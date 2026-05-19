@@ -1119,7 +1119,7 @@ function ProfilePage({user, assessment, onSignOut, onRetakeAssessment}) {
 
           {/* Video upload */}
           <div style={{padding:24,background:G.mid,borderRadius:8,border:`1px solid ${G.border}`,marginBottom:24}}>
-            <div style={{fontSize:9,color:"rgba(201,168,76,0.5)",letterSpacing:"0.2em",marginBottom:12}}>INTRODUCTION VIDEO <span style={{color:"rgba(201,168,76,0.3)",fontWeight:400"}}>(optional)</span></div>
+            <div style={{fontSize:9,color:"rgba(201,168,76,0.5)",letterSpacing:"0.2em",marginBottom:12}}>INTRODUCTION VIDEO <span style={{color:"rgba(201,168,76,0.3)",fontWeight:400}}>(optional)</span></div>
             <p style={{fontSize:12,color:G.muted,lineHeight:1.7,marginBottom:16}}>A 60–90 second introduction video significantly increases profile engagement. Record yourself sharing your professional focus and what you're looking for. MP4, max 100MB.</p>
             {videoUrl&&(
               <video src={videoUrl} controls style={{width:"100%",borderRadius:6,marginBottom:16,background:"#000",maxHeight:240}}/>
