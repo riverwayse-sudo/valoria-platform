@@ -435,7 +435,8 @@ function ReportRenderer({text}) {
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500;600;700&family=DM+Mono&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:#1A1A2E;}
+  body{background:#1A1A2E;font-family:'Raleway',sans-serif;}
+  *:focus-visible{outline:2px solid #C9A84C;outline-offset:2px;border-radius:4px;}
   @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes pulse{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
@@ -635,7 +636,7 @@ function AuthPage({onAuth}) {
         <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(29,158,117,0.1)",border:"1px solid rgba(29,158,117,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"32px auto 20px"}}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#1D9E75" strokeWidth="2" strokeLinecap="round"/></svg>
         </div>
-        <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:300,color:G.parchment,marginBottom:12}}>Check your inbox.</h2>
+        <h2 style={{fontFamily:"'Raleway',sans-serif",fontSize:22,fontWeight:300,color:G.parchment,marginBottom:12}}>Check your inbox.</h2>
         <p style={{fontSize:14,color:G.muted,lineHeight:1.7,marginBottom:24}}>We've sent a confirmation link to <strong style={{color:G.gold}}>{email}</strong>. Click it to verify your account, then return here to log in.</p>
         <Btn onClick={()=>setMode("login")} fullWidth>GO TO LOGIN</Btn>
       </div>
@@ -653,13 +654,13 @@ function AuthPage({onAuth}) {
             <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke={G.gold} strokeWidth="1.5" strokeLinecap="round"/></svg>
             </div>
-            <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:26,fontWeight:300,color:G.parchment,marginBottom:12}}>Check your inbox.</h2>
+            <h2 style={{fontFamily:"'Raleway',sans-serif",fontSize:20,fontWeight:300,color:G.parchment,marginBottom:12}}>Check your inbox.</h2>
             <p style={{fontSize:13,color:G.muted,lineHeight:1.7,marginBottom:24}}>We sent a reset link to <strong style={{color:G.gold}}>{email}</strong>. Click it to set a new password.</p>
             <Btn onClick={()=>{setMode("login");setResetSent(false);}} fullWidth>BACK TO SIGN IN</Btn>
           </div>
         ) : (
           <>
-            <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:300,color:G.parchment,marginBottom:8}}>Reset your password</h2>
+            <h2 style={{fontFamily:"'Raleway',sans-serif",fontSize:22,fontWeight:300,color:G.parchment,marginBottom:8}}>Reset your password</h2>
             <p style={{fontSize:13,color:G.muted,lineHeight:1.7,marginBottom:24}}>Enter your email and we'll send you a reset link.</p>
             <Input label="EMAIL ADDRESS" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com"/>
             {error&&<div style={{marginBottom:12,padding:"10px 14px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.25)",borderRadius:4,fontSize:12,color:"#D85A30"}}>{error}</div>}
@@ -677,7 +678,7 @@ function AuthPage({onAuth}) {
       <Noise/><Stripe/>
       <div style={{maxWidth:400,width:"100%",position:"relative",zIndex:1,animation:"fadeUp 0.7s ease both"}}>
         <div style={{marginBottom:32}}><Wordmark/></div>
-        <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:300,color:G.parchment,marginBottom:8}}>Set a new password</h2>
+        <h2 style={{fontFamily:"'Raleway',sans-serif",fontSize:22,fontWeight:300,color:G.parchment,marginBottom:8}}>Set a new password</h2>
         <p style={{fontSize:13,color:G.muted,lineHeight:1.7,marginBottom:24}}>Choose a strong password of at least 8 characters.</p>
         <div style={{marginBottom:16,position:"relative"}}>
           <div style={{fontSize:9,letterSpacing:"0.15em",color:"rgba(247,244,238,0.35)",fontWeight:600,marginBottom:6}}>NEW PASSWORD</div>
@@ -707,7 +708,7 @@ function AuthPage({onAuth}) {
       {/* LEFT PANEL */}
       <div style={{padding:"clamp(40px,7vw,80px) clamp(32px,5vw,64px)",display:"flex",flexDirection:"column",justifyContent:"center",borderRight:`1px solid ${G.border}`,position:"relative",zIndex:1}}>
         <div style={{animation:"fadeUp 0.8s ease 0.1s both",marginBottom:48}}><Wordmark/></div>
-        <h1 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:"clamp(38px,5vw,64px)",fontWeight:300,color:G.parchment,lineHeight:0.97,letterSpacing:"-0.02em",animation:"fadeUp 0.9s ease 0.25s both",marginBottom:24}}>
+        <h1 style={{fontFamily:"'Raleway',sans-serif",fontSize:"clamp(32px,4vw,52px)",fontWeight:300,color:G.parchment,lineHeight:1.05,letterSpacing:"-0.01em",animation:"fadeUp 0.9s ease 0.25s both",marginBottom:24}}>
           Know exactly<br/>where you <em style={{fontStyle:"italic",color:G.gold}}>stand.</em>
         </h1>
         <p style={{fontSize:15,color:G.muted,lineHeight:1.8,maxWidth:380,animation:"fadeUp 0.9s ease 0.4s both",marginBottom:40}}>
@@ -905,13 +906,13 @@ function AssessmentPage({user, onComplete}) {
         width:"100%",flexDirection:"column",justifyContent:"center",position:"relative",zIndex:1}}>
         {question?.skill&&question.cluster!=="VA"&&(
           <div key={`skill-${animKey}`} className="question-enter"
-            style={{fontSize:9,color:`${clColor}60`,letterSpacing:"0.25em",marginBottom:20,fontWeight:700,animationDelay:"0.05s"}}>
+            style={{fontSize:9,color:`${clColor}60`,letterSpacing:"0.15em",marginBottom:20,fontWeight:700,animationDelay:"0.05s"}}>
             {question.skill.toUpperCase()}
           </div>
         )}
         <div key={`q-${animKey}`} className="question-enter"
-          style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:"clamp(20px,3vw,28px)",
-            fontWeight:300,color:G.parchment,lineHeight:1.55,marginBottom:40,
+          style={{fontFamily:"'Raleway',sans-serif",fontSize:"clamp(17px,2.6vw,22px)",
+            fontWeight:400,color:G.parchment,lineHeight:1.65,marginBottom:40,
             opacity:transitioning?0:1,transform:transitioning?"translateY(-20px)":"translateY(0)",
             transition:"opacity 0.3s ease,transform 0.3s ease",animationDelay:"0.1s"}}>
           {question?.q}
@@ -1001,7 +1002,7 @@ function ResultsPreviewPage({ results, onJoinWaitlist }) {
 
         {/* Headline */}
         <div style={{ textAlign:"center", marginBottom:32 }}>
-          <div style={{ fontSize:11, color:"rgba(201,168,76,0.55)", letterSpacing:"0.22em", marginBottom:12 }}>YOUR VALU INDEX RESULTS</div>
+          <div style={{ fontSize:11, color:"rgba(201,168,76,0.55)", letterSpacing:"0.15em", marginBottom:12 }}>YOUR VALU INDEX RESULTS</div>
           <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(52px,10vw,80px)", fontWeight:300, color:G.gold, lineHeight:1 }}>{results.valuIndex}</div>
           <div style={{ fontSize:10, color:"rgba(247,244,238,0.25)", letterSpacing:"0.18em", marginTop:4, marginBottom:14 }}>OUT OF 100</div>
           <div style={{ display:"inline-block", padding:"6px 18px", background:desig.bg, border:`1px solid ${desig.color}50`, borderRadius:3, fontSize:11, fontWeight:700, color:desig.color, letterSpacing:"0.14em" }}>
@@ -1032,35 +1033,76 @@ function ResultsPreviewPage({ results, onJoinWaitlist }) {
           </div>
         </div>
 
-        {/* Key insight */}
-        <div style={{ background:"rgba(201,168,76,0.05)", border:`1px solid ${G.border}`, borderRadius:8, padding:"18px 20px", marginBottom:24, fontSize:13, color:"rgba(247,244,238,0.55)", lineHeight:1.75 }}>
-          {strongest && weakest && (
-            <>
-              Your strongest cluster is <strong style={{ color:strongest.color }}>{strongest.name}</strong> ({results.clusterScores[strongest.id]}/100) — {strongest.theme.toLowerCase()}. Your biggest development opportunity is in <strong style={{ color:weakest.color }}>{weakest.name}</strong> ({results.clusterScores[weakest.id]}/100) — {weakest.theme.toLowerCase()}.
-              {results.listed
-                ? <><br/><br/><span style={{ color:"#1D9E75", fontWeight:600 }}>✓ Your score qualifies you for listing on the Valoria marketplace.</span></>
-                : <><br/><br/><span style={{ color:"#BA7517" }}>Your score of {results.valuIndex} is below the 35-point listing minimum. The PRIME Sprint programme is the fastest path to getting listed.</span></>
-              }
-            </>
-          )}
-        </div>
+        {/* Personalised analysis section */}
+        {strongest && weakest && (
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontSize:9, color:"rgba(201,168,76,0.45)", letterSpacing:"0.15em", marginBottom:12, fontWeight:700 }}>YOUR ANALYSIS</div>
 
-        {/* Future-ready badge if high */}
-        {results.futureReadyScore >= 60 && (
-          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px", background:"rgba(127,119,221,0.08)", border:"1px solid rgba(127,119,221,0.25)", borderRadius:6, marginBottom:20, fontSize:12, color:"#7F77DD" }}>
-            <span style={{ fontSize:16 }}>⚡</span>
-            <span>Future-Ready score: <strong>{results.futureReadyScore}/100</strong> — you're ahead of the curve on AI and enterprise skills.</span>
+            <div style={{ background:`${strongest.color}0D`, border:`1px solid ${strongest.color}30`, borderRadius:8, padding:"16px 18px", marginBottom:10, display:"flex", gap:14, alignItems:"flex-start" }}>
+              <div style={{ width:32, height:32, borderRadius:6, background:`${strongest.color}20`, border:`1px solid ${strongest.color}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:strongest.color, flexShrink:0 }}>{strongest.id}</div>
+              <div>
+                <div style={{ fontSize:10, fontWeight:700, color:strongest.color, letterSpacing:"0.12em", marginBottom:4 }}>STRONGEST · {strongest.name.toUpperCase()}</div>
+                <div style={{ fontSize:13, color:"rgba(247,244,238,0.65)", lineHeight:1.7 }}>
+                  {strongest.theme} — this is where you lead. Your score of <strong style={{ color:strongest.color }}>{results.clusterScores[strongest.id]}/100</strong> places you in the upper tier on this dimension.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background:`${weakest.color}0D`, border:`1px solid ${weakest.color}30`, borderRadius:8, padding:"16px 18px", marginBottom:10, display:"flex", gap:14, alignItems:"flex-start" }}>
+              <div style={{ width:32, height:32, borderRadius:6, background:`${weakest.color}20`, border:`1px solid ${weakest.color}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:weakest.color, flexShrink:0 }}>{weakest.id}</div>
+              <div>
+                <div style={{ fontSize:10, fontWeight:700, color:weakest.color, letterSpacing:"0.12em", marginBottom:4 }}>DEVELOPMENT FOCUS · {weakest.name.toUpperCase()}</div>
+                <div style={{ fontSize:13, color:"rgba(247,244,238,0.65)", lineHeight:1.7 }}>
+                  {weakest.theme} — score of <strong style={{ color:weakest.color }}>{results.clusterScores[weakest.id]}/100</strong>. Your full report maps a precise growth pathway here.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding:"12px 16px", borderRadius:6, marginBottom:10, display:"flex", alignItems:"center", gap:10,
+              background: results.listed ? "rgba(29,158,117,0.08)" : "rgba(186,117,23,0.08)",
+              border: `1px solid ${results.listed ? "rgba(29,158,117,0.3)" : "rgba(186,117,23,0.3)"}` }}>
+              <span style={{ fontSize:15 }}>{results.listed ? "✓" : "→"}</span>
+              <span style={{ fontSize:12, color: results.listed ? "#1D9E75" : "#BA7517", lineHeight:1.6 }}>
+                {results.listed
+                  ? <><strong>You qualify for marketplace listing.</strong> Score of {results.valuIndex} meets the 35-point threshold.</>
+                  : <><strong>Score of {results.valuIndex} — below listing minimum of 35.</strong> PRIME Sprint is your fastest route. Your full report includes the roadmap.</>
+                }
+              </span>
+            </div>
+
+            {results.futureReadyScore >= 60 && (
+              <div style={{ padding:"12px 16px", background:"rgba(127,119,221,0.08)", border:"1px solid rgba(127,119,221,0.25)", borderRadius:6, marginBottom:10, display:"flex", alignItems:"center", gap:10, fontSize:12, color:"#7F77DD" }}>
+                <span style={{ fontSize:15 }}>⚡</span>
+                <span>Future-Ready: <strong>{results.futureReadyScore}/100</strong> — ahead of the curve on AI fluency and enterprise skills.</span>
+              </div>
+            )}
+
+            <div style={{ padding:"12px 16px", background:"rgba(201,168,76,0.05)", border:`1px solid ${G.border}`, borderRadius:6, display:"flex", alignItems:"center", gap:10, fontSize:12, color:"rgba(247,244,238,0.5)" }}>
+              <span style={{ fontSize:15 }}>🎯</span>
+              <span>Recommended pathway: <strong style={{ color:G.gold }}>{results.pathway}</strong> — mapped in full in your AI report.</span>
+            </div>
           </div>
         )}
 
+        {/* What's in the full report */}
+        <div style={{ background:"rgba(22,22,38,0.6)", border:`1px solid ${G.border}`, borderRadius:8, padding:"16px 20px", marginBottom:24 }}>
+          <div style={{ fontSize:9, color:"rgba(201,168,76,0.4)", letterSpacing:"0.15em", marginBottom:12, fontWeight:700 }}>YOUR FULL REPORT INCLUDES</div>
+          {["AI-written narrative across all 18 skills","Skill-by-skill score breakdown and interpretation","Personalised development roadmap","Marketplace listing (if score ≥ 35)","Access to PRIME programme recommendations"].map((item, i) => (
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"6px 0", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:G.gold, opacity:0.5, flexShrink:0 }}/>
+              <span style={{ fontSize:12, color:"rgba(247,244,238,0.5)" }}>{item}</span>
+            </div>
+          ))}
+        </div>
+
         {/* CTA */}
         <div style={{ textAlign:"center" }}>
-          <p style={{ fontSize:13, color:"rgba(247,244,238,0.35)", marginBottom:20, lineHeight:1.7 }}>
-            Join the founding cohort to receive your full AI-written report, get listed on the Valoria marketplace, and unlock your development pathway.
-          </p>
-          <Btn fullWidth onClick={onJoinWaitlist} style={{ fontSize:13, letterSpacing:"0.18em" }}>
-            JOIN THE WAITLIST — GET FULL REPORT →
+          <Btn fullWidth onClick={onJoinWaitlist} style={{ fontSize:12, letterSpacing:"0.12em", padding:"16px 24px", marginBottom:12 }}>
+            JOIN THE WAITLIST — GET MY FULL REPORT →
           </Btn>
+          <p style={{ fontSize:11, color:"rgba(247,244,238,0.2)", lineHeight:1.7 }}>
+            Free to join · Score held for 12 months · No payment required
+          </p>
         </div>
       </div>
     </div>
@@ -1148,7 +1190,7 @@ function WaitlistSignupPage({ results, onComplete }) {
           </div>
         </div>
 
-        <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(28px,5vw,38px)", fontWeight:300, color:G.parchment, marginBottom:8, textAlign:"center", lineHeight:1.15 }}>
+        <h2 style={{ fontFamily:"'Raleway',sans-serif", fontSize:"clamp(24px,4vw,32px)", fontWeight:400, color:G.parchment, marginBottom:8, textAlign:"center", lineHeight:1.2 }}>
           Join the <em style={{ fontStyle:"italic", color:G.gold }}>Founding Cohort.</em>
         </h2>
         <p style={{ fontSize:13, color:"rgba(247,244,238,0.4)", textAlign:"center", marginBottom:28, lineHeight:1.7 }}>
@@ -1226,7 +1268,7 @@ function WelcomePage({ signupInfo, results }) {
           </svg>
         </div>
 
-        <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(34px,6vw,52px)", fontWeight:300, color:G.parchment, marginBottom:12, lineHeight:1.1 }}>
+        <h1 style={{ fontFamily:"'Raleway',sans-serif", fontSize:"clamp(28px,5vw,44px)", fontWeight:400, color:G.parchment, marginBottom:12, lineHeight:1.15 }}>
           Welcome to <em style={{ fontStyle:"italic", color:G.gold }}>Valoria.</em>
         </h1>
 
@@ -1241,7 +1283,7 @@ function WelcomePage({ signupInfo, results }) {
 
         {/* Score summary card */}
         <div style={{ background:"rgba(22,22,38,0.8)", border:`1px solid ${G.border}`, borderRadius:10, padding:"24px 28px", marginBottom:32, textAlign:"left" }}>
-          <div style={{ fontSize:9, color:"rgba(201,168,76,0.4)", letterSpacing:"0.22em", marginBottom:16 }}>YOUR SCORE SUMMARY</div>
+          <div style={{ fontSize:9, color:"rgba(201,168,76,0.4)", letterSpacing:"0.15em", marginBottom:16 }}>YOUR SCORE SUMMARY</div>
           <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:6 }}>
             <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:48, fontWeight:300, color:G.gold, lineHeight:1 }}>{results.valuIndex}</span>
             <span style={{ fontSize:11, color:"rgba(247,244,238,0.2)", letterSpacing:"0.1em" }}>/100</span>
@@ -1264,7 +1306,7 @@ function WelcomePage({ signupInfo, results }) {
 
         {/* What happens next */}
         <div style={{ textAlign:"left", marginBottom:36 }}>
-          <div style={{ fontSize:9, color:"rgba(201,168,76,0.4)", letterSpacing:"0.22em", marginBottom:16, textAlign:"center" }}>WHAT HAPPENS NEXT</div>
+          <div style={{ fontSize:9, color:"rgba(201,168,76,0.4)", letterSpacing:"0.15em", marginBottom:16, textAlign:"center" }}>WHAT HAPPENS NEXT</div>
           {[
             { icon:"📧", text: `Check ${email} — your score summary and welcome email are on their way.` },
             { icon:"🔍", text: "We review founding cohort applications weekly. You'll be notified when your access is confirmed." },
@@ -1291,7 +1333,7 @@ function WelcomePage({ signupInfo, results }) {
 // ROOT — APP ROUTER (Assessment-first flow)
 // Flow: assessment → results-preview → waitlist-signup → welcome
 // ═══════════════════════════════════════════════════════════════════════════
-export default function ValoriaApp() {
+export default function ValoriaPlatform() {
   // page: "assessment" | "results-preview" | "waitlist-signup" | "welcome"
   const [page,        setPage]        = useState("assessment");
   const [rawResults,  setRawResults]  = useState(null);
