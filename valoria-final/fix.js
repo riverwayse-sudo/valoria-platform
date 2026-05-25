@@ -1,0 +1,1 @@
+const fs=require("fs");let c=fs.readFileSync("src/ValoriaPlatform.jsx","utf8");const i=c.indexOf("anthropic-dangerous");const before=c.slice(0,i);const after=c.slice(i);const fixedAfter=after.replace(/[\r\n]+/," ").replace(/^(.*?\}\,)/,"$1\n");const newC=before+fixedAfter;fs.writeFileSync("src/ValoriaPlatform.jsx",newC,"utf8");console.log("Done");

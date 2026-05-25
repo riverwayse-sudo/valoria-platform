@@ -95,7 +95,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 // ── CONFIG — fill these in ────────────────────────────────────────────────
 const SUPABASE_URL      = "https://sbkgpisgkuhbalsxqkdr.supabase.co";
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY; // paste from Supabase > Settings > API
+const SUPABASE_ANON_KEY = "sb_publishable_qQGMH7up2CqrRH8TsEe7LQ_t2u48c6e";
 
 // ── SUPABASE CLIENT ───────────────────────────────────────────────────────
 const sb = {
@@ -202,6 +202,7 @@ sb.signIn = async function(email, password) {
   return d;
 };
 
+// ── DESIGN TOKENS ─────────────────────────────────────────────────────────
 // ── DESIGN TOKENS ─────────────────────────────────────────────────────────
 const G = {
   gold:     "#C9A84C",
@@ -432,7 +433,7 @@ function ReportRenderer({text}) {
 
 // ── GLOBAL STYLES ─────────────────────────────────────────────────────────
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500;600;700&family=DM+Mono&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:#1A1A2E;}
   @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
@@ -441,10 +442,10 @@ const CSS = `
   @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-  input,textarea{font-family:'DM Sans',sans-serif;color:#F7F4EE;}
+  input,textarea{font-family:'Raleway',sans-serif;color:#F7F4EE;}
   input::placeholder,textarea::placeholder{color:rgba(247,244,238,0.2);}
   input:focus,textarea:focus{outline:none;}
-  button{font-family:'DM Sans',sans-serif;cursor:pointer;}
+  button{font-family:'Raleway',sans-serif;cursor:pointer;}
   ::-webkit-scrollbar{width:4px;}
   ::-webkit-scrollbar-track{background:rgba(255,255,255,0.03);}
   ::-webkit-scrollbar-thumb{background:rgba(201,168,76,0.2);border-radius:2px;}
@@ -452,6 +453,31 @@ const CSS = `
   .opt-btn:hover{border-color:rgba(201,168,76,0.4)!important;background:rgba(201,168,76,0.06)!important;}
   .gold-btn:hover{background:#E2C97E!important;}
   .ghost-btn:hover{border-color:rgba(201,168,76,0.3)!important;color:rgba(247,244,238,0.5)!important;}
+  .opt-btn{position:relative;overflow:hidden;transform:translateY(0);transition:all 0.2s cubic-bezier(0.34,1.56,0.64,1)!important;}
+  .opt-btn:hover{transform:translateY(-2px)!important;box-shadow:0 8px 24px rgba(0,0,0,0.3)!important;}
+  .opt-btn.selected{animation:selectPulse 0.4s cubic-bezier(0.34,1.56,0.64,1) both;}
+  .opt-btn.selected::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at center,rgba(201,168,76,0.15),transparent 70%);pointer-events:none;}
+  @keyframes selectPulse{0%{transform:scale(1)}40%{transform:scale(1.02)}100%{transform:scale(1)}}
+  @keyframes questionIn{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes questionOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-24px)}}
+  @keyframes optionIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes checkmark{0%{transform:scale(0) rotate(-45deg);opacity:0}60%{transform:scale(1.2) rotate(5deg)}100%{transform:scale(1) rotate(0deg);opacity:1}}
+  @keyframes ripple{0%{transform:scale(0);opacity:0.4}100%{transform:scale(4);opacity:0}}
+  @keyframes clusterGlow{0%,100%{opacity:0.6}50%{opacity:1}}
+  .question-enter{animation:questionIn 0.5s cubic-bezier(0.34,1.2,0.64,1) both;}
+  .question-exit{animation:questionOut 0.3s ease both;}
+  .option-enter{animation:optionIn 0.4s cubic-bezier(0.34,1.2,0.64,1) both;}
+  .auth-grid{display:grid;grid-template-columns:1fr 1fr;min-height:100vh;}
+  .auth-left{padding:clamp(40px,7vw,80px) clamp(32px,5vw,64px);display:flex;flex-direction:column;justify-content:center;border-right:1px solid rgba(247,244,238,0.07);position:relative;z-index:1;}
+  .auth-right{padding:clamp(40px,7vw,80px) clamp(32px,5vw,64px);display:flex;flex-direction:column;justify-content:center;background:rgba(20,20,36,0.6);position:relative;z-index:1;}
+  @media(max-width:768px){
+    .auth-grid{grid-template-columns:1fr;}
+    .auth-left{display:none;}
+    .auth-right{min-height:100vh;padding:48px 24px;justify-content:flex-start;padding-top:60px;}
+    .auth-mobile-header{display:flex!important;}
+  }
+  .auth-mobile-header{display:none;flex-direction:column;align-items:center;text-align:center;margin-bottom:32px;}
+  @media(max-width:480px){.auth-right{padding:40px 20px;}}
 `;
 
 // ── COMPONENTS ────────────────────────────────────────────────────────────
@@ -517,17 +543,27 @@ const Wordmark = ({size=1}) => (
 );
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PAGE: AUTH (Signup / Login)
+// PAGE: AUTH (Signup / Login / Forgot Password / Reset Password)
 // ═══════════════════════════════════════════════════════════════════════════
 function AuthPage({onAuth}) {
-  const [mode,setMode]         = useState("signup"); // signup | login
+  const [mode,setMode]         = useState("signup"); // signup | login | forgot | reset
   const [fullName,setFullName] = useState("");
   const [role,setRole]         = useState("");
   const [email,setEmail]       = useState("");
   const [password,setPassword] = useState("");
+  const [showPass,setShowPass] = useState(false);
   const [loading,setLoading]   = useState(false);
   const [error,setError]       = useState("");
   const [done,setDone]         = useState(false);
+  const [resetSent,setResetSent] = useState(false);
+
+  // Detect password reset token in URL hash
+  useEffect(()=>{
+    const hash = window.location.hash;
+    if(hash.includes("access_token")&&hash.includes("type=recovery")){
+      setMode("reset");
+    }
+  },[]);
 
   async function handleSubmit() {
     setError(""); setLoading(true);
@@ -536,28 +572,54 @@ function AuthPage({onAuth}) {
         if (!fullName.trim()||!role.trim()||!email.trim()||!password.trim()) {
           setError("Please fill in all fields."); setLoading(false); return;
         }
+        if (password.length < 8) {
+          setError("Password must be at least 8 characters."); setLoading(false); return;
+        }
         const d = await sb.signUp(email, password, { full_name:fullName, role });
         if (d.error||d.msg) { setError(d.msg||d.error?.message||"Signup failed."); setLoading(false); return; }
-
-        // Create profile row
         if (d.user?.id || sb.userId) {
           await sb.upsert("profiles", { id: d.user?.id||sb.userId, full_name:fullName, role });
         }
-
-        // Send welcome email via Edge Function
         await sb.invokeFunction("send-email", { type:"welcome", to:email, name:fullName });
-
-        // If email confirmation is disabled in Supabase, log in directly
         if (d.access_token) { onAuth({...d.user, full_name:fullName, role}); }
         else setDone(true);
 
-      } else {
+      } else if (mode==="login") {
+        if (!email.trim()||!password.trim()) {
+          setError("Please enter your email and password."); setLoading(false); return;
+        }
         const d = await sb.signIn(email, password);
-        if (d.error||!d.access_token) { setError(d.error?.message||d.error_description||"Login failed. Check your credentials."); setLoading(false); return; }
-        // Fetch profile
+        if (d.error||!d.access_token) {
+          setError(d.error?.message||d.error_description||"Login failed. Check your credentials.");
+          setLoading(false); return;
+        }
         const profiles = await sb.select("profiles", `id=eq.${d.user?.id}`);
         const profile = profiles[0]||{};
         onAuth({...d.user, ...profile});
+
+      } else if (mode==="forgot") {
+        if (!email.trim()) { setError("Please enter your email."); setLoading(false); return; }
+        const r = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
+          method:"POST",
+          headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY},
+          body:JSON.stringify({email, redirect_to:window.location.origin})
+        });
+        setResetSent(true);
+
+      } else if (mode==="reset") {
+        if (!password.trim()||password.length<8) {
+          setError("Password must be at least 8 characters."); setLoading(false); return;
+        }
+        const hash = window.location.hash;
+        const params = new URLSearchParams(hash.replace("#",""));
+        const accessToken = params.get("access_token");
+        const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          method:"PUT",
+          headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY,"Authorization":`Bearer ${accessToken}`},
+          body:JSON.stringify({password})
+        });
+        if(r.ok){ window.location.hash=""; setMode("login"); setError(""); setPassword(""); }
+        else { setError("Failed to reset password. Please try again."); }
       }
     } catch(e) {
       setError("Something went wrong. Please try again.");
@@ -566,7 +628,7 @@ function AuthPage({onAuth}) {
   }
 
   if (done) return (
-    <div style={{minHeight:"100vh",background:G.dark,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',sans-serif",padding:24}}>
+    <div style={{minHeight:"100vh",background:G.dark,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Raleway',sans-serif",padding:24}}>
       <Noise/><Stripe/>
       <div style={{textAlign:"center",maxWidth:400,position:"relative",zIndex:1,animation:"fadeUp 0.8s ease both"}}>
         <Wordmark/>
@@ -580,8 +642,65 @@ function AuthPage({onAuth}) {
     </div>
   );
 
+  // FORGOT PASSWORD PAGE
+  if (mode==="forgot") return (
+    <div style={{minHeight:"100vh",background:G.dark,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Raleway',sans-serif",padding:24}}>
+      <Noise/><Stripe/>
+      <div style={{maxWidth:400,width:"100%",position:"relative",zIndex:1,animation:"fadeUp 0.7s ease both"}}>
+        <div style={{marginBottom:32}}><Wordmark/></div>
+        {resetSent ? (
+          <div style={{textAlign:"center"}}>
+            <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke={G.gold} strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </div>
+            <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:26,fontWeight:300,color:G.parchment,marginBottom:12}}>Check your inbox.</h2>
+            <p style={{fontSize:13,color:G.muted,lineHeight:1.7,marginBottom:24}}>We sent a reset link to <strong style={{color:G.gold}}>{email}</strong>. Click it to set a new password.</p>
+            <Btn onClick={()=>{setMode("login");setResetSent(false);}} fullWidth>BACK TO SIGN IN</Btn>
+          </div>
+        ) : (
+          <>
+            <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:300,color:G.parchment,marginBottom:8}}>Reset your password</h2>
+            <p style={{fontSize:13,color:G.muted,lineHeight:1.7,marginBottom:24}}>Enter your email and we'll send you a reset link.</p>
+            <Input label="EMAIL ADDRESS" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com"/>
+            {error&&<div style={{marginBottom:12,padding:"10px 14px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.25)",borderRadius:4,fontSize:12,color:"#D85A30"}}>{error}</div>}
+            <Btn fullWidth loading={loading} onClick={handleSubmit} style={{marginBottom:16}}>SEND RESET LINK</Btn>
+            <button onClick={()=>{setMode("login");setError("");}} style={{width:"100%",background:"none",border:"none",color:"rgba(247,244,238,0.3)",fontSize:12,cursor:"pointer",fontFamily:"'Raleway',sans-serif"}}>← Back to Sign In</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  // RESET PASSWORD PAGE
+  if (mode==="reset") return (
+    <div style={{minHeight:"100vh",background:G.dark,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Raleway',sans-serif",padding:24}}>
+      <Noise/><Stripe/>
+      <div style={{maxWidth:400,width:"100%",position:"relative",zIndex:1,animation:"fadeUp 0.7s ease both"}}>
+        <div style={{marginBottom:32}}><Wordmark/></div>
+        <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:300,color:G.parchment,marginBottom:8}}>Set a new password</h2>
+        <p style={{fontSize:13,color:G.muted,lineHeight:1.7,marginBottom:24}}>Choose a strong password of at least 8 characters.</p>
+        <div style={{marginBottom:16,position:"relative"}}>
+          <div style={{fontSize:9,letterSpacing:"0.15em",color:"rgba(247,244,238,0.35)",fontWeight:600,marginBottom:6}}>NEW PASSWORD</div>
+          <div style={{position:"relative"}}>
+            <input type={showPass?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)}
+              placeholder="Minimum 8 characters"
+              style={{width:"100%",padding:"12px 44px 12px 14px",background:"rgba(255,255,255,0.04)",
+                border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:G.parchment,
+                fontSize:14,outline:"none",fontFamily:"'Raleway',sans-serif",boxSizing:"border-box"}}/>
+            <button onClick={()=>setShowPass(s=>!s)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"rgba(247,244,238,0.3)"}}>
+              {showPass?<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              :<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+            </button>
+          </div>
+        </div>
+        {error&&<div style={{marginBottom:12,padding:"10px 14px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.25)",borderRadius:4,fontSize:12,color:"#D85A30"}}>{error}</div>}
+        <Btn fullWidth loading={loading} onClick={handleSubmit}>SET NEW PASSWORD</Btn>
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{minHeight:"100vh",background:G.dark,display:"grid",gridTemplateColumns:"1fr 1fr",fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{minHeight:"100vh",background:G.dark,display:"grid",gridTemplateColumns:"1fr 1fr",fontFamily:"'Raleway',sans-serif"}}>
       <style>{CSS}</style>
       <Noise/><Stripe/>
 
@@ -627,12 +746,47 @@ function AuthPage({onAuth}) {
               <Input label="CURRENT ROLE" value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Head of Operations"/>
             </>}
             <Input label="EMAIL ADDRESS" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com"/>
-            <Input label="PASSWORD" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder={mode==="signup"?"Create a password (8+ chars)":"Your password"}
-              style={{marginBottom:0}} onKeyDown={e=>e.key==="Enter"&&handleSubmit()}/>
 
-            {error&&<div style={{marginTop:12,padding:"10px 14px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.25)",borderRadius:4,fontSize:12,color:"#D85A30"}}>{error}</div>}
+            {/* Password with show/hide toggle */}
+            <div style={{marginBottom:16,position:"relative"}}>
+              <div style={{fontSize:9,letterSpacing:"0.15em",color:"rgba(247,244,238,0.35)",fontWeight:600,marginBottom:6}}>PASSWORD</div>
+              <div style={{position:"relative"}}>
+                <input
+                  type={showPass?"text":"password"}
+                  value={password}
+                  onChange={e=>setPassword(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&handleSubmit()}
+                  placeholder={mode==="signup"?"Create a password (8+ chars)":"Your password"}
+                  style={{width:"100%",padding:"12px 44px 12px 14px",background:"rgba(255,255,255,0.04)",
+                    border:"1px solid rgba(255,255,255,0.1)",borderRadius:4,color:G.parchment,
+                    fontSize:14,outline:"none",fontFamily:"'Raleway',sans-serif",boxSizing:"border-box"}}
+                />
+                <button onClick={()=>setShowPass(s=>!s)}
+                  style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
+                    background:"none",border:"none",cursor:"pointer",padding:4,color:"rgba(247,244,238,0.3)",
+                    display:"flex",alignItems:"center"}}>
+                  {showPass
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </div>
+            </div>
 
-            <Btn fullWidth loading={loading} onClick={handleSubmit} style={{marginTop:20}}>
+            {/* Forgot password link — only on login */}
+            {mode==="login"&&(
+              <div style={{textAlign:"right",marginTop:-8,marginBottom:12}}>
+                <button onClick={()=>{setMode("forgot");setError("");}}
+                  style={{background:"none",border:"none",color:G.gold,fontSize:11,cursor:"pointer",
+                    letterSpacing:"0.05em",opacity:0.7,fontFamily:"'Raleway',sans-serif"}}>
+                  Forgot password?
+                </button>
+              </div>
+            )}
+
+            {error&&<div style={{marginTop:4,marginBottom:8,padding:"10px 14px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.25)",borderRadius:4,fontSize:12,color:"#D85A30"}}>{error}</div>}
+
+            <Btn fullWidth loading={loading} onClick={handleSubmit} style={{marginTop:8}}>
               {mode==="signup"?"CREATE MY ACCOUNT":"SIGN IN"}
             </Btn>
 
@@ -659,10 +813,13 @@ function AssessmentPage({user, onComplete}) {
   const [qStart,setQStart]         = useState(null);
   const [shuffleMap,setShuffleMap] = useState({});
   const [transitioning,setTrans]   = useState(false);
+  const [animKey,setAnimKey]       = useState(0);
+  const [justSelected,setJustSel]  = useState(null);
+  const [elapsed,setElapsed]       = useState(0);
   const [sessionSeed]              = useState(()=>Math.random()*99999);
 
   const question  = QUESTIONS[currentQ];
-  const progress  = Math.round((currentQ/TOTAL)*100);
+  const progress  = (currentQ/TOTAL)*100;
   const cluster   = CLUSTERS.find(c=>c.id===question?.cluster);
 
   const displayedOptions = useMemo(()=>{
@@ -674,7 +831,12 @@ function AssessmentPage({user, onComplete}) {
     return shuffled;
   },[currentQ,question,sessionSeed]);
 
-  useEffect(()=>{ setQStart(Date.now()); },[currentQ]);
+  useEffect(()=>{ setQStart(Date.now()); setAnimKey(k=>k+1); setElapsed(0); },[currentQ]);
+  useEffect(()=>{
+    if(transitioning) return;
+    const t=setInterval(()=>setElapsed(e=>e+1),1000);
+    return ()=>clearInterval(t);
+  },[currentQ,transitioning]);
 
   const liveScores={};
   CLUSTERS.forEach(c=>{
@@ -687,75 +849,130 @@ function AssessmentPage({user, onComplete}) {
     liveScores[c.id]=Math.round((raw/c.maxRaw)*100);
   });
 
-  function handleNext() {
-    if(selected===null) return;
-    const elapsed=qStart?Date.now()-qStart:0;
-    const newTimings=[...timings]; newTimings[currentQ]=elapsed;
-    setTimings(newTimings);
-    const newAnswers={...answers,[currentQ]:selected};
-    setAnswers(newAnswers);
-    setTrans(true);
+  const clusterColors={P:"#7B9EE0",R:"#E07B9E",I:"#9EE07B",M:"#E0C97B",E:"#C97BE0",VA:"#7BE0D4"};
+  const clColor=cluster?(clusterColors[cluster.id]||G.gold):G.gold;
+
+  function handleSelect(di) {
+    if(transitioning||justSelected!==null) return;
+    setJustSel(di);
+    setSelected(di);
     setTimeout(()=>{
-      if(currentQ+1<TOTAL){setCurrentQ(currentQ+1);setSelected(null);setTrans(false);}
-      else{onComplete(newAnswers,newTimings,shuffleMap);}
-    },260);
+      const elapsed=qStart?Date.now()-qStart:0;
+      const newTimings=[...timings]; newTimings[currentQ]=elapsed;
+      setTimings(newTimings);
+      const newAnswers={...answers,[currentQ]:di};
+      setAnswers(newAnswers);
+      setTrans(true);
+      setTimeout(()=>{
+        setJustSel(null);
+        if(currentQ+1<TOTAL){setCurrentQ(currentQ+1);setSelected(null);setTrans(false);}
+        else{onComplete(newAnswers,newTimings,shuffleMap);}
+      },350);
+    },430);
   }
 
   return (
-    <div style={{minHeight:"100vh",background:G.dark,display:"flex",flexDirection:"column",fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{minHeight:"100vh",background:G.dark,display:"flex",flexDirection:"column",fontFamily:"'Raleway',sans-serif",overflow:"hidden"}}>
       <style>{CSS}</style>
-      {/* Progress */}
-      <div style={{position:"fixed",top:0,left:0,right:0,height:3,background:"rgba(255,255,255,0.05)",zIndex:50}}>
-        <div style={{height:"100%",width:`${progress}%`,background:G.gold,transition:"width 0.4s ease"}}/>
+      <div style={{position:"fixed",top:"-30%",right:"-20%",width:"60vw",height:"60vw",borderRadius:"50%",
+        background:`radial-gradient(circle,${clColor}08 0%,transparent 70%)`,
+        transition:"background 1.2s ease",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"fixed",top:0,left:0,right:0,height:4,background:"rgba(255,255,255,0.04)",zIndex:50}}>
+        <div style={{height:"100%",width:`${progress}%`,background:`linear-gradient(90deg,${clColor},${G.gold})`,
+          transition:"width 0.6s cubic-bezier(0.34,1.2,0.64,1)",boxShadow:`0 0 12px ${clColor}60`}}/>
       </div>
-      {/* Header */}
-      <div style={{position:"fixed",top:0,left:0,right:0,padding:"14px 24px 12px",background:"rgba(22,22,40,0.98)",borderBottom:`1px solid ${G.border}`,backdropFilter:"blur(16px)",zIndex:40,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div style={{fontSize:11,color:"rgba(201,168,76,0.6)",letterSpacing:"0.15em",fontWeight:600}}>VALU INDEX</div>
-        <div style={{fontSize:12,color:"rgba(247,244,238,0.3)"}}>{currentQ+1} / {TOTAL}</div>
-        {cluster&&<div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{width:18,height:18,borderRadius:3,background:`${cluster.color}20`,border:`1px solid ${cluster.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:cluster.color}}>{cluster.id}</div>
-          <span style={{fontSize:11,color:cluster.color,letterSpacing:"0.08em",fontWeight:500}}>{cluster.name.toUpperCase()}</span>
-        </div>}
+      <div style={{position:"fixed",top:0,left:0,right:0,padding:"16px 28px 14px",
+        background:"rgba(16,16,30,0.95)",borderBottom:"1px solid rgba(255,255,255,0.06)",
+        backdropFilter:"blur(20px)",zIndex:40,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:10,color:`${clColor}90`,letterSpacing:"0.2em",fontWeight:700,transition:"color 0.6s"}}>VALU INDEX</div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {cluster&&<>
+            <div style={{width:20,height:20,borderRadius:4,background:`${clColor}18`,border:`1px solid ${clColor}50`,
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,color:clColor}}>{cluster.id}</div>
+            <span style={{fontSize:10,color:clColor,letterSpacing:"0.12em",fontWeight:600}}>{cluster.name.toUpperCase()}</span>
+          </>}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
+          <div style={{fontSize:11,color:"rgba(247,244,238,0.25)",fontWeight:500}}>
+            <span style={{color:G.gold,fontWeight:700}}>{currentQ+1}</span>/{TOTAL}
+          </div>
+          <div style={{fontSize:9,color:"rgba(247,244,238,0.15)",letterSpacing:"0.1em",fontWeight:600,fontVariantNumeric:"tabular-nums"}}>
+            {String(Math.floor(elapsed/60)).padStart(2,"0")}:{String(elapsed%60).padStart(2,"0")}
+          </div>
+        </div>
       </div>
-
-      {/* Question */}
-      <div style={{flex:1,display:"flex",padding:"80px 20px 140px",maxWidth:700,margin:"0 auto",width:"100%",flexDirection:"column",justifyContent:"center"}}>
+      <div style={{flex:1,display:"flex",padding:"100px 24px 120px",maxWidth:680,margin:"0 auto",
+        width:"100%",flexDirection:"column",justifyContent:"center",position:"relative",zIndex:1}}>
         {question?.skill&&question.cluster!=="VA"&&(
-          <div style={{fontSize:9,color:"rgba(201,168,76,0.4)",letterSpacing:"0.2em",marginBottom:16,fontWeight:600}}>{question.skill.toUpperCase()} · {question.type.toUpperCase()}</div>
+          <div key={`skill-${animKey}`} className="question-enter"
+            style={{fontSize:9,color:`${clColor}60`,letterSpacing:"0.25em",marginBottom:20,fontWeight:700,animationDelay:"0.05s"}}>
+            {question.skill.toUpperCase()}
+          </div>
         )}
-        <div style={{fontFamily:"Georgia,serif",fontSize:"clamp(17px,2.4vw,22px)",fontWeight:300,color:G.parchment,lineHeight:1.6,marginBottom:32,opacity:transitioning?0:1,transition:"opacity 0.2s"}}>
+        <div key={`q-${animKey}`} className="question-enter"
+          style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:"clamp(20px,3vw,28px)",
+            fontWeight:300,color:G.parchment,lineHeight:1.55,marginBottom:40,
+            opacity:transitioning?0:1,transform:transitioning?"translateY(-20px)":"translateY(0)",
+            transition:"opacity 0.3s ease,transform 0.3s ease",animationDelay:"0.1s"}}>
           {question?.q}
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:10,opacity:transitioning?0:1,transition:"opacity 0.2s"}}>
+        <div style={{display:"flex",flexDirection:"column",gap:12,
+          opacity:transitioning?0:1,transform:transitioning?"translateY(16px)":"translateY(0)",
+          transition:"opacity 0.3s ease,transform 0.3s ease"}}>
           {displayedOptions.map((opt,di)=>{
             const isSel=selected===di;
             return (
-              <button key={di} className="opt-btn" onClick={()=>!transitioning&&setSelected(di)}
-                style={{padding:"16px 20px",background:isSel?"rgba(201,168,76,0.1)":"rgba(255,255,255,0.025)",
-                  border:`1px solid ${isSel?"rgba(201,168,76,0.45)":"rgba(255,255,255,0.07)"}`,
-                  borderRadius:6,textAlign:"left",color:isSel?G.parchment:"rgba(247,244,238,0.6)",
-                  fontSize:14,lineHeight:1.55,transition:"all 0.15s",outline:"none"}}>
-                {opt.text}
+              <button key={`${animKey}-${di}`}
+                className={`opt-btn option-enter${isSel?" selected":""}`}
+                onClick={()=>handleSelect(di)}
+                style={{
+                  animationDelay:`${0.15+di*0.07}s`,
+                  padding:"18px 22px",
+                  background:isSel?`linear-gradient(135deg,${clColor}18,rgba(201,168,76,0.08))`:"rgba(255,255,255,0.03)",
+                  border:`1px solid ${isSel?clColor+"60":"rgba(255,255,255,0.07)"}`,
+                  borderRadius:8,textAlign:"left",
+                  color:isSel?G.parchment:"rgba(247,244,238,0.55)",
+                  fontSize:14,lineHeight:1.6,outline:"none",width:"100%",
+                  boxShadow:isSel?`0 4px 24px ${clColor}20,inset 0 1px 0 ${clColor}20`:"none",
+                  display:"flex",alignItems:"center",gap:14,cursor:"pointer",
+                  fontFamily:"'Raleway',sans-serif",
+                }}>
+                <div style={{
+                  width:24,height:24,borderRadius:"50%",flexShrink:0,
+                  border:`1.5px solid ${isSel?clColor:"rgba(255,255,255,0.15)"}`,
+                  background:isSel?clColor:"transparent",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  transition:"all 0.25s cubic-bezier(0.34,1.56,0.64,1)",
+                  boxShadow:isSel?`0 0 12px ${clColor}60`:"none",
+                }}>
+                  {isSel&&<div style={{width:8,height:8,borderRadius:"50%",background:"#fff",animation:"checkmark 0.3s cubic-bezier(0.34,1.56,0.64,1)"}}/>}
+                </div>
+                <span>{opt.text}</span>
               </button>
             );
           })}
         </div>
+        {selected===null&&!transitioning&&(
+          <div style={{textAlign:"center",marginTop:32,fontSize:10,color:"rgba(247,244,238,0.12)",
+            letterSpacing:"0.15em",animation:"fadeIn 1s ease 1.5s both",fontWeight:600}}>
+            TAP AN ANSWER TO CONTINUE
+          </div>
+        )}
       </div>
-
-      {/* Footer */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"14px 24px",background:"rgba(22,22,40,0.98)",borderTop:`1px solid ${G.border}`,backdropFilter:"blur(16px)",display:"flex",gap:10,justifyContent:"center"}}>
-        {currentQ>0&&<Btn variant="ghost" onClick={()=>{setSelected(answers[currentQ-1]??null);setCurrentQ(currentQ-1);}}>BACK</Btn>}
-        <button onClick={handleNext} disabled={selected===null}
-          style={{flex:1,maxWidth:320,padding:14,background:selected!==null?G.gold:"rgba(201,168,76,0.18)",border:"none",borderRadius:3,
-            color:selected!==null?G.dark:"rgba(201,168,76,0.35)",fontSize:11,fontWeight:700,letterSpacing:"0.14em",
-            cursor:selected!==null?"pointer":"not-allowed",transition:"background 0.2s"}}>
-          {currentQ+1<TOTAL?"NEXT QUESTION":"COMPLETE ASSESSMENT"}
-        </button>
-      </div>
-
-      {/* Live radar */}
-      <div style={{position:"fixed",bottom:80,right:16,opacity:0.45}}>
-        <Radar scores={liveScores} size={72}/>
+      {currentQ>0&&(
+        <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"14px 28px",
+          background:"rgba(16,16,30,0.9)",borderTop:"1px solid rgba(255,255,255,0.05)",
+          backdropFilter:"blur(20px)",display:"flex",justifyContent:"center",zIndex:40}}>
+          <button onClick={()=>{setSelected(answers[currentQ-1]??null);setCurrentQ(currentQ-1);}}
+            style={{padding:"10px 28px",background:"transparent",border:"1px solid rgba(255,255,255,0.1)",
+              borderRadius:4,color:"rgba(247,244,238,0.3)",fontSize:10,fontWeight:600,
+              letterSpacing:"0.15em",cursor:"pointer",fontFamily:"'Raleway',sans-serif"}}>
+            ← BACK
+          </button>
+        </div>
+      )}
+      <div style={{position:"fixed",bottom:currentQ>0?72:20,right:20,opacity:0.45,zIndex:30}}>
+        <Radar scores={liveScores} size={80}/>
       </div>
     </div>
   );
@@ -764,545 +981,372 @@ function AssessmentPage({user, onComplete}) {
 // ═══════════════════════════════════════════════════════════════════════════
 // PAGE: GENERATING REPORT
 // ═══════════════════════════════════════════════════════════════════════════
-function GeneratingPage({user,results,onDone}) {
-  const [reportText,setReport]   = useState("");
-  const [status,setStatus]       = useState("generating");
-  const [error,setError]         = useState(null);
-  const reportRef = useRef(null);
+// ═══════════════════════════════════════════════════════════════════════════
+// PAGE: RESULTS PREVIEW (shown right after assessment, before waitlist)
+// ═══════════════════════════════════════════════════════════════════════════
+function ResultsPreviewPage({ results, onJoinWaitlist }) {
+  const desig = results.desig;
+  const sorted = Object.entries(results.clusterScores).sort(([,a],[,b]) => b - a);
+  const strongest = CLUSTERS.find(c => c.id === sorted[0]?.[0]);
+  const weakest   = CLUSTERS.find(c => c.id === sorted[sorted.length - 1]?.[0]);
 
-  useEffect(()=>{ generate(); },[]);
+  return (
+    <div style={{ minHeight:"100vh", background:G.dark, fontFamily:"'Raleway',sans-serif", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 24px" }}>
+      <style>{CSS}</style>
+      <Noise/><Stripe/>
+      <div style={{ maxWidth:560, width:"100%", position:"relative", zIndex:1, animation:"fadeUp 0.8s ease both" }}>
 
-  async function generate() {
+        {/* Wordmark */}
+        <div style={{ marginBottom:36, textAlign:"center" }}><Wordmark/></div>
+
+        {/* Headline */}
+        <div style={{ textAlign:"center", marginBottom:32 }}>
+          <div style={{ fontSize:11, color:"rgba(201,168,76,0.55)", letterSpacing:"0.22em", marginBottom:12 }}>YOUR VALU INDEX RESULTS</div>
+          <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(52px,10vw,80px)", fontWeight:300, color:G.gold, lineHeight:1 }}>{results.valuIndex}</div>
+          <div style={{ fontSize:10, color:"rgba(247,244,238,0.25)", letterSpacing:"0.18em", marginTop:4, marginBottom:14 }}>OUT OF 100</div>
+          <div style={{ display:"inline-block", padding:"6px 18px", background:desig.bg, border:`1px solid ${desig.color}50`, borderRadius:3, fontSize:11, fontWeight:700, color:desig.color, letterSpacing:"0.14em" }}>
+            {desig.name.toUpperCase()}
+          </div>
+        </div>
+
+        {/* Radar + cluster bars */}
+        <div style={{ background:"rgba(22,22,38,0.7)", border:`1px solid ${G.border}`, borderRadius:10, padding:"28px 24px", marginBottom:24 }}>
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:20 }}>
+            <Radar scores={results.clusterScores} size={140}/>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {sorted.map(([cid, score]) => {
+              const cl = CLUSTERS.find(c => c.id === cid);
+              if (!cl) return null;
+              return (
+                <div key={cid} style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:20, height:20, borderRadius:3, background:`${cl.color}18`, border:`1px solid ${cl.color}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:800, color:cl.color, flexShrink:0 }}>{cl.id}</div>
+                  <span style={{ fontSize:11, color:"rgba(247,244,238,0.55)", width:90, flexShrink:0 }}>{cl.name}</span>
+                  <div style={{ flex:1, height:4, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+                    <div style={{ height:"100%", width:`${score}%`, background:`linear-gradient(90deg,${cl.color}80,${cl.color})`, borderRadius:2, transition:"width 1.2s cubic-bezier(0.34,1,0.64,1)" }}/>
+                  </div>
+                  <span style={{ fontSize:11, color:cl.color, fontWeight:700, minWidth:28, textAlign:"right" }}>{score}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Key insight */}
+        <div style={{ background:"rgba(201,168,76,0.05)", border:`1px solid ${G.border}`, borderRadius:8, padding:"18px 20px", marginBottom:24, fontSize:13, color:"rgba(247,244,238,0.55)", lineHeight:1.75 }}>
+          {strongest && weakest && (
+            <>
+              Your strongest cluster is <strong style={{ color:strongest.color }}>{strongest.name}</strong> ({results.clusterScores[strongest.id]}/100) — {strongest.theme.toLowerCase()}. Your biggest development opportunity is in <strong style={{ color:weakest.color }}>{weakest.name}</strong> ({results.clusterScores[weakest.id]}/100) — {weakest.theme.toLowerCase()}.
+              {results.listed
+                ? <><br/><br/><span style={{ color:"#1D9E75", fontWeight:600 }}>✓ Your score qualifies you for listing on the Valoria marketplace.</span></>
+                : <><br/><br/><span style={{ color:"#BA7517" }}>Your score of {results.valuIndex} is below the 35-point listing minimum. The PRIME Sprint programme is the fastest path to getting listed.</span></>
+              }
+            </>
+          )}
+        </div>
+
+        {/* Future-ready badge if high */}
+        {results.futureReadyScore >= 60 && (
+          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px", background:"rgba(127,119,221,0.08)", border:"1px solid rgba(127,119,221,0.25)", borderRadius:6, marginBottom:20, fontSize:12, color:"#7F77DD" }}>
+            <span style={{ fontSize:16 }}>⚡</span>
+            <span>Future-Ready score: <strong>{results.futureReadyScore}/100</strong> — you're ahead of the curve on AI and enterprise skills.</span>
+          </div>
+        )}
+
+        {/* CTA */}
+        <div style={{ textAlign:"center" }}>
+          <p style={{ fontSize:13, color:"rgba(247,244,238,0.35)", marginBottom:20, lineHeight:1.7 }}>
+            Join the founding cohort to receive your full AI-written report, get listed on the Valoria marketplace, and unlock your development pathway.
+          </p>
+          <Btn fullWidth onClick={onJoinWaitlist} style={{ fontSize:13, letterSpacing:"0.18em" }}>
+            JOIN THE WAITLIST — GET FULL REPORT →
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PAGE: WAITLIST SIGNUP
+// ═══════════════════════════════════════════════════════════════════════════
+function WaitlistSignupPage({ results, onComplete }) {
+  const [fullName,  setFullName]  = useState("");
+  const [role,      setRole]      = useState("");
+  const [email,     setEmail]     = useState("");
+  const [password,  setPassword]  = useState("");
+  const [showPass,  setShowPass]  = useState(false);
+  const [type,      setType]      = useState("professional"); // professional | employer
+  const [org,       setOrg]       = useState("");
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState("");
+
+  async function handleSignup() {
+    setError(""); setLoading(true);
     try {
-      const prompt = buildPrompt(results,user);
-      const res = await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","x-api-key":import.meta.env.VITE_ANTHROPIC_KEY},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,stream:true,messages:[{role:"user",content:prompt}]}),
-      });
-      if(!res.ok) throw new Error("API error");
-      const reader=res.body.getReader(),dec=new TextDecoder();
-      let buf="",full="";
-      while(true){
-        const{done,value}=await reader.read(); if(done) break;
-        buf+=dec.decode(value,{stream:true});
-        const lines=buf.split("\n"); buf=lines.pop()||"";
-        for(const line of lines){
-          if(!line.startsWith("data: ")) continue;
-          const d=line.slice(6).trim(); if(d==="[DONE]") continue;
-          try{const p=JSON.parse(d);if(p.type==="content_block_delta"&&p.delta?.type==="text_delta"){full+=p.delta.text;setReport(full);if(reportRef.current)reportRef.current.scrollTop=reportRef.current.scrollHeight;}}catch{}
-        }
+      if (!fullName.trim() || !email.trim() || !password.trim() || !role.trim()) {
+        setError("Please fill in all fields."); setLoading(false); return;
       }
-      setStatus("complete");
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters."); setLoading(false); return;
+      }
 
-      // Save to Supabase
-      const exp=new Date(); exp.setFullYear(exp.getFullYear()+1);
-      await sb.upsert("valu_assessments",{
-        user_id:sb.userId, full_name:user.full_name||user.email,
-        role:user.role||"", email:user.email,
-        valu_index:results.valuIndex, designation:results.desig?.name,
-        cluster_scores:results.clusterScores, skill_scores:results.skillScores,
-        future_ready_score:results.futureReadyScore, pathway:results.pathway,
-        listed:results.listed, ai_report:full,
-        gaming_detected:results.gamingDetected, speed_flag:results.speedFlag,
-        uniformity_flag:results.uniformityFlag,
-        expires_at:exp.toISOString(), completed_at:new Date().toISOString(),
-      });
+      // Sign up with Supabase
+      const d = await sb.signUp(email, password, { full_name: fullName, role, waitlist_type: type, organisation: org });
+      if (d.error || d.msg) { setError(d.msg || d.error?.message || "Signup failed. Please try again."); setLoading(false); return; }
 
-      // Send results email
-      await sb.invokeFunction("send-email",{
-        type:"results", to:user.email, name:user.full_name||"Professional",
-        valu_index:results.valuIndex, designation:results.desig?.name,
-        report_url:`https://valoriainstitute.com/profile`,
-      });
+      const userId = d.user?.id || sb.userId;
+      if (userId) {
+        // Save profile
+        await sb.upsert("profiles", { id: userId, full_name: fullName, role, bio: `${type === "employer" ? "Employer" : "Professional"} — ${org || ""}` });
 
-      onDone(full);
-    } catch(e){
-      setError(e.message);setStatus("error");
+        // Save assessment results linked to this user
+        const exp = new Date(); exp.setFullYear(exp.getFullYear() + 1);
+        await sb.upsert("valu_assessments", {
+          user_id: userId, full_name: fullName, role, email,
+          valu_index: results.valuIndex, designation: results.desig?.name,
+          cluster_scores: results.clusterScores, skill_scores: results.skillScores,
+          future_ready_score: results.futureReadyScore, pathway: results.pathway,
+          listed: results.listed, ai_report: "",
+          gaming_detected: results.gamingDetected, speed_flag: results.speedFlag,
+          uniformity_flag: results.uniformityFlag,
+          expires_at: exp.toISOString(), completed_at: new Date().toISOString(),
+        });
+
+        // Send welcome email
+        await sb.invokeFunction("send-email", { type: "welcome", to: email, name: fullName });
+
+        // Send results email (with score summary, no full AI report yet)
+        await sb.invokeFunction("send-email", {
+          type: "results", to: email, name: fullName,
+          valu_index: results.valuIndex, designation: results.desig?.name,
+          report_url: "https://valoriainstitute.com/waitlist",
+        });
+      }
+
+      onComplete({ email, fullName, type });
+    } catch (e) {
+      setError("Something went wrong. Please try again.");
     }
-  }
-
-  function buildPrompt(r,u) {
-    const sorted=Object.entries(r.skillScores||{}).filter(([s])=>s!=="Validity").sort(([,a],[,b])=>b-a);
-    const top=sorted.slice(0,3),bot=sorted.slice(-3).reverse();
-    const wkCluster=r.weakest?.id;
-    const wkSkills=sorted.filter(([s])=>SKILL_CLUSTER_MAP[s]===wkCluster).sort(([,a],[,b])=>a-b);
-    const gap=wkSkills[0]?.[0]||bot[0]?.[0];
-    const clusterDetail=CLUSTERS.map(c=>{
-      const sk=sorted.filter(([s])=>SKILL_CLUSTER_MAP[s]===c.id);
-      return `${c.name} (${r.clusterScores[c.id]}/100):\n`+sk.map(([s,sc])=>`  - ${s}: ${sc}/100`).join("\n");
-    }).join("\n\n");
-    return `You are writing a personalised professional development report for ${u.full_name||"this professional"}, a ${u.role||"professional"} who completed the VALU Index.
-
-WRITING RULES:
-1. Direct, plain language — trusted senior colleague tone.
-2. Short sentences. Never use: journey, leverage (verb), holistic, impactful, synergy, empower, transformative, unlock, actionable.
-3. Specific. Name the actual skill, actual consequence, actual programme.
-4. Speak directly: "you."
-5. No fluff. Every sentence earns its place.
-
-THEIR SCORES:
-VALU Index: ${r.valuIndex}/100 — ${r.desig?.name}
-Listed: ${r.listed?"Yes":"No — needs 35+"}
-Future-Ready: ${r.futureReadyScore}/100
-
-${clusterDetail}
-
-STRONGEST: ${top.map(([s,sc])=>`${s} (${sc})`).join(", ")}
-WEAKEST: ${bot.map(([s,sc])=>`${s} (${sc})`).join(", ")}
-PRIMARY GAP: ${gap} (${r.skillScores?.[gap]}/100)
-
-PROGRAMMES:
-- PRIME Sprint: 1 day, ₦150K–₦300K
-- PRIME Cluster: 6 weeks, ₦500K–₦1.2M
-- PRIME Certified Professional: 6 months, ₦200K–₦400K
-- Executive Immersion: 3 days, ₦800K–₦2M
-
-${!r.listed?`IMPORTANT: Score ${r.valuIndex} is below the 35-point listing minimum. PRIME Sprint is the path to getting listed.`:""}
-
-WRITE THESE EXACT SECTIONS (start directly with ## YOUR SCORE, no preamble):
-
-## YOUR SCORE: ${r.valuIndex}/100 — ${r.desig?.name?.toUpperCase()}
-One paragraph. Plain language. What this score means to an employer who finds this profile.
-
-## WHAT YOU ARE GOOD AT
-Start: "Your strongest skill is [name it]." Top 2–3 skills, one sentence each. Make them feel seen — not flattered.
-
-## WHERE YOU ARE LOSING GROUND
-Start: "Your biggest gap right now is [name the gap skill]." Name the skill, score, what it costs them as a ${u.role||"professional"}. Direct. Max 130 words.
-
-## WHAT THIS COSTS YOU IN THE NEXT 12 MONTHS
-One paragraph. Specific: who overtakes them, what they fail to get, what they keep being passed over for.
-
-## YOUR ONE ACTION FOR THIS WEEK
-Give them one specific, concrete action for ${gap}. Then one sentence connecting it to their score.
-
-## THE PROGRAMME YOU NEED RIGHT NOW
-Name the programme. 3 sentences on why it fits their profile. Reference their actual skill scores.
-
-${!r.listed?`\n## HOW TO GET LISTED\nScore ${r.valuIndex} is below minimum 35. PRIME Sprint is the direct path. Say clearly what score movement to expect.`:""}
-
-## THE QUESTION TO SIT WITH
-*One question in italics about ${gap}, specific to their role as a ${u.role||"professional"}. Make it uncomfortable enough to be useful.*`;
+    setLoading(false);
   }
 
   return (
-    <div style={{minHeight:"100vh",background:G.dark,fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{ minHeight:"100vh", background:G.dark, fontFamily:"'Raleway',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 24px" }}>
       <style>{CSS}</style>
-      <Stripe/>
-      {/* Score header */}
-      <div style={{background:G.mid,borderBottom:`1px solid ${G.border}`,padding:"28px 24px",position:"sticky",top:0,zIndex:10}}>
-        <div style={{maxWidth:660,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
-          <div>
-            <div style={{fontSize:9,color:"rgba(201,168,76,0.45)",letterSpacing:"0.2em",marginBottom:4}}>VALU INDEX REPORT — {user.full_name||user.email}</div>
-            <div style={{fontSize:11,color:G.muted}}>{user.role}</div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:20}}>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:52,fontWeight:300,color:G.gold,lineHeight:1}}>{results.valuIndex}</div>
-              <div style={{fontSize:9,color:"rgba(247,244,238,0.2)",letterSpacing:"0.1em"}}>OUT OF 100</div>
-            </div>
-            <Radar scores={results.clusterScores} size={88}/>
+      <Noise/><Stripe/>
+      <div style={{ maxWidth:480, width:"100%", position:"relative", zIndex:1, animation:"fadeUp 0.8s ease both" }}>
+
+        <div style={{ marginBottom:28, textAlign:"center" }}><Wordmark/></div>
+
+        {/* Score recap chip */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:12, marginBottom:28 }}>
+          <div style={{ padding:"6px 16px", background:"rgba(201,168,76,0.1)", border:`1px solid ${G.border}`, borderRadius:20, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, color:G.gold, fontWeight:300 }}>{results.valuIndex}</span>
+            <span style={{ fontSize:10, color:"rgba(247,244,238,0.3)", letterSpacing:"0.12em" }}>/100</span>
+            <span style={{ fontSize:9, color:"rgba(201,168,76,0.5)", letterSpacing:"0.14em", fontWeight:600 }}>· {results.desig?.name?.toUpperCase()}</span>
           </div>
         </div>
-        {/* Cluster pills */}
-        <div style={{maxWidth:660,margin:"16px auto 0",display:"flex",gap:8,flexWrap:"wrap"}}>
-          {CLUSTERS.map(c=>(
-            <div key={c.id} style={{padding:"6px 12px",background:`${c.color}10`,border:`1px solid ${c.color}28`,borderRadius:4}}>
-              <span style={{fontSize:12,color:c.color,fontWeight:600}}>{c.id} {results.clusterScores[c.id]}</span>
-              <span style={{fontSize:10,color:"rgba(247,244,238,0.2)"}}>/100</span>
+
+        <h2 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(28px,5vw,38px)", fontWeight:300, color:G.parchment, marginBottom:8, textAlign:"center", lineHeight:1.15 }}>
+          Join the <em style={{ fontStyle:"italic", color:G.gold }}>Founding Cohort.</em>
+        </h2>
+        <p style={{ fontSize:13, color:"rgba(247,244,238,0.4)", textAlign:"center", marginBottom:28, lineHeight:1.7 }}>
+          Your score is saved. Create your account to receive your full AI report, get listed on the marketplace, and secure your founding member access.
+        </p>
+
+        {/* Type selector */}
+        <div style={{ display:"flex", gap:0, marginBottom:24, background:"rgba(255,255,255,0.03)", borderRadius:4, padding:3 }}>
+          {[["professional","I AM A PROFESSIONAL"],["employer","I AM AN EMPLOYER"]].map(([v,label]) => (
+            <button key={v} onClick={() => setType(v)}
+              style={{ flex:1, padding:"10px", fontSize:10, fontWeight:600, letterSpacing:"0.12em", border:"none", borderRadius:3, cursor:"pointer",
+                background: type === v ? "rgba(201,168,76,0.15)" : "transparent",
+                color: type === v ? G.gold : "rgba(247,244,238,0.3)", fontFamily:"'Raleway',sans-serif" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <Input label="FULL NAME" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your full name"/>
+        <Input label={type === "employer" ? "JOB TITLE" : "CURRENT ROLE"} value={role} onChange={e => setRole(e.target.value)} placeholder={type === "employer" ? "e.g. Chief People Officer" : "e.g. Head of Operations"}/>
+        {type === "employer" && <Input label="ORGANISATION" value={org} onChange={e => setOrg(e.target.value)} placeholder="Company name"/>}
+        <Input label="EMAIL ADDRESS" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com"/>
+
+        {/* Password */}
+        <div style={{ marginBottom:16, position:"relative" }}>
+          <div style={{ fontSize:9, letterSpacing:"0.15em", color:"rgba(247,244,238,0.35)", fontWeight:600, marginBottom:6 }}>PASSWORD</div>
+          <div style={{ position:"relative" }}>
+            <input type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSignup()}
+              placeholder="Create a password (8+ chars)"
+              style={{ width:"100%", padding:"12px 44px 12px 14px", background:"rgba(255,255,255,0.04)",
+                border:"1px solid rgba(255,255,255,0.1)", borderRadius:4, color:G.parchment,
+                fontSize:14, outline:"none", fontFamily:"'Raleway',sans-serif", boxSizing:"border-box" }}/>
+            <button onClick={() => setShowPass(s => !s)}
+              style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", padding:4, color:"rgba(247,244,238,0.3)", display:"flex", alignItems:"center" }}>
+              {showPass
+                ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              }
+            </button>
+          </div>
+        </div>
+
+        {error && <div style={{ marginBottom:12, padding:"10px 14px", background:"rgba(216,90,48,0.08)", border:"1px solid rgba(216,90,48,0.25)", borderRadius:4, fontSize:12, color:"#D85A30" }}>{error}</div>}
+
+        <Btn fullWidth loading={loading} onClick={handleSignup} style={{ marginTop:4, marginBottom:14 }}>
+          SECURE MY PLACE ON THE WAITLIST →
+        </Btn>
+
+        <p style={{ fontSize:11, color:"rgba(247,244,238,0.2)", textAlign:"center", lineHeight:1.6 }}>
+          By signing up you agree to our terms. Your data is stored securely and is NDPA 2023 compliant.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PAGE: WELCOME / CONFIRMATION (shown after waitlist signup)
+// ═══════════════════════════════════════════════════════════════════════════
+function WelcomePage({ signupInfo, results }) {
+  const { email, fullName, type } = signupInfo;
+
+  return (
+    <div style={{ minHeight:"100vh", background:G.dark, fontFamily:"'Raleway',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 24px" }}>
+      <style>{CSS}</style>
+      <Noise/><Stripe/>
+      <div style={{ maxWidth:520, width:"100%", position:"relative", zIndex:1, textAlign:"center", animation:"fadeUp 0.9s ease both" }}>
+        <div style={{ marginBottom:36 }}><Wordmark/></div>
+
+        {/* Welcome icon */}
+        <div style={{ width:68, height:68, borderRadius:"50%", background:"rgba(201,168,76,0.1)", border:"1px solid rgba(201,168,76,0.35)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 28px" }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M5 13l4 4L19 7" stroke={G.gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+
+        <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(34px,6vw,52px)", fontWeight:300, color:G.parchment, marginBottom:12, lineHeight:1.1 }}>
+          Welcome to <em style={{ fontStyle:"italic", color:G.gold }}>Valoria.</em>
+        </h1>
+
+        <div style={{ display:"inline-block", padding:"6px 18px", background:"rgba(29,158,117,0.1)", border:"1px solid rgba(29,158,117,0.3)", borderRadius:20, fontSize:10, fontWeight:700, color:"#1D9E75", letterSpacing:"0.18em", marginBottom:28 }}>
+          ✓ YOU ARE ON THE WAITLIST
+        </div>
+
+        <p style={{ fontSize:15, color:"rgba(247,244,238,0.5)", lineHeight:1.8, marginBottom:32, maxWidth:400, margin:"0 auto 32px" }}>
+          {fullName ? `${fullName}, you` : "You"}'re now part of the founding cohort. We've sent a confirmation to{" "}
+          <strong style={{ color:G.gold }}>{email}</strong> with your VALU Index score summary.
+        </p>
+
+        {/* Score summary card */}
+        <div style={{ background:"rgba(22,22,38,0.8)", border:`1px solid ${G.border}`, borderRadius:10, padding:"24px 28px", marginBottom:32, textAlign:"left" }}>
+          <div style={{ fontSize:9, color:"rgba(201,168,76,0.4)", letterSpacing:"0.22em", marginBottom:16 }}>YOUR SCORE SUMMARY</div>
+          <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:6 }}>
+            <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:48, fontWeight:300, color:G.gold, lineHeight:1 }}>{results.valuIndex}</span>
+            <span style={{ fontSize:11, color:"rgba(247,244,238,0.2)", letterSpacing:"0.1em" }}>/100</span>
+          </div>
+          <div style={{ display:"inline-block", padding:"4px 12px", background:results.desig.bg, border:`1px solid ${results.desig.color}40`, borderRadius:3, fontSize:10, fontWeight:700, color:results.desig.color, letterSpacing:"0.12em", marginBottom:20 }}>
+            {results.desig.name.toUpperCase()}
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+            {CLUSTERS.map(cl => (
+              <div key={cl.id} style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:10, fontWeight:700, color:cl.color, width:16 }}>{cl.id}</span>
+                <div style={{ flex:1, height:3, background:"rgba(255,255,255,0.06)", borderRadius:2, overflow:"hidden" }}>
+                  <div style={{ height:"100%", width:`${results.clusterScores[cl.id] || 0}%`, background:cl.color, borderRadius:2 }}/>
+                </div>
+                <span style={{ fontSize:10, color:cl.color, fontWeight:700, minWidth:24, textAlign:"right" }}>{results.clusterScores[cl.id] || 0}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* What happens next */}
+        <div style={{ textAlign:"left", marginBottom:36 }}>
+          <div style={{ fontSize:9, color:"rgba(201,168,76,0.4)", letterSpacing:"0.22em", marginBottom:16, textAlign:"center" }}>WHAT HAPPENS NEXT</div>
+          {[
+            { icon:"📧", text: `Check ${email} — your score summary and welcome email are on their way.` },
+            { icon:"🔍", text: "We review founding cohort applications weekly. You'll be notified when your access is confirmed." },
+            { icon:"📊", text: "Your full AI-written report will be waiting in your dashboard when you're onboarded." },
+            { icon:"🌍", text: type === "employer" ? "As a founding employer partner, you'll get early access to search verified African professionals." : "As a founding professional, your profile will be among the first on the Valoria marketplace." },
+          ].map((item, i) => (
+            <div key={i} style={{ display:"flex", gap:14, padding:"14px 0", borderBottom:"1px solid rgba(255,255,255,0.05)", alignItems:"flex-start" }}>
+              <span style={{ fontSize:18, flexShrink:0 }}>{item.icon}</span>
+              <span style={{ fontSize:13, color:"rgba(247,244,238,0.5)", lineHeight:1.7 }}>{item.text}</span>
             </div>
           ))}
-          <div style={{padding:"6px 14px",background:results.desig.bg,border:`1px solid ${results.desig.color}40`,borderRadius:4}}>
-            <span style={{fontSize:10,fontWeight:700,color:results.desig.color,letterSpacing:"0.1em"}}>{results.desig.name.toUpperCase()}</span>
-          </div>
         </div>
-      </div>
 
-      {/* Report body */}
-      <div ref={reportRef} style={{maxWidth:660,margin:"0 auto",padding:"32px 24px 80px"}}>
-        {status==="generating"&&reportText.length===0&&(
-          <div style={{display:"flex",alignItems:"center",gap:14,padding:"16px 20px",background:"rgba(201,168,76,0.05)",border:`1px solid ${G.border}`,borderRadius:6,marginBottom:24}}>
-            <div style={{display:"flex",gap:4}}>{[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:G.gold,animation:`pulse 1.4s ease ${i*0.2}s infinite`}}/>)}</div>
-            <span style={{fontSize:12,color:"rgba(201,168,76,0.65)",letterSpacing:"0.08em"}}>Analysing your profile across all 18 skills...</span>
-          </div>
-        )}
-        {error&&<div style={{padding:"16px 20px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.3)",borderRadius:6,fontSize:13,color:"#D85A30",marginBottom:24}}>Report generation failed: {error}. Your score has been saved — contact hello@valoriainstituteafrica.com.</div>}
-        {reportText&&<ReportRenderer text={reportText}/>}
-        {status==="generating"&&reportText.length>0&&<span style={{display:"inline-block",width:2,height:16,background:G.gold,animation:"blink 1s step-end infinite",verticalAlign:"text-bottom",marginLeft:2}}/>}
-        {status==="complete"&&(
-          <div style={{marginTop:32,display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{padding:"18px 22px",background:results.listed?"rgba(29,158,117,0.08)":"rgba(136,136,136,0.08)",border:`1px solid ${results.listed?"rgba(29,158,117,0.3)":"rgba(136,136,136,0.2)"}`,borderRadius:6,fontSize:13,color:results.listed?"#1D9E75":"#888",fontWeight:600,letterSpacing:"0.1em"}}>
-              {results.listed?"✓ YOUR PROFILE IS NOW LISTED AND SEARCHABLE":"YOUR PROFILE IS NOT YET LISTED — SCORE BELOW 35"}
-            </div>
-            <div style={{padding:"14px 18px",background:"rgba(201,168,76,0.06)",border:`1px solid ${G.border}`,borderRadius:6,fontSize:12,color:G.muted}}>
-              📧 Your results have been sent to <strong style={{color:G.gold}}>{user.email}</strong>
-            </div>
-            <Btn fullWidth onClick={()=>onDone(reportText)} style={{marginTop:8}}>VIEW MY PROFILE →</Btn>
-          </div>
-        )}
+        <p style={{ fontSize:12, color:"rgba(247,244,238,0.2)", lineHeight:1.7 }}>
+          Questions? Write to us at{" "}
+          <a href="mailto:hello@valoriainstituteafrica.com" style={{ color:G.gold, textDecoration:"none" }}>hello@valoriainstituteafrica.com</a>
+        </p>
       </div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PAGE: PROFILE DASHBOARD
-// ═══════════════════════════════════════════════════════════════════════════
-function ProfilePage({user, assessment, onSignOut, onRetakeAssessment}) {
-  const [tab,setTab]           = useState("results");
-  const [bio,setBio]           = useState(user.bio||"");
-  const [linkedin,setLinkedin] = useState(user.linkedin_url||"");
-  const [saving,setSaving]     = useState(false);
-  const [saved,setSaved]       = useState(false);
-  const [photoUrl,setPhotoUrl] = useState(user.photo_url||null);
-  const [videoUrl,setVideoUrl] = useState(user.video_url||null);
-  const [uploading,setUploading] = useState({photo:false,video:false});
-  const photoRef=useRef(),videoRef=useRef();
-
-  async function saveProfile() {
-    setSaving(true);
-    await sb.update("profiles","id=eq."+sb.userId,{bio,linkedin_url:linkedin,photo_url:photoUrl,video_url:videoUrl});
-    setSaving(false); setSaved(true); setTimeout(()=>setSaved(false),3000);
-  }
-
-  async function handleFileUpload(type,file) {
-    if(!file) return;
-    const maxMB=type==="photo"?5:100;
-    if(file.size>maxMB*1024*1024){alert(`File too large. Max ${maxMB}MB.`);return;}
-    setUploading(u=>({...u,[type]:true}));
-    const path=`${sb.userId}/${type}-${Date.now()}.${file.name.split(".").pop()}`;
-    const url=await sb.uploadFile("profile-media",path,file);
-    if(url){type==="photo"?setPhotoUrl(url):setVideoUrl(url);}
-    setUploading(u=>({...u,[type]:false}));
-  }
-
-  const a = assessment;
-  const desig = a ? (DESIGNATIONS.find(d=>a.valu_index>=d.min)||DESIGNATIONS[DESIGNATIONS.length-1]) : null;
-  const tabs = [
-    {id:"results",label:"MY RESULTS"},
-    {id:"profile",label:"MY PROFILE"},
-    {id:"report",label:"AI REPORT"},
-    {id:"training",label:"TRAINING"},
-  ];
-
-  return (
-    <div style={{minHeight:"100vh",background:G.dark,fontFamily:"'DM Sans',sans-serif"}}>
-      <style>{CSS}</style>
-      <Stripe/>
-
-      {/* TOP NAV */}
-      <div style={{position:"sticky",top:0,zIndex:40,background:"rgba(22,22,40,0.98)",borderBottom:`1px solid ${G.border}`,backdropFilter:"blur(16px)",padding:"0 24px",display:"flex",alignItems:"stretch",justifyContent:"space-between"}}>
-        <div style={{display:"flex",alignItems:"center",gap:32}}>
-          <div style={{padding:"16px 0"}}><Wordmark size={0.7}/></div>
-          <div style={{display:"flex",gap:2}}>
-            {tabs.map(t=>(
-              <button key={t.id} className="tab-btn" onClick={()=>setTab(t.id)}
-                style={{padding:"18px 16px",background:"transparent",border:"none",fontSize:10,fontWeight:600,letterSpacing:"0.14em",
-                  color:tab===t.id?G.gold:"rgba(247,244,238,0.3)",
-                  borderBottom:tab===t.id?`2px solid ${G.gold}`:"2px solid transparent",
-                  transition:"all 0.2s",cursor:"pointer"}}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:16}}>
-          {photoUrl
-            ? <img src={photoUrl} alt="Profile" style={{width:32,height:32,borderRadius:"50%",objectFit:"cover",border:`1px solid ${G.border}`}}/>
-            : <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(201,168,76,0.1)",border:`1px solid ${G.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:600,color:G.gold}}>{(user.full_name||user.email||"?")[0].toUpperCase()}</div>
-          }
-          <span style={{fontSize:12,color:G.muted}}>{user.full_name||user.email}</span>
-          <Btn variant="ghost" onClick={onSignOut} style={{padding:"8px 14px",fontSize:10}}>SIGN OUT</Btn>
-        </div>
-      </div>
-
-      {/* ── TAB: RESULTS ─────────────────────────────────────────── */}
-      {tab==="results"&&(
-        <div style={{maxWidth:900,margin:"0 auto",padding:"40px 24px"}}>
-          {!a ? (
-            <div style={{textAlign:"center",padding:"80px 24px"}}>
-              <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:36,fontWeight:300,color:G.parchment,marginBottom:16}}>You haven't taken the assessment yet.</div>
-              <p style={{fontSize:14,color:G.muted,marginBottom:28}}>The VALU Index takes 18–28 minutes. Your personalised AI report is generated immediately on completion.</p>
-              <Btn onClick={onRetakeAssessment}>BEGIN THE VALU INDEX</Btn>
-            </div>
-          ) : (
-            <>
-              {/* Score hero */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:32,marginBottom:32,padding:"36px",background:G.mid,borderRadius:8,border:`1px solid ${G.border}`}}>
-                <div>
-                  <div style={{fontSize:9,color:"rgba(201,168,76,0.4)",letterSpacing:"0.2em",marginBottom:12}}>VALU INDEX SCORE</div>
-                  <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:80,fontWeight:300,color:G.gold,lineHeight:0.9,marginBottom:12}}>{a.valu_index}</div>
-                  <div style={{fontSize:10,color:"rgba(247,244,238,0.3)",letterSpacing:"0.1em",marginBottom:20}}>OUT OF 100</div>
-                  <div style={{display:"inline-flex",alignItems:"center",padding:"8px 16px",background:desig.bg,border:`1px solid ${desig.color}40`,borderRadius:4}}>
-                    <span style={{fontSize:11,fontWeight:700,color:desig.color,letterSpacing:"0.1em"}}>{desig.name.toUpperCase()}</span>
-                  </div>
-                  <div style={{marginTop:16,display:"flex",gap:16}}>
-                    <div>
-                      <div style={{fontSize:9,color:G.muted,letterSpacing:"0.12em",marginBottom:4}}>FUTURE-READY</div>
-                      <div style={{fontSize:20,fontWeight:600,color:"#E8A020"}}>{a.future_ready_score}<span style={{fontSize:12,color:G.muted}}>/100</span></div>
-                    </div>
-                    <div style={{width:1,background:G.border}}/>
-                    <div>
-                      <div style={{fontSize:9,color:G.muted,letterSpacing:"0.12em",marginBottom:4}}>PATHWAY</div>
-                      <div style={{fontSize:13,fontWeight:500,color:G.parchment}}>{a.pathway}</div>
-                    </div>
-                    <div style={{width:1,background:G.border}}/>
-                    <div>
-                      <div style={{fontSize:9,color:G.muted,letterSpacing:"0.12em",marginBottom:4}}>LISTED</div>
-                      <div style={{fontSize:13,fontWeight:500,color:a.listed?"#1D9E75":"#888"}}>{a.listed?"Yes":"Not yet"}</div>
-                    </div>
-                  </div>
-                </div>
-                <div style={{display:"flex",alignItems:"center"}}>
-                  <Radar scores={a.cluster_scores||{}} size={160}/>
-                </div>
-              </div>
-
-              {/* Cluster breakdown */}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:16,marginBottom:32}}>
-                {CLUSTERS.map(c=>{
-                  const skillsInCluster=Object.entries(a.skill_scores||{}).filter(([s])=>SKILL_CLUSTER_MAP[s]===c.id).sort(([,a],[,b])=>b-a);
-                  return (
-                    <div key={c.id} style={{padding:"20px",background:G.mid,borderRadius:6,border:`1px solid ${c.color}25`}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-                        <div style={{width:24,height:24,borderRadius:4,background:`${c.color}18`,border:`1px solid ${c.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:c.color}}>{c.id}</div>
-                        <span style={{fontSize:12,fontWeight:600,color:c.color}}>{c.name}</span>
-                        <span style={{marginLeft:"auto",fontSize:18,fontWeight:300,color:c.color}}>{(a.cluster_scores||{})[c.id]}<span style={{fontSize:11,color:"rgba(247,244,238,0.2)"}}>/100</span></span>
-                      </div>
-                      {skillsInCluster.map(([skill,score])=><ClusterBar key={skill} label={skill} score={score} color={c.color}/>)}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Retake */}
-              <div style={{textAlign:"center",paddingTop:16}}>
-                <p style={{fontSize:12,color:"rgba(247,244,238,0.2)",marginBottom:12}}>Assessment completed: {new Date(a.completed_at).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</p>
-                <Btn variant="ghost" onClick={onRetakeAssessment}>RETAKE ASSESSMENT</Btn>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── TAB: PROFILE ─────────────────────────────────────────── */}
-      {tab==="profile"&&(
-        <div style={{maxWidth:720,margin:"0 auto",padding:"40px 24px"}}>
-          <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:32,fontWeight:300,color:G.parchment,marginBottom:8}}>Your Profile</h2>
-          <p style={{fontSize:13,color:G.muted,marginBottom:32}}>This is what employers and event organisers see when they find your Valoria profile.</p>
-
-          {/* Photo upload */}
-          <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:24,marginBottom:32,padding:24,background:G.mid,borderRadius:8,border:`1px solid ${G.border}`,alignItems:"center"}}>
-            <div style={{position:"relative"}}>
-              {photoUrl
-                ? <img src={photoUrl} alt="Profile" style={{width:88,height:88,borderRadius:"50%",objectFit:"cover",border:`2px solid ${G.border}`}}/>
-                : <div style={{width:88,height:88,borderRadius:"50%",background:"rgba(201,168,76,0.08)",border:`2px dashed ${G.border}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke={G.gold} strokeWidth="1.5"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={G.gold} strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  </div>
-              }
-              {uploading.photo&&<div style={{position:"absolute",inset:0,borderRadius:"50%",background:"rgba(26,26,46,0.7)",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{width:20,height:20,border:"2px solid rgba(201,168,76,0.3)",borderTopColor:G.gold,borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/></div>}
-            </div>
-            <div>
-              <div style={{fontSize:13,color:G.parchment,fontWeight:500,marginBottom:4}}>Profile photo</div>
-              <div style={{fontSize:12,color:G.muted,marginBottom:12}}>JPG or PNG, max 5MB. Square images work best.</div>
-              <input ref={photoRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>handleFileUpload("photo",e.target.files[0])}/>
-              <Btn variant="ghost" onClick={()=>photoRef.current?.click()} style={{padding:"8px 16px",fontSize:10}}>{uploading.photo?"UPLOADING...":"UPLOAD PHOTO"}</Btn>
-            </div>
-          </div>
-
-          {/* Profile fields */}
-          <div style={{padding:24,background:G.mid,borderRadius:8,border:`1px solid ${G.border}`,marginBottom:24}}>
-            <Input label="PROFESSIONAL BIO" as="textarea" value={bio} onChange={e=>setBio(e.target.value)} placeholder="Write 2–3 sentences about your professional focus, what you're known for, and what you're building toward." style={{minHeight:120}}/>
-            <Input label="LINKEDIN URL" optional value={linkedin} onChange={e=>setLinkedin(e.target.value)} placeholder="https://linkedin.com/in/yourname" style={{marginBottom:0}}/>
-          </div>
-
-          {/* Video upload */}
-          <div style={{padding:24,background:G.mid,borderRadius:8,border:`1px solid ${G.border}`,marginBottom:24}}>
-            <div style={{fontSize:9,color:"rgba(201,168,76,0.5)",letterSpacing:"0.2em",marginBottom:12}}>INTRODUCTION VIDEO <span style={{color:"rgba(201,168,76,0.3)",fontWeight:400}}>(optional)</span></div>
-            <p style={{fontSize:12,color:G.muted,lineHeight:1.7,marginBottom:16}}>A 60–90 second introduction video significantly increases profile engagement. Record yourself sharing your professional focus and what you're looking for. MP4, max 100MB.</p>
-            {videoUrl&&(
-              <video src={videoUrl} controls style={{width:"100%",borderRadius:6,marginBottom:16,background:"#000",maxHeight:240}}/>
-            )}
-            <input ref={videoRef} type="file" accept="video/*" style={{display:"none"}} onChange={e=>handleFileUpload("video",e.target.files[0])}/>
-            <Btn variant="ghost" onClick={()=>videoRef.current?.click()} style={{padding:"8px 16px",fontSize:10}}>{uploading.video?"UPLOADING...":videoUrl?"REPLACE VIDEO":"UPLOAD VIDEO"}</Btn>
-          </div>
-
-          <div style={{display:"flex",alignItems:"center",gap:16}}>
-            <Btn loading={saving} onClick={saveProfile}>SAVE PROFILE</Btn>
-            {saved&&<span style={{fontSize:12,color:"#1D9E75"}}>✓ Profile saved</span>}
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB: AI REPORT ───────────────────────────────────────── */}
-      {tab==="report"&&(
-        <div style={{maxWidth:700,margin:"0 auto",padding:"40px 24px"}}>
-          {!a?.ai_report ? (
-            <div style={{textAlign:"center",padding:"80px 0"}}>
-              <p style={{fontSize:14,color:G.muted}}>Complete your assessment to see your AI report here.</p>
-              <Btn onClick={onRetakeAssessment} style={{marginTop:20}}>BEGIN THE VALU INDEX</Btn>
-            </div>
-          ) : (
-            <>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28}}>
-                <div>
-                  <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:28,fontWeight:300,color:G.parchment,marginBottom:4}}>Your AI Report</h2>
-                  <p style={{fontSize:12,color:G.muted}}>Generated {new Date(a.completed_at).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</p>
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:40,fontWeight:300,color:G.gold,lineHeight:1}}>{a.valu_index}</div>
-                  <div style={{fontSize:9,color:G.muted,letterSpacing:"0.1em"}}>VALU INDEX</div>
-                </div>
-              </div>
-              <div style={{padding:"28px",background:G.mid,borderRadius:8,border:`1px solid ${G.border}`}}>
-                <ReportRenderer text={a.ai_report}/>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── TAB: TRAINING ────────────────────────────────────────── */}
-      {tab==="training"&&(
-        <div style={{maxWidth:900,margin:"0 auto",padding:"40px 24px"}}>
-          <h2 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:32,fontWeight:300,color:G.parchment,marginBottom:8}}>Training Programmes</h2>
-          <p style={{fontSize:13,color:G.muted,marginBottom:32}}>
-            {a ? `Based on your VALU Index of ${a.valu_index}/100, your recommended pathway is the ${a.pathway}.` : "Complete your assessment to get a personalised programme recommendation."}
-          </p>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:20}}>
-            {[
-              {name:"PRIME Sprint",duration:"1 Day Intensive",price:"₦150,000–₦300,000",desc:"One urgent cluster. Fast score movement. The fastest path to getting listed on the platform.",color:"#1D9E75",recommended:a?.pathway==="PRIME Sprint"},
-              {name:"PRIME Cluster Programme",duration:"6 Weeks",price:"₦500,000–₦1,200,000",desc:"Deep work on your weakest cluster. Designed for measurable VALU Index movement.",color:"#378ADD",recommended:a?.pathway==="PRIME Cluster"},
-              {name:"PRIME Certified Professional",duration:"6 Months",price:"₦200,000–₦400,000",desc:"Full PRIME certification across all five clusters. The credential that opens the facilitator pathway.",color:G.gold,recommended:a?.pathway==="PRIME Programme"||a?.pathway==="PCP Certification"},
-              {name:"Executive Immersion",duration:"3 Days Residential",price:"₦800,000–₦2,000,000",desc:"C-suite and senior leaders. All five clusters. Time-compressed for maximum impact.",color:"#D85A30",recommended:false},
-            ].map(p=>(
-              <div key={p.name} style={{padding:"24px",background:G.mid,borderRadius:8,border:`1px solid ${p.recommended?`${p.color}50`:G.border}`,position:"relative",overflow:"hidden"}}>
-                {p.recommended&&<div style={{position:"absolute",top:0,left:0,right:0,height:3,background:p.color,opacity:0.8}}/>}
-                {p.recommended&&<div style={{display:"inline-block",padding:"3px 10px",background:`${p.color}20`,border:`1px solid ${p.color}40`,borderRadius:2,fontSize:9,fontWeight:700,color:p.color,letterSpacing:"0.15em",marginBottom:12}}>RECOMMENDED FOR YOU</div>}
-                <div style={{fontSize:14,fontWeight:600,color:p.color,marginBottom:4}}>{p.name}</div>
-                <div style={{fontSize:11,color:G.muted,marginBottom:12}}>{p.duration}</div>
-                <p style={{fontSize:13,color:"rgba(247,244,238,0.55)",lineHeight:1.7,marginBottom:16}}>{p.desc}</p>
-                <div style={{fontSize:15,fontWeight:600,color:G.parchment,marginBottom:16}}>{p.price}</div>
-                <Btn variant="ghost" style={{padding:"9px 18px",fontSize:10,width:"100%",justifyContent:"center"}} onClick={()=>window.open("https://valoriainstitute.com/programmes","_blank")}>ENQUIRE NOW →</Btn>
-              </div>
-            ))}
-          </div>
-
-          {/* Materials section */}
-          <div style={{marginTop:40}}>
-            <h3 style={{fontSize:14,fontWeight:600,color:G.parchment,letterSpacing:"0.1em",marginBottom:20}}>PRIME FRAMEWORK RESOURCES</h3>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {[
-                {title:"The PRIME Framework — Overview",type:"PDF",locked:false},
-                {title:"Cluster P: Presence — Development Guide",type:"PDF",locked:!a},
-                {title:"Cluster R: Relationships — Development Guide",type:"PDF",locked:!a},
-                {title:"Cluster I: Intelligence — Development Guide",type:"PDF",locked:!a},
-                {title:"Cluster M: Mastery — Development Guide",type:"PDF",locked:!a},
-                {title:"Cluster E: Enterprise — Development Guide",type:"PDF",locked:!a},
-                {title:"VALU Index Interpretation Guide",type:"PDF",locked:!a},
-              ].map((m,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",background:G.mid,borderRadius:6,border:`1px solid ${G.border}`,opacity:m.locked?0.45:1}}>
-                  <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    <div style={{width:32,height:32,borderRadius:4,background:"rgba(201,168,76,0.08)",border:`1px solid ${G.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:G.gold}}>{m.type}</div>
-                    <span style={{fontSize:13,color:G.parchment}}>{m.title}</span>
-                  </div>
-                  {m.locked
-                    ? <span style={{fontSize:10,color:"rgba(247,244,238,0.2)"}}>🔒 Complete assessment to unlock</span>
-                    : <Btn variant="ghost" style={{padding:"6px 14px",fontSize:10}}>DOWNLOAD</Btn>
-                  }
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// ROOT — APP ROUTER
+// ROOT — APP ROUTER (Assessment-first flow)
+// Flow: assessment → results-preview → waitlist-signup → welcome
 // ═══════════════════════════════════════════════════════════════════════════
 export default function ValoriaApp() {
-  const [page,setPage]             = useState("loading"); // loading | auth | assessment | generating | profile
-  const [user,setUser]             = useState(null);
-  const [assessment,setAssessment] = useState(null);
-  const [pendingResults,setPending] = useState(null);
-
-  // On mount — check for existing session
-  useEffect(()=>{
-    (async()=>{
-      const session = await sb.getSession();
-      if (session?.user) {
-        const profiles = await sb.select("profiles","id=eq."+session.user.id);
-        const assessments = await sb.select("valu_assessments","user_id=eq."+session.user.id+"&order=completed_at.desc&limit=1");
-        setUser({...session.user,...(profiles[0]||{})});
-        setAssessment(assessments[0]||null);
-        setPage("profile");
-      } else {
-        setPage("auth");
-      }
-    })();
-  },[]);
-
-  async function handleAuth(u) {
-    setUser(u);
-    // Fetch any existing assessment
-    if(u.id||sb.userId){
-      const assessments = await sb.select("valu_assessments","user_id=eq."+(u.id||sb.userId)+"&order=completed_at.desc&limit=1");
-      setAssessment(assessments[0]||null);
-    }
-    setPage("profile");
-  }
+  // page: "assessment" | "results-preview" | "waitlist-signup" | "welcome"
+  const [page,        setPage]        = useState("assessment");
+  const [rawResults,  setRawResults]  = useState(null);
+  const [signupInfo,  setSignupInfo]  = useState(null);
 
   function handleAssessmentComplete(answers, timings, shuffleMap) {
     const results = computeResults(answers, timings, shuffleMap);
-    setPending(results);
-    setPage("generating");
+    setRawResults(results);
+    setPage("results-preview");
   }
 
-  function handleReportDone(reportText) {
-    // Refresh assessment from DB
-    (async()=>{
-      if(sb.userId){
-        const assessments = await sb.select("valu_assessments","user_id=eq."+sb.userId+"&order=completed_at.desc&limit=1");
-        setAssessment(assessments[0]||null);
-      }
-      setPage("profile");
-    })();
+  function handleJoinWaitlist() {
+    setPage("waitlist-signup");
   }
 
-  async function handleSignOut() {
-    await sb.signOut();
-    localStorage.removeItem("valoria_session");
-    setUser(null); setAssessment(null); setPending(null);
-    setPage("auth");
+  function handleWaitlistComplete(info) {
+    setSignupInfo(info);
+    setPage("welcome");
   }
 
-  // Loading screen
-  if (page==="loading") return (
-    <div style={{minHeight:"100vh",background:G.dark,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <style>{CSS}</style>
-      <div style={{textAlign:"center"}}>
-        <Wordmark/>
-        <div style={{display:"flex",gap:6,justifyContent:"center",marginTop:24}}>
-          {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:G.gold,animation:`pulse 1.4s ease ${i*0.2}s infinite`}}/>)}
-        </div>
-      </div>
-    </div>
-  );
+  if (page === "assessment") {
+    return (
+      <AssessmentPage
+        user={null}
+        onComplete={handleAssessmentComplete}
+      />
+    );
+  }
 
-  if (page==="auth")       return <AuthPage onAuth={handleAuth}/>;
-  if (page==="assessment") return <AssessmentPage user={user} onComplete={handleAssessmentComplete}/>;
-  if (page==="generating") return <GeneratingPage user={user} results={pendingResults} onDone={handleReportDone}/>;
-  if (page==="profile")    return (
-    <ProfilePage
-      user={user}
-      assessment={assessment}
-      onSignOut={handleSignOut}
-      onRetakeAssessment={()=>setPage("assessment")}
-    />
-  );
+  if (page === "results-preview") {
+    return (
+      <ResultsPreviewPage
+        results={rawResults}
+        onJoinWaitlist={handleJoinWaitlist}
+      />
+    );
+  }
+
+  if (page === "waitlist-signup") {
+    return (
+      <WaitlistSignupPage
+        results={rawResults}
+        onComplete={handleWaitlistComplete}
+      />
+    );
+  }
+
+  if (page === "welcome") {
+    return (
+      <WelcomePage
+        signupInfo={signupInfo}
+        results={rawResults}
+      />
+    );
+  }
+
   return null;
 }
