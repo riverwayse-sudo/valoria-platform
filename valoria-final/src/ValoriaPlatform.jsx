@@ -95,7 +95,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 // ── CONFIG — fill these in ────────────────────────────────────────────────
 const SUPABASE_URL      = "https://sbkgpisgkuhbalsxqkdr.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_qQGMH7up2CqrRH8TsEe7LQ_t2u48c6e";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNia2dwaXNna3VoYmFsc3hxa2RyIiwicm9sZSI6ImFub24iLCJpYXQiOj";
 
 // ── SUPABASE CLIENT ───────────────────────────────────────────────────────
 const sb = {
