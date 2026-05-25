@@ -623,7 +623,7 @@ function AuthPage({onAuth}) {
         else { setError("Failed to reset password. Please try again."); }
       }
     } catch(e) {
-      setError("Something went wrong. Please try again.");
+      setError(e?.message || "Something went wrong. Please try again.");
     }
     setLoading(false);
   }
@@ -1135,7 +1135,7 @@ function WaitlistSignupPage({ results, onComplete }) {
 
       // Sign up with Supabase
       const d = await sb.signUp(email, password, { full_name: fullName, role, waitlist_type: type, organisation: org });
-      if (d.error || d.msg) { setError(d.msg || d.error?.message || "Signup failed. Please try again."); setLoading(false); return; }
+      if (d.error || d.msg) {ading(false); return; }
 
       const userId = d.user?.id || sb.userId;
       if (userId) {
@@ -1168,7 +1168,7 @@ function WaitlistSignupPage({ results, onComplete }) {
 
       onComplete({ email, fullName, type });
     } catch (e) {
-      setError("Something went wrong. Please try again.");
+      setError(e?.message || "Something went wrong. Please try again.");
     }
     setLoading(false);
   }
