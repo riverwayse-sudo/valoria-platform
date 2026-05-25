@@ -52,7 +52,7 @@
  *
  * ─────────────────────────────────────────────────────────────
  * SUPABASE EDGE FUNCTION — create at:
- * Supabase Dashboard → Edge Functions → New Function → "send-email"
+ * Supabase Dashboard → Edge Functions → New Function → "send-welcome-email"
  *
  * import { Resend } from "npm:resend@2.0.0";
  * const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -581,7 +581,7 @@ function AuthPage({onAuth}) {
         if (d.user?.id || sb.userId) {
           await sb.upsert("profiles", { id: d.user?.id||sb.userId, full_name:fullName, role });
         }
-        await sb.invokeFunction("send-email", { type:"welcome", to:email, name:fullName });
+        await sb.invokeFunction("send-welcome-email", { type:"welcome", to:email, name:fullName });
         if (d.access_token) { onAuth({...d.user, full_name:fullName, role}); }
         else setDone(true);
 
@@ -1156,10 +1156,10 @@ function WaitlistSignupPage({ results, onComplete }) {
         });
 
         // Send welcome email
-        await sb.invokeFunction("send-email", { type: "welcome", to: email, name: fullName });
+        await sb.invokeFunction("send-welcome-email", { type: "welcome", to: email, name: fullName });
 
         // Send results email (with score summary, no full AI report yet)
-        await sb.invokeFunction("send-email", {
+        await sb.invokeFunction("send-welcome-email", {
           type: "results", to: email, name: fullName,
           valu_index: results.valuIndex, designation: results.desig?.name,
           report_url: "https://valoriainstitute.com/waitlist",
