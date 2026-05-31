@@ -1,9 +1,26 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { createClient } from "@supabase/supabase-js";
-const supabase = createClient(
-  "https://sbkgpisgkuhbalsxqkdr.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNia2dwaXNna3VoYmFsc3hxa2RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMjI2NjEsImV4cCI6MjA5Mzg5ODY2MX0.iRPs_W6O6JkkHyVlH-9XkEgA1HNo8xtaMakoV5kwLEY"
-);
+const SUPABASE_URL = "https://sbkgpisgkuhbalsxqkdr.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNia2dwaXNna3VoYmFsc3hxa2RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMjI2NjEsImV4cCI6MjA5Mzg5ODY2MX0.iRPs_W6O6JkkHyVlH-9XkEgA1HNo8xtaMakoV5kwLEY";
+async function saveToSupabase(data) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Supabase save error:", err);
+    }
+  } catch(e) {
+    console.error("Supabase save failed:", e);
+  }
+}
 const GOLD = "#C9A84C";
 const DARK = "#1A1A2E";
 const MID  = "#2E2E4A";
@@ -992,6 +1009,11 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
   const reportRef = useRef(null);
   // Retake modal state
   const [showRetakeModal, setShowRetakeModal] = useState(false);
+  const [signupEmail, setSignupEmail]         = useState("");
+  const [signupPassword, setSignupPassword]   = useState("");
+  const [signupError, setSignupError]         = useState("");
+  const [signupLoading, setSignupLoading]     = useState(false);
+  const [signupDone, setSignupDone]           = useState(false);
   // Expiry check — is this assessment still valid?
   const assessmentIsLocked = assessmentExpiresAt
     ? new Date() < new Date(assessmentExpiresAt)
@@ -1070,24 +1092,16 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
       setReportStatus("complete");
 
       // Save assessment to Supabase
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        const userId = userData?.user?.id;
-        const { error: saveError } = await supabase.from("valu_assessments").insert({
-          user_id: userId || null,
-          total_score: scoreProfile.valuIndex ?? 0,
-          designation: scoreProfile.desig ?? "",
-          completed_at: new Date().toISOString(),
-          ai_report: fullText,
-          name: name,
-          role: role,
-          cluster_scores: scoreProfile.clusterScores ?? {},
-          skill_scores: scoreProfile.skillScores ?? {},
-        });
-        if (saveError) console.error("Supabase save error:", saveError);
-      } catch (e) {
-        console.error("Supabase save failed:", e);
-      }
+      await saveToSupabase({
+        total_score: scoreProfile.valuIndex ?? 0,
+        designation: scoreProfile.desig ?? "",
+        completed_at: new Date().toISOString(),
+        ai_report: fullText,
+        name: name,
+        role: role,
+        cluster_scores: scoreProfile.clusterScores ?? {},
+        skill_scores: scoreProfile.skillScores ?? {},
+      });
 
       // NOTE: name & role collected at intro — do NOT re-ask in downstream signup form
       if (onComplete) {
@@ -1790,13 +1804,77 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
               </div>
               {/* CTAs */}
               <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:24}}>
-                <div onClick={() => onComplete && onComplete({ name, role, ...results, reportText })} /* name+role already known — signup only needs email */
-                  style={{padding:"20px 28px",background:GOLD,borderRadius:3,textAlign:"center",cursor:"pointer"}}
-                  onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
-                  onMouseLeave={e=>e.currentTarget.style.background=GOLD}>
-                  <div style={{fontSize:12,fontWeight:700,color:DARK,letterSpacing:"0.16em",marginBottom:4}}>COMPLETE YOUR PROFILE</div>
-                  <div style={{fontSize:12,color:"rgba(26,26,46,0.6)"}}>Enter your email — name and role are already saved</div>
-                </div>
+                {signupDone ? (
+                  <div style={{padding:"24px",background:"rgba(29,158,117,0.08)",border:"1px solid rgba(29,158,117,0.3)",borderRadius:8,textAlign:"center"}}>
+                    <div style={{fontSize:14,color:"#1D9E75",fontWeight:600,marginBottom:8}}>✓ Account Created</div>
+                    <div style={{fontSize:13,color:"rgba(247,244,238,0.5)"}}>Your AI report has been sent to {signupEmail}</div>
+                  </div>
+                ) : (
+                  <div style={{background:"rgba(22,22,36,0.7)",border:"1px solid rgba(201,168,76,0.12)",borderRadius:12,padding:"24px"}}>
+                    <div style={{fontSize:11,fontWeight:600,color:"rgba(201,168,76,0.6)",letterSpacing:"0.14em",marginBottom:16}}>CREATE YOUR ACCOUNT</div>
+                    <div style={{fontSize:12,color:"rgba(247,244,238,0.4)",marginBottom:20}}>Signed in as <strong style={{color:PARCHMENT}}>{name}</strong> · {role}</div>
+                    <div style={{marginBottom:12}}>
+                      <input
+                        type="email"
+                        placeholder="Email address"
+                        value={signupEmail}
+                        onChange={e=>setSignupEmail(e.target.value)}
+                        style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1.5px solid rgba(247,244,238,0.1)",borderRadius:8,padding:"14px 16px",color:PARCHMENT,fontSize:15,outline:"none",fontFamily:"'DM Sans',sans-serif",boxSizing:"border-box"}}
+                      />
+                    </div>
+                    <div style={{marginBottom:16}}>
+                      <input
+                        type="password"
+                        placeholder="Create password"
+                        value={signupPassword}
+                        onChange={e=>setSignupPassword(e.target.value)}
+                        style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1.5px solid rgba(247,244,238,0.1)",borderRadius:8,padding:"14px 16px",color:PARCHMENT,fontSize:15,outline:"none",fontFamily:"'DM Sans',sans-serif",boxSizing:"border-box"}}
+                      />
+                    </div>
+                    {signupError && <div style={{fontSize:12,color:"#D85A30",marginBottom:12}}>{signupError}</div>}
+                    <button
+                      onClick={async () => {
+                        if (!signupEmail || !signupPassword) { setSignupError("Please enter your email and password."); return; }
+                        if (signupPassword.length < 6) { setSignupError("Password must be at least 6 characters."); return; }
+                        setSignupLoading(true); setSignupError("");
+                        try {
+                          // 1. Create Supabase auth account
+                          const authRes = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+                            method:"POST",
+                            headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY},
+                            body:JSON.stringify({email:signupEmail,password:signupPassword,data:{full_name:name,role}})
+                          });
+                          const authData = await authRes.json();
+                          if (!authRes.ok) throw new Error(authData.msg || authData.error_description || "Signup failed");
+                          // 2. Save assessment
+                          await saveToSupabase({
+                            total_score: results?.valuIndex ?? 0,
+                            designation: results?.desig ?? "",
+                            completed_at: new Date().toISOString(),
+                            ai_report: reportText,
+                            name, role,
+                            email: signupEmail,
+                            cluster_scores: results?.clusterScores ?? {},
+                            skill_scores: results?.skillScores ?? {},
+                          });
+                          // 3. Send welcome email via Resend API route
+                          await fetch("/api/send-email", {
+                            method:"POST",
+                            headers:{"Content-Type":"application/json"},
+                            body:JSON.stringify({email:signupEmail,name,role,report:reportText,score:results?.valuIndex,designation:results?.desig})
+                          });
+                          setSignupDone(true);
+                          if (onComplete) onComplete({name,role,...results,reportText,email:signupEmail});
+                        } catch(e) {
+                          setSignupError(e.message || "Something went wrong. Please try again.");
+                        } finally { setSignupLoading(false); }
+                      }}
+                      style={{width:"100%",padding:"16px",background:signupLoading?"rgba(201,168,76,0.4)":GOLD,border:"none",borderRadius:8,color:DARK,fontSize:12,fontWeight:700,letterSpacing:"0.16em",cursor:signupLoading?"wait":"pointer",fontFamily:"'DM Sans',sans-serif"}}
+                    >
+                      {signupLoading ? "CREATING ACCOUNT..." : "SECURE MY PLACE →"}
+                    </button>
+                  </div>
+                )}
                 <button onClick={requestRetake}
                   style={{padding:"15px 28px",background:"transparent",border:"1px solid rgba(201,168,76,0.15)",
                     borderRadius:3,color:"rgba(247,244,238,0.3)",fontSize:11,letterSpacing:"0.14em",cursor:"pointer",fontFamily:"sans-serif"}}>
