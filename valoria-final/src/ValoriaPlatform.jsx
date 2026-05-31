@@ -1050,72 +1050,10 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
   });
   // ── AI REPORT GENERATOR ────────────────────────────────────────────────
   async function generateAIReport(scoreProfile) {
-    setReportStatus("generating");
-    setReportText("");
-    try {
-      const response = await fetch("/api/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildReportPrompt(scoreProfile) })
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || "API request failed");
-      }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullText = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
-              fullText += parsed.delta.text;
-              setReportText(fullText);
-              // Auto-scroll as report generates
-              if (reportRef.current) {
-                reportRef.current.scrollTop = reportRef.current.scrollHeight;
-              }
-            }
-          } catch {}
-        }
-      }
-      setReportStatus("complete");
-
-      // Save assessment to Supabase
-      await saveToSupabase({
-        total_score: scoreProfile.valuIndex ?? 0,
-        designation: scoreProfile.desig ?? "",
-        completed_at: new Date().toISOString(),
-        ai_report: fullText,
-        name: name,
-        role: role,
-        cluster_scores: scoreProfile.clusterScores ?? {},
-        skill_scores: scoreProfile.skillScores ?? {},
-      });
-
-      // NOTE: name & role collected at intro — do NOT re-ask in downstream signup form
-      if (onComplete) {
-        onComplete({
-          name, role, ...scoreProfile,
-          reportText: fullText,
-          promptVersion: PROMPT_VERSION,
-          completedAt: new Date().toISOString()
-        });
-      }
-    } catch (err) {
-      console.error("Report generation failed:", err);
-      setReportError(err.message);
-      setReportStatus("error");
+    // AI report is generated server-side on signup and emailed — just show scores now
+    setReportStatus("complete");
+    if (onComplete) {
+      onComplete({ name, role, ...scoreProfile, promptVersion: PROMPT_VERSION, completedAt: new Date().toISOString() });
     }
   }
   function handleSelect(optIdx) {
@@ -1748,46 +1686,13 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
         </div>
         {/* ── REPORT BODY ── */}
         <div ref={reportRef} style={{maxWidth:680,margin:"0 auto",padding:"32px 24px 80px"}}>
-          {/* Generating indicator */}
-          {isGenerating && (
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:28,padding:"14px 18px",background:"rgba(201,168,76,0.06)",border:"1px solid rgba(201,168,76,0.15)",borderRadius:6}}>
-              <div style={{display:"flex",gap:4}}>
-                {[0,1,2].map(i => (
-                  <div key={i} style={{
-                    width:6,height:6,borderRadius:"50%",background:GOLD,
-                    animation:`pulse 1.4s ease-in-out ${i*0.2}s infinite`,
-                  }}/>
-                ))}
-              </div>
-              <div style={{fontSize:12,color:"rgba(201,168,76,0.7)",letterSpacing:"0.08em"}}>
-                {reportText.length === 0
-                  ? "Analysing your profile..."
-                  : "Writing your report..."}
-              </div>
-            </div>
-          )}
-          {/* Error state */}
-          {isError && (
-            <div style={{padding:"20px 24px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.3)",borderRadius:6,marginBottom:24}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#D85A30",letterSpacing:"0.1em",marginBottom:8}}>REPORT GENERATION FAILED</div>
-              <p style={{fontSize:13,color:"rgba(247,244,238,0.5)",lineHeight:1.7,marginBottom:16}}>
-                {reportError || "An error occurred while generating your report. Your score has been saved."}
-              </p>
-              <p style={{fontSize:12,color:"rgba(247,244,238,0.4)",lineHeight:1.7,margin:0}}>
-                Your VALU Index is <strong style={{color:GOLD}}>{valuIndex}/100</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact hello@valoriainstituteafrica.com to receive your full report.
-              </p>
-            </div>
-          )}
-          {/* Streamed report content */}
-          {reportText && (
-            <div style={{lineHeight:1}}>
-              {renderReport(reportText)}
-            </div>
-          )}
-          {/* Cursor animation while streaming */}
-          {isGenerating && reportText.length > 0 && (
-            <span style={{display:"inline-block",width:2,height:16,background:GOLD,marginLeft:2,animation:"blink 1s step-end infinite",verticalAlign:"text-bottom"}}/>
-          )}
+          {/* Email report notice */}
+          <div style={{padding:"20px 24px",background:"rgba(201,168,76,0.06)",border:"1px solid rgba(201,168,76,0.15)",borderRadius:8,marginBottom:24}}>
+            <div style={{fontSize:11,fontWeight:700,color:"rgba(201,168,76,0.8)",letterSpacing:"0.12em",marginBottom:8}}>✦ YOUR AI REPORT</div>
+            <p style={{fontSize:13,color:"rgba(247,244,238,0.6)",lineHeight:1.75,margin:0}}>
+              Your personalised AI report will be generated and sent to your email when you create your account below. It covers your strengths, gaps, and recommended next steps.
+            </p>
+          </div>
           {/* Platform status — shown after report completes */}
           {isComplete && (
             <>
@@ -1857,11 +1762,24 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
                             cluster_scores: results?.clusterScores ?? {},
                             skill_scores: results?.skillScores ?? {},
                           });
-                          // 3. Send welcome email via Resend API route
+                          // 3. Generate AI report + send welcome email via API route
                           await fetch("/api/send-email", {
                             method:"POST",
                             headers:{"Content-Type":"application/json"},
-                            body:JSON.stringify({email:signupEmail,name,role,report:reportText,score:results?.valuIndex,designation:results?.desig})
+                            body:JSON.stringify({
+                              email:signupEmail,
+                              name,
+                              role,
+                              score:results?.valuIndex,
+                              designation:results?.desig,
+                              clusterScores:results?.clusterScores,
+                              skillScores:results?.skillScores,
+                              listed:results?.listed,
+                              futureReadyScore:results?.futureReadyScore,
+                              strongest:results?.strongest,
+                              weakest:results?.weakest,
+                              prompt: buildReportPrompt({name, role, ...results})
+                            })
                           });
                           setSignupDone(true);
                           if (onComplete) onComplete({name,role,...results,reportText,email:signupEmail});
