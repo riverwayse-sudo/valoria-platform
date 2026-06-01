@@ -41,7 +41,7 @@ const DESIGNATIONS = [
   { min:65, name:"Emerging Force",         color:"#378ADD", bg:"rgba(55,138,221,0.10)",  desc:"Strong foundations with clear areas of excellence. You are on the trajectory — deliberate development will complete the picture." },
   { min:50, name:"Developing Professional",color:"#1D9E75", bg:"rgba(29,158,117,0.10)",  desc:"Genuine capability with uneven development. Your PRIME pathway is shown on your profile." },
   { min:35, name:"Building Foundations",   color:"#BA7517", bg:"rgba(186,117,23,0.10)",  desc:"Early-stage professional architecture. A PRIME Sprint is your recommended next step." },
-  { min:0,  name:"At the Starting Point",  color:"#888888", bg:"rgba(136,136,136,0.10)", desc:"Not yet listed on the candidate platform. Complete a PRIME Sprint to qualify for listing." },
+  { min:0,  name:"At the Starting Point",  color:"rgba(247,244,238,0.3)", bg:"rgba(247,244,238,0.05)", desc:"Not yet listed on the candidate platform. Complete a PRIME Sprint to qualify for listing." },
 ];
 // ── QUESTION BANK — VERSION 3 ──────────────────────────────────────────────
 // ALL FIXES APPLIED:
@@ -1163,16 +1163,75 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
           ))}
         </div>
 
-        {/* ── SINGLE COLUMN SCROLL LAYOUT ── */}
-        <div style={{
+        {/* ── TWO COLUMN DESKTOP / SINGLE COLUMN MOBILE LAYOUT ── */}
+        <style>{`
+          @media (min-width: 900px) {
+            .vi-intro-wrap { max-width:1200px !important; flex-direction:row !important; align-items:flex-start !important; gap:64px !important; padding:72px 48px !important; }
+            .vi-intro-left { flex:1.2 !important; display:block !important; }
+            .vi-intro-right { flex:1 !important; position:sticky !important; top:40px !important; }
+            .vi-mobile-only { display:none !important; }
+          }
+          @media (max-width: 899px) {
+            .vi-intro-left { display:none !important; }
+          }
+        `}</style>
+        <div className="vi-intro-wrap" style={{
           position:"relative", zIndex:1,
           maxWidth:520, margin:"0 auto",
           padding:"clamp(48px,10vw,72px) 20px clamp(40px,8vw,64px)",
           display:"flex", flexDirection:"column", gap:0,
         }}>
+        {/* LEFT COLUMN — desktop only */}
+        <div className="vi-intro-left" style={{display:"none"}}> 
+          {/* Wordmark */}
+          <div style={{marginBottom:48}}>
+            <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:32,fontWeight:600,color:GOLD,letterSpacing:"0.2em",lineHeight:1,marginBottom:3}}>VALORIA</div>
+            <div style={{fontSize:9,color:"rgba(201,168,76,0.4)",letterSpacing:"0.3em"}}>INSTITUTE</div>
+          </div>
+          {/* Badge */}
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 12px",background:"rgba(201,168,76,0.08)",border:"1px solid rgba(201,168,76,0.2)",borderRadius:100,marginBottom:24}}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:GOLD,animation:"pulseGold 2.5s ease infinite"}}/>
+            <span style={{fontSize:9,fontWeight:600,color:GOLD,letterSpacing:"0.2em"}}>FOUNDING COHORT — NOW OPEN</span>
+          </div>
+          {/* Headline */}
+          <h1 style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:"clamp(52px,5vw,72px)",fontWeight:300,lineHeight:0.95,letterSpacing:"-0.025em",color:PARCHMENT,margin:"0 0 24px"}}>
+            Know exactly<br/>where you <em style={{fontStyle:"italic",color:GOLD}}>stand.</em>
+          </h1>
+          <p style={{fontSize:17,fontWeight:300,color:"rgba(247,244,238,0.5)",lineHeight:1.75,margin:"0 0 48px",maxWidth:480}}>
+            55 questions across five PRIME clusters. Designed to surface what you genuinely do — not what you aspire to do.
+          </p>
+          {/* Stats */}
+          <div style={{display:"flex",gap:0,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:8,overflow:"hidden",marginBottom:48,maxWidth:420}}>
+            {[{label:"Questions",val:"55"},{label:"Minutes",val:"18–28"},{label:"Always",val:"Free"}].map((s,i)=>(
+              <div key={i} style={{flex:1,padding:"20px 8px",textAlign:"center",borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none"}}>
+                <div style={{fontSize:22,fontWeight:700,color:GOLD,lineHeight:1,fontFamily:"'Cormorant Garamond',Georgia,serif"}}>{s.val}</div>
+                <div style={{fontSize:10,color:"rgba(247,244,238,0.3)",marginTop:5,letterSpacing:"0.08em"}}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {/* PRIME Clusters */}
+          <div style={{marginBottom:8}}>
+            <div style={{fontSize:9,color:"rgba(201,168,76,0.35)",letterSpacing:"0.18em",marginBottom:16}}>WHAT IS ASSESSED</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {CLUSTERS.map((c,i)=>(
+                <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"rgba(255,255,255,0.02)",border:`1px solid ${c.color}20`,borderRadius:8}}>
+                  <div style={{width:34,height:34,borderRadius:6,background:`${c.color}15`,border:`1px solid ${c.color}35`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:c.color,flexShrink:0}}>{c.id}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:14,color:PARCHMENT,fontWeight:500}}>{c.name}</div>
+                    <div style={{fontSize:12,color:"rgba(247,244,238,0.3)",fontStyle:"italic"}}>{c.theme}</div>
+                  </div>
+                  <div style={{fontSize:11,color:`${c.color}70`,letterSpacing:"0.06em",fontFamily:"'DM Mono',monospace"}}>{Math.round(c.weight*100)}%</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
-          {/* WORDMARK */}
-          <div style={{marginBottom:32, animation:"fadeUp 0.7s ease 0.05s both"}}>
+        {/* RIGHT COLUMN — form (always visible) */}
+        <div className="vi-intro-right">
+
+          {/* WORDMARK — mobile only */}
+          <div className="vi-mobile-only" style={{marginBottom:32, animation:"fadeUp 0.7s ease 0.05s both"}}>
             <div style={{
               fontFamily:"'Cormorant Garamond',Georgia,serif",
               fontSize:28, fontWeight:600, color:GOLD,
@@ -1184,8 +1243,8 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
             }}>INSTITUTE</div>
           </div>
 
-          {/* HERO HEADLINE */}
-          <div style={{marginBottom:16, animation:"fadeUp 0.8s ease 0.15s both"}}>
+          {/* HERO HEADLINE — mobile only */}
+          <div className="vi-mobile-only" style={{marginBottom:16, animation:"fadeUp 0.8s ease 0.15s both"}}>
             <div style={{
               display:"inline-flex", alignItems:"center", gap:8,
               padding:"5px 12px",
@@ -1216,8 +1275,8 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
             </p>
           </div>
 
-          {/* QUICK STATS ROW */}
-          <div style={{
+          {/* QUICK STATS ROW — mobile only */}
+          <div className="vi-mobile-only" style={{
             display:"flex", gap:0,
             margin:"24px 0 32px",
             background:"rgba(255,255,255,0.025)",
@@ -1351,6 +1410,10 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
                 Enter your name and role to continue
               </p>
             )}
+            <p style={{textAlign:"center",fontSize:11,color:"rgba(247,244,238,0.2)",marginTop:16,lineHeight:1.5}}>
+              Already have an account?{" "}
+              <a href="https://valoriainstitute.com/login" style={{color:"rgba(201,168,76,0.6)",textDecoration:"none"}}>Sign in</a>
+            </p>
           </div>
 
           {/* INSTRUCTION NOTE */}
@@ -1408,7 +1471,7 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
             </div>
           </div>
 
-          {/* DESIGNATIONS */}
+          {/* DESIGNATIONS — hidden on desktop left col since already shown */}
           <div style={{
             marginTop:28,
             animation:"fadeUp 0.8s ease 0.7s both",
@@ -1476,13 +1539,15 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
           input::placeholder { color: rgba(247,244,238,0.2) !important; }
           * { -webkit-tap-highlight-color: transparent; }
         `}</style>
+        </div>{/* end right column */}
+        </div>{/* end two-col wrapper */}
       </div>
     );
   }
   // ── ASSESSMENT SCREEN ──────────────────────────────────────────────────
   if (phase === "assessing") {
     return (
-      <div style={{minHeight:"100vh",background:DARK,display:"flex",flexDirection:"column",fontFamily:"sans-serif"}}>
+      <div style={{minHeight:"100vh",background:DARK,display:"flex",flexDirection:"column",fontFamily:"'DM Sans',sans-serif"}}>
         <div style={{position:"fixed",top:0,left:0,right:0,height:3,background:"rgba(255,255,255,0.06)",zIndex:50}}>
           <div style={{height:"100%",width:`${progress}%`,background:GOLD,transition:"width 0.4s ease"}}/>
         </div>
@@ -1629,7 +1694,7 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
       return elements;
     }
     return (
-      <div style={{minHeight:"100vh",background:DARK,fontFamily:"sans-serif"}}>
+      <div style={{minHeight:"100vh",background:DARK,fontFamily:"'DM Sans',sans-serif"}}>
         {/* ── SCORE HEADER — always visible ── */}
         <div style={{background:MID,borderBottom:"1px solid rgba(201,168,76,0.12)",padding:"32px 24px 28px",position:"sticky",top:0,zIndex:10}}>
           <div style={{maxWidth:680,margin:"0 auto"}}>
@@ -1696,9 +1761,9 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
           {/* Platform status — shown after report completes */}
           {isComplete && (
             <>
-              <div style={{marginTop:32,padding:"20px 24px",background:listed?"rgba(29,158,117,0.08)":"rgba(136,136,136,0.08)",
+              <div style={{marginTop:32,padding:"20px 24px",background:listed?"rgba(29,158,117,0.08)":"rgba(247,244,238,0.04)",
                 border:`1px solid ${listed?"rgba(29,158,117,0.3)":"rgba(136,136,136,0.25)"}`,borderRadius:6}}>
-                <div style={{fontSize:11,fontWeight:700,color:listed?"#1D9E75":"#888888",letterSpacing:"0.12em",marginBottom:8}}>
+                <div style={{fontSize:11,fontWeight:700,color:listed?"#1D9E75":"rgba(247,244,238,0.3)",letterSpacing:"0.12em",marginBottom:8}}>
                   {listed ? "LISTED — YOUR PROFILE IS SEARCHABLE" : "NOT YET LISTED — SCORE BELOW 35"}
                 </div>
                 <p style={{fontSize:13,color:"rgba(247,244,238,0.55)",lineHeight:1.75,margin:0}}>
@@ -1712,7 +1777,8 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
                 {signupDone ? (
                   <div style={{padding:"24px",background:"rgba(29,158,117,0.08)",border:"1px solid rgba(29,158,117,0.3)",borderRadius:8,textAlign:"center"}}>
                     <div style={{fontSize:14,color:"#1D9E75",fontWeight:600,marginBottom:8}}>✓ Account Created</div>
-                    <div style={{fontSize:13,color:"rgba(247,244,238,0.5)"}}>Your AI report has been sent to {signupEmail}</div>
+                    <div style={{fontSize:13,color:"rgba(247,244,238,0.5)",marginBottom:16}}>Your AI report has been sent to {signupEmail}</div>
+                    <a href="https://valoriainstitute.com/profile-page" style={{display:"inline-block",padding:"12px 24px",background:GOLD,color:DARK,borderRadius:4,fontSize:11,fontWeight:700,letterSpacing:"0.14em",textDecoration:"none"}}>VIEW MY PROFILE →</a>
                   </div>
                 ) : (
                   <div style={{background:"rgba(22,22,36,0.7)",border:"1px solid rgba(201,168,76,0.12)",borderRadius:12,padding:"24px"}}>
@@ -1736,7 +1802,10 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
                         style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1.5px solid rgba(247,244,238,0.1)",borderRadius:8,padding:"14px 16px",color:PARCHMENT,fontSize:15,outline:"none",fontFamily:"'DM Sans',sans-serif",boxSizing:"border-box"}}
                       />
                     </div>
-                    {signupError && <div style={{fontSize:12,color:"#D85A30",marginBottom:12}}>{signupError}</div>}
+                    {signupError && <div style={{fontSize:12,color:"#D85A30",marginBottom:12,padding:"10px 14px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.2)",borderRadius:6}}>{signupError}</div>}
+                    <p style={{fontSize:10,color:"rgba(247,244,238,0.2)",lineHeight:1.6,marginBottom:12}}>
+                      Your data is protected under the Nigeria Data Protection Act 2023. We never share your information with third parties.
+                    </p>
                     <button
                       onClick={async () => {
                         if (!signupEmail || !signupPassword) { setSignupError("Please enter your email and password."); return; }
@@ -1754,7 +1823,7 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
                           // 2. Save assessment
                           await saveToSupabase({
                             total_score: results?.valuIndex ?? 0,
-                            designation: results?.desig ?? "",
+                            designation: results?.desig?.name ?? "",
                             completed_at: new Date().toISOString(),
                             ai_report: reportText,
                             name, role,
@@ -1783,13 +1852,22 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
                           });
                           setSignupDone(true);
                           if (onComplete) onComplete({name,role,...results,reportText,email:signupEmail});
+                          // Redirect to profile page after 2 seconds
+                          setTimeout(() => {
+                            window.location.href = "https://valoriainstitute.com/profile-page";
+                          }, 2000);
                         } catch(e) {
                           setSignupError(e.message || "Something went wrong. Please try again.");
                         } finally { setSignupLoading(false); }
                       }}
                       style={{width:"100%",padding:"16px",background:signupLoading?"rgba(201,168,76,0.4)":GOLD,border:"none",borderRadius:8,color:DARK,fontSize:12,fontWeight:700,letterSpacing:"0.16em",cursor:signupLoading?"wait":"pointer",fontFamily:"'DM Sans',sans-serif"}}
                     >
-                      {signupLoading ? "CREATING ACCOUNT..." : "SECURE MY PLACE →"}
+                      {signupLoading ? (
+                        <span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                          <span style={{width:12,height:12,border:"2px solid rgba(26,26,46,0.3)",borderTopColor:DARK,borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite"}}/>
+                          CREATING ACCOUNT...
+                        </span>
+                      ) : "SECURE MY PLACE →"}
                     </button>
                   </div>
                 )}
@@ -1888,6 +1966,7 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
             0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
             40% { opacity: 1; transform: scale(1); }
           }
+          @keyframes spin { to { transform: rotate(360deg); } }
           @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0; }
