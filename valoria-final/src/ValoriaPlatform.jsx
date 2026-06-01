@@ -1877,6 +1877,88 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
                   RETAKE ASSESSMENT
                 </button>
               </div>
+
+              {/* ── WAITLIST CTA ── */}
+              <div style={{
+                marginTop:40,
+                background:"rgba(201,168,76,0.04)",
+                border:"1px solid rgba(201,168,76,0.15)",
+                borderRadius:12,
+                padding:"32px 28px",
+                textAlign:"center",
+              }}>
+                <div style={{
+                  display:"inline-flex",alignItems:"center",gap:8,
+                  padding:"4px 12px",background:"rgba(201,168,76,0.08)",
+                  border:"1px solid rgba(201,168,76,0.2)",borderRadius:100,
+                  marginBottom:16,
+                }}>
+                  <div style={{width:6,height:6,borderRadius:"50%",background:GOLD,animation:"pulseGold 2.5s ease infinite"}}/>
+                  <span style={{fontSize:9,fontWeight:600,color:GOLD,letterSpacing:"0.2em"}}>FOUNDING COHORT — NOW OPEN</span>
+                </div>
+                <h3 style={{
+                  fontFamily:"'Cormorant Garamond',Georgia,serif",
+                  fontSize:"clamp(24px,5vw,32px)",
+                  fontWeight:300,color:"#F7F4EE",
+                  lineHeight:1.15,margin:"0 0 12px",
+                }}>
+                  Your score is {valuIndex}.<br/>
+                  <em style={{fontStyle:"italic",color:GOLD}}>Now make it count.</em>
+                </h3>
+                <p style={{
+                  fontSize:14,color:"rgba(247,244,238,0.5)",
+                  lineHeight:1.75,margin:"0 0 24px",
+                  maxWidth:420,marginLeft:"auto",marginRight:"auto",
+                }}>
+                  Valoria is building Africa's first merit-based professional marketplace. Join the Founding Cohort — be among the first professionals listed when the platform opens.
+                </p>
+                <a
+                  href="https://valoriainstitute.com/waitlist"
+                  style={{
+                    display:"inline-block",
+                    padding:"16px 36px",
+                    background:GOLD,
+                    color:"#1A1A2E",
+                    fontSize:12,fontWeight:700,
+                    letterSpacing:"0.16em",
+                    borderRadius:4,
+                    textDecoration:"none",
+                    transition:"background 0.2s",
+                  }}
+                  onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
+                  onMouseLeave={e=>e.currentTarget.style.background=GOLD}
+                >
+                  JOIN THE FOUNDING COHORT →
+                </a>
+                <p style={{
+                  fontSize:11,color:"rgba(247,244,238,0.2)",
+                  marginTop:16,lineHeight:1.6,
+                }}>
+                  Free to join. No commitment. Your VALU score is valid for 12 months.
+                </p>
+              </div>
+
+              {/* ── TIMESTAMP ── */}
+              <div style={{
+                marginTop:24,
+                padding:"14px 18px",
+                background:"rgba(255,255,255,0.02)",
+                border:"1px solid rgba(255,255,255,0.05)",
+                borderRadius:6,
+                display:"flex",
+                alignItems:"center",
+                justifyContent:"space-between",
+                flexWrap:"wrap",
+                gap:8,
+              }}>
+                <div style={{fontSize:10,color:"rgba(247,244,238,0.2)",letterSpacing:"0.08em"}}>
+                  VALU INDEX v4.0 · PRIME FRAMEWORK · VALORIA INSTITUTE
+                </div>
+                <div style={{fontSize:10,color:"rgba(247,244,238,0.2)",fontFamily:"'DM Mono',monospace",letterSpacing:"0.06em"}}>
+                  Assessed: {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})} · {new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})} · Valid 12 months
+                </div>
+              </div>
+
               {/* ── RETAKE MODAL ── */}
               {showRetakeModal && (
                 <div style={{
