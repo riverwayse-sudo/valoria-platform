@@ -1176,10 +1176,6 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
         </div>
 
         {/* ── TWO COLUMN DESKTOP / SINGLE COLUMN MOBILE LAYOUT ── */}
-        {(() => {
-          const isDesktop = typeof window !== "undefined" && isDesktop;
-          return null;
-        })()}
         <div style={{
           position:"relative", zIndex:1,
           maxWidth: isDesktop ? 1200 : 520,
