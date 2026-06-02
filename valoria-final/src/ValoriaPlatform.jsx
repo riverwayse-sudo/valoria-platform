@@ -23,6 +23,16 @@ async function saveToSupabase(data) {
 }
 const GOLD = "#C9A84C";
 const DARK = "#1A1A2E";
+
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return width;
+}
 const MID  = "#2E2E4A";
 const PARCHMENT = "#F7F4EE";
 const ACCENT = "#EDE8DC";
@@ -990,6 +1000,8 @@ Write the complete report now. Start directly with ## YOUR SCORE. No introductio
 //                            Pass from your auth/dashboard for hard launch.
 //                            Omit for soft launch testing.
 export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
+  const winWidth = useWindowWidth();
+  const isDesktop = winWidth >= 900;
   const [phase, setPhase]           = useState("intro");
   const [currentQ, setCurrentQ]     = useState(0);
   const [answers, setAnswers]       = useState({});
@@ -1164,25 +1176,25 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
         </div>
 
         {/* ── TWO COLUMN DESKTOP / SINGLE COLUMN MOBILE LAYOUT ── */}
-        <style>{`
-          @media (min-width: 900px) {
-            .vi-intro-wrap { max-width:1200px !important; flex-direction:row !important; align-items:flex-start !important; gap:64px !important; padding:72px 48px !important; }
-            .vi-intro-left { flex:1.2 !important; display:block !important; }
-            .vi-intro-right { flex:1 !important; position:sticky !important; top:40px !important; }
-            .vi-mobile-only { display:none !important; }
-          }
-          @media (max-width: 899px) {
-            .vi-intro-left { display:none !important; }
-          }
-        `}</style>
-        <div className="vi-intro-wrap" style={{
+        {(() => {
+          const isDesktop = typeof window !== "undefined" && isDesktop;
+          return null;
+        })()}
+        <div style={{
           position:"relative", zIndex:1,
-          maxWidth:520, margin:"0 auto",
-          padding:"clamp(48px,10vw,72px) 20px clamp(40px,8vw,64px)",
-          display:"flex", flexDirection:"column", gap:0,
+          maxWidth: isDesktop ? 1200 : 520,
+          margin:"0 auto",
+          padding: isDesktop ? "72px 48px" : "clamp(48px,10vw,72px) 20px clamp(40px,8vw,64px)",
+          display:"flex",
+          flexDirection: isDesktop ? "row" : "column",
+          alignItems: isDesktop ? "flex-start" : "stretch",
+          gap: isDesktop ? 64 : 0,
         }}>
         {/* LEFT COLUMN — desktop only */}
-        <div className="vi-intro-left" style={{display:"none"}}> 
+        <div style={{
+          display: isDesktop ? "block" : "none",
+          flex: "1.2",
+        }}> 
           {/* Wordmark */}
           <div style={{marginBottom:48}}>
             <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:32,fontWeight:600,color:GOLD,letterSpacing:"0.2em",lineHeight:1,marginBottom:3}}>VALORIA</div>
@@ -1228,10 +1240,10 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
         </div>
 
         {/* RIGHT COLUMN — form (always visible) */}
-        <div className="vi-intro-right">
+        <div style={{flex: isDesktop ? "1" : "unset", position: isDesktop ? "sticky" : "static", top: isDesktop ? 40 : "auto"}}>
 
           {/* WORDMARK — mobile only */}
-          <div className="vi-mobile-only" style={{marginBottom:32, animation:"fadeUp 0.7s ease 0.05s both"}}>
+          <div style={{display: isDesktop ? "none" : "block", marginBottom:32, animation:"fadeUp 0.7s ease 0.05s both"}}>
             <div style={{
               fontFamily:"'Cormorant Garamond',Georgia,serif",
               fontSize:28, fontWeight:600, color:GOLD,
@@ -1244,7 +1256,7 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
           </div>
 
           {/* HERO HEADLINE — mobile only */}
-          <div className="vi-mobile-only" style={{marginBottom:16, animation:"fadeUp 0.8s ease 0.15s both"}}>
+          <div style={{display: isDesktop ? "none" : "block", marginBottom:16, animation:"fadeUp 0.8s ease 0.15s both"}}>
             <div style={{
               display:"inline-flex", alignItems:"center", gap:8,
               padding:"5px 12px",
@@ -1276,7 +1288,7 @@ export default function PRIMEAssessment({ onComplete, assessmentExpiresAt }) {
           </div>
 
           {/* QUICK STATS ROW — mobile only */}
-          <div className="vi-mobile-only" style={{
+          <div style={{display: isDesktop ? "none" : "block", 
             display:"flex", gap:0,
             margin:"24px 0 32px",
             background:"rgba(255,255,255,0.025)",
