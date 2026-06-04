@@ -13,16 +13,19 @@ async function saveToSupabase(data) {
         "Content-Type": "application/json",
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Prefer": "return=minimal"
+        "Prefer": "return=representation"
       },
       body: JSON.stringify(data)
     });
     if (!res.ok) {
       const err = await res.text();
       console.error("Supabase save error:", err);
+      return null;
     }
+    return await res.json();
   } catch(e) {
     console.error("Supabase save failed:", e);
+    return null;
   }
 }
 const GOLD = "#C9A84C";
@@ -48,23 +51,10 @@ const DESIGNATIONS = [
   { min:0,  name:"At the Starting Point",  color:"#888888", bg:"rgba(136,136,136,0.10)", desc:"Not yet listed on the candidate platform. Complete a PRIME Sprint to qualify for listing." },
 ];
 // ── QUESTION BANK — VERSION 3 ──────────────────────────────────────────────
-// ALL FIXES APPLIED:
-// Fix 1: Options shuffled on render (see useMemo in component)
-// Fix 2: Option language equalised — same register, same length, no gradient
-// Fix 3: Distractor options embedded — high-sounding but lower-scoring choices
-// Fix 4: Uniformity flag in computeResults — flags suspiciously low variance
-//
-// OPTION LANGUAGE PRINCIPLES:
-// — All four options per question are within 10 words of each other in length
-// — All options written in the same professional register
-// — Score 2 options sometimes sound more sophisticated than score 3 (distractor)
-// — No option uses vocabulary that signals "most advanced" by phrasing alone
-// — Scores travel with options — shuffle does not affect scoring
 const ALL_QUESTIONS = [
   // ═══════════════════════════════════════════════════════════════════════════
   // CLUSTER P — PRESENCE
   // ═══════════════════════════════════════════════════════════════════════════
-  // P1 — Communication
   { id:"P1a", cluster:"P", skill:"Communication", type:"behavioural",
     q:"You need to explain a complex decision to a mixed audience — some technical, some not. What do you do?",
     options:[
@@ -79,7 +69,6 @@ const ALL_QUESTIONS = [
       {text:"Finish the presentation — they should hear everything before I adjust.",score:1},
       {text:"Name what I am sensing and ask what their current thinking is before continuing.",score:3},
       {text:"Pivot to the one point most likely to shift their position and invite the disagreement.",score:4},
-      // DISTRACTOR: sounds decisive and confident — actually scores 2 because it prioritises speed over intelligence
       {text:"Accelerate through the key points before I lose the room entirely.",score:2},
     ]},
   { id:"P1c", cluster:"P", skill:"Communication", type:"reflective",
@@ -87,15 +76,12 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I assumed the explanation was clear and wondered if they had followed it properly.",score:1},
       {text:"I treated it as a signal that my explanation was the problem and redesigned it.",score:4},
-      // DISTRACTOR: sounds humble and responsive — scores 2 because it repeats rather than redesigns
       {text:"I went through it again using simpler language to make it clearer.",score:2},
       {text:"I stopped and asked what specifically was unclear before rebuilding the explanation.",score:3},
     ]},
-  // P2 — Negotiation
   { id:"P2a", cluster:"P", skill:"Negotiation", type:"behavioural",
     q:"Before entering a significant negotiation — salary, contract, or partnership — what do you actually do to prepare?",
     options:[
-      // DISTRACTOR: sounds thorough and research-based — scores 2 because it only prepares one side
       {text:"I research comparable benchmarks and prepare a clear justification for my position.",score:2},
       {text:"I map both sides — what I need, what they likely care about — before deciding my opening.",score:3},
       {text:"I know what I want and go in ready to make the case.",score:1},
@@ -106,7 +92,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"State that it is too low and name what I actually need.",score:1},
       {text:"Ask what is driving their number before deciding how to respond.",score:3},
-      // DISTRACTOR: sounds strategic with anchoring rationale — scores 2 because it assumes price is the only variable
       {text:"Counter firmly with my number and a strong rationale for why it is justified.",score:2},
       {text:"Probe the interest behind their position, then explore whether non-price variables can close the gap.",score:4},
     ]},
@@ -115,17 +100,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I had not defined my walk-away position, so I did not recognise the moment to use it.",score:4},
       {text:"The other side had stronger leverage or was better prepared than I expected.",score:1},
-      // DISTRACTOR: sounds analytically grounded — scores 2 because it focuses on tactics not structure
       {text:"I did not anchor high enough at the start, which limited the final range.",score:2},
       {text:"I did not fully understand what they valued, so I could not find a trade that worked for both sides.",score:3},
     ]},
-  // P3 — Personal Brand & Executive Presence
   { id:"P3a", cluster:"P", skill:"Personal Brand & Executive Presence", type:"behavioural",
     q:"How would a professional who can only see your digital presence describe what you stand for?",
     options:[
       {text:"They would know my role and industry but probably not much more.",score:1},
       {text:"They would know precisely what I stand for and why I am worth a conversation.",score:4},
-      // DISTRACTOR: sounds intentional and curated — scores 2 because it is general not specific
       {text:"They would get a clear sense of my expertise and the kind of professional I am.",score:3},
       {text:"They would see my field and some of my thinking, though not a complete picture.",score:2},
     ]},
@@ -135,7 +117,6 @@ const ALL_QUESTIONS = [
       {text:"I research who will be in the room and arrive knowing exactly who I want to reach.",score:3},
       {text:"I let the conversation come to me and wait for the right introduction.",score:1},
       {text:"I introduce myself and make sure key people know my role and organisation.",score:2},
-      // This is score 4 — describes a fully deliberate presence architecture
       {text:"I know precisely what impression I want to leave and have planned how I will create it — entry, approach, conversation, and close.",score:4},
     ]},
   { id:"P3c", cluster:"P", skill:"Personal Brand & Executive Presence", type:"reflective",
@@ -143,20 +124,17 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I treat how I come across as a practised skill — I seek feedback and track whether changes are landing.",score:4},
       {text:"I do not recall specific feedback of this kind in recent memory.",score:1},
-      // DISTRACTOR: sounds like growth mindset — scores 2 because it is passive not active
       {text:"I have received feedback and I keep it in mind when relevant situations come up.",score:2},
       {text:"I actively seek this type of feedback and have made specific, traceable changes based on it.",score:3},
     ]},
   // ═══════════════════════════════════════════════════════════════════════════
   // CLUSTER R — RELATIONSHIPS
   // ═══════════════════════════════════════════════════════════════════════════
-  // R1 — Emotional Intelligence
   { id:"R1a", cluster:"R", skill:"Emotional Intelligence", type:"behavioural",
     q:"You are in a high-pressure meeting and someone says something that genuinely irritates you. What actually happens next?",
     options:[
       {text:"I notice the reaction, give myself a beat, and choose my response rather than react.",score:3},
       {text:"I address it in the moment — it is better than letting it sit.",score:1},
-      // DISTRACTOR: sounds controlled and professional — scores 2 because the emotion is still driving behaviour
       {text:"I hold back but the irritation probably shapes how I engage for the rest of the meeting.",score:2},
       {text:"I name the emotion to myself, regulate it in real time, and decide whether to address it now or later.",score:4},
     ]},
@@ -166,7 +144,6 @@ const ALL_QUESTIONS = [
       {text:"Find a quiet moment to check in directly without framing it as a performance conversation.",score:3},
       {text:"Let it unfold — they will address it themselves if it becomes a real problem.",score:1},
       {text:"Check in privately, create genuine space for what they want to share, and think carefully about what they actually need.",score:4},
-      // DISTRACTOR: sounds responsible and action-oriented — scores 2 because it removes the human relationship
       {text:"Mention it to their manager so someone with authority is aware of the change.",score:2},
     ]},
   { id:"R1c", cluster:"R", skill:"Emotional Intelligence", type:"reflective",
@@ -174,17 +151,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I generally keep things professional — I cannot think of a clear example of handling emotion badly.",score:1},
       {text:"I have a specific example, a clear analysis of the trigger, and a practice I have built since then to catch it earlier.",score:4},
-      // DISTRACTOR: sounds self-aware and grown — scores 2 because it is hindsight without mechanism
       {text:"I can think of a time. I would handle it differently now, though I am not entirely sure how.",score:2},
       {text:"I can name the situation, what triggered me, and how I would regulate it earlier if it happened again.",score:3},
     ]},
-  // R2 — Conflict Resolution
   { id:"R2a", cluster:"R", skill:"Conflict Resolution", type:"behavioural",
     q:"You are aware of unspoken tension between two team members that is starting to affect group performance. What do you do?",
     options:[
       {text:"Give it time — most tensions resolve without intervention if not made worse.",score:1},
       {text:"Have a deliberate sequence — understand each side privately, diagnose whether it is relational or task-based, then design a resolution conversation.",score:4},
-      // DISTRACTOR: sounds balanced and procedural — scores 2 because it hopes not designs
       {text:"Mention it to each of them separately and see if that shifts things.",score:2},
       {text:"Speak to each person individually to understand what is happening, then create a structure to address it.",score:3},
     ]},
@@ -192,7 +166,6 @@ const ALL_QUESTIONS = [
     q:"Two senior people are in open disagreement in a meeting and the conversation is breaking down. You are not the most senior person in the room. What do you do?",
     options:[
       {text:"Stay quiet — it is not my place to intervene when I am not the most senior.",score:1},
-      // DISTRACTOR: sounds constructive and focused on outcomes — scores 2 because it avoids the conflict rather than resolving it
       {text:"Redirect toward the agenda to keep the meeting moving and limit further damage.",score:2},
       {text:"Name the breakdown, separate positions from interests, and redirect toward what both parties actually need.",score:4},
       {text:"Name what is happening and suggest a short pause or a reframe of the question.",score:3},
@@ -203,16 +176,13 @@ const ALL_QUESTIONS = [
       {text:"I have a specific example, a precise analysis of what each party needed, and an intervention that would have resolved it sooner — which I have since used successfully.",score:4},
       {text:"Most conflicts I have experienced were mainly driven by the other party — I tend to be reasonable in these situations.",score:1},
       {text:"I understand what made it difficult and know specifically what I would do differently — go to understand their position earlier and with more genuine curiosity.",score:3},
-      // DISTRACTOR: sounds reflective and honest — scores 2 because it has no mechanism or learning
       {text:"I can think of one. Emotions were high and I was focused on being right rather than resolving it.",score:2},
     ]},
-  // R3 — People Development
   { id:"R3a", cluster:"R", skill:"People Development", type:"behavioural",
     q:"Someone on your team makes a significant mistake on an important piece of work. What is your first move?",
     options:[
       {text:"Fix it — the outcome is the priority in the moment.",score:1},
       {text:"Use it as a deliberate development moment — diagnosis, structured reflection, a specific action, and a follow-up to confirm the learning has landed.",score:4},
-      // DISTRACTOR: sounds coaching-oriented — scores 2 because it tells rather than develops
       {text:"Correct it and walk them through what they should have done differently.",score:2},
       {text:"Ask them to walk me through their thinking, then help them identify where it went wrong.",score:3},
     ]},
@@ -220,7 +190,6 @@ const ALL_QUESTIONS = [
     q:"You have a team member who is highly capable but consistently underdelivering. Their potential is obvious but something is blocking it. How do you approach this?",
     options:[
       {text:"Have a direct conversation about the performance gap and what needs to change.",score:1},
-      // DISTRACTOR: sounds structured and developmental — scores 2 because structure without diagnosis misses the real blocker
       {text:"Give them clearer direction and more scaffolding to help them get back on track.",score:2},
       {text:"Start with genuine curiosity about what is happening for them — capability gaps usually have context that is not visible.",score:3},
       {text:"Treat it as a diagnostic challenge — separate capability, motivation, and context to identify the actual blocker and design a specific intervention for it.",score:4},
@@ -231,16 +200,13 @@ const ALL_QUESTIONS = [
       {text:"I can name someone and describe the capability gaps I identified, the deliberate interventions I designed, and the measurable difference in their trajectory.",score:4},
       {text:"I have supported people but struggle to identify specific growth I directly caused.",score:1},
       {text:"I can name someone and describe specific things I did that I can trace to their development.",score:3},
-      // DISTRACTOR: sounds generous and supportive — scores 2 because opportunity is not development
       {text:"I can name someone. I gave them opportunities and encouragement when they needed it.",score:2},
     ]},
-  // R4 — Stakeholder Management
   { id:"R4a", cluster:"R", skill:"Stakeholder Management", type:"behavioural",
     q:"You are about to lead a significant initiative requiring support from people across multiple functions. Where do you start?",
     options:[
       {text:"Build a stakeholder influence map — interests, concerns, level of support needed — and create a deliberate alignment sequence before I need it.",score:4},
       {text:"Start the work and bring stakeholders in as they become relevant to their area.",score:1},
-      // DISTRACTOR: sounds organised and communicative — scores 2 because informing is not aligning
       {text:"Brief all key stakeholders early so they are aware of what is coming.",score:2},
       {text:"Map who needs to be involved, understand what each person cares about, and sequence conversations before work begins.",score:3},
     ]},
@@ -249,30 +215,25 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Continue and trust that progress will bring them back around.",score:1},
       {text:"Request a conversation and go in with genuine curiosity about what has changed for them.",score:4},
-      // DISTRACTOR: sounds responsible and involves leadership — scores 2 because it avoids direct engagement
       {text:"Escalate to my manager to help manage the stakeholder relationship.",score:2},
       {text:"Request a direct conversation to understand what has shifted and address it.",score:3},
     ]},
   { id:"R4c", cluster:"R", skill:"Stakeholder Management", type:"reflective",
     q:"Tell me about a project that stalled or failed because of a relationship or political dynamic you did not manage well. What did you miss?",
     options:[
-      // DISTRACTOR: sounds professionally confident — scores 1 because it avoids the question entirely
       {text:"I cannot think of a project that failed for this reason — I tend to manage relationships well.",score:1},
       {text:"I have a specific example with a precise analysis of what I misread, what they actually needed, and the mapping practice I now use to prevent it.",score:4},
       {text:"I have a clear example. I underestimated someone's concerns, did not address them early, and paid for it.",score:3},
-      // DISTRACTOR: sounds accountable — scores 2 because it is general not analytical
       {text:"Something comes to mind. I did not communicate well enough with a key person and lost their support.",score:2},
     ]},
   // ═══════════════════════════════════════════════════════════════════════════
   // CLUSTER I — INTELLIGENCE
   // ═══════════════════════════════════════════════════════════════════════════
-  // I1 — Critical Thinking
   { id:"I1a", cluster:"I", skill:"Critical Thinking", type:"behavioural",
     q:"A respected colleague presents data that strongly supports a decision the team is aligned on. You notice something in the analysis that does not add up. What do you actually do?",
     options:[
       {text:"Trust the analysis — they are experienced and the team is already aligned.",score:1},
       {text:"Raise it specifically — naming what I noticed, why it matters to the decision, and the question that forces it to be interrogated properly.",score:4},
-      // DISTRACTOR: sounds diplomatic and collegial — scores 2 because it avoids the room where the decision is being made
       {text:"Mention it quietly to the colleague after the meeting rather than disrupting the group.",score:2},
       {text:"Raise it in the room — the decision should not move forward on flawed analysis regardless of who produced it.",score:3},
     ]},
@@ -281,7 +242,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Treat the validation as genuinely independent — stress-test every assumption and present a complete picture including downside scenarios.",score:4},
       {text:"Validate it as requested — raising issues on an approved case creates problems without solving them.",score:1},
-      // DISTRACTOR: sounds responsible — scores 2 because informally flagging is not validation
       {text:"Flag the assumptions informally to the person who asked me to validate it.",score:2},
       {text:"Document the assumptions, stress-test them, and present the risk they create — even though the case is already approved.",score:3},
     ]},
@@ -290,17 +250,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I have a specific example — I can trace the disconfirming evidence I encountered, the resistance I initially had, and the reasoning that finally moved me.",score:4},
       {text:"I generally land in the right place from the start, so complete reversals are unusual for me.",score:1},
-      // DISTRACTOR: sounds open-minded and confident — scores 2 because it describes compliance not reasoning
       {text:"I can think of something. Someone made a strong argument and I updated my position.",score:2},
       {text:"I have a clear example. I encountered evidence that contradicted my position and worked through it seriously before updating.",score:3},
     ]},
-  // I2 — Strategic Thinking
   { id:"I2a", cluster:"I", skill:"Strategic Thinking", type:"behavioural",
     q:"Your manager gives you a task that is clearly important. Before starting, what goes through your mind?",
     options:[
       {text:"How to do it well and deliver it on time.",score:1},
       {text:"How this task connects to longer-term direction, what it enables or constrains, and whether this is the right task to be doing at all.",score:4},
-      // DISTRACTOR: sounds strategically aware — scores 2 because it only looks one level up
       {text:"How this connects to the team's current priorities and where it sits in the queue.",score:2},
       {text:"How it fits the broader goal, who will use the output, and what success looks like beyond task completion.",score:3},
     ]},
@@ -309,7 +266,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Trust that leadership has thought through the timing — they have more context than I do.",score:1},
       {text:"Prepare a structured analysis — what I am seeing, why it matters, the alternatives, and my recommendation — and get it to the decision-maker.",score:4},
-      // DISTRACTOR: sounds responsible — scores 2 because it delegates rather than leads the thinking
       {text:"Flag my concern to my manager and leave it with them to handle.",score:2},
       {text:"Build a clear, evidence-based view of the risk and find the right channel to get it into the decision.",score:3},
     ]},
@@ -318,17 +274,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Most of my decisions hold up well over time — I struggle to think of a clear example.",score:1},
       {text:"I have a specific example — the second-order consequence I missed, why I missed it, and the thinking practice I now use to surface those consequences before deciding.",score:4},
-      // DISTRACTOR: sounds reflective — scores 2 because it identifies the error without analysing it
       {text:"Something comes to mind. I focused on the immediate problem and did not think far enough ahead.",score:2},
       {text:"I have a clear example. I optimised for the near term and did not trace the downstream consequences.",score:3},
     ]},
-  // I3 — Business Acumen
   { id:"I3a", cluster:"I", skill:"Business Acumen", type:"behavioural",
     q:"If someone asked you to explain how your current or most recent organisation actually makes money — the mechanics of it — how confident are you?",
     options:[
       {text:"I can explain unit economics, key metrics, where value is created and destroyed, and how my role connects to commercial outcomes.",score:4},
       {text:"I know what we do and roughly what we charge — beyond that I am less certain.",score:1},
-      // DISTRACTOR: sounds commercially aware — scores 2 because knowing the model is not understanding it
       {text:"I understand the core revenue model and the main things we spend money on.",score:2},
       {text:"I can walk through the revenue model, the key cost drivers, and where the margin is actually made.",score:3},
     ]},
@@ -337,7 +290,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I can present a fully worked commercial case — cost, return, assumption ranges, downside scenarios, payback period, and the metrics I would use to track it.",score:4},
       {text:"I can explain what the initiative does and why it matters to the organisation.",score:1},
-      // DISTRACTOR: sounds commercially literate — scores 2 because it omits the assumptions and range
       {text:"I can explain the cost and the expected benefit at a high level.",score:2},
       {text:"I can present the cost, projected return, key assumptions, and the timeline to value.",score:3},
     ]},
@@ -346,17 +298,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I have a specific example — I built the commercial case, modelled the options, made a recommendation based on financial reasoning, and can trace what the outcome was against what I projected.",score:4},
       {text:"Most of my decisions are not directly commercial — my focus is functional rather than financial.",score:1},
-      // DISTRACTOR: sounds commercially engaged — scores 2 because it is accidental not analytical
       {text:"I can think of something. I made a call that saved costs or generated value, though I did not formally model it.",score:2},
       {text:"I have a clear example where I thought through the commercial implications deliberately before deciding.",score:3},
     ]},
-  // I4 — Managing Ambiguity
   { id:"I4a", cluster:"I", skill:"Managing Ambiguity", type:"behavioural",
     q:"You are asked to lead something where the goal is clear but the method is entirely undefined. How do you respond?",
     options:[
       {text:"Frame the ambiguity explicitly, make a directional move, communicate the uncertainty to stakeholders, and build in review points.",score:4},
       {text:"Ask for more direction before starting — I want to move in the right direction from the beginning.",score:1},
-      // DISTRACTOR: sounds pragmatic and iterative — scores 2 because checking in without framing is not managing ambiguity
       {text:"Make a start and check in regularly to make sure I am not too far off course.",score:2},
       {text:"Define what I know, identify the smallest reversible step to generate new information, and move from there.",score:3},
     ]},
@@ -365,7 +314,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Treat the uncertainty as the operating context — define short-term priorities, communicate them upward, and stay curious rather than anxious about how things are unfolding.",score:4},
       {text:"I find it genuinely hard to commit fully until I know where things are going to land.",score:1},
-      // DISTRACTOR: sounds resilient and professional — scores 2 because suppressing uncertainty is not managing it
       {text:"Focus on what I can control and try not to let the uncertainty affect my output.",score:2},
       {text:"Name the uncertainty to my manager, agree on what to prioritise in the short term, and operate with full commitment within that frame.",score:3},
     ]},
@@ -374,17 +322,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I have a specific example — what I knew, what I treated as an assumption, how I reduced reversibility risk, what happened, and what it taught me about the right threshold for action under uncertainty.",score:4},
       {text:"I generally try to gather enough information before making decisions with significant consequences.",score:1},
-      // DISTRACTOR: sounds honest — scores 2 because luck is not a decision framework
       {text:"I can think of an example. I made a call with incomplete information — it either worked out or it did not.",score:2},
       {text:"I have a clear example where I defined the decision threshold — enough information to act responsibly — made the call, and owned the outcome.",score:3},
     ]},
-  // I5 — AI Fluency (Future-Ready)
   { id:"I5a", cluster:"I", skill:"AI Fluency", type:"behavioural", futureReady:true,
     q:"How are you currently using AI in your professional work — not what you have tried once, but what is genuinely part of how you work?",
     options:[
       {text:"I have explored AI tools but they are not yet a consistent part of my regular workflow.",score:1},
       {text:"I have deliberately redesigned how I work around AI — I know which tasks I delegate to it, which I keep human, and I refine how I work with it regularly.",score:4},
-      // DISTRACTOR: sounds integrated — scores 2 because using AI without evaluating its outputs is not AI fluency
       {text:"I use AI for specific tasks like drafting and summarising, though not in a systematic way.",score:2},
       {text:"I have integrated AI into several parts of my workflow and I evaluate its outputs critically before using them.",score:3},
     ]},
@@ -393,7 +338,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Use it — AI confidence is generally a reasonable signal of accuracy.",score:1},
       {text:"Identify exactly which parts are load-bearing, verify those specifically, and be explicit with the recipient about what was verified and what was not.",score:4},
-      // DISTRACTOR: sounds responsible — scores 2 because disclosure without verification does not protect quality
       {text:"Add a note that the output was AI-generated so the recipient can evaluate accordingly.",score:2},
       {text:"Run a targeted spot-check on the specific claims most critical to the work before using it.",score:3},
     ]},
@@ -402,20 +346,17 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I have mapped my work explicitly against AI capability — I know precisely which tasks AI does better, which require human judgment, and I have restructured my time accordingly.",score:4},
       {text:"I am not certain AI is yet better than me at the things that matter most in my work.",score:1},
-      // DISTRACTOR: sounds balanced and grounded — scores 2 because it identifies the boundary without acting on it
       {text:"AI is better at some routine tasks but the work that really matters still requires human judgment.",score:2},
       {text:"I have a clear picture of where AI outperforms me on specific tasks and where human judgment is essential — and I have started reorganising my work around that boundary.",score:3},
     ]},
   // ═══════════════════════════════════════════════════════════════════════════
   // CLUSTER M — MASTERY
   // ═══════════════════════════════════════════════════════════════════════════
-  // M1 — Execution & Accountability
   { id:"M1a", cluster:"M", skill:"Execution & Accountability", type:"behavioural",
     q:"You realise partway through a project that you are not going to meet a commitment you made. What do you do?",
     options:[
       {text:"Flag it immediately with a revised timeline, an impact assessment, a recovery plan, and an honest account of what I missed in the original commitment.",score:4},
       {text:"Deliver what I can and explain the situation when I submit.",score:1},
-      // DISTRACTOR: sounds accountable — scores 2 because flagging certainty not risk is too late
       {text:"Let the relevant people know as soon as I am certain I will miss it.",score:2},
       {text:"Flag it the moment I see the risk — before certainty — and arrive with a revised plan and an impact assessment.",score:3},
     ]},
@@ -424,7 +365,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Miss the deadline and make clear that the dependency was not delivered.",score:1},
       {text:"Make every reasonable attempt to resolve the dependency, deliver the best version possible, document what was missing, and escalate the dependency separately — never using it as cover for my own accountability.",score:4},
-      // DISTRACTOR: sounds practical and professional — scores 2 because it is passive and incomplete
       {text:"Do what I can without the input and flag the gap clearly in what I deliver.",score:2},
       {text:"Find a way to deliver with what I have, escalate the dependency failure clearly, and keep my accountability separate from theirs.",score:3},
     ]},
@@ -433,17 +373,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I have a specific example with a clear analysis of where my commitment-making process failed and the specific practices I have built since then.",score:4},
       {text:"I am generally reliable — I cannot think of a significant missed commitment.",score:1},
-      // DISTRACTOR: sounds self-aware — scores 2 because it attributes the failure externally
       {text:"Something comes to mind. Circumstances changed and I was not able to deliver what I had committed to.",score:2},
       {text:"I have a clear example. I overcommitted and underdelivered — and now I think much more carefully about what I agree to.",score:3},
     ]},
-  // M2 — Resilience & Self-Leadership
   { id:"M2a", cluster:"M", skill:"Resilience & Self-Leadership", type:"behavioural",
     q:"After a significant professional setback — a failed project, a difficult performance conversation, a lost opportunity — how do you actually recover?",
     options:[
       {text:"I take time and eventually return to normal, though it can take longer than I would like.",score:1},
       {text:"I have a structured recovery practice — specific steps to process the emotion, extract the learning, and rebuild momentum — and my recovery time has shortened because of it.",score:4},
-      // DISTRACTOR: sounds contained and professional — scores 2 because suppressing is not recovering
       {text:"I process it privately and try not to let it affect my work for too long.",score:2},
       {text:"I have a deliberate process — feel the setback, extract the lesson, make a conscious decision to move forward.",score:3},
     ]},
@@ -452,7 +389,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I push through — it is temporary and the work needs to get done.",score:1},
       {text:"I have a clear framework for sustained pressure — how I manage cognitive, emotional, and physical energy, what signals I watch for, and when I escalate.",score:4},
-      // DISTRACTOR: sounds mature and pragmatic — scores 2 because time management under pressure is not self-leadership
       {text:"I try to manage my time better and accept that some things will have to slip.",score:2},
       {text:"I actively manage my energy — not just my time — and make deliberate choices about what to protect and what to let go.",score:3},
     ]},
@@ -461,17 +397,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I have a specific experience — what signals I missed, where my self-management failed, and the specific practices I have built since then to catch it earlier.",score:4},
       {text:"I handle pressure well — I have not experienced anything I would describe as close to burnout.",score:1},
-      // DISTRACTOR: sounds resilient — scores 2 because surviving is not learning
       {text:"I have had difficult periods. I got through them, though I am not sure I handled them as well as I could have.",score:2},
       {text:"I have a clear experience. I now understand what my warning signs are and what I need to do when I see them.",score:3},
     ]},
-  // M3 — Adaptability
   { id:"M3a", cluster:"M", skill:"Adaptability", type:"behavioural",
     q:"Your organisation announces a significant change that affects how you work — new structure, new process, new direction. What is your honest first reaction?",
     options:[
       {text:"Frustration — I had a system that worked and rebuilding it feels like wasted effort.",score:1},
       {text:"Opportunity — I move quickly to understand the new landscape and where I can add the most value within it.",score:4},
-      // DISTRACTOR: sounds rational — scores 2 because waiting is not adapting
       {text:"Uncertainty — I tend to wait and see how things settle before committing to the new way.",score:2},
       {text:"Curiosity — I start thinking about how to position myself well within the new context.",score:3},
     ]},
@@ -480,7 +413,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Flag that this is outside my area and recommend someone who is better suited.",score:1},
       {text:"Take it on, map the specific knowledge gaps that matter most, fill them deliberately, and treat the unfamiliarity as a potential advantage.",score:4},
-      // DISTRACTOR: sounds willing and honest — scores 2 because learning as you go without mapping gaps is not adaptability
       {text:"Take it on and learn as I go, being transparent when I reach the edges of my knowledge.",score:2},
       {text:"Take it on, identify the specific gaps that matter most, fill them deliberately, and be transparent about what I am learning as I go.",score:3},
     ]},
@@ -489,20 +421,17 @@ const ALL_QUESTIONS = [
     options:[
       {text:"My core professional approach has been consistent — I have refined it but not fundamentally reversed anything.",score:1},
       {text:"I have a specific example of a fundamental shift — what I believed, what challenged it, how I unlearned it, what replaced it, and why this kind of adaptability is one of the most important things I have built.",score:4},
-      // DISTRACTOR: sounds honest and practical — scores 2 because updating without reasoning is not adaptability
       {text:"Something comes to mind. I changed my approach when I could see it was not producing the results I wanted.",score:2},
       {text:"I have a clear example of a significant belief I abandoned — I encountered clear evidence it was wrong and updated deliberately.",score:3},
     ]},
   // ═══════════════════════════════════════════════════════════════════════════
   // CLUSTER E — ENTERPRISE
   // ═══════════════════════════════════════════════════════════════════════════
-  // E1 — Commercial Creativity
   { id:"E1a", cluster:"E", skill:"Commercial Creativity", type:"behavioural",
     q:"You are facing a significant constraint — budget cut, resource reduction, policy restriction — that threatens something you are trying to deliver. How do you respond?",
     options:[
       {text:"Deliver what is possible within the constraint and communicate clearly about what is not.",score:1},
       {text:"Treat the constraint as potentially generative — some of the best solutions come from working around limitations you never would have encountered otherwise.",score:4},
-      // DISTRACTOR: sounds assertive and commercially minded — scores 2 because escalation is not creativity
       {text:"Push back and make the case for more resource or greater flexibility.",score:2},
       {text:"Treat the constraint as a design problem — look for a different way to achieve the same outcome.",score:3},
     ]},
@@ -511,7 +440,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Note it and wait for the right person or moment to raise it.",score:1},
       {text:"Develop it enough to be taken seriously — what it is, why it is real, what it would take, and what it costs to ignore — and navigate it to the right decision-maker.",score:4},
-      // DISTRACTOR: sounds responsible — scores 2 because delegating up is not commercial creativity
       {text:"Mention it to my manager and let them decide whether it is worth pursuing.",score:2},
       {text:"Build a basic case for the opportunity and find the right channel to put it in front of someone who can act on it.",score:3},
     ]},
@@ -520,17 +448,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I have a specific example — where the insight came from, how I developed it into a proposal, who I had to persuade, how I navigated the resistance, and what the outcome actually was.",score:4},
       {text:"I tend to contribute to other people's ideas more than originate my own.",score:1},
-      // DISTRACTOR: sounds creative and outcome-focused — scores 2 because fixing problems is not commercial creativity
       {text:"I can think of an idea that worked. It came from noticing a problem and suggesting a practical fix.",score:2},
       {text:"I have a clear example of an idea I originated, developed into a real proposal, and drove to implementation with measurable impact.",score:3},
     ]},
-  // E2 — Influence Without Authority
   { id:"E2a", cluster:"E", skill:"Influence Without Authority", type:"behavioural",
     q:"You need cooperation from someone who does not report to you — and they are currently not prioritising what you need. How do you approach it?",
     options:[
       {text:"Escalate to someone who has authority over them.",score:1},
       {text:"Invest in the relationship before I need something, understand their pressures, frame my request in terms of their interests, and make it easy for them to say yes.",score:4},
-      // DISTRACTOR: sounds clear and professional — scores 2 because explaining importance is not influence
       {text:"Make the request clearly and explain why it matters to the organisation.",score:2},
       {text:"Take time to understand what they are prioritising and find a way to connect my need to something they already care about.",score:3},
     ]},
@@ -539,7 +464,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Present the idea to all three together and make the strongest possible case.",score:1},
       {text:"Map each person's interests, sequence conversations to build momentum, address each objection with something that genuinely resolves it, and bring them together only when alignment is already close.",score:4},
-      // DISTRACTOR: sounds strategic — scores 2 because social proof is not tailored influence
       {text:"Start with the most sympathetic person and use their support to help move the others.",score:2},
       {text:"Meet each person separately first, understand their specific concerns, and tailor each conversation before bringing them together.",score:3},
     ]},
@@ -548,17 +472,14 @@ const ALL_QUESTIONS = [
     options:[
       {text:"I have a specific example — the stakeholder map I built, how I sequenced conversations, what I offered each person, and how I maintained momentum through the resistance.",score:4},
       {text:"I generally work through the proper channels rather than trying to influence things outside my remit.",score:1},
-      // DISTRACTOR: sounds persistent — scores 2 because persistence without strategy is not influence
       {text:"I can think of a time. I made the case clearly and kept making it until people came around.",score:2},
       {text:"I have a clear example. I mapped who mattered, had deliberate conversations, and built enough support to move it.",score:3},
     ]},
-  // E3 — Human-AI Collaboration (Future-Ready)
   { id:"E3a", cluster:"E", skill:"Human-AI Collaboration", type:"behavioural", futureReady:true,
     q:"How have you actually changed how you work because of AI — not in theory, but in practice?",
     options:[
       {text:"I have not made significant changes yet — I am still working out where AI genuinely fits in my work.",score:1},
       {text:"I have comprehensively redesigned how I work around the human-AI boundary — I can name precisely which tasks I have moved to AI, what I have kept human, and how that has changed my output.",score:4},
-      // DISTRACTOR: sounds engaged — scores 2 because using AI at the edges is not redesigning how you work
       {text:"I have added AI to tasks at the edges of my workflow but my core approach has not changed significantly.",score:2},
       {text:"I have deliberately redesigned parts of my workflow around AI — deciding what to delegate and what to keep — and I can see a real difference in what I produce.",score:3},
     ]},
@@ -567,7 +488,6 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Wait until the adoption settles before deciding how to change how I work.",score:1},
       {text:"Lead the thinking in my function — map decisions against AI capability, define what stays human and why, build genuine fluency in the team, and establish governance that protects quality.",score:4},
-      // DISTRACTOR: sounds balanced — scores 2 because selective adoption without a framework is not collaboration
       {text:"Adopt the tools that seem useful and avoid the ones that feel like they are replacing work that matters.",score:2},
       {text:"Think through each tool systematically — what it does well, what risks it creates, what it should and should not be used for — and develop a clear position.",score:3},
     ]},
@@ -576,68 +496,46 @@ const ALL_QUESTIONS = [
     options:[
       {text:"Honestly, I am not certain there are things AI cannot eventually do that I currently do.",score:1},
       {text:"I have a precise and reasoned answer — what I bring that AI cannot replicate structurally, why it matters commercially, and how I am investing in deepening exactly those capabilities.",score:4},
-      // DISTRACTOR: sounds thoughtful — scores 2 because naming categories is not mapping your specific value
       {text:"Relationships and judgment are areas where I think human presence will remain essential.",score:2},
       {text:"I have a clear view of where my specific value lies that AI cannot replicate — particular types of judgment, contextual knowledge, or relational work that requires genuine human presence.",score:3},
     ]},
   // ═══════════════════════════════════════════════════════════════════════════
-  // VALIDITY ANCHORS — embedded at fixed positions in buildQuestionSequence()
-  // These have no high-scoring option — selecting the most confident-sounding
-  // answer always produces a lower score. Gaming detection triggers at 3+ flags.
+  // VALIDITY ANCHORS
   // ═══════════════════════════════════════════════════════════════════════════
   { id:"VA1", cluster:"VA", skill:"Validity", type:"anchor", validAnchor:true,
     q:"When you receive feedback from someone you genuinely respect, your first response is always to implement it.",
     options:[
-      // BAIT: sounds confident in relationships — score 1
       {text:"Yes — if someone I respect has taken the time to give feedback, acting on it is the right response.",score:1},
-      // BAIT: sounds diplomatically humble — score 2
       {text:"Almost always — I occasionally push back but my default is to implement.",score:2},
-      // CORRECT: sounds like it might seem contrarian but reflects genuine critical thinking — score 4
       {text:"Not always — good feedback still needs to fit the context, even from people I respect.",score:4},
-      // BAIT: sounds independent-minded — score 2
       {text:"Rarely — feedback is one input and I weigh it carefully against everything else I know.",score:2},
     ]},
   { id:"VA2", cluster:"VA", skill:"Validity", type:"anchor", validAnchor:true,
     q:"You always know exactly what is driving your emotions in a professional setting.",
     options:[
-      // BAIT: sounds self-aware and developed — score 1
       {text:"Yes — self-awareness is something I have worked hard to build and I have strong insight into my emotional drivers.",score:1},
-      // BAIT: sounds honestly qualified — score 2
       {text:"Usually — I sometimes need time to understand what is behind a strong reaction.",score:2},
-      // CORRECT: sounds like it might undermine the self-awareness claim but actually reflects psychological sophistication — score 4
       {text:"Not always — even with strong self-awareness, emotions in complex situations are not always immediately legible.",score:4},
-      // BAIT: sounds humbly honest — score 1
       {text:"Rarely — I am not naturally introspective about my emotional drivers.",score:1},
     ]},
   { id:"VA3", cluster:"VA", skill:"Validity", type:"anchor", validAnchor:true,
     q:"When you prepare thoroughly for a negotiation, you reliably get the outcome you are aiming for.",
     options:[
-      // BAIT: sounds like a champion — score 1
       {text:"Yes — thorough preparation is the consistent differentiator between winning and losing.",score:1},
-      // BAIT: sounds grounded and success-oriented — score 2
       {text:"Usually — preparation significantly increases my success rate.",score:2},
-      // CORRECT: sounds modest but reflects genuine sophistication about negotiation dynamics — score 4
       {text:"Often, but not always — even excellent preparation cannot overcome every structural constraint or the other party's position.",score:4},
-      // BAIT: sounds nuanced — score 3, but this is correct
       {text:"Not always — preparation is essential but the outcome also depends on variables outside my control.",score:3},
     ]},
   { id:"VA4", cluster:"VA", skill:"Validity", type:"anchor", validAnchor:true,
     q:"You have never made a significant people decision you later regretted.",
     options:[
-      // BAIT: sounds like a strong leader — score 1
       {text:"Correct — I take people decisions seriously and my track record is strong.",score:1},
-      // BAIT: sounds appropriately humble — score 2
       {text:"Almost — there are minor things I would do differently but nothing significant.",score:2},
-      // CORRECT: sounds like an admission but reflects psychological honesty and learning — score 4
       {text:"No — people decisions are genuinely complex and some of my most important learning has come from the ones I got wrong.",score:4},
-      // BAIT: sounds self-aware — score 3
       {text:"No — I have made people decisions I later regretted, and I have thought carefully about why.",score:3},
     ]},
 ];
 // ── FIX 1: OPTION SHUFFLE UTILITY ─────────────────────────────────────────
-// Shuffles options for display while preserving score values.
-// Called per question render — seed based on question ID for consistency
-// within a session but variation across test-takers.
 function seededShuffle(arr, seed) {
   const a = arr.map((item, i) => ({ item, sort: Math.sin(seed * (i + 1)) * 10000 % 1 }));
   a.sort((x, y) => x.sort - y.sort);
@@ -675,14 +573,12 @@ const SKILL_CLUSTER = {
   "Influence Without Authority":    "E",
   "Human-AI Collaboration":         "E",
 };
-// Max raw per skill = 3 questions × 4 points = 12
 const SKILL_MAX_RAW = 12;
-// ── SCORING ENGINE — ALL FIXES APPLIED ────────────────────────────────────
+// ── SCORING ENGINE ────────────────────────────────────────────────────────
 function computeResults(answers, timings, shuffleMap) {
   const clusterRaw       = { P:0, R:0, I:0, M:0, E:0 };
   const clusterAllScores = { P:[], R:[], I:[], M:[], E:[] };
-  const skillRaw         = {}; // skill name → raw sum
-  // 1. Cluster + skill raw scores
+  const skillRaw         = {};
   QUESTIONS.forEach((q, idx) => {
     if (q.cluster === "VA") return;
     const displayedIdx = answers[idx];
@@ -693,26 +589,21 @@ function computeResults(answers, timings, shuffleMap) {
     const score = originalOption?.score || 0;
     clusterRaw[q.cluster] += score;
     clusterAllScores[q.cluster].push(score);
-    // Accumulate per-skill
     if (q.skill && q.skill !== "Validity") {
       skillRaw[q.skill] = (skillRaw[q.skill] || 0) + score;
     }
   });
-  // Normalise skill scores to 0–100
   const skillScores = {};
   Object.entries(skillRaw).forEach(([skill, raw]) => {
     skillScores[skill] = Math.round((raw / SKILL_MAX_RAW) * 100);
   });
-  // 2. Normalise to 0–100
   const clusterScores = {};
   CLUSTERS.forEach(c => {
     clusterScores[c.id] = Math.round((clusterRaw[c.id] / c.maxRaw) * 100);
   });
-  // 3. Weighted VALU Index
   let valuRaw = 0;
   CLUSTERS.forEach(c => { valuRaw += clusterScores[c.id] * c.weight; });
   let valuIndex = Math.round(valuRaw);
-  // 4. FIX: Consistency check — SD > 1.2 within any cluster → 15% penalty + flag
   const consistencyFlags = {};
   CLUSTERS.forEach(c => {
     const scores = clusterAllScores[c.id];
@@ -724,17 +615,14 @@ function computeResults(answers, timings, shuffleMap) {
       clusterScores[c.id] = Math.round(clusterScores[c.id] * 0.85);
     }
   });
-  // Recompute after consistency penalty
   let valuRaw2 = 0;
   CLUSTERS.forEach(c => { valuRaw2 += clusterScores[c.id] * c.weight; });
   valuIndex = Math.round(valuRaw2);
-  // 5. Validity anchor check — 3+ highest-position picks on anchors → 20% penalty
   let anchorFlags = 0;
   QUESTIONS.forEach((q, idx) => {
     if (!q.validAnchor) return;
     const displayedIdx = answers[idx];
     if (displayedIdx === undefined) return;
-    // Check if chosen option has score 1 (the "bait" options that sound strongest)
     const originalOption = shuffleMap[idx]
       ? shuffleMap[idx][displayedIdx]
       : q.options[displayedIdx];
@@ -742,12 +630,10 @@ function computeResults(answers, timings, shuffleMap) {
   });
   const gamingDetected = anchorFlags >= 3;
   if (gamingDetected) valuIndex = Math.round(valuIndex * 0.80);
-  // 6. Speed check — under 12 min total OR 3+ questions under 8 seconds → flag
   const answeredTimings = timings.filter(t => t > 0);
   const totalTime  = answeredTimings.reduce((a,b) => a+b, 0);
   const fastAnswers = timings.filter(t => t > 0 && t < 8000).length;
   const speedFlag  = totalTime < 720000 || fastAnswers >= 3;
-  // 7. FIX 4: Uniformity check — global SD < 0.5 on a high score is suspicious
   const allScores = [];
   QUESTIONS.forEach((q, idx) => {
     if (q.cluster === "VA") return;
@@ -760,11 +646,8 @@ function computeResults(answers, timings, shuffleMap) {
   });
   const globalMean = allScores.reduce((a,b) => a+b,0) / allScores.length;
   const globalSD   = Math.sqrt(allScores.reduce((a,b) => a+(b-globalMean)**2,0) / allScores.length);
-  // Flag if high score AND suspiciously low variance — genuine high performers vary
   const uniformityFlag = valuIndex >= 65 && globalSD < 0.5;
-  // 8. Designation
   const desig = DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length-1];
-  // 9. Future-Ready score
   const frQuestions = QUESTIONS.filter(q => q.futureReady);
   const frRaw = frQuestions.reduce((sum, q) => {
     const idx = QUESTIONS.indexOf(q);
@@ -776,7 +659,6 @@ function computeResults(answers, timings, shuffleMap) {
     return sum + (originalOption?.score || 0);
   }, 0);
   const futureReadyScore = Math.round((frRaw / (frQuestions.length * 4)) * 100);
-  // 10. Strongest / weakest
   const sorted = [...CLUSTERS].sort((a,b) => clusterScores[b.id] - clusterScores[a.id]);
   const anyFlag = Object.keys(consistencyFlags).length > 0 || gamingDetected || speedFlag || uniformityFlag;
   return {
@@ -822,10 +704,7 @@ function Radar({ scores, size = 200 }) {
   );
 }
 // ── AI REPORT PROMPT BUILDER — v2.0 ───────────────────────────────────────
-// Complete rebuild. Plain language. Skill-specific. Action-oriented.
-// Names the exact skill gaps. Points to the exact programme. No fluff.
 const PROMPT_VERSION = "v2.0";
-// Programme definitions — used in prompt and in skill routing
 const PRIME_PROGRAMMES = {
   sprint: {
     name: "PRIME Sprint",
@@ -852,7 +731,6 @@ const PRIME_PROGRAMMES = {
     best_for: "C-suite and senior leaders. All five clusters. Time-compressed.",
   },
 };
-// Skill-specific development actions — what to do THIS WEEK
 const SKILL_ACTIONS = {
   "Communication": "Before your next important meeting, write down the one thing you need the room to leave believing — and build backwards from that, not from your slide order.",
   "Negotiation": "Before your next salary, contract, or vendor conversation, write down your walk-away position before you write down your opening ask.",
@@ -873,26 +751,25 @@ const SKILL_ACTIONS = {
   "Influence Without Authority": "Name one thing you need to move forward that requires someone else's cooperation — someone who does not report to you. Have you started that conversation? If not, what is stopping you?",
   "Human-AI Collaboration": "Pick one routine deliverable from your job — a report, a brief, a summary. Use AI to produce a first draft this week. Your job is then to make it better. Notice where you add value and where you do not.",
 };
-// Skill-to-programme routing — which programme addresses which skill most directly
 const SKILL_PROGRAMME_MAP = {
-  "Communication":                    "cluster", // P cluster
+  "Communication":                    "cluster",
   "Negotiation":                      "cluster",
   "Personal Brand & Executive Presence": "cluster",
-  "Emotional Intelligence":           "cluster", // R cluster
+  "Emotional Intelligence":           "cluster",
   "Conflict Resolution":              "cluster",
   "People Development":               "cluster",
   "Stakeholder Management":           "cluster",
-  "Critical Thinking":                "cluster", // I cluster
+  "Critical Thinking":                "cluster",
   "Strategic Thinking":               "cluster",
   "Business Acumen":                  "cluster",
   "Managing Ambiguity":               "cluster",
-  "AI Fluency":                       "sprint",  // future-ready — Sprint first
-  "Execution & Accountability":       "cluster", // M cluster
+  "AI Fluency":                       "sprint",
+  "Execution & Accountability":       "cluster",
   "Resilience & Self-Leadership":     "cluster",
   "Adaptability":                     "cluster",
-  "Commercial Creativity":            "cluster", // E cluster
+  "Commercial Creativity":            "cluster",
   "Influence Without Authority":      "cluster",
-  "Human-AI Collaboration":           "sprint",  // future-ready — Sprint first
+  "Human-AI Collaboration":           "sprint",
 };
 function buildReportPrompt(scoreProfile) {
   const {
@@ -901,29 +778,24 @@ function buildReportPrompt(scoreProfile) {
     pathway, listed, globalSD,
     consistencyFlags, gamingDetected, speedFlag, uniformityFlag
   } = scoreProfile;
-  // Sort skills by score to find top 3 and bottom 3
   const sortedSkills = Object.entries(skillScores || {})
     .filter(([s]) => s !== "Validity")
     .sort(([,a],[,b]) => b - a);
   const topSkills    = sortedSkills.slice(0, 3);
-  const bottomSkills = sortedSkills.slice(-3).reverse(); // weakest first
-  // Skills within the weakest cluster
+  const bottomSkills = sortedSkills.slice(-3).reverse();
   const weakestClusterSkills = sortedSkills
     .filter(([s]) => SKILL_CLUSTER[s] === weakest.id)
-    .sort(([,a],[,b]) => a - b); // weakest first within that cluster
+    .sort(([,a],[,b]) => a - b);
   const primaryGapSkill   = weakestClusterSkills[0]?.[0] || bottomSkills[0]?.[0];
   const secondaryGapSkill = weakestClusterSkills[1]?.[0] || bottomSkills[1]?.[0];
-  // Recommended programme
   const primaryProgrammeKey = SKILL_PROGRAMME_MAP[primaryGapSkill] || "cluster";
   const primaryProgramme    = PRIME_PROGRAMMES[primaryProgrammeKey];
-  // If score is too low for listing, Sprint is always first
   const immediateAction = !listed ? "PRIME Sprint" : primaryProgramme.name;
   const clusterSkillDetail = CLUSTERS.map(c => {
     const skills = sortedSkills.filter(([s]) => SKILL_CLUSTER[s] === c.id);
     return `${c.name} (${clusterScores[c.id]}/100):\n` +
       skills.map(([s,sc]) => `  - ${s}: ${sc}/100`).join("\n");
   }).join("\n\n");
-  const gapSize = clusterScores[strongest.id] - clusterScores[weakest.id];
   return `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index assessment.
 YOUR WRITING RULES — follow these exactly:
 1. Write like a trusted senior colleague who tells the truth — not a consultant, not a coach, not a wellness app.
@@ -986,13 +858,7 @@ A single question in italics. It must be about their weakest skill (${primaryGap
 ---
 Write the complete report now. Start directly with ## YOUR SCORE. No introduction before it.`;
 }
-// ── MAIN COMPONENT — v4 AI-POWERED ────────────────────────────────────────
-// Props:
-//   onComplete(results)    — called when assessment finishes
-//   assessmentExpiresAt    — ISO date string — if set and in the future,
-//                            retake is blocked and the expiry date is shown.
-//                            Pass from your auth/dashboard for hard launch.
-//                            Omit for soft launch testing.
+// ── MAIN COMPONENT ────────────────────────────────────────────────────────
 export default function PRIMEAssessment({
   onComplete,
   onAssessmentSubmitted,
@@ -1015,12 +881,10 @@ export default function PRIMEAssessment({
   const [transitioning, setTransitioning] = useState(false);
   const [shuffleMap, setShuffleMap] = useState({});
   const [sessionSeed]               = useState(() => Math.random() * 99999);
-  // AI report state
-  const [reportText, setReportText]     = useState("");
+  // ── REPLACE 2: added reportToken state ──
   const [reportStatus, setReportStatus] = useState("idle");
-  const [reportError, setReportError]   = useState(null);
+  const [reportToken, setReportToken] = useState(null);
   const reportRef = useRef(null);
-  // Retake modal state
   const [showRetakeModal, setShowRetakeModal] = useState(false);
   const userFingerprint = useMemo(
     () => (name.trim() && role.trim() ? computeFingerprint(name, role) : null),
@@ -1049,10 +913,11 @@ export default function PRIMEAssessment({
     }, 400);
     return () => clearTimeout(t);
   }, [name, role, onIdentityChange]);
+
   const question = QUESTIONS[currentQ];
   const progress  = Math.round((currentQ / TOTAL) * 100);
   const cluster   = CLUSTERS.find(c => c.id === question?.cluster);
-  // FIX 1: Shuffle options per question
+
   const displayedOptions = useMemo(() => {
     if (!question) return [];
     if (question.type === "anchor") return question.options;
@@ -1061,10 +926,11 @@ export default function PRIMEAssessment({
     setShuffleMap(prev => ({ ...prev, [currentQ]: shuffled }));
     return shuffled;
   }, [currentQ, question, sessionSeed]);
+
   useEffect(() => {
     if (phase === "assessing") setQStartTime(Date.now());
   }, [currentQ, phase]);
-  // Live radar scores
+
   const liveScores = {};
   CLUSTERS.forEach(c => {
     const qs = QUESTIONS.filter((q,i) => q.cluster === c.id && answers[i] !== undefined);
@@ -1076,110 +942,45 @@ export default function PRIMEAssessment({
     }, 0);
     liveScores[c.id] = Math.round((raw / c.maxRaw) * 100);
   });
-  // ── AI REPORT GENERATOR ────────────────────────────────────────────────
-  async function persistAssessmentRow(scoreProfile, aiReport = null) {
+
+  // ── REPLACE 1: updated persistAssessmentRow — saves row, returns token ──
+  async function persistAssessmentRow(scoreProfile) {
     const fp = computeFingerprint(name, role);
     const expiresAtIso = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-    await saveToSupabase({
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const result = await saveToSupabase({
       total_score: scoreProfile.valuIndex ?? 0,
       designation: scoreProfile.desig?.name ?? scoreProfile.desig ?? "",
       completed_at: new Date().toISOString(),
-      ai_report: aiReport,
       name,
       role,
       identity_hash: fp,
-      assessment_expires_at: expiresAtIso,
+      expires_at: expiresAtIso,
+      token_used: false,
+      token_expires_at: tokenExpiry,
       cluster_scores: scoreProfile.clusterScores ?? {},
       skill_scores: scoreProfile.skillScores ?? {},
     });
+    return result?.[0]?.report_token ?? null;
   }
 
-  async function generateAIReport(scoreProfile) {
-    setReportStatus("generating");
-    setReportText("");
-    await persistAssessmentRow(scoreProfile, null);
-    try {
-      const response = await fetch("/api/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildReportPrompt(scoreProfile) })
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || "API request failed");
-      }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullText = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
-              fullText += parsed.delta.text;
-              setReportText(fullText);
-              // Auto-scroll as report generates
-              if (reportRef.current) {
-                reportRef.current.scrollTop = reportRef.current.scrollHeight;
-              }
-            }
-          } catch {}
-        }
-      }
-      setReportStatus("complete");
-      await persistAssessmentRow(scoreProfile, fullText);
-
-      // NOTE: name & role collected at intro — do NOT re-ask in downstream signup form
-      if (onComplete) {
-        onComplete({
-          name, role, ...scoreProfile,
-          reportText: fullText,
-          promptVersion: PROMPT_VERSION,
-          completedAt: new Date().toISOString()
-        });
-      }
-    } catch (err) {
-      console.error("Report generation failed:", err);
-      setReportError(err.message);
-      setReportStatus("error");
-      if (onComplete) {
-        onComplete({
-          name,
-          role,
-          ...scoreProfile,
-          reportText: "",
-          promptVersion: PROMPT_VERSION,
-          completedAt: new Date().toISOString(),
-        });
-      }
-    }
-  }
   function handleSelect(optIdx) {
     if (transitioning) return;
     setSelected(optIdx);
-    // Auto-advance after a brief moment so user can see their selection highlighted
     setTimeout(() => {
       handleNextWithAnswer(optIdx);
     }, 400);
   }
 
-  function handleNextWithAnswer(optIdx) {
+  // ── REPLACE 3: both answer-completion handlers now call persistAssessmentRow ──
+  async function handleNextWithAnswer(optIdx) {
     const elapsed = qStartTime ? Date.now() - qStartTime : 0;
     const newTimings = [...timings];
     newTimings[currentQ] = elapsed;
     const newAnswers = { ...answers, [currentQ]: optIdx };
     setAnswers(newAnswers);
     setTransitioning(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       if (currentQ + 1 < TOTAL) {
         setCurrentQ(currentQ + 1);
         setSelected(null);
@@ -1187,13 +988,15 @@ export default function PRIMEAssessment({
       } else {
         const r = computeResults(newAnswers, newTimings, shuffleMap);
         setResults(r);
-        setPhase("generating");
         setTransitioning(false);
+        const token = await persistAssessmentRow(r);
+        setReportToken(token);
+        setPhase("results");
         if (onAssessmentSubmitted) onAssessmentSubmitted({ name, role, ...r });
-        generateAIReport({ name, role, ...r });
       }
     }, 280);
   }
+
   function handleNext() {
     if (selected === null) return;
     const elapsed = qStartTime ? Date.now() - qStartTime : 0;
@@ -1203,7 +1006,7 @@ export default function PRIMEAssessment({
     const newAnswers = { ...answers, [currentQ]: selected };
     setAnswers(newAnswers);
     setTransitioning(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       if (currentQ + 1 < TOTAL) {
         setCurrentQ(currentQ + 1);
         setSelected(null);
@@ -1211,38 +1014,37 @@ export default function PRIMEAssessment({
       } else {
         const r = computeResults(newAnswers, newTimings, shuffleMap);
         setResults(r);
-        setPhase("generating");
         setTransitioning(false);
+        const token = await persistAssessmentRow(r);
+        setReportToken(token);
+        setPhase("results");
         if (onAssessmentSubmitted) onAssessmentSubmitted({ name, role, ...r });
-        generateAIReport({ name, role, ...r });
       }
     }, 280);
   }
+
   function handleBack() {
     if (currentQ === 0) return;
     setSelected(answers[currentQ - 1] ?? null);
     setCurrentQ(currentQ - 1);
   }
-  // ── RETAKE LOGIC ──────────────────────────────────────────────────────
-  // Called when the professional clicks "Retake Assessment"
-  // If assessmentExpiresAt is set and still in the future — blocked entirely.
-  // If no expiry is set (soft launch / testing) — shows confirmation modal.
+
   function requestRetake() {
     if (assessmentIsLocked) {
-      // Show the locked modal — retake not available yet
       setShowRetakeModal("locked");
     } else {
-      // Show the confirmation modal — are you sure?
       setShowRetakeModal("confirm");
     }
   }
+
   function confirmRetake() {
     setShowRetakeModal(false);
     setPhase("intro"); setCurrentQ(0); setAnswers({});
     setSelected(null); setResults(null); setName(""); setRole("");
     setTimings(Array(TOTAL).fill(0)); setShuffleMap({});
-    setReportText(""); setReportStatus("idle"); setReportError(null);
+    setReportStatus("idle"); setReportToken(null);
   }
+
   // ── INTRO SCREEN ───────────────────────────────────────────────────────
   if (phase === "intro") {
     const canBegin = name.trim().length > 0 && role.trim().length > 0 && !assessmentIsLocked;
@@ -1253,25 +1055,21 @@ export default function PRIMEAssessment({
         position:"relative", overflowX:"hidden",
         overflowY:"auto",
       }}>
-        {/* Noise grain overlay */}
         <div style={{
           position:"fixed", inset:0, pointerEvents:"none", zIndex:0, opacity:0.035,
           backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
           backgroundSize:"256px",
         }}/>
-        {/* Ambient gold glow — positioned top-center */}
         <div style={{
           position:"fixed", inset:0, pointerEvents:"none", zIndex:0,
           background:"radial-gradient(ellipse 100% 50% at 50% 0%, rgba(201,168,76,0.09) 0%, transparent 60%)",
         }}/>
-        {/* PRIME cluster stripe — top */}
         <div style={{position:"fixed",top:0,left:0,right:0,height:3,display:"flex",zIndex:10}}>
           {[["#1D9E75",20],["#378ADD",25],["#7F77DD",25],["#BA7517",20],["#D85A30",10]].map(([color,pct],i)=>(
             <div key={i} style={{flex:pct,background:color,opacity:0.9}}/>
           ))}
         </div>
 
-        {/* Desktop: two-column | Mobile: single-column */}
         <div style={{
           position:"relative", zIndex:1,
           maxWidth: isDesktop ? 1400 : 600,
@@ -1282,7 +1080,6 @@ export default function PRIMEAssessment({
           gap: isDesktop ? 80 : 0,
         }}>
 
-          {/* DESKTOP LEFT — marketing column */}
           {isDesktop && (
             <div style={{ flex: 1.2, paddingRight: 20 }}>
               <div style={{ marginBottom: 40 }}>
@@ -1325,7 +1122,6 @@ export default function PRIMEAssessment({
             </div>
           )}
 
-          {/* RIGHT / MOBILE — form column */}
           <div style={{ flex: isDesktop ? 1 : "unset", width: isDesktop ? "auto" : "100%" }}>
 
           {!isDesktop && (
@@ -1362,7 +1158,6 @@ export default function PRIMEAssessment({
             </div>
           )}
 
-          {/* FORM CARD */}
           <div style={{
             background:"rgba(22,22,36,0.7)",
             border:"1px solid rgba(201,168,76,0.12)",
@@ -1375,7 +1170,6 @@ export default function PRIMEAssessment({
               letterSpacing:"0.14em", marginBottom:20,
             }}>BEFORE YOU BEGIN</div>
 
-            {/* Name field */}
             <div style={{marginBottom:16}}>
               <label style={{
                 fontSize:9, fontWeight:700, color:"rgba(201,168,76,0.5)",
@@ -1406,7 +1200,6 @@ export default function PRIMEAssessment({
               />
             </div>
 
-            {/* Role field */}
             <div style={{marginBottom:24}}>
               <label style={{
                 fontSize:9, fontWeight:700, color:"rgba(201,168,76,0.5)",
@@ -1437,7 +1230,6 @@ export default function PRIMEAssessment({
               />
             </div>
 
-            {/* CTA BUTTON */}
             <button
               onClick={() => {
                 if (canBegin) setPhase("assessing");
@@ -1465,7 +1257,6 @@ export default function PRIMEAssessment({
               BEGIN THE VALU INDEX
             </button>
 
-            {/* Helper note */}
             {!canBegin && (
               <p style={{
                 textAlign:"center", fontSize:11,
@@ -1479,7 +1270,6 @@ export default function PRIMEAssessment({
             )}
           </div>
 
-          {/* INSTRUCTION NOTE */}
           <div style={{
             marginTop:16,
             padding:"14px 18px",
@@ -1493,7 +1283,6 @@ export default function PRIMEAssessment({
             </div>
           </div>
 
-          {/* PRIME CLUSTERS — mobile only (desktop: left column) */}
           {!isDesktop && (
           <div style={{
             marginTop:28,
@@ -1536,7 +1325,6 @@ export default function PRIMEAssessment({
           </div>
           )}
 
-          {/* DESIGNATIONS — mobile only */}
           {!isDesktop && (
           <div style={{
             marginTop:28,
@@ -1571,7 +1359,6 @@ export default function PRIMEAssessment({
           </div>
           )}
 
-          {/* FOOTER NOTE */}
           <div style={{
             marginTop:32, paddingTop:24,
             borderTop:"1px solid rgba(201,168,76,0.08)",
@@ -1589,7 +1376,6 @@ export default function PRIMEAssessment({
           </div>
         </div>
 
-        {/* Animations */}
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
           @keyframes fadeUp {
@@ -1610,6 +1396,7 @@ export default function PRIMEAssessment({
       </div>
     );
   }
+
   // ── ASSESSMENT SCREEN ──────────────────────────────────────────────────
   if (phase === "assessing") {
     return (
@@ -1700,292 +1487,266 @@ export default function PRIMEAssessment({
       </div>
     );
   }
-  // ── GENERATING / REPORT SCREEN ─────────────────────────────────────────
-  if ((phase === "generating" || phase === "report") && results) {
-    const { valuIndex, clusterScores, skillScores, desig, futureReadyScore,
-            strongest, weakest, listed } = results;
-    const isGenerating = reportStatus === "generating";
-    const isComplete   = reportStatus === "complete";
-    const isError      = reportStatus === "error";
-    // ── MARKDOWN RENDERER ──
-    // Converts the streamed markdown into styled React elements
-    function renderReport(text) {
-      if (!text) return null;
-      const lines = text.split("\n");
-      const elements = [];
-      let i = 0;
-      while (i < lines.length) {
-        const line = lines[i];
-        // ## Section heading
-        if (line.startsWith("## ")) {
-          elements.push(
-            <div key={i} style={{marginTop:32,marginBottom:12}}>
-              <div style={{fontSize:10,color:GOLD,letterSpacing:"0.2em",marginBottom:6}}>
-                {line.replace("## ", "").toUpperCase()}
-              </div>
-              <div style={{height:1,background:"rgba(201,168,76,0.15)"}}/>
-            </div>
-          );
-          i++; continue;
-        }
-        // Italic line (question to sit with)
-        if (line.startsWith("*") && line.endsWith("*") && line.length > 2) {
-          elements.push(
-            <div key={i} style={{padding:"20px 24px",background:"rgba(201,168,76,0.05)",borderLeft:`3px solid ${GOLD}`,borderRadius:"0 6px 6px 0",margin:"16px 0"}}>
-              <p style={{fontFamily:"Georgia,serif",fontSize:"clamp(15px,2.2vw,20px)",fontWeight:300,color:PARCHMENT,lineHeight:1.55,margin:0,fontStyle:"italic"}}>
-                {line.slice(1,-1)}
-              </p>
-            </div>
-          );
-          i++; continue;
-        }
-        // Bold inline — **text**
-        if (line.trim() && !line.startsWith("#")) {
-          const parts = line.split(/(\*\*[^*]+\*\*)/g);
-          const rendered = parts.map((part, pi) => {
-            if (part.startsWith("**") && part.endsWith("**")) {
-              return <strong key={pi} style={{color:PARCHMENT,fontWeight:600}}>{part.slice(2,-2)}</strong>;
-            }
-            return part;
-          });
-          elements.push(
-            <p key={i} style={{fontSize:14,color:"rgba(247,244,238,0.65)",lineHeight:1.85,margin:"0 0 14px 0"}}>
-              {rendered}
-            </p>
-          );
-          i++; continue;
-        }
-        i++;
-      }
-      return elements;
-    }
+
+  // ── REPLACE 4: RESULTS + SIGNUP SCREEN ───────────────────────────────────────
+  if (phase === "results" && results) {
+    const { valuIndex, clusterScores, desig, futureReadyScore, listed } = results;
     return (
-      <div style={{minHeight:"100vh",background:DARK,fontFamily:"sans-serif"}}>
-        {/* ── SCORE HEADER — always visible ── */}
-        <div style={{background:MID,borderBottom:"1px solid rgba(201,168,76,0.12)",padding:"32px 24px 28px",position:"sticky",top:0,zIndex:10}}>
-          <div style={{maxWidth:680,margin:"0 auto"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
-              <div>
-                <div style={{fontSize:10,color:"rgba(201,168,76,0.45)",letterSpacing:"0.2em",marginBottom:6}}>VALU INDEX REPORT · {name}</div>
-                <div style={{fontSize:11,color:"rgba(247,244,238,0.35)"}}>{role}</div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:20}}>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontFamily:"Georgia,serif",fontSize:48,fontWeight:300,color:GOLD,lineHeight:1}}>{valuIndex}</div>
-                  <div style={{fontSize:9,color:"rgba(247,244,238,0.25)",letterSpacing:"0.1em"}}>OUT OF 100</div>
-                </div>
-                <Radar scores={clusterScores} size={90}/>
-              </div>
+      <div style={{ minHeight:"100vh", background:DARK, fontFamily:"'DM Sans',sans-serif" }}>
+        {/* Cluster stripe */}
+        <div style={{position:"fixed",top:0,left:0,right:0,height:3,display:"flex",zIndex:10}}>
+          {[["#1D9E75",20],["#378ADD",25],["#7F77DD",25],["#BA7517",20],["#D85A30",10]].map(([color,pct],i)=>(
+            <div key={i} style={{flex:pct,background:color}}/>
+          ))}
+        </div>
+        <div style={{ maxWidth:640, margin:"0 auto", padding:"60px 24px 80px" }}>
+          {/* Score header */}
+          <div style={{ textAlign:"center", marginBottom:40 }}>
+            <div style={{ fontSize:10, color:"rgba(201,168,76,0.5)", letterSpacing:"0.2em", marginBottom:16 }}>
+              VALU INDEX COMPLETE
             </div>
-            {/* Cluster + skill scores */}
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:16}}>
-              {CLUSTERS.map(c => {
-                // Get skills in this cluster sorted weakest first
-                const clusterSkillList = Object.entries(skillScores || {})
-                  .filter(([s]) => SKILL_CLUSTER[s] === c.id)
-                  .sort(([,a],[,b]) => a - b);
-                const weakestSkill = clusterSkillList[0];
-                return (
-                  <div key={c.id} style={{
-                    padding:"8px 12px",
-                    background:`${c.color}10`,
-                    border:`1px solid ${c.color}30`,
-                    borderRadius:4, minWidth:120,
-                  }}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-                      <div style={{width:14,height:14,borderRadius:2,background:`${c.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:c.color}}>{c.id}</div>
-                      <span style={{fontSize:13,color:c.color,fontWeight:600}}>{clusterScores[c.id]}</span>
-                      <span style={{fontSize:10,color:"rgba(247,244,238,0.25)"}}>/100</span>
-                    </div>
-                    {weakestSkill && (
-                      <div style={{fontSize:10,color:"rgba(247,244,238,0.3)",lineHeight:1.4}}>
-                        Gap: {weakestSkill[0].split(" ")[0]} ({weakestSkill[1]})
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",background:"rgba(232,160,32,0.08)",border:`1px solid rgba(232,160,32,0.2)`,borderRadius:4}}>
-                <span style={{fontSize:10,color:AMBER,letterSpacing:"0.06em"}}>FUTURE-READY</span>
-                <span style={{fontSize:13,color:AMBER,fontWeight:600}}>{futureReadyScore}</span>
-              </div>
-              <div style={{display:"flex",alignItems:"center",padding:"8px 14px",background:desig.bg,border:`1px solid ${desig.color}40`,borderRadius:4}}>
-                <span style={{fontSize:10,fontWeight:700,color:desig.color,letterSpacing:"0.1em"}}>{desig.name.toUpperCase()}</span>
-              </div>
+            <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:80, fontWeight:300, color:GOLD, lineHeight:1 }}>
+              {valuIndex}
+            </div>
+            <div style={{ fontSize:11, color:"rgba(247,244,238,0.3)", letterSpacing:"0.1em", marginBottom:12 }}>OUT OF 100</div>
+            <div style={{ display:"inline-block", padding:"8px 20px", background:desig.bg, border:`1px solid ${desig.color}40`, borderRadius:4 }}>
+              <span style={{ fontSize:12, fontWeight:700, color:desig.color, letterSpacing:"0.12em" }}>
+                {desig.name.toUpperCase()}
+              </span>
             </div>
           </div>
-        </div>
-        {/* ── REPORT BODY ── */}
-        <div ref={reportRef} style={{maxWidth:680,margin:"0 auto",padding:"32px 24px 80px"}}>
-          {/* Generating indicator */}
-          {isGenerating && (
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:28,padding:"14px 18px",background:"rgba(201,168,76,0.06)",border:"1px solid rgba(201,168,76,0.15)",borderRadius:6}}>
-              <div style={{display:"flex",gap:4}}>
-                {[0,1,2].map(i => (
-                  <div key={i} style={{
-                    width:6,height:6,borderRadius:"50%",background:GOLD,
-                    animation:`pulse 1.4s ease-in-out ${i*0.2}s infinite`,
-                  }}/>
-                ))}
+          {/* Radar */}
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:40 }}>
+            <Radar scores={clusterScores} size={200}/>
+          </div>
+          {/* Cluster scores */}
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center", marginBottom:40 }}>
+            {CLUSTERS.map(c => (
+              <div key={c.id} style={{ padding:"10px 16px", background:`${c.color}10`, border:`1px solid ${c.color}30`, borderRadius:6, textAlign:"center" }}>
+                <div style={{ fontSize:18, fontWeight:700, color:c.color }}>{clusterScores[c.id]}</div>
+                <div style={{ fontSize:10, color:"rgba(247,244,238,0.4)", marginTop:2 }}>{c.name}</div>
               </div>
-              <div style={{fontSize:12,color:"rgba(201,168,76,0.7)",letterSpacing:"0.08em"}}>
-                {reportText.length === 0
-                  ? "Analysing your profile..."
-                  : "Writing your report..."}
-              </div>
+            ))}
+          </div>
+          {/* Signup form */}
+          <div style={{ background:"rgba(22,22,36,0.8)", border:"1px solid rgba(201,168,76,0.15)", borderRadius:12, padding:"32px" }}>
+            <div style={{ fontSize:11, fontWeight:700, color:GOLD, letterSpacing:"0.16em", marginBottom:8 }}>
+              YOUR FULL REPORT IS READY
             </div>
-          )}
-          {/* Error state */}
-          {isError && (
-            <div style={{padding:"20px 24px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.3)",borderRadius:6,marginBottom:24}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#D85A30",letterSpacing:"0.1em",marginBottom:8}}>REPORT GENERATION FAILED</div>
-              <p style={{fontSize:13,color:"rgba(247,244,238,0.5)",lineHeight:1.7,marginBottom:16}}>
-                {reportError || "An error occurred while generating your report. Your score has been saved."}
-              </p>
-              <p style={{fontSize:12,color:"rgba(247,244,238,0.4)",lineHeight:1.7,margin:0}}>
-                Your VALU Index is <strong style={{color:GOLD}}>{valuIndex}/100</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact hello@valoriainstituteafrica.com to receive your full report.
-              </p>
-            </div>
-          )}
-          {/* Streamed report content */}
-          {reportText && (
-            <div style={{lineHeight:1}}>
-              {renderReport(reportText)}
-            </div>
-          )}
-          {/* Cursor animation while streaming */}
-          {isGenerating && reportText.length > 0 && (
-            <span style={{display:"inline-block",width:2,height:16,background:GOLD,marginLeft:2,animation:"blink 1s step-end infinite",verticalAlign:"text-bottom"}}/>
-          )}
-          {/* Platform status — shown after report completes */}
-          {isComplete && (
-            <>
-              <div style={{marginTop:32,padding:"20px 24px",background:listed?"rgba(29,158,117,0.08)":"rgba(136,136,136,0.08)",
-                border:`1px solid ${listed?"rgba(29,158,117,0.3)":"rgba(136,136,136,0.25)"}`,borderRadius:6}}>
-                <div style={{fontSize:11,fontWeight:700,color:listed?"#1D9E75":"#888888",letterSpacing:"0.12em",marginBottom:8}}>
-                  {listed ? "LISTED — YOUR PROFILE IS SEARCHABLE" : "NOT YET LISTED — SCORE BELOW 35"}
-                </div>
-                <p style={{fontSize:13,color:"rgba(247,244,238,0.55)",lineHeight:1.75,margin:0}}>
-                  {listed
-                    ? `Your VALU Index of ${valuIndex} qualifies you for listing on the Valoria platform. Complete your profile to become searchable by employers, event organisers, and training buyers.`
-                    : `A score of ${valuIndex} does not yet qualify for listing. The minimum is 35. A PRIME Sprint is specifically designed to move your score into the listed range.`}
-                </p>
-              </div>
-              {/* CTAs */}
-              <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:24}}>
-                <div onClick={() => onComplete && onComplete({ name, role, ...results, reportText })} /* name+role already known — signup only needs email */
-                  style={{padding:"20px 28px",background:GOLD,borderRadius:3,textAlign:"center",cursor:"pointer"}}
-                  onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
-                  onMouseLeave={e=>e.currentTarget.style.background=GOLD}>
-                  <div style={{fontSize:12,fontWeight:700,color:DARK,letterSpacing:"0.16em",marginBottom:4}}>COMPLETE YOUR PROFILE</div>
-                  <div style={{fontSize:12,color:"rgba(26,26,46,0.6)"}}>Enter your email — name and role are already saved</div>
-                </div>
-                <button onClick={requestRetake}
-                  style={{padding:"15px 28px",background:"transparent",border:"1px solid rgba(201,168,76,0.15)",
-                    borderRadius:3,color:"rgba(247,244,238,0.3)",fontSize:11,letterSpacing:"0.14em",cursor:"pointer",fontFamily:"sans-serif"}}>
-                  RETAKE ASSESSMENT
+            <p style={{ fontSize:14, color:"rgba(247,244,238,0.5)", lineHeight:1.7, marginBottom:24 }}>
+              Enter your email and create a password to receive your full AI report and join the Valoria platform.
+            </p>
+            <SignupForm
+              name={name}
+              role={role}
+              score={valuIndex}
+              designation={desig.name}
+              identity_hash={computeFingerprint(name, role)}
+            />
+          </div>
+
+          {/* Retake button */}
+          <div style={{ marginTop:16, textAlign:"center" }}>
+            <button onClick={requestRetake}
+              style={{padding:"15px 28px",background:"transparent",border:"1px solid rgba(201,168,76,0.15)",
+                borderRadius:3,color:"rgba(247,244,238,0.3)",fontSize:11,letterSpacing:"0.14em",cursor:"pointer",fontFamily:"sans-serif"}}>
+              RETAKE ASSESSMENT
+            </button>
+          </div>
+
+          {/* ── RETAKE MODAL ── */}
+          {showRetakeModal && (
+            <div style={{
+              position:"fixed",inset:0,zIndex:999,
+              background:"rgba(15,15,26,0.92)",
+              backdropFilter:"blur(12px)",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              padding:"24px",
+            }}>
+              <div style={{
+                background:"#1A1A2E",
+                border:"1px solid rgba(201,168,76,0.2)",
+                borderRadius:10,padding:"36px 32px",
+                maxWidth:460,width:"100%",
+                position:"relative",
+              }}>
+                <button
+                  onClick={() => setShowRetakeModal(false)}
+                  style={{position:"absolute",top:16,right:16,background:"none",border:"none",color:"rgba(247,244,238,0.3)",fontSize:20,cursor:"pointer",lineHeight:1}}>
+                  ×
                 </button>
-              </div>
-              {/* ── RETAKE MODAL ── */}
-              {showRetakeModal && (
-                <div style={{
-                  position:"fixed",inset:0,zIndex:999,
-                  background:"rgba(15,15,26,0.92)",
-                  backdropFilter:"blur(12px)",
-                  display:"flex",alignItems:"center",justifyContent:"center",
-                  padding:"24px",
-                }}>
-                  <div style={{
-                    background:"#1A1A2E",
-                    border:"1px solid rgba(201,168,76,0.2)",
-                    borderRadius:10,padding:"36px 32px",
-                    maxWidth:460,width:"100%",
-                    position:"relative",
-                  }}>
-                    {/* Close */}
+                {showRetakeModal === "locked" ? (
+                  <>
+                    <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20}}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="11" width="18" height="11" rx="2" stroke="#C9A84C" strokeWidth="1.5"/>
+                        <path d="M7 11V7a5 5 0 0110 0v4" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:26,fontWeight:300,color:"#F7F4EE",marginBottom:12,lineHeight:1.2}}>
+                      Your VALU Index is still valid.
+                    </div>
+                    <p style={{fontSize:14,color:"rgba(247,244,238,0.5)",lineHeight:1.75,marginBottom:16}}>
+                      You can retake the assessment on <strong style={{color:"#C9A84C"}}>{expiryDateFormatted}</strong>. Your score expires 12 months after your assessment date.
+                    </p>
+                    <p style={{fontSize:13,color:"rgba(247,244,238,0.35)",lineHeight:1.7,marginBottom:24}}>
+                      If you believe there is an error in your result, contact <span style={{color:"#C9A84C"}}>hello@valoriainstituteafrica.com</span> and a Valoria adviser will review your session.
+                    </p>
                     <button
                       onClick={() => setShowRetakeModal(false)}
-                      style={{position:"absolute",top:16,right:16,background:"none",border:"none",color:"rgba(247,244,238,0.3)",fontSize:20,cursor:"pointer",lineHeight:1}}>
-                      ×
+                      style={{width:"100%",padding:"14px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.3)",borderRadius:3,color:"#C9A84C",fontSize:11,fontWeight:700,letterSpacing:"0.16em",cursor:"pointer",fontFamily:"sans-serif"}}>
+                      CLOSE
                     </button>
-                    {showRetakeModal === "locked" ? (
-                      /* ── LOCKED STATE — score still valid ── */
-                      <>
-                        <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20}}>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="11" width="18" height="11" rx="2" stroke="#C9A84C" strokeWidth="1.5"/>
-                            <path d="M7 11V7a5 5 0 0110 0v4" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/>
-                          </svg>
-                        </div>
-                        <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:26,fontWeight:300,color:"#F7F4EE",marginBottom:12,lineHeight:1.2}}>
-                          Your VALU Index is still valid.
-                        </div>
-                        <p style={{fontSize:14,color:"rgba(247,244,238,0.5)",lineHeight:1.75,marginBottom:16}}>
-                          You can retake the assessment on <strong style={{color:"#C9A84C"}}>{expiryDateFormatted}</strong>. Your score expires 12 months after your assessment date.
-                        </p>
-                        <p style={{fontSize:13,color:"rgba(247,244,238,0.35)",lineHeight:1.7,marginBottom:24}}>
-                          If you believe there is an error in your result, contact <span style={{color:"#C9A84C"}}>hello@valoriainstituteafrica.com</span> and a Valoria adviser will review your session.
-                        </p>
-                        <button
-                          onClick={() => setShowRetakeModal(false)}
-                          style={{width:"100%",padding:"14px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.3)",borderRadius:3,color:"#C9A84C",fontSize:11,fontWeight:700,letterSpacing:"0.16em",cursor:"pointer",fontFamily:"sans-serif"}}>
-                          CLOSE
-                        </button>
-                      </>
-                    ) : (
-                      /* ── CONFIRM STATE — are you sure? ── */
-                      <>
-                        <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(216,90,48,0.1)",border:"1px solid rgba(216,90,48,0.3)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20}}>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#D85A30" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </div>
-                        <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:26,fontWeight:300,color:"#F7F4EE",marginBottom:12,lineHeight:1.2}}>
-                          Are you sure you want to retake?
-                        </div>
-                        <p style={{fontSize:14,color:"rgba(247,244,238,0.5)",lineHeight:1.75,marginBottom:8}}>
-                          Retaking the assessment will permanently replace your current result. Your VALU Index, cluster scores, and AI report will all be overwritten.
-                        </p>
-                        <p style={{fontSize:13,color:"rgba(247,244,238,0.4)",lineHeight:1.7,marginBottom:24}}>
-                          The assessment is designed to be taken once every 12 months. Retaking it immediately is unlikely to produce a meaningfully different result — and will not improve your score if your capability has not changed.
-                        </p>
-                        <div style={{display:"flex",gap:10}}>
-                          <button
-                            onClick={() => setShowRetakeModal(false)}
-                            style={{flex:1,padding:"13px",background:"transparent",border:"1px solid rgba(247,244,238,0.15)",borderRadius:3,color:"rgba(247,244,238,0.5)",fontSize:11,letterSpacing:"0.12em",cursor:"pointer",fontFamily:"sans-serif"}}>
-                            KEEP MY RESULT
-                          </button>
-                          <button
-                            onClick={confirmRetake}
-                            style={{flex:1,padding:"13px",background:"rgba(216,90,48,0.15)",border:"1px solid rgba(216,90,48,0.4)",borderRadius:3,color:"#D85A30",fontSize:11,fontWeight:700,letterSpacing:"0.12em",cursor:"pointer",fontFamily:"sans-serif"}}>
-                            YES, RETAKE
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </>
+                  </>
+                ) : (
+                  <>
+                    <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(216,90,48,0.1)",border:"1px solid rgba(216,90,48,0.3)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20}}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#D85A30" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:26,fontWeight:300,color:"#F7F4EE",marginBottom:12,lineHeight:1.2}}>
+                      Are you sure you want to retake?
+                    </div>
+                    <p style={{fontSize:14,color:"rgba(247,244,238,0.5)",lineHeight:1.75,marginBottom:8}}>
+                      Retaking the assessment will permanently replace your current result. Your VALU Index, cluster scores, and AI report will all be overwritten.
+                    </p>
+                    <p style={{fontSize:13,color:"rgba(247,244,238,0.4)",lineHeight:1.7,marginBottom:24}}>
+                      The assessment is designed to be taken once every 12 months. Retaking it immediately is unlikely to produce a meaningfully different result — and will not improve your score if your capability has not changed.
+                    </p>
+                    <div style={{display:"flex",gap:10}}>
+                      <button
+                        onClick={() => setShowRetakeModal(false)}
+                        style={{flex:1,padding:"13px",background:"transparent",border:"1px solid rgba(247,244,238,0.15)",borderRadius:3,color:"rgba(247,244,238,0.5)",fontSize:11,letterSpacing:"0.12em",cursor:"pointer",fontFamily:"sans-serif"}}>
+                        KEEP MY RESULT
+                      </button>
+                      <button
+                        onClick={confirmRetake}
+                        style={{flex:1,padding:"13px",background:"rgba(216,90,48,0.15)",border:"1px solid rgba(216,90,48,0.4)",borderRadius:3,color:"#D85A30",fontSize:11,fontWeight:700,letterSpacing:"0.12em",cursor:"pointer",fontFamily:"sans-serif"}}>
+                        YES, RETAKE
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           )}
         </div>
-        {/* Animations */}
-        <style>{`
-          @keyframes pulse {
-            0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-            40% { opacity: 1; transform: scale(1); }
-          }
-          @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-          }
-        `}</style>
-        {/* Footer */}
         <div style={{textAlign:"center",padding:"24px",fontSize:10,color:"rgba(247,244,238,0.12)",letterSpacing:"0.1em"}}>
-          VALU INDEX v4.0 · AI-POWERED REPORT · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
+          VALU INDEX v4.0 · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
         </div>
       </div>
     );
   }
+
   return null;
+}
+
+// ── SIGNUP FORM COMPONENT ─────────────────────────────────────────────────
+function SignupForm({ name, role, score, designation, identity_hash }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState("idle"); // idle | sending | done | error
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleSignup() {
+    if (!email.trim() || !password.trim()) return;
+    setStatus("sending");
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name, role, score, designation, identity_hash }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || "Something went wrong. Please try again.");
+        setStatus("error");
+        return;
+      }
+      setStatus("done");
+    } catch (e) {
+      setErrorMsg("Network error. Please try again.");
+      setStatus("error");
+    }
+  }
+
+  if (status === "done") {
+    return (
+      <div style={{ textAlign:"center", padding:"24px 0" }}>
+        <div style={{ fontSize:32, marginBottom:16 }}>✓</div>
+        <div style={{ fontSize:16, color:GOLD, fontWeight:600, marginBottom:8 }}>Check your inbox</div>
+        <p style={{ fontSize:14, color:"rgba(247,244,238,0.5)", lineHeight:1.7 }}>
+          We've sent your full report to <strong style={{ color:PARCHMENT }}>{email}</strong>.
+          Click the link in the email to read it.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom:16 }}>
+        <label style={{ fontSize:9, fontWeight:700, color:"rgba(201,168,76,0.5)", letterSpacing:"0.2em", display:"block", marginBottom:8 }}>
+          EMAIL ADDRESS
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="your@email.com"
+          style={{
+            width:"100%", background:"rgba(255,255,255,0.04)",
+            border:`1.5px solid ${email.trim() ? "rgba(201,168,76,0.4)" : "rgba(247,244,238,0.1)"}`,
+            borderRadius:8, padding:"16px 18px", color:PARCHMENT,
+            fontSize:16, outline:"none", fontFamily:"'DM Sans',sans-serif",
+            boxSizing:"border-box",
+          }}
+        />
+      </div>
+      <div style={{ marginBottom:24 }}>
+        <label style={{ fontSize:9, fontWeight:700, color:"rgba(201,168,76,0.5)", letterSpacing:"0.2em", display:"block", marginBottom:8 }}>
+          CREATE PASSWORD
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder="Minimum 8 characters"
+          style={{
+            width:"100%", background:"rgba(255,255,255,0.04)",
+            border:`1.5px solid ${password.trim() ? "rgba(201,168,76,0.4)" : "rgba(247,244,238,0.1)"}`,
+            borderRadius:8, padding:"16px 18px", color:PARCHMENT,
+            fontSize:16, outline:"none", fontFamily:"'DM Sans',sans-serif",
+            boxSizing:"border-box",
+          }}
+        />
+      </div>
+      {errorMsg && (
+        <div style={{ fontSize:13, color:"#D85A30", marginBottom:16, lineHeight:1.6 }}>
+          {errorMsg}
+        </div>
+      )}
+      <button
+        onClick={handleSignup}
+        disabled={!email.trim() || !password.trim() || status === "sending"}
+        style={{
+          width:"100%", padding:"18px 24px",
+          background: (email.trim() && password.trim()) ? GOLD : "rgba(201,168,76,0.12)",
+          color: (email.trim() && password.trim()) ? DARK : "rgba(201,168,76,0.25)",
+          border:"none", borderRadius:8,
+          fontSize:12, fontWeight:700, letterSpacing:"0.18em",
+          cursor: (email.trim() && password.trim()) ? "pointer" : "not-allowed",
+          fontFamily:"'DM Sans',sans-serif",
+        }}
+      >
+        {status === "sending" ? "SENDING..." : "GET MY FULL REPORT"}
+      </button>
+      <p style={{ fontSize:11, color:"rgba(247,244,238,0.2)", textAlign:"center", marginTop:12, lineHeight:1.6 }}>
+        Your report will arrive by email within 30 seconds.
+        The link works once and expires in 24 hours.
+      </p>
+    </div>
+  );
 }
