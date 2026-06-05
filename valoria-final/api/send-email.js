@@ -37,7 +37,7 @@ export default async function handler(req) {
   const { report_token } = rows[0];
   const reportUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/report?token=${report_token}`;
 
-  // 2. Send welcome email with token link — NO AI generation here
+  // 2. Send welcome email with token link — AI report generated only when link is clicked
   const html = `
     <!DOCTYPE html>
     <html>
