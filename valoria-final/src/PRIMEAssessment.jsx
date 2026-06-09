@@ -25,6 +25,73 @@ async function saveToSupabase(data) {
     console.error("Supabase save failed:", e);
   }
 }
+// ── SIGNUP / WAITLIST / EMAIL-CONFIRMATION HELPERS ─────────────────────────
+const PENDING_REPORT_KEY = "valu_pending_report_v1";
+
+async function signUpWithSupabase(email, password, name, role) {
+  const redirectTo = encodeURIComponent(window.location.origin + "/");
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup?redirect_to=${redirectTo}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+    body: JSON.stringify({ email, password, data: { full_name: name, role } }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.msg || data.error_description || data.error || "Signup failed.");
+  }
+  return data;
+}
+
+async function joinWaitlist({ name, email, role }) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Prefer": "return=minimal",
+      },
+      body: JSON.stringify({ name, email, type: "professional", role }),
+    });
+    // 409 / 23505 = already on the waitlist — treat as success
+    if (!res.ok && res.status !== 409) {
+      console.error("Waitlist insert failed:", await res.text());
+    }
+  } catch (e) {
+    console.error("Waitlist insert failed:", e);
+  }
+}
+
+function setPendingReport(payload) {
+  try { localStorage.setItem(PENDING_REPORT_KEY, JSON.stringify(payload)); } catch {}
+}
+function getPendingReport() {
+  try {
+    const raw = localStorage.getItem(PENDING_REPORT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function clearPendingReport() {
+  try { localStorage.removeItem(PENDING_REPORT_KEY); } catch {}
+}
+
+// Detects the Supabase email-confirmation redirect (tokens arrive in the URL hash)
+function parseAuthHash() {
+  if (typeof window === "undefined" || !window.location.hash) return null;
+  const hash = window.location.hash.replace(/^#/, "");
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  const errorDescription = params.get("error_description");
+  if (errorDescription) return { error: errorDescription.replace(/\+/g, " ") };
+  const accessToken = params.get("access_token");
+  const type = params.get("type");
+  if (!accessToken) return null;
+  let email = null;
+  try { email = JSON.parse(atob(accessToken.split(".")[1])).email || null; } catch {}
+  return { accessToken, type, email };
+}
+
 const GOLD = "#C9A84C";
 const DARK = "#1A1A2E";
 const MID  = "#2E2E4A";
@@ -1020,6 +1087,14 @@ export default function PRIMEAssessment({
   const [reportStatus, setReportStatus] = useState("idle");
   const [reportError, setReportError]   = useState(null);
   const reportRef = useRef(null);
+  // Signup state (waitlist + account creation after partial results)
+  const [signupEmail, setSignupEmail]     = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupError, setSignupError]     = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [signupDone, setSignupDone]       = useState(false);
+  const [confirmedEmail, setConfirmedEmail] = useState(null);
+  const [emailStatus, setEmailStatus]     = useState("idle"); // idle | sending | sent | failed
   // Retake modal state
   const [showRetakeModal, setShowRetakeModal] = useState(false);
   const userFingerprint = useMemo(
@@ -1076,28 +1151,133 @@ export default function PRIMEAssessment({
     }, 0);
     liveScores[c.id] = Math.round((raw / c.maxRaw) * 100);
   });
+  // ── EMAIL-CONFIRMATION RETURN ──────────────────────────────────────────
+  // When the user clicks the confirmation link in their welcome email,
+  // Supabase redirects back here with tokens in the URL hash. Detect it,
+  // restore the pending assessment, and generate + email the full report.
+  useEffect(() => {
+    const auth = parseAuthHash();
+    if (!auth) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (auth.error) {
+      setPhase("results");
+      setSignupError(`Confirmation link issue: ${auth.error}. Sign up again to receive a new link.`);
+      return;
+    }
+    const pending = getPendingReport();
+    const email = auth.email || pending?.email || null;
+    const finishWith = (profileName, profileRole, profileResults) => {
+      setName(profileName);
+      setRole(profileRole);
+      setResults(profileResults);
+      setConfirmedEmail(email);
+      setPhase("generating");
+      generateAIReport({ name: profileName, role: profileRole, ...profileResults }, email);
+      clearPendingReport();
+    };
+    if (pending?.results) {
+      finishWith(pending.name, pending.role, pending.results);
+    } else if (email) {
+      // Different device or cleared storage — rebuild from the saved assessment row
+      fetchAssessmentByEmail(email).then((profile) => {
+        if (profile) finishWith(profile.name, profile.role, profile.results);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function fetchAssessmentByEmail(email) {
+    try {
+      const params = new URLSearchParams({
+        email: `eq.${email}`,
+        select: "name,role,total_score,cluster_scores,skill_scores",
+        order: "completed_at.desc",
+        limit: "1",
+      });
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+      });
+      if (!res.ok) return null;
+      const rows = await res.json();
+      if (!rows?.length) return null;
+      const row = rows[0];
+      const valuIndex = row.total_score ?? 0;
+      const clusterScores = row.cluster_scores ?? {};
+      const sorted = [...CLUSTERS].sort((a, b) => (clusterScores[b.id] ?? 0) - (clusterScores[a.id] ?? 0));
+      const clusterAvg = Math.round(
+        CLUSTERS.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS.length
+      );
+      return {
+        name: row.name,
+        role: row.role,
+        results: {
+          valuIndex,
+          clusterScores,
+          skillScores: row.skill_scores ?? {},
+          desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
+          futureReadyScore: clusterAvg,
+          strongest: sorted[0],
+          weakest: sorted[sorted.length - 1],
+          consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
+          speedFlag: false, uniformityFlag: false, anyFlag: false,
+          listed: valuIndex >= 35,
+          pathway: valuIndex >= 80 ? "PCP Certification"
+                 : valuIndex >= 65 ? "PRIME Programme"
+                 : valuIndex >= 50 ? "PRIME Cluster"
+                 : "PRIME Sprint",
+          globalSD: 1,
+        },
+      };
+    } catch { return null; }
+  }
+
   // ── AI REPORT GENERATOR ────────────────────────────────────────────────
-  async function persistAssessmentRow(scoreProfile, aiReport = null) {
-    const fp = computeFingerprint(name, role);
+  async function persistAssessmentRow(scoreProfile, aiReport = null, email = null) {
+    const rowName = scoreProfile.name ?? name;
+    const rowRole = scoreProfile.role ?? role;
+    const fp = computeFingerprint(rowName, rowRole);
     const expiresAtIso = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
     await saveToSupabase({
       total_score: scoreProfile.valuIndex ?? 0,
       designation: scoreProfile.desig?.name ?? scoreProfile.desig ?? "",
       completed_at: new Date().toISOString(),
       ai_report: aiReport,
-      name,
-      role,
+      name: rowName,
+      role: rowRole,
       identity_hash: fp,
       assessment_expires_at: expiresAtIso,
       cluster_scores: scoreProfile.clusterScores ?? {},
       skill_scores: scoreProfile.skillScores ?? {},
+      ...(email ? { email } : {}),
     });
   }
 
-  async function generateAIReport(scoreProfile) {
+  async function emailFullReport(email, scoreProfile, fullText) {
+    if (!email) return;
+    setEmailStatus("sending");
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          name: scoreProfile.name ?? name,
+          role: scoreProfile.role ?? role,
+          score: scoreProfile.valuIndex,
+          designation: scoreProfile.desig?.name ?? "",
+          reportText: fullText,
+        }),
+      });
+      setEmailStatus(res.ok ? "sent" : "failed");
+    } catch {
+      setEmailStatus("failed");
+    }
+  }
+
+  async function generateAIReport(scoreProfile, recipientEmail = null) {
     setReportStatus("generating");
     setReportText("");
-    await persistAssessmentRow(scoreProfile, null);
+    await persistAssessmentRow(scoreProfile, null, recipientEmail);
     try {
       const response = await fetch("/api/report", {
         method: "POST",
@@ -1136,9 +1316,10 @@ export default function PRIMEAssessment({
         }
       }
       setReportStatus("complete");
-      await persistAssessmentRow(scoreProfile, fullText);
+      await persistAssessmentRow(scoreProfile, fullText, recipientEmail);
+      // Email the finished report — generation already happened, so this call is fast
+      emailFullReport(recipientEmail, scoreProfile, fullText);
 
-      // NOTE: name & role collected at intro — do NOT re-ask in downstream signup form
       if (onComplete) {
         onComplete({
           name, role, ...scoreProfile,
@@ -1187,10 +1368,10 @@ export default function PRIMEAssessment({
       } else {
         const r = computeResults(newAnswers, newTimings, shuffleMap);
         setResults(r);
-        setPhase("generating");
+        setPhase("results");
         setTransitioning(false);
         if (onAssessmentSubmitted) onAssessmentSubmitted({ name, role, ...r });
-        generateAIReport({ name, role, ...r });
+        persistAssessmentRow({ name, role, ...r }, null);
       }
     }, 280);
   }
@@ -1211,10 +1392,10 @@ export default function PRIMEAssessment({
       } else {
         const r = computeResults(newAnswers, newTimings, shuffleMap);
         setResults(r);
-        setPhase("generating");
+        setPhase("results");
         setTransitioning(false);
         if (onAssessmentSubmitted) onAssessmentSubmitted({ name, role, ...r });
-        generateAIReport({ name, role, ...r });
+        persistAssessmentRow({ name, role, ...r }, null);
       }
     }, 280);
   }
@@ -1242,6 +1423,37 @@ export default function PRIMEAssessment({
     setSelected(null); setResults(null); setName(""); setRole("");
     setTimings(Array(TOTAL).fill(0)); setShuffleMap({});
     setReportText(""); setReportStatus("idle"); setReportError(null);
+    setSignupEmail(""); setSignupPassword(""); setSignupError("");
+    setSignupDone(false); setConfirmedEmail(null); setEmailStatus("idle");
+    clearPendingReport();
+  }
+  // ── SIGNUP HANDLER — waitlist account creation after partial results ────
+  async function handleSignup() {
+    if (!signupEmail.trim() || !signupPassword) {
+      setSignupError("A valid email address and password are required to continue.");
+      return;
+    }
+    if (signupPassword.length < 8) {
+      setSignupError("Your password must be at least 8 characters.");
+      return;
+    }
+    setSignupLoading(true);
+    setSignupError("");
+    try {
+      // 1. Create the account — Supabase sends the welcome/confirmation email
+      await signUpWithSupabase(signupEmail.trim(), signupPassword, name, role);
+      // 2. Store the assessment locally so the report can be generated on return
+      setPendingReport({ name, role, email: signupEmail.trim(), results });
+      // 3. Save the assessment row with the email attached
+      await persistAssessmentRow({ name, role, ...results }, null, signupEmail.trim());
+      // 4. Join the waitlist
+      await joinWaitlist({ name, email: signupEmail.trim(), role });
+      setSignupDone(true);
+    } catch (e) {
+      setSignupError(e.message || "Something has prevented this from completing. Refresh the page or try again shortly.");
+    } finally {
+      setSignupLoading(false);
+    }
   }
   // ── INTRO SCREEN ───────────────────────────────────────────────────────
   if (phase === "intro") {
@@ -1700,6 +1912,169 @@ export default function PRIMEAssessment({
       </div>
     );
   }
+  // ── PARTIAL RESULTS + SIGNUP SCREEN ────────────────────────────────────
+  // Shown immediately after the assessment. The professional sees their
+  // score, designation, and cluster scores — the full AI report unlocks
+  // after they sign up and confirm their email.
+  if (phase === "results") {
+    if (!results) {
+      // Reached via an expired/invalid confirmation link with no saved session
+      return (
+        <div style={{minHeight:"100vh",background:DARK,display:"flex",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'DM Sans',sans-serif"}}>
+          <div style={{maxWidth:460,width:"100%",background:"rgba(22,22,36,0.7)",border:"1px solid rgba(201,168,76,0.15)",borderRadius:12,padding:"36px 32px",textAlign:"center"}}>
+            <div style={{fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"0.16em",marginBottom:14}}>VALU INDEX</div>
+            <p style={{fontSize:14,color:"rgba(247,244,238,0.55)",lineHeight:1.75,marginBottom:24}}>
+              {signupError || "Your session could not be restored. Take the assessment to generate your result."}
+            </p>
+            <button
+              onClick={() => { setSignupError(""); setPhase("intro"); }}
+              style={{padding:"15px 36px",background:GOLD,border:"none",borderRadius:9999,color:DARK,fontSize:12,fontWeight:700,letterSpacing:"0.14em",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+              TAKE THE ASSESSMENT
+            </button>
+          </div>
+        </div>
+      );
+    }
+    const { valuIndex, clusterScores, desig, futureReadyScore } = results;
+    const inputStyle = {
+      width:"100%", background:"rgba(255,255,255,0.04)",
+      border:"1px solid rgba(247,244,238,0.1)", borderRadius:4,
+      padding:"13px 16px", color:PARCHMENT, fontSize:14, outline:"none",
+      fontFamily:"'DM Sans',sans-serif", boxSizing:"border-box",
+      transition:"border-color 0.25s",
+    };
+    const labelStyle = {
+      display:"block", fontSize:10, fontWeight:500, color:"rgba(247,244,238,0.35)",
+      letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:8,
+    };
+    return (
+      <div style={{minHeight:"100vh",background:DARK,fontFamily:"'DM Sans',sans-serif"}}>
+        {/* ── SCORE HEADER — the partial result ── */}
+        <div style={{background:MID,borderBottom:"1px solid rgba(201,168,76,0.12)",padding:"32px 24px 28px"}}>
+          <div style={{maxWidth:680,margin:"0 auto"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
+              <div>
+                <div style={{fontSize:10,color:"rgba(201,168,76,0.45)",letterSpacing:"0.2em",marginBottom:6}}>VALU INDEX RESULT · {name}</div>
+                <div style={{fontSize:11,color:"rgba(247,244,238,0.35)"}}>{role}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:20}}>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:48,fontWeight:300,color:GOLD,lineHeight:1}}>{valuIndex}</div>
+                  <div style={{fontSize:9,color:"rgba(247,244,238,0.25)",letterSpacing:"0.1em"}}>OUT OF 100</div>
+                </div>
+                <Radar scores={clusterScores} size={90}/>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:16}}>
+              {CLUSTERS.map(c => (
+                <div key={c.id} style={{padding:"8px 12px",background:`${c.color}10`,border:`1px solid ${c.color}30`,borderRadius:4,display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{width:14,height:14,borderRadius:2,background:`${c.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:c.color}}>{c.id}</div>
+                  <span style={{fontSize:13,color:c.color,fontWeight:600}}>{clusterScores[c.id]}</span>
+                  <span style={{fontSize:10,color:"rgba(247,244,238,0.25)"}}>/100</span>
+                </div>
+              ))}
+              <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",background:"rgba(232,160,32,0.08)",border:"1px solid rgba(232,160,32,0.2)",borderRadius:4}}>
+                <span style={{fontSize:10,color:AMBER,letterSpacing:"0.06em"}}>FUTURE-READY</span>
+                <span style={{fontSize:13,color:AMBER,fontWeight:600}}>{futureReadyScore}</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",padding:"8px 14px",background:desig.bg,border:`1px solid ${desig.color}40`,borderRadius:4}}>
+                <span style={{fontSize:10,fontWeight:700,color:desig.color,letterSpacing:"0.1em"}}>{desig.name.toUpperCase()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* ── SIGNUP CARD ── */}
+        <div style={{maxWidth:680,margin:"0 auto",padding:"32px 24px 80px"}}>
+          {signupDone ? (
+            <div style={{background:"rgba(29,158,117,0.05)",border:"1px solid rgba(29,158,117,0.25)",borderRadius:10,padding:"32px 28px"}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#1D9E75",letterSpacing:"0.16em",marginBottom:12}}>CONFIRMATION SENT</div>
+              <p style={{fontSize:14,color:"rgba(247,244,238,0.65)",lineHeight:1.8,margin:"0 0 12px"}}>
+                A confirmation link has been sent to <strong style={{color:PARCHMENT}}>{signupEmail}</strong>.
+                Confirm your email to unlock your full AI report — it will be generated here and a copy delivered to your inbox.
+              </p>
+              <p style={{fontSize:12,color:"rgba(247,244,238,0.35)",lineHeight:1.7,margin:0}}>
+                The link arrives within a minute. Check your spam folder if you do not see it.
+                Your VALU Index of {valuIndex} is saved and remains valid for 12 months.
+              </p>
+            </div>
+          ) : (
+            <div style={{background:"rgba(22,22,36,0.7)",border:"1px solid rgba(201,168,76,0.2)",borderRadius:10,padding:"32px 28px"}}>
+              <div style={{fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"0.16em",marginBottom:8}}>UNLOCK YOUR FULL AI REPORT</div>
+              <p style={{fontSize:14,color:"rgba(247,244,238,0.5)",lineHeight:1.7,marginBottom:24}}>
+                Create your account to join the Valoria waitlist and receive your full AI report.
+                A confirmation email will be sent to you — your report unlocks the moment you confirm.
+              </p>
+              <div style={{fontSize:12,color:"rgba(247,244,238,0.4)",marginBottom:20}}>
+                Continuing as <strong style={{color:PARCHMENT}}>{name}</strong> · {role}
+              </div>
+              <div style={{marginBottom:16}}>
+                <label style={labelStyle} htmlFor="signup-email">Email address</label>
+                <input
+                  id="signup-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={signupEmail}
+                  onChange={e=>setSignupEmail(e.target.value)}
+                  onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
+                  onBlur={e=>e.target.style.borderColor="rgba(247,244,238,0.1)"}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{marginBottom:18}}>
+                <label style={labelStyle} htmlFor="signup-password">Create password</label>
+                <input
+                  id="signup-password"
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  value={signupPassword}
+                  onChange={e=>setSignupPassword(e.target.value)}
+                  onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
+                  onBlur={e=>e.target.style.borderColor="rgba(247,244,238,0.1)"}
+                  style={inputStyle}
+                />
+              </div>
+              {signupError && (
+                <div style={{fontSize:12,color:"#D85A30",marginBottom:16,padding:"10px 14px",background:"rgba(216,90,48,0.06)",borderLeft:"2px solid rgba(216,90,48,0.6)"}}>
+                  {signupError}
+                </div>
+              )}
+              <button
+                onClick={handleSignup}
+                disabled={signupLoading}
+                style={{
+                  width:"100%", padding:"16px",
+                  background: signupLoading ? "rgba(201,168,76,0.4)" : GOLD,
+                  border:"none", borderRadius:9999, color:DARK,
+                  fontSize:12, fontWeight:700, letterSpacing:"0.16em",
+                  cursor: signupLoading ? "wait" : "pointer",
+                  fontFamily:"'DM Sans',sans-serif",
+                  transition:"background 0.2s",
+                }}
+                onMouseEnter={e=>{ if(!signupLoading) e.currentTarget.style.background="#E2C97E"; }}
+                onMouseLeave={e=>{ if(!signupLoading) e.currentTarget.style.background=GOLD; }}>
+                {signupLoading ? "CREATING YOUR ACCOUNT..." : "GET MY FULL REPORT"}
+              </button>
+              <p style={{fontSize:10,color:"rgba(247,244,238,0.25)",lineHeight:1.7,marginTop:14,marginBottom:0}}>
+                Your data is protected under the Nigeria Data Protection Act 2023.
+                We never share your information with third parties.
+              </p>
+            </div>
+          )}
+          <div style={{marginTop:24,textAlign:"center"}}>
+            <button onClick={requestRetake}
+              style={{padding:"15px 28px",background:"transparent",border:"1px solid rgba(201,168,76,0.15)",
+                borderRadius:9999,color:"rgba(247,244,238,0.3)",fontSize:11,letterSpacing:"0.14em",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+              RETAKE ASSESSMENT
+            </button>
+          </div>
+          {renderRetakeModal()}
+        </div>
+        <div style={{textAlign:"center",padding:"24px",fontSize:10,color:"rgba(247,244,238,0.12)",letterSpacing:"0.1em"}}>
+          VALU INDEX v4.0 · AI-POWERED REPORT · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
+        </div>
+      </div>
+    );
+  }
   // ── GENERATING / REPORT SCREEN ─────────────────────────────────────────
   if ((phase === "generating" || phase === "report") && results) {
     const { valuIndex, clusterScores, skillScores, desig, futureReadyScore,
@@ -1843,7 +2218,7 @@ export default function PRIMEAssessment({
                 {reportError || "An error occurred while generating your report. Your score has been saved."}
               </p>
               <p style={{fontSize:12,color:"rgba(247,244,238,0.4)",lineHeight:1.7,margin:0}}>
-                Your VALU Index is <strong style={{color:GOLD}}>{valuIndex}/100</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact hello@valoriainstituteafrica.com to receive your full report.
+                Your VALU Index is <strong style={{color:GOLD}}>{valuIndex}/100</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact info@valoriainstitute.com to receive your full report.
               </p>
             </div>
           )}
@@ -1871,15 +2246,29 @@ export default function PRIMEAssessment({
                     : `A score of ${valuIndex} does not yet qualify for listing. The minimum is 35. A PRIME Sprint is specifically designed to move your score into the listed range.`}
                 </p>
               </div>
+              {/* Email delivery status */}
+              {confirmedEmail && (
+                <div style={{marginTop:16,padding:"16px 20px",background:"rgba(201,168,76,0.05)",border:"1px solid rgba(201,168,76,0.15)",borderRadius:6}}>
+                  <p style={{fontSize:13,color:"rgba(247,244,238,0.55)",lineHeight:1.7,margin:0}}>
+                    {emailStatus === "sent"
+                      ? <>A copy of this report has been sent to <strong style={{color:GOLD}}>{confirmedEmail}</strong>.</>
+                      : emailStatus === "sending"
+                      ? "Sending a copy of this report to your email..."
+                      : emailStatus === "failed"
+                      ? <>The report could not be emailed at this time. It remains available here, and your score is saved. Contact <span style={{color:GOLD}}>info@valoriainstitute.com</span> if you need a copy.</>
+                      : null}
+                  </p>
+                </div>
+              )}
               {/* CTAs */}
               <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:24}}>
-                <div onClick={() => onComplete && onComplete({ name, role, ...results, reportText })} /* name+role already known — signup only needs email */
-                  style={{padding:"20px 28px",background:GOLD,borderRadius:3,textAlign:"center",cursor:"pointer"}}
+                <a href="https://valoriainstitute.com/profile-page"
+                  style={{display:"block",padding:"20px 28px",background:GOLD,borderRadius:9999,textAlign:"center",cursor:"pointer",textDecoration:"none"}}
                   onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
                   onMouseLeave={e=>e.currentTarget.style.background=GOLD}>
                   <div style={{fontSize:12,fontWeight:700,color:DARK,letterSpacing:"0.16em",marginBottom:4}}>COMPLETE YOUR PROFILE</div>
-                  <div style={{fontSize:12,color:"rgba(26,26,46,0.6)"}}>Enter your email — name and role are already saved</div>
-                </div>
+                  <div style={{fontSize:12,color:"rgba(26,26,46,0.6)"}}>Your account is confirmed — finish your profile on the platform</div>
+                </a>
                 <button onClick={requestRetake}
                   style={{padding:"15px 28px",background:"transparent",border:"1px solid rgba(201,168,76,0.15)",
                     borderRadius:3,color:"rgba(247,244,238,0.3)",fontSize:11,letterSpacing:"0.14em",cursor:"pointer",fontFamily:"sans-serif"}}>
@@ -1887,7 +2276,34 @@ export default function PRIMEAssessment({
                 </button>
               </div>
               {/* ── RETAKE MODAL ── */}
-              {showRetakeModal && (
+              {renderRetakeModal()}
+            </>
+          )}
+        </div>
+        {/* Animations */}
+        <style>{`
+          @keyframes pulse {
+            0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+            40% { opacity: 1; transform: scale(1); }
+          }
+          @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+          }
+        `}</style>
+        {/* Footer */}
+        <div style={{textAlign:"center",padding:"24px",fontSize:10,color:"rgba(247,244,238,0.12)",letterSpacing:"0.1em"}}>
+          VALU INDEX v4.0 · AI-POWERED REPORT · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
+        </div>
+      </div>
+    );
+  }
+  return null;
+
+  // ── RETAKE MODAL (shared between results + report screens) ─────────────
+  function renderRetakeModal() {
+    if (!showRetakeModal) return null;
+    return (
                 <div style={{
                   position:"fixed",inset:0,zIndex:999,
                   background:"rgba(15,15,26,0.92)",
@@ -1924,7 +2340,7 @@ export default function PRIMEAssessment({
                           You can retake the assessment on <strong style={{color:"#C9A84C"}}>{expiryDateFormatted}</strong>. Your score expires 12 months after your assessment date.
                         </p>
                         <p style={{fontSize:13,color:"rgba(247,244,238,0.35)",lineHeight:1.7,marginBottom:24}}>
-                          If you believe there is an error in your result, contact <span style={{color:"#C9A84C"}}>hello@valoriainstituteafrica.com</span> and a Valoria adviser will review your session.
+                          If you believe there is an error in your result, contact <span style={{color:"#C9A84C"}}>info@valoriainstitute.com</span> and a Valoria adviser will review your session.
                         </p>
                         <button
                           onClick={() => setShowRetakeModal(false)}
@@ -1965,27 +2381,6 @@ export default function PRIMEAssessment({
                     )}
                   </div>
                 </div>
-              )}
-            </>
-          )}
-        </div>
-        {/* Animations */}
-        <style>{`
-          @keyframes pulse {
-            0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-            40% { opacity: 1; transform: scale(1); }
-          }
-          @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-          }
-        `}</style>
-        {/* Footer */}
-        <div style={{textAlign:"center",padding:"24px",fontSize:10,color:"rgba(247,244,238,0.12)",letterSpacing:"0.1em"}}>
-          VALU INDEX v4.0 · AI-POWERED REPORT · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
-        </div>
-      </div>
     );
   }
-  return null;
 }
