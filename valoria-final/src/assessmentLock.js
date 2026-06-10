@@ -1,3 +1,40 @@
+// ── BRAND CONSTANTS — single source of truth for all components ───────────
+// These are the only approved values per VI-WDS-2026-001.
+// Do NOT override these anywhere else in the codebase.
+export const BRAND = {
+  // Core palette
+  DARK:      '#1A1A2E',   // primary background
+  MID:       '#2E2E4A',   // secondary surface
+  GOLD:      '#C9A84C',   // primary accent — never on linen (#EDE8DC)
+  PARCHMENT: '#F7F4EE',   // primary text on dark
+  ACCENT:    '#EDE8DC',   // linen — use sparingly, never paired with gold text
+  AMBER:     '#E8A020',   // secondary warm — future-ready score, warnings
+  BODY:      '#2C2C2C',   // body text on light backgrounds
+
+  // Cluster colours
+  CLUSTER: {
+    P: '#1D9E75',
+    R: '#378ADD',
+    I: '#7F77DD',
+    M: '#BA7517',
+    E: '#D85A30',
+  },
+
+  // Typography (loaded in main.jsx)
+  FONT_DISPLAY: "'Cormorant Garamond', Georgia, serif",
+  FONT_BODY:    "'DM Sans', sans-serif",
+  FONT_MONO:    "'DM Mono', monospace",
+
+  // Contact — only approved address
+  EMAIL: 'info@valoriainstitute.com',
+
+  // Border radius — full pill only for primary CTAs
+  RADIUS_PILL: '9999px',
+  RADIUS_CARD: '12px',
+  RADIUS_SM:   '8px',
+};
+
+// ── LOCK STORAGE ──────────────────────────────────────────────────────────
 const LOCK_KEY = 'valu_assessment_lock_v1';
 
 const env = typeof import.meta !== 'undefined' ? import.meta.env : {};
@@ -76,17 +113,14 @@ export async function fetchServerLock(fingerprint) {
 export async function resolveLockForIdentity(name, role) {
   const fingerprint = computeFingerprint(name, role);
   if (!name?.trim() || !role?.trim()) return null;
-
   const serverLock = await fetchServerLock(fingerprint);
   if (serverLock && isLockActive(serverLock, fingerprint)) {
     setAssessmentLock(serverLock);
     return serverLock;
   }
-
   const localLock = getAssessmentLock();
   if (localLock && isLockActive(localLock, fingerprint)) {
     return localLock;
   }
-
   return null;
 }
