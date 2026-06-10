@@ -1,12 +1,1 @@
-{
-  "rewrites": [
-    { "source": "/", "destination": "/Index.html" },
-    { "source": "/about-us", "destination": "/About_Valoria.html" },
-    { "source": "/assessment", "destination": "/Assessment.html" },
-    { "source": "/facilitators", "destination": "/Facilitators.html" },
-    { "source": "/prime", "destination": "/PRIME.html" },
-    { "source": "/speakers", "destination": "/Speaker.html" },
-    { "source": "/atb-connect", "destination": "/Talent.html" },
-    { "source": "/waitlist", "destination": "/Waitlist.html" }
-  ]
-}
+{}
