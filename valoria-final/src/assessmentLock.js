@@ -3,13 +3,13 @@
 // Do NOT override these anywhere else in the codebase.
 export const BRAND = {
   // Core palette
-  DARK:      '#1A1A2E',   // primary background
-  MID:       '#2E2E4A',   // secondary surface
+  DARK:      '#0F0F1A',   // primary background
+  MID:       '#1A1A2E',   // secondary surface
   GOLD:      '#C9A84C',   // primary accent — never on linen (#EDE8DC)
   PARCHMENT: '#F7F4EE',   // primary text on dark
   ACCENT:    '#EDE8DC',   // linen — use sparingly, never paired with gold text
-  AMBER:     '#E8A020',   // secondary warm — future-ready score, warnings
-  BODY:      '#2C2C2C',   // body text on light backgrounds
+  AMBER:     '#BA7517',   // secondary warm — future-ready score, warnings
+  BODY:      '#F7F4EE',   // body text on light backgrounds
 
   // Cluster colours
   CLUSTER: {
@@ -86,8 +86,8 @@ export async function fetchServerLock(fingerprint) {
     const now = new Date().toISOString();
     const params = new URLSearchParams({
       identity_hash: `eq.${fingerprint}`,
-      assessment_expires_at: `gt.${now}`,
-      select: 'assessment_expires_at,completed_at',
+      expires_at: `gt.${now}`,
+      select: 'expires_at,completed_at',
       order: 'completed_at.desc',
       limit: '1',
     });
@@ -102,7 +102,7 @@ export async function fetchServerLock(fingerprint) {
     if (!rows?.length) return null;
     return {
       fingerprint,
-      expiresAt: rows[0].assessment_expires_at,
+      expiresAt: rows[0].expires_at,
       completedAt: rows[0].completed_at,
     };
   } catch {
