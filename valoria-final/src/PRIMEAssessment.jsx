@@ -1,3 +1,4 @@
+// v1.3.1 — brand compliant, expires_at fix, no ON CONFLICT, no user_scores
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   computeFingerprint,
