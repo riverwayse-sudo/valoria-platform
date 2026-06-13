@@ -1576,7 +1576,15 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
     });
   }, [currentQ, question, sessionSeed]);
 
-  useEffect(() => { setQStartTime(Date.now()); }, [currentQ]);
+  useEffect(() => {
+    setQStartTime(Date.now());
+    return () => {
+      if (autoAdvanceTimer.current) {
+        clearTimeout(autoAdvanceTimer.current);
+        autoAdvanceTimer.current = null;
+      }
+    };
+  }, [currentQ]);
 
   // FIX: complete deps array — name, role, sessionSeed added
   useEffect(() => {
@@ -1595,9 +1603,47 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
     liveScores[c.id] = Math.round((raw / c.maxRaw) * 100);
   });
 
+  const autoAdvanceTimer = useRef(null);
+
   function handleSelect(optIdx) {
     if (transitioning) return;
     setSelected(optIdx);
+    // Auto-advance after 300ms — enough time for the checkmark animation to land.
+    // On the final question keep it manual so the user can review before submitting.
+    if (currentQ + 1 < TOTAL) {
+      if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = setTimeout(() => {
+        handleContinueWithAnswer(optIdx);
+      }, 300);
+    }
+  }
+
+  // Separated so auto-advance can pass the freshly selected index directly,
+  // avoiding a stale-closure read of `selected` inside the timeout.
+  function handleContinueWithAnswer(optIdx) {
+    if (transitioning) return;
+    const elapsed = qStartTime ? Date.now() - qStartTime : 0;
+    const newTimings = [...timings];
+    newTimings[currentQ] = elapsed;
+    const newAnswers = { ...answers, [currentQ]: optIdx };
+    setAnswers(newAnswers);
+    setTimings(newTimings);
+    setTransitioning(true);
+    if (autoAdvanceTimer.current) {
+      clearTimeout(autoAdvanceTimer.current);
+      autoAdvanceTimer.current = null;
+    }
+    setTimeout(() => {
+      if (currentQ + 1 < TOTAL) {
+        setCurrentQ(currentQ + 1);
+        setSelected(null);
+        setTransitioning(false);
+      } else {
+        const r = computeResults(newAnswers, newTimings, shuffleMap);
+        clearCheckpoint();
+        onComplete({ name, role, results: r, shuffleMap });
+      }
+    }, 220);
   }
 
   function handleContinue() {
@@ -1746,15 +1792,29 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
           )}
         </div>
 
-        <button
-          onClick={handleContinue}
-          disabled={selected === null}
-          style={{ ...pillBtn(selected !== null ? "primary" : "disabled"), padding:"13px 32px", minWidth:160 }}
-          onMouseEnter={e => { if (selected !== null) e.currentTarget.style.background="#E2C97E"; }}
-          onMouseLeave={e => { if (selected !== null) e.currentTarget.style.background=T.gold; }}
-        >
-          {currentQ + 1 === TOTAL ? "SEE MY RESULTS" : "CONTINUE →"}
-        </button>
+        {currentQ + 1 === TOTAL ? (
+          // Final question — manual submit so user can review before committing.
+          <button
+            onClick={handleContinue}
+            disabled={selected === null}
+            style={{ ...pillBtn(selected !== null ? "primary" : "disabled"), padding:"13px 32px", minWidth:160 }}
+            onMouseEnter={e => { if (selected !== null) e.currentTarget.style.background="#E2C97E"; }}
+            onMouseLeave={e => { if (selected !== null) e.currentTarget.style.background=T.gold; }}
+          >
+            SEE MY RESULTS
+          </button>
+        ) : (
+          // All other questions auto-advance on select — show a passive indicator.
+          <div style={{
+            padding:"13px 32px", minWidth:160, textAlign:"center",
+            fontSize: T.size.caption, letterSpacing:"0.12em",
+            color: selected !== null ? "rgba(201,168,76,0.5)" : T.text.ghost,
+            fontFamily: T.font.body,
+            transition: "color 0.2s",
+          }}>
+            {selected !== null ? "ADVANCING..." : "SELECT AN OPTION"}
+          </div>
+        )}
 
         {/* FIX: 100px as per spec */}
         <div style={{ flexShrink:0 }}>
