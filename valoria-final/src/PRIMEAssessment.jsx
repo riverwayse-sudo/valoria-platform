@@ -768,21 +768,18 @@ function clearPendingReport() {
 
 // ── SUPABASE HELPERS ───────────────────────────────────────────────────────
 // Retries once on any non-4xx failure (network blip, 5xx).
-// INSERT with upsert on identity_hash — requires a UNIQUE constraint on
-// identity_hash in valu_assessments. Duplicate submissions merge rather
-// than create extra rows.
-// SQL to add the constraint if it doesn't exist:
-//   ALTER TABLE valu_assessments
-//   ADD CONSTRAINT valu_assessments_identity_hash_key UNIQUE (identity_hash);
+// INSERT with upsert on identity_hash.
+// on_conflict=identity_hash query param tells PostgREST to upsert on that
+// column. resolution=merge-duplicates in Prefer header updates all columns
+// on conflict rather than rejecting the insert.
 async function saveToSupabase(data, attempt = 0) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments`, {
+  const url = `${SUPABASE_URL}/rest/v1/valu_assessments?on_conflict=identity_hash`;
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "apikey": SUPABASE_ANON_KEY,
       "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      // resolution=merge-duplicates: on conflict with identity_hash,
-      // update all columns rather than reject the insert.
       "Prefer": "return=minimal,resolution=merge-duplicates",
     },
     body: JSON.stringify(data),
@@ -793,7 +790,10 @@ async function saveToSupabase(data, attempt = 0) {
       await new Promise(r => setTimeout(r, 1200));
       return saveToSupabase(data, 1);
     }
-    throw new Error(`Supabase save failed (${res.status}): ${err}`);
+    // Parse Supabase error JSON for a clean message
+    let msg = err;
+    try { const p = JSON.parse(err); msg = p.message || p.hint || err; } catch {}
+    throw new Error(`Score could not be saved. Please contact info@valoriainstitute.com with your result. (${res.status})`);
   }
 }
 
