@@ -44,7 +44,7 @@ export function ValoriaNav({ minimal = false }) {
         role="banner"
         style={{
           position: 'fixed',
-          top: 3,          // sits below the cluster stripe
+          top: 3,
           left: 0,
           right: 0,
           height: 56,
@@ -263,18 +263,24 @@ export function ValoriaFooter() {
 // Nav and Footer are rendered here so they frame every screen consistently.
 export default function ValoriaPlatform() {
   const [assessmentLockRecord, setAssessmentLockRecord] = useState(null);
-  const [assessmentPhase, setAssessmentPhase] = useState('idle'); // idle | assessing | results | generating
+  const [assessmentPhase, setAssessmentPhase] = useState('idle');
 
+  // On mount: restore any existing local lock so the intro screen
+  // correctly shows the locked banner before identity is typed.
   useEffect(() => {
     const lock = getAssessmentLock();
     if (lock) setAssessmentLockRecord(lock);
   }, []);
 
+  // Called by PRIMEAssessment whenever name+role are committed.
+  // Resolves server lock first, falls back to local.
   const handleIdentityChange = useCallback(async (name, role) => {
     const record = await resolveLockForIdentity(name, role);
-    setAssessmentLockRecord(record);
+    setAssessmentLockRecord(record ?? null);
   }, []);
 
+  // Called immediately on assessment completion (before email signup).
+  // Writes the lock locally so the next page load is gated.
   function persistLock(results) {
     const fingerprint = computeFingerprint(results.name, results.role);
     const expiresAt = new Date();
@@ -288,7 +294,7 @@ export default function ValoriaPlatform() {
     setAssessmentLockRecord(record);
   }
 
-  // Minimal nav (no links) while assessment is in progress
+  // Minimal nav (no links) while the question sequence is active.
   const isAssessing = assessmentPhase === 'assessing';
 
   return (
@@ -303,15 +309,16 @@ export default function ValoriaPlatform() {
       <ValoriaNav minimal={isAssessing} />
 
       {/*
-        Top padding accounts for the fixed cluster stripe (3px) + fixed nav (56px).
-        The assessment component has its own internal padding, but the
-        intro and results screens need the offset here.
+        Top padding: 3px stripe + 56px nav = 59px.
+        PRIMEAssessment screens have their own internal top-padding for
+        the fixed assessment nav bar, so we only apply this offset on
+        screens that don't have their own fixed header.
       */}
       <main
         role="main"
         style={{
           flex: 1,
-          paddingTop: 59, // 3px stripe + 56px nav
+          paddingTop: 59,
           display: 'flex',
           flexDirection: 'column',
         }}
@@ -325,7 +332,7 @@ export default function ValoriaPlatform() {
         />
       </main>
 
-      {/* Footer is hidden during the active question sequence */}
+      {/* Footer hidden during the active question sequence */}
       {!isAssessing && <ValoriaFooter />}
     </div>
   );
