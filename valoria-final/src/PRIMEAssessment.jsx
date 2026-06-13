@@ -768,6 +768,12 @@ function clearPendingReport() {
 
 // ── SUPABASE HELPERS ───────────────────────────────────────────────────────
 // Retries once on any non-4xx failure (network blip, 5xx).
+// INSERT with upsert on identity_hash — requires a UNIQUE constraint on
+// identity_hash in valu_assessments. Duplicate submissions merge rather
+// than create extra rows.
+// SQL to add the constraint if it doesn't exist:
+//   ALTER TABLE valu_assessments
+//   ADD CONSTRAINT valu_assessments_identity_hash_key UNIQUE (identity_hash);
 async function saveToSupabase(data, attempt = 0) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments`, {
     method: "POST",
@@ -775,18 +781,44 @@ async function saveToSupabase(data, attempt = 0) {
       "Content-Type": "application/json",
       "apikey": SUPABASE_ANON_KEY,
       "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      "Prefer": "return=minimal",
+      // resolution=merge-duplicates: on conflict with identity_hash,
+      // update all columns rather than reject the insert.
+      "Prefer": "return=minimal,resolution=merge-duplicates",
     },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
     const err = await res.text();
-    // Retry once on server errors; do not retry client errors (4xx).
     if (attempt === 0 && res.status >= 500) {
       await new Promise(r => setTimeout(r, 1200));
       return saveToSupabase(data, 1);
     }
     throw new Error(`Supabase save failed (${res.status}): ${err}`);
+  }
+}
+
+// PATCH a single existing row by identity_hash — used for partial updates
+// (adding email after signup, adding ai_report after generation).
+// Never creates a new row.
+async function updateAssessmentByFingerprint(fingerprint, fields, attempt = 0) {
+  const params = new URLSearchParams({ identity_hash: `eq.${fingerprint}` });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Prefer": "return=minimal",
+    },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    if (attempt === 0 && res.status >= 500) {
+      await new Promise(r => setTimeout(r, 1200));
+      return updateAssessmentByFingerprint(fingerprint, fields, 1);
+    }
+    throw new Error(`Supabase update failed (${res.status}): ${err}`);
   }
 }
 
@@ -1786,21 +1818,9 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
       // 2. Store pending report payload so the hash-return flow can resume.
       setPendingReport({ name, role, email: signupEmail.trim(), results });
 
-      // 3. Update the assessment row with the confirmed email address.
+      // 3. Patch the existing row with the email — no new row created.
       const fp = computeFingerprint(name, role);
-      const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-      await saveToSupabase({
-        total_score: valuIndex,
-        designation: desig?.name || "",
-        completed_at: new Date().toISOString(),
-        ai_report: null,
-        name, role,
-        identity_hash: fp,
-        expires_at: expiresAt,
-        cluster_scores: clusterScores,
-        skill_scores: skillScores,
-        email: signupEmail.trim(),
-      }).catch(() => {});
+      await updateAssessmentByFingerprint(fp, { email: signupEmail.trim() }).catch(() => {});
 
       // 4. Add to waitlist table (idempotent — 409 is silently swallowed).
       await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(() => {});
@@ -1986,18 +2006,11 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
   }, []);
 
   async function persistWithReport(fullText) {
+    // Patch the existing row — only writes the ai_report field.
+    // The row already exists from ResultsScreen's initial INSERT.
     const fp = computeFingerprint(name, role);
-    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-    await saveToSupabase({
-      total_score: valuIndex,
-      designation: desig?.name || "",
-      completed_at: new Date().toISOString(),
+    await updateAssessmentByFingerprint(fp, {
       ai_report: fullText,
-      name, role,
-      identity_hash: fp,
-      expires_at: expiresAt,
-      cluster_scores: clusterScores,
-      skill_scores: skillScores,
       ...(confirmedEmail ? { email: confirmedEmail } : {}),
     });
   }
