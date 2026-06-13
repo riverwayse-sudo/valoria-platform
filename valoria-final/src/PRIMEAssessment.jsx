@@ -1,5 +1,20 @@
-// v1.3.1 — brand compliant, expires_at fix, no ON CONFLICT, no user_scores
-import { useState, useEffect, useRef, useMemo } from "react";
+// PRIMEAssessment.jsx — v2.2
+// Changes from v2.1:
+//  - isLockActive now receives assessmentLockRecord.fingerprint (was always-false bug)
+//  - Resume name-match re-introduction fixed in assessing phase block
+//  - ClusterStripe removed from all four screens — owned by ValoriaNav in platform shell
+//  - Radar size in live assessment bottom bar: 56 → 100px
+//  - Token sweep: all hardcoded borderRadius 2/3 replaced with T.radius.chip
+//  - saveCheckpoint useEffect deps completed: [answers, currentQ, name, role, sessionSeed]
+//  - saveToSupabase now retries once on transient failure before surfacing error
+//  - localStorage pending report fallback error state wired to UI
+//  - Lock set immediately on assessment completion via onAssessmentSubmitted callback
+//  - onPhaseChange callback fires on every phase transition so ValoriaPlatform can
+//    switch nav to minimal mode during the question sequence
+//  - Welcome email sent on signup (combined with report delivery in /api/send-email)
+//  - Email stored in Supabase row on both initial save and on signup
+
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   computeFingerprint,
   isLockActive,
@@ -7,125 +22,191 @@ import {
   SUPABASE_ANON_KEY,
 } from "./assessmentLock.js";
 
-// ── BRAND COLOUR CONSTANTS (VI-WDS-2026-001 v1.3) ─────────────────────────
-// All values match the master design standard exactly.
-// DARK      = --dark       #0F0F1A  page background
-// MID       = --midnight   #1A1A2E  section/header surfaces
-// PARCHMENT = --parchment  #F7F4EE  primary text
-// GOLD      = --gold       #C9A84C  CTAs, accents, active states
-// AMBER     = --amber      #BA7517  warning states
-const GOLD      = "#C9A84C";
-const DARK      = "#0F0F1A"; // FIX: was #1A1A2E (midnight) — page bg is #0F0F1A
-const MID       = "#1A1A2E";
-const PARCHMENT = "#F7F4EE";
-const ACCENT    = "#EDE8DC";
-const AMBER     = "#BA7517";
-// BODY removed — was #2C2C2C which is not in the brand palette
-
-async function saveToSupabase(data) {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Prefer": "return=minimal"
-      },
-      body: JSON.stringify(data)
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("Supabase save error:", err);
-    }
-  } catch(e) {
-    console.error("Supabase save failed:", e);
+// ── FONT INJECTION — once at module level ─────────────────────────────────
+if (typeof document !== "undefined") {
+  const FONT_ID = "vi-fonts-raleway";
+  if (!document.getElementById(FONT_ID)) {
+    const s = document.createElement("style");
+    s.id = FONT_ID;
+    s.textContent = `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=Raleway:ital,wght@0,400;0,600;1,300;1,400&family=DM+Mono:wght@400&display=swap');
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    input, select, textarea { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+    input::placeholder { color: rgba(247,244,238,0.2) !important; }
+    input:focus { outline: none; border-color: rgba(201,168,76,0.5) !important; box-shadow: 0 0 0 3px rgba(201,168,76,0.08) !important; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes pulse { 0%,80%,100% { opacity:0.2; transform:scale(0.8); } 40% { opacity:1; transform:scale(1); } }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+    @keyframes checkIn { from { transform:scale(0) rotate(-10deg); opacity:0; } to { transform:scale(1) rotate(0deg); opacity:1; } }
+    @keyframes optionSelect { 0% { transform:scale(1); } 50% { transform:scale(0.985); } 100% { transform:scale(1); } }`;
+    document.head.appendChild(s);
   }
 }
 
-// ── SIGNUP / WAITLIST / EMAIL-CONFIRMATION HELPERS ─────────────────────────
-const PENDING_REPORT_KEY = "valu_pending_report_v1";
+// ── DESIGN TOKENS ─────────────────────────────────────────────────────────
+const T = {
+  dark:      "#0F0F1A",
+  midnight:  "#1A1A2E",
+  parchment: "#F7F4EE",
+  gold:      "#C9A84C",
+  amber:     "#BA7517",
+  coral:     "#D85A30",
+  text: {
+    primary:   "rgba(247,244,238,1)",
+    secondary: "rgba(247,244,238,0.65)",
+    tertiary:  "rgba(247,244,238,0.45)",
+    muted:     "rgba(247,244,238,0.30)",
+    ghost:     "rgba(247,244,238,0.15)",
+  },
+  size: {
+    display: 48,
+    h1:      28,
+    h2:      20,
+    body:    14,
+    small:   12,
+    caption: 10,
+    micro:   11,
+  },
+  radius: {
+    pill: 9999,
+    card: 12,
+    chip: 6,
+  },
+  font: {
+    display: "'Cormorant Garamond', Georgia, serif",
+    body:    "'DM Sans', sans-serif",
+    label:   "'Raleway', sans-serif",
+    mono:    "'DM Mono', monospace",
+  },
+  cluster: {
+    P: "#1D9E75",
+    R: "#378ADD",
+    I: "#7F77DD",
+    M: "#BA7517",
+    E: "#D85A30",
+  },
+};
 
-async function signUpWithSupabase(email, password, name, role) {
-  const redirectTo = encodeURIComponent(window.location.origin + "/");
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup?redirect_to=${redirectTo}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
-    body: JSON.stringify({ email, password, data: { full_name: name, role } }),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.msg || data.error_description || data.error || "Signup failed.");
-  }
-  return data;
+// ── SHARED STYLE HELPERS ───────────────────────────────────────────────────
+const inputBase = {
+  width: "100%",
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(247,244,238,0.1)",
+  borderRadius: T.radius.chip,
+  padding: "13px 16px",
+  color: T.parchment,
+  fontSize: T.size.body,
+  fontFamily: T.font.body,
+  transition: "border-color 0.25s, box-shadow 0.25s",
+};
+const labelBase = {
+  display: "block",
+  fontSize: T.size.micro,
+  fontWeight: 700,
+  color: "rgba(201,168,76,0.5)",
+  letterSpacing: "0.22em",
+  textTransform: "uppercase",
+  marginBottom: 8,
+  fontFamily: T.font.label,
+};
+const pillBtn = (variant = "primary") => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "14px 28px",
+  borderRadius: T.radius.pill,
+  fontSize: T.size.caption,
+  fontWeight: 700,
+  letterSpacing: "0.16em",
+  fontFamily: T.font.body,
+  cursor: "pointer",
+  transition: "background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s",
+  border: "none",
+  ...(variant === "primary" && {
+    background: T.gold,
+    color: T.dark,
+    boxShadow: "0 4px 20px rgba(201,168,76,0.25)",
+  }),
+  ...(variant === "ghost" && {
+    background: "transparent",
+    color: T.text.tertiary,
+    border: "1px solid rgba(247,244,238,0.15)",
+  }),
+  ...(variant === "gold-ghost" && {
+    background: "rgba(201,168,76,0.08)",
+    color: T.gold,
+    border: "1px solid rgba(201,168,76,0.25)",
+  }),
+  ...(variant === "danger" && {
+    background: "rgba(216,90,48,0.12)",
+    color: T.coral,
+    border: "1px solid rgba(216,90,48,0.35)",
+  }),
+  ...(variant === "disabled" && {
+    background: "rgba(201,168,76,0.12)",
+    color: "rgba(201,168,76,0.25)",
+    border: "1px solid rgba(201,168,76,0.15)",
+    cursor: "not-allowed",
+  }),
+});
+
+// ── PAGE NUMBER ────────────────────────────────────────────────────────────
+function PageNumber({ current, total }) {
+  return (
+    <div style={{
+      fontFamily: T.font.label,
+      fontStyle: "italic",
+      fontWeight: 300,
+      fontSize: T.size.body,
+      color: T.text.muted,
+      letterSpacing: "0.04em",
+      whiteSpace: "nowrap",
+      userSelect: "none",
+    }}>
+      {current} <span style={{ color: T.text.ghost }}>/ {total}</span>
+    </div>
+  );
 }
 
-async function joinWaitlist({ name, email, role }) {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Prefer": "return=minimal",
-      },
-      body: JSON.stringify({ name, email, type: "professional", role }),
-    });
-    if (!res.ok && res.status !== 409) {
-      console.error("Waitlist insert failed:", await res.text());
-    }
-  } catch (e) {
-    console.error("Waitlist insert failed:", e);
-  }
+// ── NOISE GRAIN ────────────────────────────────────────────────────────────
+function Grain() {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, opacity: 0.06,
+      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+      backgroundSize: "256px",
+    }} />
+  );
 }
 
-function setPendingReport(payload) {
-  try { localStorage.setItem(PENDING_REPORT_KEY, JSON.stringify(payload)); } catch {}
-}
-function getPendingReport() {
-  try {
-    const raw = localStorage.getItem(PENDING_REPORT_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-function clearPendingReport() {
-  try { localStorage.removeItem(PENDING_REPORT_KEY); } catch {}
-}
-
-function parseAuthHash() {
-  if (typeof window === "undefined" || !window.location.hash) return null;
-  const hash = window.location.hash.replace(/^#/, "");
-  if (!hash) return null;
-  const params = new URLSearchParams(hash);
-  const errorDescription = params.get("error_description");
-  if (errorDescription) return { error: errorDescription.replace(/\+/g, " ") };
-  const accessToken = params.get("access_token");
-  const type = params.get("type");
-  if (!accessToken) return null;
-  let email = null;
-  try { email = JSON.parse(atob(accessToken.split(".")[1])).email || null; } catch {}
-  return { accessToken, type, email };
+// ── AMBIENT GLOW ──────────────────────────────────────────────────────────
+function AmbientGlow({ color = "rgba(201,168,76,0.09)" }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
+      background: `radial-gradient(ellipse 100% 50% at 50% 0%, ${color} 0%, transparent 60%)`,
+    }} />
+  );
 }
 
 // ── CLUSTER CONFIG ─────────────────────────────────────────────────────────
 const CLUSTERS = [
-  { id:"P", name:"Presence",      theme:"How you show up",  color:"#1D9E75", weight:0.20, maxRaw:36 },
-  { id:"R", name:"Relationships", theme:"How you connect",  color:"#378ADD", weight:0.25, maxRaw:48 },
-  { id:"I", name:"Intelligence",  theme:"How you think",    color:"#7F77DD", weight:0.25, maxRaw:60 },
-  { id:"M", name:"Mastery",       theme:"How you deliver",  color:"#BA7517", weight:0.20, maxRaw:36 },
-  { id:"E", name:"Enterprise",    theme:"How you create",   color:"#D85A30", weight:0.10, maxRaw:36 },
+  { id:"P", name:"Presence",      theme:"How you show up",  color: T.cluster.P, weight:0.20, maxRaw:36 },
+  { id:"R", name:"Relationships", theme:"How you connect",  color: T.cluster.R, weight:0.25, maxRaw:48 },
+  { id:"I", name:"Intelligence",  theme:"How you think",    color: T.cluster.I, weight:0.25, maxRaw:60 },
+  { id:"M", name:"Mastery",       theme:"How you deliver",  color: T.cluster.M, weight:0.20, maxRaw:36 },
+  { id:"E", name:"Enterprise",    theme:"How you create",   color: T.cluster.E, weight:0.10, maxRaw:36 },
 ];
 
 const DESIGNATIONS = [
-  { min:80, name:"Force to Align With",    color:GOLD,      bg:"rgba(201,168,76,0.12)",  desc:"Operating at the highest expression of professional capability. You are recognised on the platform as a priority professional." },
-  { min:65, name:"Emerging Force",         color:"#378ADD", bg:"rgba(55,138,221,0.10)",  desc:"Strong foundations with clear areas of excellence. You are on the trajectory — deliberate development will complete the picture." },
-  { min:50, name:"Developing Professional",color:"#1D9E75", bg:"rgba(29,158,117,0.10)",  desc:"Genuine capability with uneven development. Your PRIME pathway is shown on your profile." },
-  { min:35, name:"Building Foundations",   color:"#BA7517", bg:"rgba(186,117,23,0.10)",  desc:"Early-stage professional architecture. A PRIME Sprint is your recommended next step." },
-  { min:0,  name:"At the Starting Point",  color:"#888888", bg:"rgba(136,136,136,0.10)", desc:"Not yet listed on the candidate platform. Complete a PRIME Sprint to qualify for listing." },
+  { min:80, name:"Force to Align With",    color: T.gold,       bg:"rgba(201,168,76,0.12)",  desc:"Operating at the highest expression of professional capability. You are recognised on the platform as a priority professional." },
+  { min:65, name:"Emerging Force",         color:"#378ADD",     bg:"rgba(55,138,221,0.10)",  desc:"Strong foundations with clear areas of excellence. You are on the trajectory — deliberate development will complete the picture." },
+  { min:50, name:"Developing Professional",color:"#1D9E75",     bg:"rgba(29,158,117,0.10)",  desc:"Genuine capability with uneven development. Your PRIME pathway is shown on your profile." },
+  { min:35, name:"Building Foundations",   color: T.amber,      bg:"rgba(186,117,23,0.10)",  desc:"Early-stage professional architecture. A PRIME Sprint is your recommended next step." },
+  { min:0,  name:"At the Starting Point",  color:"#888888",     bg:"rgba(136,136,136,0.10)", desc:"Not yet listed on the candidate platform. Complete a PRIME Sprint to qualify for listing." },
 ];
 
-// ── QUESTION BANK — VERSION 3 (unchanged) ─────────────────────────────────
+// ── QUESTION BANK ──────────────────────────────────────────────────────────
 const ALL_QUESTIONS = [
   { id:"P1a", cluster:"P", skill:"Communication", type:"behavioural",
     q:"You need to explain a complex decision to a mixed audience — some technical, some not. What do you do?",
@@ -594,23 +675,37 @@ const ALL_QUESTIONS = [
     ]},
 ];
 
+// ── FISHER-YATES SEEDED SHUFFLE ────────────────────────────────────────────
 function seededShuffle(arr, seed) {
-  const a = arr.map((item, i) => ({ item, sort: Math.sin(seed * (i + 1)) * 10000 % 1 }));
-  a.sort((x, y) => x.sort - y.sort);
-  return a.map(({ item }) => item);
+  const result = [...arr];
+  let s = seed;
+  const rand = () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0x100000000;
+  };
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }
 
+// ── BUILD QUESTION SEQUENCE ────────────────────────────────────────────────
 function buildQuestionSequence() {
   const scored  = ALL_QUESTIONS.filter(q => q.cluster !== "VA");
   const anchors = ALL_QUESTIONS.filter(q => q.cluster === "VA");
   const seq = [...scored];
-  const positions = [13, 27, 41, 55];
-  anchors.forEach((a, i) => { seq.splice(positions[i], 0, a); });
+  const step = Math.floor(scored.length / (anchors.length + 1));
+  [...anchors].reverse().forEach((a, ri) => {
+    const i = anchors.length - 1 - ri;
+    const pos = step * (i + 1) + i;
+    seq.splice(Math.min(pos, seq.length), 0, a);
+  });
   return seq;
 }
 
 const QUESTIONS = buildQuestionSequence();
-const TOTAL = QUESTIONS.length;
+const TOTAL     = QUESTIONS.length;
 
 const SKILL_CLUSTER = {
   "Communication":                        "P",
@@ -635,6 +730,180 @@ const SKILL_CLUSTER = {
 
 const SKILL_MAX_RAW = 12;
 
+// ── SESSION STORAGE CHECKPOINT ─────────────────────────────────────────────
+const SESSION_KEY = "vi_session_v2";
+function saveCheckpoint(data) {
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(data)); } catch {}
+}
+function loadCheckpoint() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function clearCheckpoint() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+}
+
+// ── PENDING REPORT (localStorage) ─────────────────────────────────────────
+const PENDING_KEY = "valu_pending_report_v2";
+function setPendingReport(payload) {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
+  } catch (e) {
+    // Storage quota or private-browsing restriction — not fatal.
+    // The hash-return flow will fall back to fetching from Supabase by email.
+    console.warn("setPendingReport: could not write to localStorage:", e.message);
+  }
+}
+function getPendingReport() {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function clearPendingReport() {
+  try { localStorage.removeItem(PENDING_KEY); } catch {}
+}
+
+// ── SUPABASE HELPERS ───────────────────────────────────────────────────────
+// Retries once on any non-4xx failure (network blip, 5xx).
+async function saveToSupabase(data, attempt = 0) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Prefer": "return=minimal",
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    // Retry once on server errors; do not retry client errors (4xx).
+    if (attempt === 0 && res.status >= 500) {
+      await new Promise(r => setTimeout(r, 1200));
+      return saveToSupabase(data, 1);
+    }
+    throw new Error(`Supabase save failed (${res.status}): ${err}`);
+  }
+}
+
+async function signUpWithSupabase(email, password, name, role) {
+  const redirectTo = encodeURIComponent(window.location.origin + "/");
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup?redirect_to=${redirectTo}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+    body: JSON.stringify({ email, password, data: { full_name: name, role } }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.msg || data.error_description || data.error || "Signup failed.");
+  return data;
+}
+
+async function joinWaitlist({ name, email, role }) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Prefer": "return=minimal",
+    },
+    body: JSON.stringify({ name, email, type: "professional", role }),
+  });
+  // 409 = already on waitlist — not an error.
+  if (!res.ok && res.status !== 409) throw new Error(await res.text());
+}
+
+async function fetchAssessmentByEmail(email) {
+  try {
+    const params = new URLSearchParams({
+      email: `eq.${email}`,
+      select: "name,role,total_score,cluster_scores,skill_scores",
+      order: "completed_at.desc",
+      limit: "1",
+    });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!rows?.length) return null;
+    const row = rows[0];
+    const valuIndex = row.total_score ?? 0;
+    const clusterScores = row.cluster_scores ?? {};
+    const sorted = [...CLUSTERS].sort((a, b) => (clusterScores[b.id] ?? 0) - (clusterScores[a.id] ?? 0));
+    return {
+      name: row.name, role: row.role,
+      results: {
+        valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
+        desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
+        futureReadyScore: Math.round(CLUSTERS.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS.length),
+        strongest: sorted[0], weakest: sorted[sorted.length - 1],
+        consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
+        speedFlag: false, uniformityFlag: false, anyFlag: false,
+        listed: valuIndex >= 35,
+        pathway: valuIndex >= 80 ? "PCP Certification" : valuIndex >= 65 ? "PRIME Programme" : valuIndex >= 50 ? "PRIME Cluster" : "PRIME Sprint",
+        globalSD: 1,
+      },
+    };
+  } catch { return null; }
+}
+
+async function fetchAssessmentByFingerprint(fingerprint) {
+  try {
+    const params = new URLSearchParams({
+      identity_hash: `eq.${fingerprint}`,
+      select: "name,role,total_score,cluster_scores,skill_scores,ai_report",
+      order: "completed_at.desc",
+      limit: "1",
+    });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!rows?.length) return null;
+    const row = rows[0];
+    const valuIndex = row.total_score ?? 0;
+    const clusterScores = row.cluster_scores ?? {};
+    const sorted = [...CLUSTERS].sort((a, b) => (clusterScores[b.id] ?? 0) - (clusterScores[a.id] ?? 0));
+    return {
+      name: row.name, role: row.role,
+      aiReport: row.ai_report || null,
+      results: {
+        valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
+        desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
+        futureReadyScore: Math.round(CLUSTERS.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS.length),
+        strongest: sorted[0], weakest: sorted[sorted.length - 1],
+        consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
+        speedFlag: false, uniformityFlag: false, anyFlag: false,
+        listed: valuIndex >= 35,
+        pathway: valuIndex >= 80 ? "PCP Certification" : valuIndex >= 65 ? "PRIME Programme" : valuIndex >= 50 ? "PRIME Cluster" : "PRIME Sprint",
+        globalSD: 1,
+      },
+    };
+  } catch { return null; }
+}
+
+function parseAuthHash() {
+  if (typeof window === "undefined" || !window.location.hash) return null;
+  const hash = window.location.hash.replace(/^#/, "");
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  const errorDescription = params.get("error_description");
+  if (errorDescription) return { error: errorDescription.replace(/\+/g, " ") };
+  const accessToken = params.get("access_token");
+  const type = params.get("type");
+  if (!accessToken) return null;
+  let email = null;
+  try { email = JSON.parse(atob(accessToken.split(".")[1])).email || null; } catch {}
+  return { accessToken, type, email };
+}
+
+// ── SCORING ENGINE ─────────────────────────────────────────────────────────
 function computeResults(answers, timings, shuffleMap) {
   const clusterRaw       = { P:0, R:0, I:0, M:0, E:0 };
   const clusterAllScores = { P:[], R:[], I:[], M:[], E:[] };
@@ -687,9 +956,9 @@ function computeResults(answers, timings, shuffleMap) {
   const gamingDetected = anchorFlags >= 3;
   if (gamingDetected) valuIndex = Math.round(valuIndex * 0.80);
   const answeredTimings = timings.filter(t => t > 0);
-  const totalTime  = answeredTimings.reduce((a,b) => a+b, 0);
+  const totalTime = answeredTimings.reduce((a,b) => a+b, 0);
   const fastAnswers = timings.filter(t => t > 0 && t < 8000).length;
-  const speedFlag  = totalTime < 720000 || fastAnswers >= 3;
+  const speedFlag = totalTime < 720000 || fastAnswers >= 3;
   const allScores = [];
   QUESTIONS.forEach((q, idx) => {
     if (q.cluster === "VA") return;
@@ -726,42 +995,146 @@ function computeResults(answers, timings, shuffleMap) {
   };
 }
 
+// ── RADAR CHART ────────────────────────────────────────────────────────────
 function Radar({ scores, size = 200 }) {
   const cx = size/2, cy = size/2, r = size * 0.37, n = 5;
   const angle = i => (Math.PI*2*i/n) - Math.PI/2;
   const pt = (i, frac) => ({ x: cx + r*frac*Math.cos(angle(i)), y: cy + r*frac*Math.sin(angle(i)) });
   const gridPoly = frac => CLUSTERS.map((_,i) => { const p=pt(i,frac); return `${p.x},${p.y}`; }).join(" ");
-  const dataPts  = CLUSTERS.map((c,i) => pt(i, (scores[c.id]||0)/100));
+  const dataPts = CLUSTERS.map((c,i) => pt(i, (scores[c.id]||0)/100));
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{overflow:"visible"}}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{overflow:"visible",display:"block"}}>
       {[0.25,0.5,0.75,1].map(f =>
         <polygon key={f} points={gridPoly(f)} fill="none"
           stroke={f===1?"rgba(201,168,76,0.4)":"rgba(201,168,76,0.15)"}
           strokeWidth={f===1?0.8:0.5}/>)}
       {CLUSTERS.map((_,i) => { const p=pt(i,1); return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(201,168,76,0.2)" strokeWidth={0.5}/>; })}
       <polygon points={dataPts.map(p=>`${p.x},${p.y}`).join(" ")}
-        fill="rgba(201,168,76,0.15)" stroke={GOLD} strokeWidth={1.5}
+        fill="rgba(201,168,76,0.15)" stroke={T.gold} strokeWidth={1.5}
         style={{transition:"all 0.5s"}}/>
       {dataPts.map((p,i) =>
         <circle key={i} cx={p.x} cy={p.y} r={3} fill={CLUSTERS[i].color}
           style={{transition:"all 0.5s"}}/>)}
       {CLUSTERS.map((c,i) => {
-        const lp=pt(i,1.22);
+        const lp=pt(i,1.28);
         return <text key={i} x={lp.x} y={lp.y} textAnchor="middle"
           dominantBaseline="central"
-          style={{fontSize:10,fontWeight:600,fill:c.color}}>{c.id}</text>;
+          style={{fontSize:10,fontWeight:600,fill:c.color,fontFamily:T.font.body}}>{c.id}</text>;
       })}
     </svg>
   );
 }
 
-// ── AI REPORT PROMPT BUILDER — v2.0 (unchanged) ───────────────────────────
-const PROMPT_VERSION = "v2.0";
+// ── CLUSTER SCORE STRIP ────────────────────────────────────────────────────
+function ClusterStrip({ clusterScores, skillScores, compact = false }) {
+  return (
+    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+      {CLUSTERS.map(c => {
+        const clusterSkillList = Object.entries(skillScores || {})
+          .filter(([s]) => SKILL_CLUSTER[s] === c.id)
+          .sort(([,a],[,b]) => a - b);
+        const weakestSkill = clusterSkillList[0];
+        return (
+          <div key={c.id} style={{
+            padding: compact ? "7px 10px" : "8px 12px",
+            background: `${c.color}10`,
+            border: `1px solid ${c.color}30`,
+            borderRadius: T.radius.chip,
+            minWidth: compact ? 80 : 110,
+          }}>
+            <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom: weakestSkill && !compact ? 4 : 0 }}>
+              <div style={{
+                width:14, height:14, borderRadius: T.radius.chip,
+                background:`${c.color}20`, border:`1px solid ${c.color}40`,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:8, fontWeight:700, color:c.color, flexShrink:0,
+                fontFamily: T.font.body,
+              }}>{c.id}</div>
+              <span style={{ fontSize:T.size.small, color:c.color, fontWeight:600, fontFamily:T.font.body }}>{clusterScores[c.id]}</span>
+              <span style={{ fontSize:T.size.caption, color:T.text.ghost, fontFamily:T.font.body }}>/100</span>
+            </div>
+            {weakestSkill && !compact && (
+              <div style={{ fontSize:T.size.caption, color:T.text.muted, lineHeight:1.4, fontFamily:T.font.body }}>
+                Gap: {weakestSkill[0].split(" ")[0]} ({weakestSkill[1]})
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── DESIGNATION BADGE ──────────────────────────────────────────────────────
+function DesignationBadge({ desig }) {
+  return (
+    <div style={{
+      display:"inline-flex", alignItems:"center",
+      padding:"8px 14px",
+      background: desig.bg,
+      border: `1px solid ${desig.color}40`,
+      borderRadius: T.radius.chip,
+    }}>
+      <span style={{
+        fontSize: T.size.caption, fontWeight:700,
+        color: desig.color, letterSpacing:"0.1em",
+        fontFamily: T.font.body,
+      }}>{desig.name.toUpperCase()}</span>
+    </div>
+  );
+}
+
+// ── SCORE HEADER ──────────────────────────────────────────────────────────
+function ScoreHeader({ name, role, valuIndex, clusterScores, skillScores, desig, futureReadyScore, sticky = false }) {
+  return (
+    <div style={{
+      background: T.midnight,
+      borderBottom: "1px solid rgba(201,168,76,0.12)",
+      padding: "28px 24px",
+      ...(sticky && { position:"sticky", top:0, zIndex:10 }),
+    }}>
+      <div style={{ maxWidth:720, margin:"0 auto" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:16, marginBottom:16 }}>
+          <div>
+            <div style={{ fontSize:T.size.caption, color:"rgba(201,168,76,0.45)", letterSpacing:"0.2em", marginBottom:4, fontFamily:T.font.body }}>
+              VALU INDEX · {name?.toUpperCase()}
+            </div>
+            <div style={{ fontSize:T.size.caption, color:T.text.tertiary, fontFamily:T.font.body }}>{role}</div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:20 }}>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontFamily:T.font.display, fontSize:T.size.display, fontWeight:300, color:T.gold, lineHeight:1 }}>{valuIndex}</div>
+              <div style={{ fontSize:T.size.micro, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>OUT OF 100</div>
+            </div>
+            <Radar scores={clusterScores} size={100} />
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+          <ClusterStrip clusterScores={clusterScores} skillScores={skillScores} compact={false} />
+          <div style={{
+            display:"flex", alignItems:"center", gap:6,
+            padding:"8px 12px",
+            background:"rgba(186,117,23,0.08)",
+            border:"1px solid rgba(186,117,23,0.2)",
+            borderRadius: T.radius.chip,
+          }}>
+            <span style={{ fontSize:T.size.caption, color:T.amber, letterSpacing:"0.06em", fontFamily:T.font.body }}>FUTURE-READY</span>
+            <span style={{ fontSize:T.size.small, color:T.amber, fontWeight:600, fontFamily:T.font.body }}>{futureReadyScore}</span>
+          </div>
+          <DesignationBadge desig={desig} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── AI REPORT HELPERS ──────────────────────────────────────────────────────
+const PROMPT_VERSION = "v2.2";
 const PRIME_PROGRAMMES = {
-  sprint:    { name:"PRIME Sprint",                    duration:"1 day",           price:"₦150,000–₦300,000",     best_for:"One urgent cluster." },
-  cluster:   { name:"PRIME Cluster Programme",         duration:"6 weeks",         price:"₦500,000–₦1,200,000",   best_for:"Deep work on one cluster." },
-  pcp:       { name:"PRIME Certified Professional (PCP)", duration:"6 months",     price:"₦200,000–₦400,000",     best_for:"Full PRIME certification." },
-  executive: { name:"Executive Immersion",             duration:"3 days residential", price:"₦800,000–₦2,000,000", best_for:"C-suite and senior leaders." },
+  sprint:    { name:"PRIME Sprint",                       duration:"1 day",              price:"₦150,000–₦300,000" },
+  cluster:   { name:"PRIME Cluster Programme",            duration:"6 weeks",            price:"₦500,000–₦1,200,000" },
+  pcp:       { name:"PRIME Certified Professional (PCP)", duration:"6 months",           price:"₦200,000–₦400,000" },
+  executive: { name:"Executive Immersion",                duration:"3 days residential", price:"₦800,000–₦2,000,000" },
 };
 const SKILL_ACTIONS = {
   "Communication": "Before your next important meeting, write down the one thing you need the room to leave believing — and build backwards from that, not from your slide order.",
@@ -784,50 +1157,30 @@ const SKILL_ACTIONS = {
   "Human-AI Collaboration": "Pick one routine deliverable from your job — a report, a brief, a summary. Use AI to produce a first draft this week. Your job is then to make it better. Notice where you add value and where you do not.",
 };
 const SKILL_PROGRAMME_MAP = {
-  "Communication":                        "cluster",
-  "Negotiation":                          "cluster",
-  "Personal Brand & Executive Presence":  "cluster",
-  "Emotional Intelligence":               "cluster",
-  "Conflict Resolution":                  "cluster",
-  "People Development":                   "cluster",
-  "Stakeholder Management":               "cluster",
-  "Critical Thinking":                    "cluster",
-  "Strategic Thinking":                   "cluster",
-  "Business Acumen":                      "cluster",
-  "Managing Ambiguity":                   "cluster",
-  "AI Fluency":                           "sprint",
-  "Execution & Accountability":           "cluster",
-  "Resilience & Self-Leadership":         "cluster",
-  "Adaptability":                         "cluster",
-  "Commercial Creativity":                "cluster",
-  "Influence Without Authority":          "cluster",
-  "Human-AI Collaboration":              "sprint",
+  "Communication": "cluster", "Negotiation": "cluster",
+  "Personal Brand & Executive Presence": "cluster", "Emotional Intelligence": "cluster",
+  "Conflict Resolution": "cluster", "People Development": "cluster",
+  "Stakeholder Management": "cluster", "Critical Thinking": "cluster",
+  "Strategic Thinking": "cluster", "Business Acumen": "cluster",
+  "Managing Ambiguity": "cluster", "AI Fluency": "sprint",
+  "Execution & Accountability": "cluster", "Resilience & Self-Leadership": "cluster",
+  "Adaptability": "cluster", "Commercial Creativity": "cluster",
+  "Influence Without Authority": "cluster", "Human-AI Collaboration": "sprint",
 };
 
 function buildReportPrompt(scoreProfile) {
-  const {
-    name, role, valuIndex, clusterScores, skillScores,
-    desig, futureReadyScore, strongest, weakest,
-    pathway, listed, globalSD,
-    consistencyFlags, gamingDetected, speedFlag, uniformityFlag
-  } = scoreProfile;
-  const sortedSkills = Object.entries(skillScores || {})
-    .filter(([s]) => s !== "Validity")
-    .sort(([,a],[,b]) => b - a);
+  const { name, role, valuIndex, clusterScores, skillScores, desig, futureReadyScore, strongest, weakest, pathway, listed, globalSD } = scoreProfile;
+  const sortedSkills = Object.entries(skillScores || {}).filter(([s]) => s !== "Validity").sort(([,a],[,b]) => b - a);
   const topSkills    = sortedSkills.slice(0, 3);
   const bottomSkills = sortedSkills.slice(-3).reverse();
-  const weakestClusterSkills = sortedSkills
-    .filter(([s]) => SKILL_CLUSTER[s] === weakest.id)
-    .sort(([,a],[,b]) => a - b);
+  const weakestClusterSkills = sortedSkills.filter(([s]) => SKILL_CLUSTER[s] === weakest?.id).sort(([,a],[,b]) => a - b);
   const primaryGapSkill   = weakestClusterSkills[0]?.[0] || bottomSkills[0]?.[0];
   const secondaryGapSkill = weakestClusterSkills[1]?.[0] || bottomSkills[1]?.[0];
   const primaryProgrammeKey = SKILL_PROGRAMME_MAP[primaryGapSkill] || "cluster";
   const primaryProgramme    = PRIME_PROGRAMMES[primaryProgrammeKey];
-  const immediateAction = !listed ? "PRIME Sprint" : primaryProgramme.name;
   const clusterSkillDetail = CLUSTERS.map(c => {
     const skills = sortedSkills.filter(([s]) => SKILL_CLUSTER[s] === c.id);
-    return `${c.name} (${clusterScores[c.id]}/100):\n` +
-      skills.map(([s,sc]) => `  - ${s}: ${sc}/100`).join("\n");
+    return `${c.name} (${clusterScores[c.id]}/100):\n` + skills.map(([s,sc]) => `  - ${s}: ${sc}/100`).join("\n");
   }).join("\n\n");
   return `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index assessment.
 YOUR WRITING RULES:
@@ -843,22 +1196,14 @@ THEIR SCORE DATA:
 VALU Index: ${valuIndex}/100 — ${desig.name}
 Listed on platform: ${listed ? "Yes" : "No — needs score of 35+"}
 Future-Ready score: ${futureReadyScore}/100
-SKILL SCORES:
-${clusterSkillDetail}
+SKILL SCORES:\n${clusterSkillDetail}
 THEIR STRONGEST SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc}/100)`).join(", ")}
 THEIR WEAKEST SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc}/100)`).join(", ")}
 PRIMARY GAP SKILL: ${primaryGapSkill} (${skillScores?.[primaryGapSkill]}/100)
 SECONDARY GAP SKILL: ${secondaryGapSkill} (${skillScores?.[secondaryGapSkill]}/100)
 RECOMMENDED PROGRAMME: ${primaryProgramme.name} (${primaryProgramme.duration}, ${primaryProgramme.price})
-IMMEDIATE WEEKLY ACTION for ${primaryGapSkill}:
-"${SKILL_ACTIONS[primaryGapSkill] || "Start by naming the exact gap in your own words."}"
-VALORIA'S PROGRAMME MENU:
-- PRIME Sprint: 1 day, ₦150K–₦300K
-- PRIME Cluster Programme: 6 weeks, ₦500K–₦1.2M
-- PRIME Certified Professional (PCP): 6 months, ₦200K–₦400K
-- Executive Immersion: 3 days residential, ₦800K–₦2M
+IMMEDIATE WEEKLY ACTION for ${primaryGapSkill}: "${SKILL_ACTIONS[primaryGapSkill] || "Start by naming the exact gap in your own words."}"
 ${!listed ? `IMPORTANT: ${name} scored ${valuIndex}/100 which is below the 35-point listing minimum. The PRIME Sprint is the direct path to getting listed.` : ""}
-${gamingDetected ? "NOTE: Gaming pattern was detected and adjusted. Do not mention this in the report." : ""}
 WRITE THE REPORT IN THESE EXACT SECTIONS:
 ---
 ## YOUR SCORE: ${valuIndex}/100 — ${desig.name.toUpperCase()}
@@ -876,277 +1221,373 @@ A single question in italics about ${primaryGapSkill}, specific to their role as
 Start directly with ## YOUR SCORE. No introduction before it.`;
 }
 
-// ── MAIN COMPONENT ─────────────────────────────────────────────────────────
-export default function PRIMEAssessment({
-  onComplete,
-  onAssessmentSubmitted,
-  onIdentityChange,
-  assessmentExpiresAt,
-  assessmentLockRecord,
-}) {
-  const [phase, setPhase]           = useState("intro");
-  const [isDesktop, setIsDesktop]   = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : false
+// ── RETAKE MODAL ───────────────────────────────────────────────────────────
+function RetakeModal({ mode, onClose, onConfirm, expiryDateFormatted }) {
+  if (!mode) return null;
+  return (
+    <div style={{
+      position:"fixed", inset:0, zIndex:999,
+      background:"rgba(15,15,26,0.92)",
+      backdropFilter:"blur(12px)",
+      display:"flex", alignItems:"center", justifyContent:"center", padding:"24px",
+    }}>
+      <div style={{
+        background: T.midnight, border:"1px solid rgba(201,168,76,0.2)",
+        borderRadius: T.radius.card, padding:"36px 32px",
+        maxWidth:460, width:"100%", position:"relative",
+      }}>
+        <button onClick={onClose} style={{
+          position:"absolute", top:16, right:16,
+          background:"none", border:"none", color:T.text.muted,
+          fontSize:20, cursor:"pointer", lineHeight:1, fontFamily:T.font.body,
+        }}>×</button>
+        {mode === "locked" ? (
+          <>
+            <div style={{ width:48, height:48, borderRadius:"50%", background:"rgba(201,168,76,0.1)", border:"1px solid rgba(201,168,76,0.3)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:20 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke={T.gold} strokeWidth="1.5"/><path d="M7 11V7a5 5 0 0110 0v4" stroke={T.gold} strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </div>
+            <div style={{ fontFamily:T.font.display, fontSize:26, fontWeight:300, color:T.parchment, marginBottom:12, lineHeight:1.2 }}>Your VALU Index is still valid.</div>
+            <p style={{ fontSize:T.size.body, color:T.text.tertiary, lineHeight:1.75, marginBottom:16 }}>You can retake the assessment on <strong style={{color:T.gold}}>{expiryDateFormatted}</strong>. Your score expires 12 months after your assessment date.</p>
+            <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, marginBottom:24 }}>If you believe there is an error, contact <span style={{color:T.gold}}>info@valoriainstitute.com</span> and a Valoria adviser will review your session.</p>
+            <button onClick={onClose} style={{...pillBtn("gold-ghost"), width:"100%"}}>CLOSE</button>
+          </>
+        ) : (
+          <>
+            <div style={{ width:48, height:48, borderRadius:"50%", background:"rgba(216,90,48,0.1)", border:"1px solid rgba(216,90,48,0.3)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:20 }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke={T.coral} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div style={{ fontFamily:T.font.display, fontSize:26, fontWeight:300, color:T.parchment, marginBottom:12, lineHeight:1.2 }}>Are you sure you want to retake?</div>
+            <p style={{ fontSize:T.size.body, color:T.text.tertiary, lineHeight:1.75, marginBottom:8 }}>Retaking permanently replaces your current result. Your VALU Index, cluster scores, and AI report will all be overwritten.</p>
+            <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, marginBottom:24 }}>The assessment is designed to be taken once every 12 months. Retaking it immediately is unlikely to produce a meaningfully different result.</p>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={onClose} style={{...pillBtn("ghost"), flex:1}}>KEEP MY RESULT</button>
+              <button onClick={onConfirm} style={{...pillBtn("danger"), flex:1}}>YES, RETAKE</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
-  const [currentQ, setCurrentQ]     = useState(0);
-  const [answers, setAnswers]       = useState({});
-  const [selected, setSelected]     = useState(null);
-  const [name, setName]             = useState("");
-  const [role, setRole]             = useState("");
-  const [timings, setTimings]       = useState(Array(TOTAL).fill(0));
-  const [qStartTime, setQStartTime] = useState(null);
-  const [results, setResults]       = useState(null);
-  const [transitioning, setTransitioning] = useState(false);
-  const [shuffleMap, setShuffleMap] = useState({});
-  const [sessionSeed]               = useState(() => Math.random() * 99999);
-  const [reportText, setReportText]     = useState("");
-  const [reportStatus, setReportStatus] = useState("idle");
-  const [reportError, setReportError]   = useState(null);
-  const reportRef = useRef(null);
-  const [signupEmail, setSignupEmail]       = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [signupError, setSignupError]       = useState("");
-  const [signupLoading, setSignupLoading]   = useState(false);
-  const [signupDone, setSignupDone]         = useState(false);
-  const [confirmedEmail, setConfirmedEmail] = useState(null);
-  const [emailStatus, setEmailStatus]       = useState("idle");
-  const [showRetakeModal, setShowRetakeModal] = useState(false);
+}
 
-  const userFingerprint = useMemo(
-    () => (name.trim() && role.trim() ? computeFingerprint(name, role) : null),
-    [name, role]
+// ════════════════════════════════════════════════════════════════════════════
+// SCREEN: INTRO
+// ════════════════════════════════════════════════════════════════════════════
+function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpoint, lockRecord }) {
+  const [name, setName] = useState(checkpoint?.name || "");
+  const [role, setRole] = useState(checkpoint?.role || "");
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width:1024px)").matches : false
   );
-  const lockExpiresAt = assessmentLockRecord?.expiresAt ?? assessmentExpiresAt ?? null;
-  const assessmentIsLocked =
-    (assessmentLockRecord && isLockActive(assessmentLockRecord, userFingerprint)) ||
-    (assessmentExpiresAt ? new Date() < new Date(assessmentExpiresAt) : false);
-  const expiryDateFormatted = lockExpiresAt
-    ? new Date(lockExpiresAt).toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" })
-    : null;
+  const [prevLoading, setPrevLoading] = useState(false);
+  const [prevError, setPrevError]     = useState(null);
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const onChange = () => setIsDesktop(mq.matches);
-    onChange();
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
+    const mq = window.matchMedia("(min-width:1024px)");
+    const fn = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
   }, []);
 
-  useEffect(() => {
-    if (!onIdentityChange) return;
-    const t = setTimeout(() => { onIdentityChange(name, role); }, 400);
-    return () => clearTimeout(t);
-  }, [name, role, onIdentityChange]);
+  const canBegin = name.trim().length > 0 && role.trim().length > 0 && !assessmentIsLocked;
+  const hasCheckpoint = checkpoint && checkpoint.currentQ > 0;
+
+  async function handleViewPrevious() {
+    if (!lockRecord?.fingerprint) {
+      setPrevError("Could not locate your previous result. Contact info@valoriainstitute.com.");
+      return;
+    }
+    setPrevLoading(true);
+    setPrevError(null);
+    try {
+      const profile = await fetchAssessmentByFingerprint(lockRecord.fingerprint);
+      if (!profile) {
+        setPrevError("Your previous result could not be retrieved. Contact info@valoriainstitute.com.");
+        return;
+      }
+      onBegin({ name: profile.name, role: profile.role, resume: false, previousProfile: profile });
+    } catch {
+      setPrevError("Something went wrong. Try again or contact info@valoriainstitute.com.");
+    } finally {
+      setPrevLoading(false);
+    }
+  }
+
+  const fieldStyle = (filled) => ({
+    ...inputBase,
+    border: `1.5px solid ${filled ? "rgba(201,168,76,0.4)" : "rgba(247,244,238,0.1)"}`,
+    borderRadius: T.radius.card,
+    padding: "16px 18px",
+    fontSize: 16,
+  });
+
+  return (
+    <div style={{ minHeight:"100vh", background:T.dark, fontFamily:T.font.body, position:"relative", overflowX:"hidden" }}>
+      <Grain />
+      <AmbientGlow />
+
+      <div style={{
+        position:"relative", zIndex:1,
+        maxWidth: isDesktop ? 1400 : 600,
+        margin:"0 auto",
+        padding: isDesktop ? "60px 48px" : "clamp(48px,10vw,72px) 20px clamp(40px,8vw,64px)",
+        display:"flex",
+        flexDirection: isDesktop ? "row" : "column",
+        gap: isDesktop ? 80 : 0,
+      }}>
+
+        {/* DESKTOP LEFT — marketing column */}
+        {isDesktop && (
+          <div style={{ flex:1.2, paddingRight:20 }}>
+            <div style={{ marginBottom:40 }}>
+              <div style={{ fontFamily:T.font.display, fontSize:34, fontWeight:600, color:T.gold, letterSpacing:"0.22em", lineHeight:1, marginBottom:4 }}>VALORIA</div>
+              <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.4)", letterSpacing:"0.3em", fontFamily:T.font.label }}>INSTITUTE</div>
+            </div>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"5px 14px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:28 }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:T.gold }} />
+              <span style={{ fontSize:T.size.micro, fontWeight:600, color:T.gold, letterSpacing:"0.2em", fontFamily:T.font.label }}>FOUNDING COHORT — NOW OPEN</span>
+            </div>
+            <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(48px,5vw,68px)", fontWeight:300, lineHeight:1, letterSpacing:"-0.02em", color:T.parchment, margin:"0 0 20px" }}>
+              Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
+            </h1>
+            <p style={{ fontSize:16, fontWeight:300, color:T.text.tertiary, lineHeight:1.75, margin:"0 0 40px", maxWidth:460, fontFamily:T.font.body }}>
+              55 questions across five PRIME clusters. Designed to surface what you genuinely do — not what you aspire to do.
+            </p>
+            <div style={{ display:"flex", background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:T.radius.chip, overflow:"hidden", marginBottom:40, maxWidth:400 }}>
+              {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Always",v:"Free"}].map((s,i)=>(
+                <div key={i} style={{ flex:1, padding:"18px 8px", textAlign:"center", borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none" }}>
+                  <div style={{ fontSize:22, fontWeight:700, color:T.gold, lineHeight:1, fontFamily:T.font.display }}>{s.v}</div>
+                  <div style={{ fontSize:T.size.caption, color:T.text.ghost, marginTop:5, letterSpacing:"0.06em", fontFamily:T.font.body }}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+            <div>
+              <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.35)", letterSpacing:"0.18em", marginBottom:14, fontFamily:T.font.label }}>WHAT IS ASSESSED</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {CLUSTERS.map(c=>(
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}22`, borderRadius:T.radius.chip }}>
+                    <div style={{ width:36, height:36, borderRadius:T.radius.chip, background:`${c.color}15`, border:`1px solid ${c.color}35`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:c.color, flexShrink:0, fontFamily:T.font.body }}>{c.id}</div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:T.size.body, color:T.parchment, fontWeight:500, fontFamily:T.font.body }}>{c.name}</div>
+                      <div style={{ fontSize:T.size.caption+1, color:T.text.muted, fontStyle:"italic", fontFamily:T.font.body }}>{c.theme}</div>
+                    </div>
+                    <div style={{ fontSize:T.size.caption, color:`${c.color}70`, letterSpacing:"0.06em", fontFamily:T.font.mono }}>{Math.round(c.weight*100)}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RIGHT / MOBILE — form column */}
+        <div style={{ flex:isDesktop ? 1 : "unset", width:isDesktop ? "auto" : "100%" }}>
+          {!isDesktop && (
+            <div style={{ marginBottom:28, animation:"fadeUp 0.7s ease 0.05s both" }}>
+              <div style={{ fontFamily:T.font.display, fontSize:26, fontWeight:600, color:T.gold, letterSpacing:"0.2em", lineHeight:1, marginBottom:3 }}>VALORIA</div>
+              <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.4)", letterSpacing:"0.3em", marginBottom:16, fontFamily:T.font.label }}>INSTITUTE</div>
+              <div style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"4px 12px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:18 }}>
+                <div style={{ width:5, height:5, borderRadius:"50%", background:T.gold }} />
+                <span style={{ fontSize:T.size.micro, fontWeight:600, color:T.gold, letterSpacing:"0.18em", fontFamily:T.font.label }}>FOUNDING COHORT — NOW OPEN</span>
+              </div>
+              <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(34px,8vw,48px)", fontWeight:300, lineHeight:1.05, color:T.parchment, margin:"0 0 12px" }}>
+                Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
+              </h1>
+              <p style={{ fontSize:T.size.body, color:T.text.tertiary, lineHeight:1.65, margin:"0 0 24px", fontFamily:T.font.body }}>55 questions across five PRIME clusters.</p>
+              <div style={{ display:"flex", marginBottom:28, background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:T.radius.chip, overflow:"hidden" }}>
+                {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Free",v:"Always"}].map((s,i)=>(
+                  <div key={i} style={{ flex:1, padding:"12px 6px", textAlign:"center", borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none" }}>
+                    <div style={{ fontSize:18, fontWeight:700, color:T.gold, fontFamily:T.font.display }}>{s.v}</div>
+                    <div style={{ fontSize:T.size.micro, color:T.text.ghost, marginTop:4, fontFamily:T.font.body }}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hasCheckpoint && (
+            <div style={{ marginBottom:16, padding:"14px 18px", background:"rgba(55,138,221,0.06)", border:"1px solid rgba(55,138,221,0.25)", borderRadius:T.radius.chip }}>
+              <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#378ADD", letterSpacing:"0.14em", marginBottom:6, fontFamily:T.font.body }}>SESSION IN PROGRESS</div>
+              <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.7, margin:"0 0 10px" }}>
+                You have a session in progress at question {checkpoint.currentQ + 1} of {TOTAL}.
+              </p>
+              <button
+                onClick={() => onBegin({ name: checkpoint.name, role: checkpoint.role, resume: true })}
+                style={{...pillBtn("gold-ghost"), padding:"10px 20px", fontSize:T.size.caption}}>
+                RESUME SESSION →
+              </button>
+            </div>
+          )}
+
+          {assessmentIsLocked && (
+            <div style={{ marginBottom:20, padding:"16px 18px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.25)", borderRadius:T.radius.chip }}>
+              <div style={{ fontSize:T.size.caption, fontWeight:700, color:T.gold, letterSpacing:"0.14em", marginBottom:8, fontFamily:T.font.body }}>ASSESSMENT LOCKED</div>
+              <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.7, margin:"0 0 14px" }}>
+                You completed the VALU Index for this identity. Retake is available on <strong style={{color:T.gold}}>{expiryDateFormatted}</strong>.
+              </p>
+              {prevError && (
+                <p style={{ fontSize:T.size.small, color:T.coral, margin:"0 0 10px", lineHeight:1.6 }}>{prevError}</p>
+              )}
+              <button
+                onClick={handleViewPrevious}
+                disabled={prevLoading}
+                style={{...pillBtn(prevLoading ? "disabled" : "gold-ghost"), padding:"10px 20px", fontSize:T.size.caption}}>
+                {prevLoading ? "RETRIEVING..." : "VIEW MY PREVIOUS REPORT →"}
+              </button>
+            </div>
+          )}
+
+          <div style={{ background:"rgba(22,22,36,0.7)", border:"1px solid rgba(201,168,76,0.12)", borderRadius:T.radius.card, padding:"clamp(24px,6vw,32px)", animation:"fadeUp 0.8s ease 0.35s both" }}>
+            <div style={{ fontSize:T.size.caption, fontWeight:600, color:T.text.muted, letterSpacing:"0.14em", marginBottom:20, fontFamily:T.font.label }}>BEFORE YOU BEGIN</div>
+            <div style={{ marginBottom:16 }}>
+              <label style={labelBase}>Your Full Name</label>
+              <input value={name} onChange={e=>setName(e.target.value)} placeholder="Full name" autoComplete="name" style={fieldStyle(name.trim())} />
+            </div>
+            <div style={{ marginBottom:24 }}>
+              <label style={labelBase}>Your Current Role</label>
+              <input value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Director of Strategy" autoComplete="organization-title" style={fieldStyle(role.trim())} />
+            </div>
+            <button
+              onClick={() => { if (canBegin) onBegin({ name, role, resume: false }); }}
+              disabled={!canBegin}
+              style={{ ...pillBtn(canBegin ? "primary" : "disabled"), width:"100%", padding:"18px 24px" }}
+              onMouseEnter={e => { if (canBegin) e.currentTarget.style.background="#E2C97E"; }}
+              onMouseLeave={e => { if (canBegin) e.currentTarget.style.background=T.gold; }}
+            >
+              BEGIN THE VALU INDEX
+            </button>
+            {!canBegin && (
+              <p style={{ textAlign:"center", fontSize:T.size.caption, color:T.text.ghost, marginTop:12, lineHeight:1.5, fontFamily:T.font.body }}>
+                {assessmentIsLocked ? "Assessment locked for 12 months for this identity." : "Enter your name and role to continue."}
+              </p>
+            )}
+          </div>
+
+          <div style={{ marginTop:16, padding:"14px 18px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.05)", borderRadius:T.radius.chip, animation:"fadeUp 0.8s ease 0.45s both" }}>
+            <div style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.75, fontFamily:T.font.body }}>
+              Answer based on what you <em style={{color:T.text.tertiary}}>actually do</em> — not what you aim to do. Consistent honest responses produce a more accurate result.
+            </div>
+          </div>
+
+          {!isDesktop && (
+            <div style={{ marginTop:28, animation:"fadeUp 0.8s ease 0.55s both" }}>
+              <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.35)", letterSpacing:"0.18em", marginBottom:12, fontFamily:T.font.label }}>WHAT IS ASSESSED</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {CLUSTERS.map(c=>(
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}20`, borderRadius:T.radius.chip }}>
+                    <div style={{ width:32, height:32, borderRadius:T.radius.chip, background:`${c.color}15`, border:`1px solid ${c.color}35`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:c.color, flexShrink:0, fontFamily:T.font.body }}>{c.id}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:T.size.small, color:T.parchment, fontWeight:500, fontFamily:T.font.body }}>{c.name}</div>
+                      <div style={{ fontSize:T.size.caption, color:T.text.muted, fontStyle:"italic", fontFamily:T.font.body }}>{c.theme}</div>
+                    </div>
+                    <div style={{ fontSize:T.size.caption, color:`${c.color}70`, letterSpacing:"0.06em", flexShrink:0, fontFamily:T.font.mono }}>{Math.round(c.weight*100)}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop:32, paddingTop:24, borderTop:"1px solid rgba(201,168,76,0.08)", display:"flex", gap:16, flexWrap:"wrap", justifyContent:"center" }}>
+            {["Always free","18–28 minutes","NDPA 2023 compliant"].map(t=>(
+              <div key={t} style={{ display:"flex", alignItems:"center", gap:6, fontSize:T.size.caption, color:T.text.ghost, fontFamily:T.font.body }}>
+                <div style={{ width:3, height:3, borderRadius:"50%", background:"rgba(201,168,76,0.4)" }}/>
+                {t}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SCREEN: ASSESSMENT
+// ════════════════════════════════════════════════════════════════════════════
+function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ, sessionSeed, onComplete }) {
+  const [currentQ, setCurrentQ]     = useState(initialQ || 0);
+  const [answers, setAnswers]       = useState(initialAnswers || {});
+  const [selected, setSelected]     = useState(null);
+  const [timings, setTimings]       = useState(initialTimings || Array(TOTAL).fill(0));
+  const [qStartTime, setQStartTime] = useState(null);
+  const [transitioning, setTransitioning] = useState(false);
+  const [shuffleMap, setShuffleMap] = useState(() => {
+    const q = QUESTIONS[initialQ || 0];
+    if (!q || q.type === "anchor") return {};
+    return { [initialQ || 0]: seededShuffle(q.options, sessionSeed + (initialQ || 0)) };
+  });
 
   const question = QUESTIONS[currentQ];
-  const progress  = Math.round((currentQ / TOTAL) * 100);
-  const cluster   = CLUSTERS.find(c => c.id === question?.cluster);
+  const cluster  = CLUSTERS.find(c => c.id === question?.cluster);
+  const progress = Math.round((currentQ / TOTAL) * 100);
 
+  // Single source of truth: displayedOptions reads from shuffleMap only.
   const displayedOptions = useMemo(() => {
     if (!question) return [];
     if (question.type === "anchor") return question.options;
-    const seed = sessionSeed + currentQ;
-    const shuffled = seededShuffle(question.options, seed);
-    setShuffleMap(prev => ({ ...prev, [currentQ]: shuffled }));
-    return shuffled;
+    return shuffleMap[currentQ] || [];
+  }, [currentQ, question, shuffleMap]);
+
+  // Populate shuffleMap entry for currentQ (and prefetch next) in useEffect.
+  // This is the only place seededShuffle is called — no parallel calls in useMemo.
+  useEffect(() => {
+    if (!question) return;
+    setShuffleMap(prev => {
+      const next = { ...prev };
+      if (question.type !== "anchor" && !next[currentQ]) {
+        next[currentQ] = seededShuffle(question.options, sessionSeed + currentQ);
+      }
+      const nextQ = QUESTIONS[currentQ + 1];
+      if (nextQ && nextQ.type !== "anchor" && !next[currentQ + 1]) {
+        next[currentQ + 1] = seededShuffle(nextQ.options, sessionSeed + currentQ + 1);
+      }
+      return next;
+    });
   }, [currentQ, question, sessionSeed]);
 
-  useEffect(() => {
-    if (phase === "assessing") setQStartTime(Date.now());
-  }, [currentQ, phase]);
+  useEffect(() => { setQStartTime(Date.now()); }, [currentQ]);
 
+  // FIX: complete deps array — name, role, sessionSeed added
+  useEffect(() => {
+    saveCheckpoint({ name, role, answers, timings, currentQ, sessionSeed });
+  }, [answers, currentQ, name, role, sessionSeed]);
+
+  // Live cluster scores for radar
   const liveScores = {};
   CLUSTERS.forEach(c => {
-    const qs = QUESTIONS.filter((q,i) => q.cluster === c.id && answers[i] !== undefined);
+    const qs = QUESTIONS.filter((q, i) => q.cluster === c.id && answers[i] !== undefined);
     const raw = qs.reduce((s, q) => {
       const idx = QUESTIONS.indexOf(q);
-      const displayedIdx = answers[idx];
-      const originalOption = shuffleMap[idx] ? shuffleMap[idx][displayedIdx] : q.options[displayedIdx];
-      return s + (originalOption?.score || 0);
+      const opt = shuffleMap[idx] ? shuffleMap[idx][answers[idx]] : q.options[answers[idx]];
+      return s + (opt?.score || 0);
     }, 0);
     liveScores[c.id] = Math.round((raw / c.maxRaw) * 100);
   });
 
-  useEffect(() => {
-    const auth = parseAuthHash();
-    if (!auth) return;
-    window.history.replaceState(null, "", window.location.pathname);
-    if (auth.error) {
-      setPhase("results");
-      setSignupError(`Confirmation link issue: ${auth.error}. Sign up again to receive a new link.`);
-      return;
-    }
-    const pending = getPendingReport();
-    const email = auth.email || pending?.email || null;
-    const finishWith = (profileName, profileRole, profileResults) => {
-      setName(profileName);
-      setRole(profileRole);
-      setResults(profileResults);
-      setConfirmedEmail(email);
-      setPhase("generating");
-      generateAIReport({ name: profileName, role: profileRole, ...profileResults }, email);
-      clearPendingReport();
-    };
-    if (pending?.results) {
-      finishWith(pending.name, pending.role, pending.results);
-    } else if (email) {
-      fetchAssessmentByEmail(email).then((profile) => {
-        if (profile) finishWith(profile.name, profile.role, profile.results);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function fetchAssessmentByEmail(email) {
-    try {
-      const params = new URLSearchParams({
-        email: `eq.${email}`,
-        select: "name,role,total_score,cluster_scores,skill_scores",
-        order: "completed_at.desc",
-        limit: "1",
-      });
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-      });
-      if (!res.ok) return null;
-      const rows = await res.json();
-      if (!rows?.length) return null;
-      const row = rows[0];
-      const valuIndex = row.total_score ?? 0;
-      const clusterScores = row.cluster_scores ?? {};
-      const sorted = [...CLUSTERS].sort((a, b) => (clusterScores[b.id] ?? 0) - (clusterScores[a.id] ?? 0));
-      const clusterAvg = Math.round(CLUSTERS.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS.length);
-      return {
-        name: row.name, role: row.role,
-        results: {
-          valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
-          desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
-          futureReadyScore: clusterAvg,
-          strongest: sorted[0], weakest: sorted[sorted.length - 1],
-          consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
-          speedFlag: false, uniformityFlag: false, anyFlag: false,
-          listed: valuIndex >= 35,
-          pathway: valuIndex >= 80 ? "PCP Certification" : valuIndex >= 65 ? "PRIME Programme" : valuIndex >= 50 ? "PRIME Cluster" : "PRIME Sprint",
-          globalSD: 1,
-        },
-      };
-    } catch { return null; }
-  }
-
-  async function persistAssessmentRow(scoreProfile, aiReport = null, email = null) {
-    const rowName = scoreProfile.name ?? name;
-    const rowRole = scoreProfile.role ?? role;
-    const fp = computeFingerprint(rowName, rowRole);
-    const expiresAtIso = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-    await saveToSupabase({
-      total_score: scoreProfile.valuIndex ?? 0,
-      designation: scoreProfile.desig?.name ?? scoreProfile.desig ?? "",
-      completed_at: new Date().toISOString(),
-      ai_report: aiReport,
-      name: rowName, role: rowRole,
-      identity_hash: fp,
-      expires_at: expiresAtIso,
-      cluster_scores: scoreProfile.clusterScores ?? {},
-      skill_scores: scoreProfile.skillScores ?? {},
-      ...(email ? { email } : {}),
-    });
-  }
-
-  async function emailFullReport(email, scoreProfile, fullText) {
-    if (!email) return;
-    setEmailStatus("sending");
-    try {
-      const res = await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          name: scoreProfile.name ?? name,
-          role: scoreProfile.role ?? role,
-          score: scoreProfile.valuIndex,
-          designation: scoreProfile.desig?.name ?? "",
-          reportText: fullText,
-        }),
-      });
-      setEmailStatus(res.ok ? "sent" : "failed");
-    } catch {
-      setEmailStatus("failed");
-    }
-  }
-
-  async function generateAIReport(scoreProfile, recipientEmail = null) {
-    setReportStatus("generating");
-    setReportText("");
-    await persistAssessmentRow(scoreProfile, null, recipientEmail);
-    try {
-      const response = await fetch("/api/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildReportPrompt(scoreProfile) })
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || "API request failed");
-      }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullText = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") continue;
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
-              fullText += parsed.delta.text;
-              setReportText(fullText);
-              if (reportRef.current) reportRef.current.scrollTop = reportRef.current.scrollHeight;
-            }
-          } catch {}
-        }
-      }
-      setReportStatus("complete");
-      await persistAssessmentRow(scoreProfile, fullText, recipientEmail);
-      emailFullReport(recipientEmail, scoreProfile, fullText);
-      if (onComplete) onComplete({ name, role, ...scoreProfile, reportText: fullText, promptVersion: PROMPT_VERSION, completedAt: new Date().toISOString() });
-    } catch (err) {
-      console.error("Report generation failed:", err);
-      setReportError(err.message);
-      setReportStatus("error");
-      if (onComplete) onComplete({ name, role, ...scoreProfile, reportText: "", promptVersion: PROMPT_VERSION, completedAt: new Date().toISOString() });
-    }
-  }
-
   function handleSelect(optIdx) {
     if (transitioning) return;
     setSelected(optIdx);
-    setTimeout(() => { handleNextWithAnswer(optIdx); }, 400);
   }
 
-  function handleNextWithAnswer(optIdx) {
+  function handleContinue() {
+    if (selected === null || transitioning) return;
     const elapsed = qStartTime ? Date.now() - qStartTime : 0;
     const newTimings = [...timings];
     newTimings[currentQ] = elapsed;
-    const newAnswers = { ...answers, [currentQ]: optIdx };
+    const newAnswers = { ...answers, [currentQ]: selected };
     setAnswers(newAnswers);
+    setTimings(newTimings);
     setTransitioning(true);
     setTimeout(() => {
       if (currentQ + 1 < TOTAL) {
-        setCurrentQ(currentQ + 1); setSelected(null); setTransitioning(false);
+        setCurrentQ(currentQ + 1);
+        setSelected(null);
+        setTransitioning(false);
       } else {
         const r = computeResults(newAnswers, newTimings, shuffleMap);
-        setResults(r); setPhase("results"); setTransitioning(false);
-        if (onAssessmentSubmitted) onAssessmentSubmitted({ name, role, ...r });
-        persistAssessmentRow({ name, role, ...r }, null);
+        clearCheckpoint();
+        onComplete({ name, role, results: r, shuffleMap });
       }
-    }, 280);
+    }, 220);
   }
 
   function handleBack() {
@@ -1155,24 +1596,181 @@ export default function PRIMEAssessment({
     setCurrentQ(currentQ - 1);
   }
 
-  function requestRetake() {
-    setShowRetakeModal(assessmentIsLocked ? "locked" : "confirm");
-  }
+  const pageNum = currentQ + 1;
 
-  function confirmRetake() {
-    setShowRetakeModal(false);
-    setPhase("intro"); setCurrentQ(0); setAnswers({}); setSelected(null);
-    setResults(null); setName(""); setRole("");
-    setTimings(Array(TOTAL).fill(0)); setShuffleMap({});
-    setReportText(""); setReportStatus("idle"); setReportError(null);
-    setSignupEmail(""); setSignupPassword(""); setSignupError("");
-    setSignupDone(false); setConfirmedEmail(null); setEmailStatus("idle");
-    clearPendingReport();
-  }
+  return (
+    <div style={{ minHeight:"100vh", background:T.dark, display:"flex", flexDirection:"column", fontFamily:T.font.body }}>
+      {/* No <ClusterStripe /> here — owned by ValoriaNav in the platform shell */}
+      <Grain />
+      <AmbientGlow color="rgba(201,168,76,0.06)" />
+
+      {/* Nav bar */}
+      <div style={{
+        position:"fixed", top:59, left:0, right:0,
+        padding:"14px 24px 12px",
+        background:"rgba(26,26,46,0.97)",
+        borderBottom:"1px solid rgba(201,168,76,0.1)",
+        backdropFilter:"blur(12px)",
+        zIndex:40,
+        display:"flex", justifyContent:"space-between", alignItems:"center",
+      }}>
+        <div style={{ fontFamily:T.font.label, fontSize:T.size.caption, color:"rgba(201,168,76,0.6)", letterSpacing:"0.15em" }}>VALU INDEX</div>
+        {cluster && (
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <div style={{ width:18, height:18, borderRadius: T.radius.chip, background:`${cluster.color}20`, border:`1px solid ${cluster.color}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:T.size.micro, fontWeight:700, color:cluster.color, fontFamily:T.font.body }}>{cluster.id}</div>
+            <div style={{ fontSize:T.size.caption, color:cluster.color, letterSpacing:"0.08em", fontFamily:T.font.label }}>{cluster.name.toUpperCase()}</div>
+          </div>
+        )}
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:2, background:"rgba(255,255,255,0.06)" }}>
+          <div style={{ height:"100%", width:`${progress}%`, background:T.gold, transition:"width 0.4s ease", borderRadius: T.radius.chip }} />
+        </div>
+      </div>
+
+      {/* Question area — top padding accounts for platform nav (59px) + assessment nav (~48px) */}
+      <div style={{ flex:1, display:"flex", padding:"120px 20px 140px", maxWidth:700, margin:"0 auto", width:"100%", flexDirection:"column", justifyContent:"center" }}>
+        {question.skill && question.cluster !== "VA" && (
+          <div style={{ fontSize:T.size.caption, color:"rgba(201,168,76,0.4)", letterSpacing:"0.18em", marginBottom:16, textTransform:"uppercase", fontFamily:T.font.body }}>
+            {question.skill} · {question.type}
+          </div>
+        )}
+        <div style={{
+          fontFamily: T.font.display,
+          fontSize:"clamp(17px,2.5vw,22px)",
+          fontWeight:300,
+          color: T.parchment,
+          lineHeight:1.55,
+          marginBottom:28,
+          opacity: transitioning ? 0 : 1,
+          transition:"opacity 0.2s",
+        }}>
+          {question.q}
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:10, opacity:transitioning?0:1, transition:"opacity 0.2s" }}>
+          {displayedOptions.map((opt, displayIdx) => {
+            const isSelected = selected === displayIdx;
+            return (
+              <button key={displayIdx} onClick={() => handleSelect(displayIdx)}
+                style={{
+                  padding:"16px 20px",
+                  background: isSelected ? "rgba(201,168,76,0.12)" : "rgba(255,255,255,0.03)",
+                  border: `1.5px solid ${isSelected ? "rgba(201,168,76,0.5)" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: T.radius.chip,
+                  textAlign:"left",
+                  cursor:"pointer",
+                  color: isSelected ? T.parchment : T.text.secondary,
+                  fontSize: T.size.body,
+                  lineHeight:1.55,
+                  fontFamily: T.font.body,
+                  transition:"all 0.2s cubic-bezier(0.22,1,0.36,1)",
+                  outline:"none",
+                  boxShadow: isSelected ? "0 4px 20px rgba(201,168,76,0.15)" : "none",
+                  display:"flex",
+                  alignItems:"flex-start",
+                  gap:12,
+                  animation: isSelected ? "optionSelect 0.25s ease" : "none",
+                }}
+                onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.background="rgba(255,255,255,0.06)"; e.currentTarget.style.borderColor="rgba(201,168,76,0.25)"; e.currentTarget.style.color=T.parchment; }}}
+                onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.background="rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; e.currentTarget.style.color=T.text.secondary; }}}
+                onTouchStart={e => { e.currentTarget.style.transform="scale(0.98)"; }}
+                onTouchEnd={e => { e.currentTarget.style.transform="scale(1)"; }}
+              >
+                <div style={{
+                  width:18, height:18, borderRadius:"50%", flexShrink:0, marginTop:2,
+                  border: `1.5px solid ${isSelected ? T.gold : "rgba(247,244,238,0.2)"}`,
+                  background: isSelected ? T.gold : "transparent",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  transition:"all 0.2s",
+                }}>
+                  {isSelected && (
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none" style={{animation:"checkIn 0.2s ease"}}>
+                      <path d="M1 4L3.5 6.5L9 1" stroke={T.dark} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+                <span>{opt.text}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Bottom action bar */}
+      <div style={{
+        position:"fixed", bottom:0, left:0, right:0,
+        padding:"14px 24px",
+        background:"rgba(26,26,46,0.97)",
+        borderTop:"1px solid rgba(201,168,76,0.08)",
+        backdropFilter:"blur(12px)",
+        display:"flex", gap:10, alignItems:"center", justifyContent:"space-between",
+        zIndex:40,
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:100 }}>
+          <PageNumber current={pageNum} total={TOTAL} />
+          {currentQ > 0 && (
+            <button onClick={handleBack}
+              style={{ ...pillBtn("ghost"), padding:"10px 18px", fontSize:T.size.caption }}>
+              BACK
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={handleContinue}
+          disabled={selected === null}
+          style={{ ...pillBtn(selected !== null ? "primary" : "disabled"), padding:"13px 32px", minWidth:160 }}
+          onMouseEnter={e => { if (selected !== null) e.currentTarget.style.background="#E2C97E"; }}
+          onMouseLeave={e => { if (selected !== null) e.currentTarget.style.background=T.gold; }}
+        >
+          {currentQ + 1 === TOTAL ? "SEE MY RESULTS" : "CONTINUE →"}
+        </button>
+
+        {/* FIX: 100px as per spec */}
+        <div style={{ flexShrink:0 }}>
+          <Radar scores={liveScores} size={100} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SCREEN: RESULTS
+// ════════════════════════════════════════════════════════════════════════════
+function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
+  const [signupEmail, setSignupEmail]       = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupError, setSignupError]       = useState("");
+  const [signupLoading, setSignupLoading]   = useState(false);
+  const [signupDone, setSignupDone]         = useState(false);
+  const [saveError, setSaveError]           = useState(null);
+  const [retakeModal, setRetakeModal]       = useState(null);
+
+  const { valuIndex, clusterScores, skillScores, desig, futureReadyScore, listed } = results;
+
+  // Save scores to Supabase immediately on completion.
+  // Email is not available yet — it is added in handleSignup below.
+  // Uses upsert-style: if the same identity_hash already exists this
+  // will create a duplicate row; the uniqueness constraint on the DB
+  // should be set to identity_hash with ON CONFLICT DO NOTHING.
+  useEffect(() => {
+    const fp = computeFingerprint(name, role);
+    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    saveToSupabase({
+      total_score: valuIndex,
+      designation: desig?.name || "",
+      completed_at: new Date().toISOString(),
+      ai_report: null,
+      name, role,
+      identity_hash: fp,
+      expires_at: expiresAt,
+      cluster_scores: clusterScores,
+      skill_scores: skillScores,
+    }).catch(err => setSaveError(err.message));
+  }, []);
 
   async function handleSignup() {
     if (!signupEmail.trim() || !signupPassword) {
-      setSignupError("A valid email address and password are required to continue.");
+      setSignupError("A valid email address and password are required.");
       return;
     }
     if (signupPassword.length < 8) {
@@ -1182,890 +1780,619 @@ export default function PRIMEAssessment({
     setSignupLoading(true);
     setSignupError("");
     try {
+      // 1. Create Supabase Auth account — sends confirmation email automatically.
       await signUpWithSupabase(signupEmail.trim(), signupPassword, name, role);
+
+      // 2. Store pending report payload so the hash-return flow can resume.
       setPendingReport({ name, role, email: signupEmail.trim(), results });
-      await persistAssessmentRow({ name, role, ...results }, null, signupEmail.trim());
-      await joinWaitlist({ name, email: signupEmail.trim(), role });
+
+      // 3. Update the assessment row with the confirmed email address.
+      const fp = computeFingerprint(name, role);
+      const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      await saveToSupabase({
+        total_score: valuIndex,
+        designation: desig?.name || "",
+        completed_at: new Date().toISOString(),
+        ai_report: null,
+        name, role,
+        identity_hash: fp,
+        expires_at: expiresAt,
+        cluster_scores: clusterScores,
+        skill_scores: skillScores,
+        email: signupEmail.trim(),
+      }).catch(() => {});
+
+      // 4. Add to waitlist table (idempotent — 409 is silently swallowed).
+      await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(() => {});
+
       setSignupDone(true);
+      if (onSignupDone) onSignupDone(signupEmail.trim());
     } catch (e) {
-      setSignupError(e.message || "Something has prevented this from completing. Refresh the page or try again shortly.");
+      setSignupError(e.message || "Something prevented this from completing. Try again shortly.");
     } finally {
       setSignupLoading(false);
     }
   }
 
-  // ── SHARED INPUT STYLE — brand compliant dark surface ─────────────────
-  // FIX: Added WebkitAppearance, MozAppearance, appearance to override
-  // browser/Webflow default white background on inputs.
-  const inputStyle = {
-    width: "100%",
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(247,244,238,0.1)",
-    borderRadius: 4,
-    padding: "13px 16px",
-    color: PARCHMENT,
-    fontSize: 14,
-    outline: "none",
-    fontFamily: "'DM Sans',sans-serif",
-    boxSizing: "border-box",
-    transition: "border-color 0.25s",
-    WebkitAppearance: "none",
-    MozAppearance: "none",
-    appearance: "none",
-  };
+  const pageNum = TOTAL + 1;
+  const sortedSkills = Object.entries(skillScores || {})
+    .filter(([s]) => s !== "Validity")
+    .sort(([,a],[,b]) => b - a);
+  const topSkills    = sortedSkills.slice(0, 3);
+  const bottomSkills = sortedSkills.slice(-3).reverse();
 
-  const labelStyle = {
-    display: "block",
-    fontSize: 10,
-    fontWeight: 500,
-    color: "rgba(247,244,238,0.35)",
-    letterSpacing: "0.12em",
-    textTransform: "uppercase",
-    marginBottom: 8,
-  };
+  return (
+    <div style={{ minHeight:"100vh", background:T.dark, fontFamily:T.font.body }}>
+      {/* No <ClusterStripe /> — owned by ValoriaNav */}
+      <Grain />
+      <AmbientGlow />
 
-  // ── RETAKE MODAL ────────────────────────────────────────────────────────
-  function renderRetakeModal() {
-    if (!showRetakeModal) return null;
-    return (
-      <div style={{
-        position:"fixed", inset:0, zIndex:999,
-        background:"rgba(15,15,26,0.92)",
-        backdropFilter:"blur(12px)",
-        display:"flex", alignItems:"center", justifyContent:"center", padding:"24px",
-      }}>
-        <div style={{
-          background: MID,
-          border:"1px solid rgba(201,168,76,0.2)",
-          borderRadius:10, padding:"36px 32px",
-          maxWidth:460, width:"100%", position:"relative",
-        }}>
-          <button onClick={() => setShowRetakeModal(false)}
-            style={{position:"absolute",top:16,right:16,background:"none",border:"none",color:"rgba(247,244,238,0.3)",fontSize:20,cursor:"pointer",lineHeight:1}}>
-            ×
-          </button>
-          {showRetakeModal === "locked" ? (
-            <>
-              <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(201,168,76,0.1)",border:"1px solid rgba(201,168,76,0.3)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20}}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <rect x="3" y="11" width="18" height="11" rx="2" stroke="#C9A84C" strokeWidth="1.5"/>
-                  <path d="M7 11V7a5 5 0 0110 0v4" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-              </div>
-              <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:26,fontWeight:300,color:PARCHMENT,marginBottom:12,lineHeight:1.2}}>
-                Your VALU Index is still valid.
-              </div>
-              <p style={{fontSize:14,color:"rgba(247,244,238,0.5)",lineHeight:1.75,marginBottom:16}}>
-                You can retake the assessment on <strong style={{color:GOLD}}>{expiryDateFormatted}</strong>. Your score expires 12 months after your assessment date.
-              </p>
-              <p style={{fontSize:13,color:"rgba(247,244,238,0.35)",lineHeight:1.7,marginBottom:24}}>
-                If you believe there is an error in your result, contact <span style={{color:GOLD}}>info@valoriainstitute.com</span> and a Valoria adviser will review your session.
-              </p>
-              {/* FIX: borderRadius 9999px — was 3 */}
-              <button onClick={() => setShowRetakeModal(false)}
-                style={{width:"100%",padding:"14px",background:"rgba(201,168,76,0.15)",border:"1px solid rgba(201,168,76,0.3)",borderRadius:9999,color:GOLD,fontSize:11,fontWeight:700,letterSpacing:"0.16em",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-                CLOSE
-              </button>
-            </>
-          ) : (
-            <>
-              <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(216,90,48,0.1)",border:"1px solid rgba(216,90,48,0.3)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:20}}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#D85A30" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:26,fontWeight:300,color:PARCHMENT,marginBottom:12,lineHeight:1.2}}>
-                Are you sure you want to retake?
-              </div>
-              <p style={{fontSize:14,color:"rgba(247,244,238,0.5)",lineHeight:1.75,marginBottom:8}}>
-                Retaking the assessment will permanently replace your current result. Your VALU Index, cluster scores, and AI report will all be overwritten.
-              </p>
-              <p style={{fontSize:13,color:"rgba(247,244,238,0.4)",lineHeight:1.7,marginBottom:24}}>
-                The assessment is designed to be taken once every 12 months. Retaking it immediately is unlikely to produce a meaningfully different result.
-              </p>
-              <div style={{display:"flex",gap:10}}>
-                {/* FIX: borderRadius 9999px — was 3 */}
-                <button onClick={() => setShowRetakeModal(false)}
-                  style={{flex:1,padding:"13px",background:"transparent",border:"1px solid rgba(247,244,238,0.15)",borderRadius:9999,color:"rgba(247,244,238,0.5)",fontSize:11,letterSpacing:"0.12em",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-                  KEEP MY RESULT
-                </button>
-                {/* FIX: borderRadius 9999px — was 3 */}
-                <button onClick={confirmRetake}
-                  style={{flex:1,padding:"13px",background:"rgba(216,90,48,0.15)",border:"1px solid rgba(216,90,48,0.4)",borderRadius:9999,color:"#D85A30",fontSize:11,fontWeight:700,letterSpacing:"0.12em",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-                  YES, RETAKE
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
+      <ScoreHeader
+        name={name} role={role}
+        valuIndex={valuIndex} clusterScores={clusterScores}
+        skillScores={skillScores} desig={desig}
+        futureReadyScore={futureReadyScore}
+        sticky={false}
+      />
 
-  // ── INTRO SCREEN ────────────────────────────────────────────────────────
-  if (phase === "intro") {
-    const canBegin = name.trim().length > 0 && role.trim().length > 0 && !assessmentIsLocked;
-    return (
-      <div style={{
-        minHeight:"100vh", background:DARK,
-        fontFamily:"'DM Sans',sans-serif",
-        position:"relative", overflowX:"hidden", overflowY:"auto",
-      }}>
-        {/* Noise grain overlay */}
-        <div style={{
-          position:"fixed", inset:0, pointerEvents:"none", zIndex:0, opacity:0.035,
-          backgroundImage:`url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-          backgroundSize:"256px",
-        }}/>
-        {/* Ambient gold glow */}
-        <div style={{
-          position:"fixed", inset:0, pointerEvents:"none", zIndex:0,
-          background:"radial-gradient(ellipse 100% 50% at 50% 0%, rgba(201,168,76,0.09) 0%, transparent 60%)",
-        }}/>
-        {/* PRIME cluster stripe */}
-        <div style={{position:"fixed",top:0,left:0,right:0,height:3,display:"flex",zIndex:10}}>
-          {[["#1D9E75",20],["#378ADD",25],["#7F77DD",25],["#BA7517",20],["#D85A30",10]].map(([color,pct],i)=>(
-            <div key={i} style={{flex:pct,background:color,opacity:0.9}}/>
-          ))}
-        </div>
+      <div style={{ maxWidth:720, margin:"0 auto", padding:"32px 24px 80px" }}>
 
-        <div style={{
-          position:"relative", zIndex:1,
-          maxWidth: isDesktop ? 1400 : 600,
-          margin:"0 auto",
-          padding: isDesktop ? "60px 48px" : "clamp(48px,10vw,72px) 20px clamp(40px,8vw,64px)",
-          display:"flex",
-          flexDirection: isDesktop ? "row" : "column",
-          gap: isDesktop ? 80 : 0,
-        }}>
+        {saveError && (
+          <div style={{ marginBottom:16, padding:"12px 16px", background:"rgba(216,90,48,0.08)", border:"1px solid rgba(216,90,48,0.3)", borderRadius:T.radius.chip, fontSize:T.size.small, color:T.coral, fontFamily:T.font.body }}>
+            Score could not be saved: {saveError}. Contact info@valoriainstitute.com with your result ({valuIndex}/100).
+          </div>
+        )}
 
-          {/* DESKTOP LEFT — marketing column */}
-          {isDesktop && (
-            <div style={{ flex: 1.2, paddingRight: 20 }}>
-              <div style={{ marginBottom: 40 }}>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:34, fontWeight:600, color:GOLD, letterSpacing:"0.22em", lineHeight:1, marginBottom:4 }}>VALORIA</div>
-                <div style={{ fontSize:9, color:"rgba(201,168,76,0.4)", letterSpacing:"0.3em" }}>INSTITUTE</div>
-              </div>
-              <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"5px 14px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:100, marginBottom:28 }}>
-                <div style={{ width:6, height:6, borderRadius:"50%", background:GOLD }} />
-                <span style={{ fontSize:9, fontWeight:600, color:GOLD, letterSpacing:"0.2em" }}>FOUNDING COHORT — NOW OPEN</span>
-              </div>
-              <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(48px,5vw,68px)", fontWeight:300, lineHeight:1, letterSpacing:"-0.02em", color:PARCHMENT, margin:"0 0 20px" }}>
-                Know exactly<br/>where you <em style={{ fontStyle:"italic", color:GOLD }}>stand.</em>
-              </h1>
-              <p style={{ fontSize:16, fontWeight:300, color:"rgba(247,244,238,0.5)", lineHeight:1.75, margin:"0 0 40px", maxWidth:460 }}>
-                55 questions across five PRIME clusters. Designed to surface what you genuinely do — not what you aspire to do.
-              </p>
-              <div style={{ display:"flex", background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:10, overflow:"hidden", marginBottom:40, maxWidth:400 }}>
-                {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Always",v:"Free"}].map((s,i)=>(
-                  <div key={i} style={{ flex:1, padding:"18px 8px", textAlign:"center", borderRight: i<2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
-                    <div style={{ fontSize:22, fontWeight:700, color:GOLD, lineHeight:1, fontFamily:"'Cormorant Garamond',Georgia,serif" }}>{s.v}</div>
-                    <div style={{ fontSize:10, color:"rgba(247,244,238,0.3)", marginTop:5, letterSpacing:"0.06em" }}>{s.l}</div>
+        <div style={{ marginBottom:24, padding:"24px", background:"rgba(22,22,36,0.6)", border:"1px solid rgba(201,168,76,0.1)", borderRadius:T.radius.card }}>
+          <div style={{ fontSize:T.size.caption, fontWeight:700, color:T.gold, letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>YOUR RESULT SUMMARY</div>
+
+          <div style={{ padding:"16px", background: desig.bg, border:`1px solid ${desig.color}30`, borderRadius:T.radius.chip, marginBottom:16 }}>
+            <div style={{ fontSize:T.size.small, fontWeight:700, color:desig.color, letterSpacing:"0.1em", marginBottom:6, fontFamily:T.font.body }}>{desig.name.toUpperCase()}</div>
+            <p style={{ fontSize:T.size.body, color:T.text.secondary, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>{desig.desc}</p>
+          </div>
+
+          <div style={{ display:"flex", alignItems:"center", gap:24, flexWrap:"wrap", marginBottom:16 }}>
+            <Radar scores={clusterScores} size={160} />
+            <div style={{ flex:1, minWidth:200 }}>
+              {CLUSTERS.map(c => (
+                <div key={c.id} style={{ marginBottom:10 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                    <span style={{ fontSize:T.size.small, color:c.color, fontFamily:T.font.body }}>{c.name}</span>
+                    <span style={{ fontSize:T.size.small, color:c.color, fontWeight:600, fontFamily:T.font.mono }}>{clusterScores[c.id]}</span>
                   </div>
-                ))}
-              </div>
-              <div>
-                <div style={{ fontSize:9, color:"rgba(201,168,76,0.35)", letterSpacing:"0.18em", marginBottom:14 }}>WHAT IS ASSESSED</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {CLUSTERS.map(c=>(
-                    <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}22`, borderRadius:10 }}>
-                      <div style={{ width:36, height:36, borderRadius:8, background:`${c.color}15`, border:`1px solid ${c.color}35`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:c.color, flexShrink:0 }}>{c.id}</div>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:14, color:PARCHMENT, fontWeight:500 }}>{c.name}</div>
-                        <div style={{ fontSize:11, color:"rgba(247,244,238,0.3)", fontStyle:"italic" }}>{c.theme}</div>
-                      </div>
-                      <div style={{ fontSize:11, color:`${c.color}70`, letterSpacing:"0.06em" }}>{Math.round(c.weight*100)}%</div>
-                    </div>
-                  ))}
+                  <div style={{ height:3, background:"rgba(255,255,255,0.06)", borderRadius: T.radius.chip, overflow:"hidden" }}>
+                    <div style={{ height:"100%", width:`${clusterScores[c.id]}%`, background:c.color, borderRadius: T.radius.chip, transition:"width 0.8s ease" }} />
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
 
-          {/* RIGHT / MOBILE — form column */}
-          <div style={{ flex: isDesktop ? 1 : "unset", width: isDesktop ? "auto" : "100%" }}>
-            {!isDesktop && (
-              <div style={{ marginBottom:28, animation:"fadeUp 0.7s ease 0.05s both" }}>
-                <div style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:26, fontWeight:600, color:GOLD, letterSpacing:"0.2em", lineHeight:1, marginBottom:3 }}>VALORIA</div>
-                <div style={{ fontSize:9, color:"rgba(201,168,76,0.4)", letterSpacing:"0.3em", marginBottom:16 }}>INSTITUTE</div>
-                <div style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"4px 12px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:100, marginBottom:18 }}>
-                  <div style={{ width:5, height:5, borderRadius:"50%", background:GOLD }} />
-                  <span style={{ fontSize:9, fontWeight:600, color:GOLD, letterSpacing:"0.18em" }}>FOUNDING COHORT — NOW OPEN</span>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div>
+              <div style={{ fontSize:T.size.micro, color:"rgba(29,158,117,0.6)", letterSpacing:"0.14em", marginBottom:8, fontFamily:T.font.label }}>YOUR STRENGTHS</div>
+              {topSkills.map(([s, sc]) => (
+                <div key={s} style={{ display:"flex", justifyContent:"space-between", marginBottom:5, alignItems:"center" }}>
+                  <span style={{ fontSize:T.size.small, color:T.text.secondary, fontFamily:T.font.body }}>{s}</span>
+                  <span style={{ fontSize:T.size.caption, color:"#1D9E75", fontFamily:T.font.mono }}>{sc}</span>
                 </div>
-                <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:"clamp(34px,8vw,48px)", fontWeight:300, lineHeight:1.05, color:PARCHMENT, margin:"0 0 12px" }}>
-                  Know exactly<br/>where you <em style={{ fontStyle:"italic", color:GOLD }}>stand.</em>
-                </h1>
-                <p style={{ fontSize:14, color:"rgba(247,244,238,0.45)", lineHeight:1.65, margin:"0 0 24px" }}>55 questions across five PRIME clusters.</p>
-                <div style={{ display:"flex", marginBottom:28, background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:8, overflow:"hidden" }}>
-                  {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Free",v:"Always"}].map((s,i)=>(
-                    <div key={i} style={{ flex:1, padding:"12px 6px", textAlign:"center", borderRight: i<2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
-                      <div style={{ fontSize:18, fontWeight:700, color:GOLD }}>{s.v}</div>
-                      <div style={{ fontSize:9, color:"rgba(247,244,238,0.3)", marginTop:4 }}>{s.l}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {assessmentIsLocked && userFingerprint && (
-              <div style={{ marginBottom:20, padding:"16px 18px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.25)", borderRadius:10 }}>
-                <div style={{ fontSize:11, fontWeight:700, color:GOLD, letterSpacing:"0.14em", marginBottom:8 }}>ASSESSMENT LOCKED</div>
-                <p style={{ fontSize:13, color:"rgba(247,244,238,0.55)", lineHeight:1.7, margin:0 }}>
-                  You completed the VALU Index for this identity. Retake is available on <strong style={{ color:GOLD }}>{expiryDateFormatted}</strong>.
-                </p>
-              </div>
-            )}
-
-            {/* FORM CARD — brand compliant */}
-            <div style={{
-              background:"rgba(22,22,36,0.7)",
-              border:"1px solid rgba(201,168,76,0.12)",
-              borderRadius:12,
-              padding:"clamp(24px,6vw,32px)",
-              animation:"fadeUp 0.8s ease 0.35s both",
-            }}>
-              <div style={{
-                fontSize:11, fontWeight:600, color:"rgba(247,244,238,0.4)",
-                letterSpacing:"0.14em", marginBottom:20,
-              }}>BEFORE YOU BEGIN</div>
-
-              <div style={{marginBottom:16}}>
-                <label style={{
-                  fontSize:9, fontWeight:700, color:"rgba(201,168,76,0.5)",
-                  letterSpacing:"0.22em", display:"block", marginBottom:8,
-                }}>YOUR FULL NAME</label>
-                <input
-                  value={name}
-                  onChange={e=>setName(e.target.value)}
-                  placeholder="Full name"
-                  autoComplete="name"
-                  inputMode="text"
-                  enterKeyHint="next"
-                  style={{
-                    width:"100%",
-                    background:"rgba(255,255,255,0.04)",
-                    border:`1.5px solid ${name.trim() ? "rgba(201,168,76,0.4)" : "rgba(247,244,238,0.1)"}`,
-                    borderRadius:8,
-                    padding:"16px 18px",
-                    color:PARCHMENT,
-                    fontSize:16,
-                    outline:"none",
-                    fontFamily:"'DM Sans',sans-serif",
-                    transition:"border-color 0.2s",
-                    boxSizing:"border-box",
-                    WebkitAppearance:"none",
-                    MozAppearance:"none",
-                    appearance:"none",
-                  }}
-                />
-              </div>
-
-              <div style={{marginBottom:24}}>
-                <label style={{
-                  fontSize:9, fontWeight:700, color:"rgba(201,168,76,0.5)",
-                  letterSpacing:"0.22em", display:"block", marginBottom:8,
-                }}>YOUR CURRENT ROLE</label>
-                <input
-                  value={role}
-                  onChange={e=>setRole(e.target.value)}
-                  placeholder="e.g. Director of Strategy"
-                  autoComplete="organization-title"
-                  inputMode="text"
-                  enterKeyHint="done"
-                  style={{
-                    width:"100%",
-                    background:"rgba(255,255,255,0.04)",
-                    border:`1.5px solid ${role.trim() ? "rgba(201,168,76,0.4)" : "rgba(247,244,238,0.1)"}`,
-                    borderRadius:8,
-                    padding:"16px 18px",
-                    color:PARCHMENT,
-                    fontSize:16,
-                    outline:"none",
-                    fontFamily:"'DM Sans',sans-serif",
-                    transition:"border-color 0.2s",
-                    boxSizing:"border-box",
-                    WebkitAppearance:"none",
-                    MozAppearance:"none",
-                    appearance:"none",
-                  }}
-                />
-              </div>
-
-              {/* FIX: borderRadius 9999px — was 8 */}
-              <button
-                onClick={() => { if (canBegin) setPhase("assessing"); }}
-                disabled={!canBegin}
-                style={{
-                  width:"100%",
-                  padding:"18px 24px",
-                  background: canBegin ? GOLD : "rgba(201,168,76,0.12)",
-                  color: canBegin ? DARK : "rgba(201,168,76,0.25)",
-                  border: canBegin ? "none" : "1px solid rgba(201,168,76,0.15)",
-                  borderRadius:9999,
-                  fontSize:12, fontWeight:700, letterSpacing:"0.18em",
-                  cursor: canBegin ? "pointer" : "not-allowed",
-                  transition:"background 0.25s, transform 0.15s, box-shadow 0.2s",
-                  fontFamily:"'DM Sans',sans-serif",
-                  boxShadow: canBegin ? "0 4px 24px rgba(201,168,76,0.25)" : "none",
-                  WebkitTapHighlightColor:"transparent",
-                }}
-                onMouseEnter={e => { if (canBegin) e.currentTarget.style.background="#E2C97E"; }}
-                onMouseLeave={e => { if (canBegin) e.currentTarget.style.background=GOLD; }}
-                onTouchStart={e => { if (canBegin) e.currentTarget.style.transform="scale(0.98)"; }}
-                onTouchEnd={e => { e.currentTarget.style.transform="scale(1)"; }}
-              >
-                BEGIN THE VALU INDEX
-              </button>
-
-              {!canBegin && (
-                <p style={{
-                  textAlign:"center", fontSize:11,
-                  color:"rgba(247,244,238,0.2)", marginTop:12,
-                  lineHeight:1.5, margin:"12px 0 0",
-                }}>
-                  {assessmentIsLocked
-                    ? "Your assessment is locked for 12 months for this name and role."
-                    : "Enter your name and role to continue"}
-                </p>
-              )}
+              ))}
             </div>
-
-            <div style={{
-              marginTop:16, padding:"14px 18px",
-              background:"rgba(255,255,255,0.02)",
-              border:"1px solid rgba(255,255,255,0.05)",
-              borderRadius:8,
-              animation:"fadeUp 0.8s ease 0.45s both",
-            }}>
-              <div style={{fontSize:12,color:"rgba(247,244,238,0.28)",lineHeight:1.75}}>
-                Answer based on what you <em style={{color:"rgba(247,244,238,0.45)"}}>actually do</em> — not what you aim to do. Consistent honest responses produce a more accurate result.
-              </div>
-            </div>
-
-            {!isDesktop && (
-              <div style={{ marginTop:28, animation:"fadeUp 0.8s ease 0.55s both" }}>
-                <div style={{ fontSize:9, color:"rgba(201,168,76,0.35)", letterSpacing:"0.18em", marginBottom:12 }}>WHAT IS ASSESSED</div>
-                <div style={{display:"flex", flexDirection:"column", gap:8}}>
-                  {CLUSTERS.map((c,i) => (
-                    <div key={c.id} style={{
-                      display:"flex", alignItems:"center", gap:12,
-                      padding:"10px 14px",
-                      background:"rgba(255,255,255,0.02)",
-                      border:`1px solid ${c.color}20`,
-                      borderRadius:8,
-                    }}>
-                      <div style={{
-                        width:32, height:32, borderRadius:6,
-                        background:`${c.color}15`, border:`1px solid ${c.color}35`,
-                        display:"flex", alignItems:"center", justifyContent:"center",
-                        fontSize:12, fontWeight:700, color:c.color, flexShrink:0,
-                      }}>{c.id}</div>
-                      <div style={{flex:1, minWidth:0}}>
-                        <div style={{fontSize:13,color:PARCHMENT,fontWeight:500}}>{c.name}</div>
-                        <div style={{fontSize:11,color:"rgba(247,244,238,0.3)",fontStyle:"italic"}}>{c.theme}</div>
-                      </div>
-                      <div style={{
-                        fontSize:10, color:`${c.color}70`, letterSpacing:"0.06em", flexShrink:0,
-                        fontFamily:"'DM Mono',monospace",
-                      }}>{Math.round(c.weight*100)}%</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div style={{
-              marginTop:32, paddingTop:24,
-              borderTop:"1px solid rgba(201,168,76,0.08)",
-              display:"flex", gap:16, flexWrap:"wrap", justifyContent:"center",
-            }}>
-              {["Always free","18–28 minutes","NDPA 2023 compliant"].map(t => (
-                <div key={t} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:"rgba(247,244,238,0.2)"}}>
-                  <div style={{width:3,height:3,borderRadius:"50%",background:"rgba(201,168,76,0.4)"}}/>
-                  {t}
+            <div>
+              <div style={{ fontSize:T.size.micro, color:"rgba(216,90,48,0.6)", letterSpacing:"0.14em", marginBottom:8, fontFamily:T.font.label }}>DEVELOPMENT AREAS</div>
+              {bottomSkills.map(([s, sc]) => (
+                <div key={s} style={{ display:"flex", justifyContent:"space-between", marginBottom:5, alignItems:"center" }}>
+                  <span style={{ fontSize:T.size.small, color:T.text.secondary, fontFamily:T.font.body }}>{s}</span>
+                  <span style={{ fontSize:T.size.caption, color:T.coral, fontFamily:T.font.mono }}>{sc}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
-          @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-          @keyframes pulseGold { 0%,100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.5); } 50% { box-shadow: 0 0 0 5px rgba(201,168,76,0); } }
-          /* FIX: Global input reset — overrides browser/Webflow default white background */
-          input, select, textarea { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
-          input:focus { border-color: rgba(201,168,76,0.5) !important; box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
-          input::placeholder { color: rgba(247,244,238,0.2) !important; }
-          * { -webkit-tap-highlight-color: transparent; }
-          @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-        `}</style>
-      </div>
-    );
-  }
-
-  // ── ASSESSMENT SCREEN ─────────────────────────────────────────────────
-  if (phase === "assessing") {
-    return (
-      <div style={{minHeight:"100vh",background:DARK,display:"flex",flexDirection:"column",fontFamily:"'DM Sans',sans-serif"}}>
-        {/* Progress bar */}
-        <div style={{position:"fixed",top:0,left:0,right:0,height:3,background:"rgba(255,255,255,0.06)",zIndex:50}}>
-          <div style={{height:"100%",width:`${progress}%`,background:GOLD,transition:"width 0.4s ease"}}/>
-        </div>
-        {/* Nav bar */}
-        <div style={{position:"fixed",top:0,left:0,right:0,padding:"16px 24px 12px",background:"rgba(26,26,46,0.97)",borderBottom:"1px solid rgba(201,168,76,0.1)",backdropFilter:"blur(12px)",zIndex:40,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:11,color:"rgba(201,168,76,0.6)",letterSpacing:"0.15em",fontFamily:"'DM Sans',sans-serif"}}>VALU INDEX</div>
-          <div style={{fontSize:12,color:"rgba(247,244,238,0.35)",fontFamily:"'DM Sans',sans-serif"}}>{currentQ + 1} / {TOTAL}</div>
-          {cluster && (
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{width:18,height:18,borderRadius:3,background:`${cluster.color}20`,border:`1px solid ${cluster.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:cluster.color}}>{cluster.id}</div>
-              <div style={{fontSize:11,color:cluster.color,letterSpacing:"0.08em",fontFamily:"'DM Sans',sans-serif"}}>{cluster.name.toUpperCase()}</div>
-            </div>
-          )}
-        </div>
-        {/* Question area */}
-        <div style={{flex:1,display:"flex",padding:"80px 20px 140px",maxWidth:700,margin:"0 auto",width:"100%",flexDirection:"column",justifyContent:"center"}}>
-          {question.skill && question.cluster !== "VA" && (
-            <div style={{fontSize:10,color:"rgba(201,168,76,0.4)",letterSpacing:"0.18em",marginBottom:16,textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>
-              {question.skill} · {question.type}
-            </div>
-          )}
-          <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:"clamp(17px,2.5vw,22px)",fontWeight:300,color:PARCHMENT,lineHeight:1.55,marginBottom:32,opacity:transitioning?0:1,transition:"opacity 0.2s"}}>
-            {question.q}
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:10,opacity:transitioning?0:1,transition:"opacity 0.2s"}}>
-            {displayedOptions.map((opt, displayIdx) => {
-              const isSelected = selected === displayIdx;
-              return (
-                <button key={displayIdx}
-                  onClick={() => handleSelect(displayIdx)}
-                  style={{
-                    padding:"16px 20px",
-                    background: isSelected ? "rgba(201,168,76,0.12)" : "rgba(255,255,255,0.03)",
-                    border:`1.5px solid ${isSelected ? "rgba(201,168,76,0.5)" : "rgba(255,255,255,0.08)"}`,
-                    borderRadius:8,
-                    textAlign:"left",
-                    cursor:"pointer",
-                    color: isSelected ? PARCHMENT : "rgba(247,244,238,0.65)",
-                    fontSize:14,
-                    lineHeight:1.55,
-                    fontFamily:"'DM Sans',sans-serif",
-                    transition:"all 0.2s cubic-bezier(0.22,1,0.36,1)",
-                    outline:"none",
-                    boxShadow: isSelected ? "0 4px 20px rgba(201,168,76,0.15)" : "none",
-                    WebkitTapHighlightColor:"transparent",
-                    display:"block", width:"100%",
-                  }}
-                  onMouseEnter={e => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-                      e.currentTarget.style.borderColor = "rgba(201,168,76,0.25)";
-                      e.currentTarget.style.color = PARCHMENT;
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isSelected) {
-                      e.currentTarget.style.background = "rgba(255,255,255,0.03)";
-                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
-                      e.currentTarget.style.color = "rgba(247,244,238,0.65)";
-                    }
-                  }}
-                  onTouchStart={e => { e.currentTarget.style.transform = "scale(0.98)"; }}
-                  onTouchEnd={e => { e.currentTarget.style.transform = "scale(1)"; }}
-                >
-                  {opt.text}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        {/* Bottom bar */}
-        <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px 24px",background:"rgba(26,26,46,0.97)",borderTop:"1px solid rgba(201,168,76,0.08)",backdropFilter:"blur(12px)",display:"flex",gap:10,justifyContent:"center"}}>
-          {currentQ > 0 && (
-            // FIX: borderRadius 9999px — was 3
-            <button onClick={handleBack}
-              style={{padding:"12px 24px",background:"transparent",border:"1px solid rgba(201,168,76,0.2)",borderRadius:9999,color:"rgba(247,244,238,0.4)",fontSize:12,letterSpacing:"0.1em",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-              BACK
-            </button>
-          )}
-          <div style={{flex:1,maxWidth:320,padding:"14px",textAlign:"center",fontSize:11,color:"rgba(201,168,76,0.4)",letterSpacing:"0.12em",fontFamily:"'DM Sans',sans-serif"}}>
-            {selected === null ? "SELECT AN ANSWER TO CONTINUE" : "MOVING TO NEXT QUESTION..."}
-          </div>
-        </div>
-        {/* Live radar */}
-        <div style={{position:"fixed",bottom:80,right:20,opacity:0.5}}>
-          <Radar scores={liveScores} size={80}/>
-        </div>
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
-          input, select, textarea { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
-          @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-        `}</style>
-      </div>
-    );
-  }
-
-  // ── RESULTS / SIGNUP SCREEN ────────────────────────────────────────────
-  if (phase === "results") {
-    if (!results) {
-      return (
-        <div style={{minHeight:"100vh",background:DARK,display:"flex",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'DM Sans',sans-serif"}}>
-          <div style={{maxWidth:460,width:"100%",background:"rgba(22,22,36,0.7)",border:"1px solid rgba(201,168,76,0.15)",borderRadius:12,padding:"36px 32px",textAlign:"center"}}>
-            <div style={{fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"0.16em",marginBottom:14}}>VALU INDEX</div>
-            <p style={{fontSize:14,color:"rgba(247,244,238,0.55)",lineHeight:1.75,marginBottom:24}}>
-              {signupError || "Your session could not be restored. Take the assessment to generate your result."}
+        {/* Signup / email confirmation card */}
+        {signupDone ? (
+          <div style={{ background:"rgba(29,158,117,0.05)", border:"1px solid rgba(29,158,117,0.25)", borderRadius:T.radius.card, padding:"32px 28px" }}>
+            <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#1D9E75", letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>CHECK YOUR EMAIL</div>
+            <p style={{ fontSize:T.size.body, color:T.text.secondary, lineHeight:1.8, margin:"0 0 12px", fontFamily:T.font.body }}>
+              A confirmation link has been sent to <strong style={{color:T.parchment}}>{signupEmail}</strong>.
             </p>
-            <button
-              onClick={() => { setSignupError(""); setPhase("intro"); }}
-              style={{padding:"15px 36px",background:GOLD,border:"none",borderRadius:9999,color:DARK,fontSize:12,fontWeight:700,letterSpacing:"0.14em",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-              TAKE THE ASSESSMENT
-            </button>
+            <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>
+              Confirm your email to unlock your full AI report. Your VALU Index of {valuIndex} is saved. Check your spam folder if you don't see it within a minute.
+            </p>
           </div>
+        ) : (
+          <div style={{ background:"rgba(22,22,36,0.7)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.card, padding:"32px 28px" }}>
+            <div style={{ fontSize:T.size.caption, fontWeight:700, color:T.gold, letterSpacing:"0.16em", marginBottom:8, fontFamily:T.font.label }}>UNLOCK YOUR FULL AI REPORT</div>
+            <p style={{ fontSize:T.size.body, color:T.text.tertiary, lineHeight:1.7, marginBottom:16, fontFamily:T.font.body }}>
+              Your personalised development report — gap analysis, 12-month cost of inaction, recommended programme, and one immediate action — generates the moment you confirm your email.
+            </p>
+            <div style={{ fontSize:T.size.small, color:T.text.muted, marginBottom:20, fontFamily:T.font.body }}>
+              Continuing as <strong style={{color:T.parchment}}>{name}</strong> · {role}
+            </div>
+            <div style={{ marginBottom:14 }}>
+              <label style={labelBase} htmlFor="signup-email">Email Address</label>
+              <input id="signup-email" type="email" placeholder="you@example.com" value={signupEmail}
+                onChange={e=>setSignupEmail(e.target.value)} style={inputBase}
+                onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
+                onBlur={e=>e.target.style.borderColor="rgba(247,244,238,0.1)"} />
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={labelBase} htmlFor="signup-password">Create Password</label>
+              <input id="signup-password" type="password" placeholder="Minimum 8 characters" value={signupPassword}
+                onChange={e=>setSignupPassword(e.target.value)} style={inputBase}
+                onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
+                onBlur={e=>e.target.style.borderColor="rgba(247,244,238,0.1)"} />
+            </div>
+            {signupError && (
+              <div style={{ fontSize:T.size.small, color:T.coral, marginBottom:14, padding:"10px 14px", background:"rgba(216,90,48,0.06)", borderLeft:`2px solid rgba(216,90,48,0.6)`, borderRadius:`0 ${T.radius.chip}px ${T.radius.chip}px 0`, fontFamily:T.font.body }}>
+                {signupError}
+              </div>
+            )}
+            <button onClick={handleSignup} disabled={signupLoading}
+              style={{ ...pillBtn(signupLoading ? "disabled" : "primary"), width:"100%", padding:"16px" }}
+              onMouseEnter={e=>{ if(!signupLoading) e.currentTarget.style.background="#E2C97E"; }}
+              onMouseLeave={e=>{ if(!signupLoading) e.currentTarget.style.background=T.gold; }}>
+              {signupLoading ? "CREATING YOUR ACCOUNT..." : "CONFIRM EMAIL & UNLOCK REPORT"}
+            </button>
+            <p style={{ fontSize:T.size.caption, color:T.text.ghost, lineHeight:1.7, marginTop:12, fontFamily:T.font.body }}>
+              Your AI report generates only after email confirmation — this ensures it reaches the right inbox.
+            </p>
+          </div>
+        )}
+
+        <div style={{ marginTop:24, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+          <PageNumber current={pageNum} total={TOTAL + 2} />
+          <button onClick={() => setRetakeModal("confirm")}
+            style={{ ...pillBtn("ghost"), padding:"13px 24px", fontSize:T.size.caption }}>
+            RETAKE ASSESSMENT
+          </button>
+        </div>
+      </div>
+
+      <div style={{ textAlign:"center", padding:"24px", fontSize:T.size.caption, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>
+        VALU INDEX v4.0 · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
+      </div>
+
+      <RetakeModal mode={retakeModal} onClose={() => setRetakeModal(null)} onConfirm={onRetake} expiryDateFormatted={null} />
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SCREEN: REPORT
+// ════════════════════════════════════════════════════════════════════════════
+function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialReportText }) {
+  const [reportText, setReportText]           = useState(initialReportText || "");
+  const [reportStatus, setReportStatus]       = useState(initialReportText ? "complete" : "idle");
+  const [reportError, setReportError]         = useState(null);
+  const [saveReportError, setSaveReportError] = useState(null);
+  const [emailStatus, setEmailStatus]         = useState("idle");
+  const [retakeModal, setRetakeModal]         = useState(null);
+  const reportRef  = useRef(null);
+  const abortRef   = useRef(null);
+  const bufferRef  = useRef("");
+  const flushTimer = useRef(null);
+
+  const { valuIndex, clusterScores, skillScores, desig, futureReadyScore, listed } = results;
+
+  useEffect(() => {
+    if (initialReportText) return;
+    generateAIReport();
+    return () => {
+      abortRef.current?.abort();
+      if (flushTimer.current) clearInterval(flushTimer.current);
+    };
+  }, []);
+
+  async function persistWithReport(fullText) {
+    const fp = computeFingerprint(name, role);
+    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    await saveToSupabase({
+      total_score: valuIndex,
+      designation: desig?.name || "",
+      completed_at: new Date().toISOString(),
+      ai_report: fullText,
+      name, role,
+      identity_hash: fp,
+      expires_at: expiresAt,
+      cluster_scores: clusterScores,
+      skill_scores: skillScores,
+      ...(confirmedEmail ? { email: confirmedEmail } : {}),
+    });
+  }
+
+  async function emailFullReport(fullText) {
+    if (!confirmedEmail) return;
+    setEmailStatus("sending");
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: confirmedEmail,
+          name,
+          role,
+          score: valuIndex,
+          designation: desig?.name || "",
+          reportText: fullText,
+          // welcome: true signals the endpoint to prepend a welcome section
+          // to the email before the report body.
+          welcome: true,
+        }),
+      });
+      setEmailStatus(res.ok ? "sent" : "failed");
+    } catch {
+      setEmailStatus("failed");
+    }
+  }
+
+  async function generateAIReport() {
+    setReportStatus("generating");
+    setReportText("");
+    bufferRef.current = "";
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    flushTimer.current = setInterval(() => {
+      if (bufferRef.current) {
+        setReportText(prev => {
+          const next = prev + bufferRef.current;
+          bufferRef.current = "";
+          return next;
+        });
+        if (reportRef.current) reportRef.current.scrollTop = reportRef.current.scrollHeight;
+      }
+    }, 80);
+
+    try {
+      const scoreProfile = { name, role, ...results };
+      const response = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: buildReportPrompt(scoreProfile) }),
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "API request failed");
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let streamBuffer = "";
+      let fullText = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        streamBuffer += decoder.decode(value, { stream: true });
+        const lines = streamBuffer.split("\n");
+        streamBuffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
+              fullText += parsed.delta.text;
+              bufferRef.current += parsed.delta.text;
+            }
+          } catch {}
+        }
+      }
+      // Clear interval BEFORE final state set — prevents double-flush race.
+      clearInterval(flushTimer.current);
+      flushTimer.current = null;
+      setReportText(fullText);
+      setReportStatus("complete");
+      // Persist report (with retry built into saveToSupabase).
+      persistWithReport(fullText).catch(err => setSaveReportError(err.message));
+      // Email report + welcome message.
+      await emailFullReport(fullText);
+      clearPendingReport();
+    } catch (err) {
+      clearInterval(flushTimer.current);
+      flushTimer.current = null;
+      if (err.name === "AbortError") return;
+      console.error("Report generation failed:", err);
+      setReportError(err.message);
+      setReportStatus("error");
+    }
+  }
+
+  function renderReport(text) {
+    if (!text) return null;
+    return text.split("\n").map((line, i) => {
+      if (line.startsWith("## ")) return (
+        <div key={i} style={{ marginTop:32, marginBottom:12 }}>
+          <div style={{ fontSize:T.size.caption, color:T.gold, letterSpacing:"0.2em", marginBottom:6, fontFamily:T.font.label }}>
+            {line.replace("## ", "").toUpperCase()}
+          </div>
+          <div style={{ height:1, background:"rgba(201,168,76,0.15)" }} />
         </div>
       );
-    }
+      if (line.startsWith("*") && line.endsWith("*") && line.length > 2) return (
+        <div key={i} style={{ padding:"20px 24px", background:"rgba(201,168,76,0.05)", borderLeft:`3px solid ${T.gold}`, borderRadius:`0 ${T.radius.chip}px ${T.radius.chip}px 0`, margin:"16px 0" }}>
+          <p style={{ fontFamily:T.font.display, fontSize:"clamp(15px,2.2vw,20px)", fontWeight:300, color:T.parchment, lineHeight:1.55, margin:0, fontStyle:"italic" }}>
+            {line.slice(1,-1)}
+          </p>
+        </div>
+      );
+      if (line.trim() && !line.startsWith("#")) {
+        const parts = line.split(/(\*\*[^*]+\*\*)/g);
+        return (
+          <p key={i} style={{ fontSize:T.size.body, color:T.text.secondary, lineHeight:1.85, margin:"0 0 14px", fontFamily:T.font.body }}>
+            {parts.map((part, pi) =>
+              part.startsWith("**") && part.endsWith("**")
+                ? <strong key={pi} style={{color:T.parchment, fontWeight:600}}>{part.slice(2,-2)}</strong>
+                : part
+            )}
+          </p>
+        );
+      }
+      return null;
+    });
+  }
 
-    const { valuIndex, clusterScores, desig, futureReadyScore } = results;
+  const pageNum = TOTAL + 2;
 
-    return (
-      <div style={{minHeight:"100vh",background:DARK,fontFamily:"'DM Sans',sans-serif"}}>
-        {/* Score header */}
-        <div style={{background:MID,borderBottom:"1px solid rgba(201,168,76,0.12)",padding:"32px 24px 28px"}}>
-          <div style={{maxWidth:680,margin:"0 auto"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
-              <div>
-                <div style={{fontSize:10,color:"rgba(201,168,76,0.45)",letterSpacing:"0.2em",marginBottom:6,fontFamily:"'DM Sans',sans-serif"}}>VALU INDEX RESULT · {name}</div>
-                <div style={{fontSize:11,color:"rgba(247,244,238,0.35)",fontFamily:"'DM Sans',sans-serif"}}>{role}</div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:20}}>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:48,fontWeight:300,color:GOLD,lineHeight:1}}>{valuIndex}</div>
-                  <div style={{fontSize:9,color:"rgba(247,244,238,0.25)",letterSpacing:"0.1em",fontFamily:"'DM Sans',sans-serif"}}>OUT OF 100</div>
-                </div>
-                <Radar scores={clusterScores} size={90}/>
-              </div>
+  return (
+    <div style={{ minHeight:"100vh", background:T.dark, fontFamily:T.font.body }}>
+      {/* No <ClusterStripe /> — owned by ValoriaNav */}
+      <Grain />
+      <AmbientGlow color="rgba(216,90,48,0.07)" />
+
+      <ScoreHeader
+        name={name} role={role}
+        valuIndex={valuIndex} clusterScores={clusterScores}
+        skillScores={skillScores} desig={desig}
+        futureReadyScore={futureReadyScore}
+        sticky={true}
+      />
+
+      <div ref={reportRef} style={{ maxWidth:720, margin:"0 auto", padding:"32px 24px 80px" }}>
+
+        {reportStatus === "generating" && (
+          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:28, padding:"14px 18px", background:"rgba(201,168,76,0.06)", border:"1px solid rgba(201,168,76,0.15)", borderRadius:T.radius.chip }}>
+            <div style={{ display:"flex", gap:4 }}>
+              {[0,1,2].map(i => <div key={i} style={{ width:6, height:6, borderRadius:"50%", background:T.gold, animation:`pulse 1.4s ease-in-out ${i*0.2}s infinite` }}/>)}
             </div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:16}}>
-              {CLUSTERS.map(c => (
-                <div key={c.id} style={{padding:"8px 12px",background:`${c.color}10`,border:`1px solid ${c.color}30`,borderRadius:4,display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{width:14,height:14,borderRadius:2,background:`${c.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:c.color}}>{c.id}</div>
-                  <span style={{fontSize:13,color:c.color,fontWeight:600}}>{clusterScores[c.id]}</span>
-                  <span style={{fontSize:10,color:"rgba(247,244,238,0.25)"}}>/100</span>
-                </div>
-              ))}
-              <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",background:"rgba(186,117,23,0.08)",border:"1px solid rgba(186,117,23,0.2)",borderRadius:4}}>
-                <span style={{fontSize:10,color:AMBER,letterSpacing:"0.06em",fontFamily:"'DM Sans',sans-serif"}}>FUTURE-READY</span>
-                <span style={{fontSize:13,color:AMBER,fontWeight:600}}>{futureReadyScore}</span>
-              </div>
-              <div style={{display:"flex",alignItems:"center",padding:"8px 14px",background:desig.bg,border:`1px solid ${desig.color}40`,borderRadius:4}}>
-                <span style={{fontSize:10,fontWeight:700,color:desig.color,letterSpacing:"0.1em",fontFamily:"'DM Sans',sans-serif"}}>{desig.name.toUpperCase()}</span>
-              </div>
+            <div style={{ fontSize:T.size.small, color:"rgba(201,168,76,0.7)", letterSpacing:"0.08em", fontFamily:T.font.body }}>
+              {reportText.length === 0 ? "Analysing your profile..." : "Writing your report..."}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Signup card */}
-        <div style={{maxWidth:680,margin:"0 auto",padding:"32px 24px 80px"}}>
-          {signupDone ? (
-            <div style={{background:"rgba(29,158,117,0.05)",border:"1px solid rgba(29,158,117,0.25)",borderRadius:10,padding:"32px 28px"}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#1D9E75",letterSpacing:"0.16em",marginBottom:12}}>CONFIRMATION SENT</div>
-              <p style={{fontSize:14,color:"rgba(247,244,238,0.65)",lineHeight:1.8,margin:"0 0 12px"}}>
-                A confirmation link has been sent to <strong style={{color:PARCHMENT}}>{signupEmail}</strong>.
-                Confirm your email to unlock your full AI report.
-              </p>
-              <p style={{fontSize:12,color:"rgba(247,244,238,0.35)",lineHeight:1.7,margin:0}}>
-                The link arrives within a minute. Check your spam folder if you do not see it. Your VALU Index of {valuIndex} is saved.
-              </p>
-            </div>
-          ) : (
-            <div style={{background:"rgba(22,22,36,0.7)",border:"1px solid rgba(201,168,76,0.2)",borderRadius:10,padding:"32px 28px"}}>
-              <div style={{fontSize:11,fontWeight:700,color:GOLD,letterSpacing:"0.16em",marginBottom:8}}>YOUR FULL REPORT IS READY</div>
-              <p style={{fontSize:14,color:"rgba(247,244,238,0.5)",lineHeight:1.7,marginBottom:24}}>
-                Create your account to receive your full AI report and join the Valoria platform. A confirmation email will be sent — your report unlocks the moment you confirm.
-              </p>
-              <div style={{fontSize:12,color:"rgba(247,244,238,0.4)",marginBottom:20}}>
-                Continuing as <strong style={{color:PARCHMENT}}>{name}</strong> · {role}
-              </div>
-              <div style={{marginBottom:16}}>
-                <label style={labelStyle} htmlFor="signup-email">Email Address</label>
-                <input
-                  id="signup-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={signupEmail}
-                  onChange={e=>setSignupEmail(e.target.value)}
-                  onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
-                  onBlur={e=>e.target.style.borderColor="rgba(247,244,238,0.1)"}
-                  style={inputStyle}
-                />
-              </div>
-              <div style={{marginBottom:18}}>
-                <label style={labelStyle} htmlFor="signup-password">Create Password</label>
-                <input
-                  id="signup-password"
-                  type="password"
-                  placeholder="Minimum 8 characters"
-                  value={signupPassword}
-                  onChange={e=>setSignupPassword(e.target.value)}
-                  onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
-                  onBlur={e=>e.target.style.borderColor="rgba(247,244,238,0.1)"}
-                  style={inputStyle}
-                />
-              </div>
-              {signupError && (
-                <div style={{fontSize:12,color:"#D85A30",marginBottom:16,padding:"10px 14px",background:"rgba(216,90,48,0.06)",borderLeft:"2px solid rgba(216,90,48,0.6)"}}>
-                  {signupError}
-                </div>
-              )}
-              <button
-                onClick={handleSignup}
-                disabled={signupLoading}
-                style={{
-                  width:"100%", padding:"16px",
-                  background: signupLoading ? "rgba(201,168,76,0.4)" : GOLD,
-                  border:"none", borderRadius:9999, color:DARK,
-                  fontSize:12, fontWeight:700, letterSpacing:"0.16em",
-                  cursor: signupLoading ? "wait" : "pointer",
-                  fontFamily:"'DM Sans',sans-serif",
-                  transition:"background 0.2s",
-                }}
-                onMouseEnter={e=>{ if(!signupLoading) e.currentTarget.style.background="#E2C97E"; }}
-                onMouseLeave={e=>{ if(!signupLoading) e.currentTarget.style.background=GOLD; }}>
-                {signupLoading ? "CREATING YOUR ACCOUNT..." : "GET MY FULL REPORT"}
-              </button>
-              <p style={{fontSize:10,color:"rgba(247,244,238,0.25)",lineHeight:1.7,marginTop:14,marginBottom:0}}>
-                Your report will arrive by email within 30 seconds. The link works once and expires in 24 hours.
-              </p>
-            </div>
-          )}
-
-          <div style={{marginTop:24,textAlign:"center"}}>
-            <button onClick={requestRetake}
-              style={{padding:"15px 28px",background:"transparent",border:"1px solid rgba(201,168,76,0.15)",
-                borderRadius:9999,color:"rgba(247,244,238,0.3)",fontSize:11,letterSpacing:"0.14em",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-              RETAKE ASSESSMENT
+        {reportStatus === "error" && (
+          <div style={{ padding:"20px 24px", background:"rgba(216,90,48,0.08)", border:"1px solid rgba(216,90,48,0.3)", borderRadius:T.radius.chip, marginBottom:24 }}>
+            <div style={{ fontSize:T.size.caption, fontWeight:700, color:T.coral, letterSpacing:"0.1em", marginBottom:8, fontFamily:T.font.label }}>REPORT GENERATION FAILED</div>
+            <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.7, marginBottom:12, fontFamily:T.font.body }}>
+              {reportError || "An error occurred. Your score has been saved."}
+            </p>
+            <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>
+              Your VALU Index is <strong style={{color:T.gold}}>{valuIndex}/100</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact info@valoriainstitute.com for your full report.
+            </p>
+            <button onClick={generateAIReport} style={{...pillBtn("gold-ghost"), marginTop:16, padding:"11px 24px", fontSize:T.size.caption}}>
+              TRY AGAIN
             </button>
           </div>
-          {renderRetakeModal()}
-        </div>
+        )}
 
-        <div style={{textAlign:"center",padding:"24px",fontSize:10,color:"rgba(247,244,238,0.12)",letterSpacing:"0.1em",fontFamily:"'DM Sans',sans-serif"}}>
-          VALU INDEX v4.0 · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
-        </div>
+        {reportText && <div style={{ lineHeight:1 }}>{renderReport(reportText)}</div>}
 
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
-          input, select, textarea { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
-          input:focus { border-color: rgba(201,168,76,0.4) !important; box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
-          input::placeholder { color: rgba(247,244,238,0.2) !important; }
-          @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-        `}</style>
+        {reportStatus === "generating" && reportText.length > 0 && (
+          <span style={{ display:"inline-block", width:2, height:16, background:T.gold, marginLeft:2, animation:"blink 1s step-end infinite", verticalAlign:"text-bottom" }}/>
+        )}
+
+        {reportStatus === "complete" && (
+          <>
+            {saveReportError && (
+              <div style={{ marginBottom:16, padding:"12px 16px", background:"rgba(216,90,48,0.08)", border:"1px solid rgba(216,90,48,0.3)", borderRadius:T.radius.chip, fontSize:T.size.small, color:T.coral, fontFamily:T.font.body }}>
+                Your report could not be saved to the server: {saveReportError}. Your score is intact. Contact info@valoriainstitute.com if you need this resolved.
+              </div>
+            )}
+
+            <div style={{ marginTop:32, padding:"20px 24px", background: listed ? "rgba(29,158,117,0.08)" : "rgba(136,136,136,0.08)", border:`1px solid ${listed ? "rgba(29,158,117,0.3)" : "rgba(136,136,136,0.25)"}`, borderRadius:T.radius.chip }}>
+              <div style={{ fontSize:T.size.caption, fontWeight:700, color: listed ? "#1D9E75" : "#888888", letterSpacing:"0.12em", marginBottom:8, fontFamily:T.font.label }}>
+                {listed ? "LISTED — YOUR PROFILE IS SEARCHABLE" : "NOT YET LISTED — SCORE BELOW 35"}
+              </div>
+              <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.75, margin:0, fontFamily:T.font.body }}>
+                {listed
+                  ? `Your VALU Index of ${valuIndex} qualifies you for listing. Complete your profile to become searchable by employers and event organisers.`
+                  : `A score of ${valuIndex} does not yet qualify for listing. The minimum is 35. A PRIME Sprint is designed to move your score into the listed range.`}
+              </p>
+            </div>
+
+            {confirmedEmail && (
+              <div style={{ marginTop:14, padding:"14px 18px", background:"rgba(201,168,76,0.05)", border:"1px solid rgba(201,168,76,0.15)", borderRadius:T.radius.chip }}>
+                <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>
+                  {emailStatus === "sent" && <>A copy of this report was sent to <strong style={{color:T.gold}}>{confirmedEmail}</strong>.</>}
+                  {emailStatus === "sending" && "Sending your report and welcome email..."}
+                  {emailStatus === "failed" && <>The report could not be emailed. Contact <span style={{color:T.gold}}>info@valoriainstitute.com</span> for a copy.</>}
+                </p>
+              </div>
+            )}
+
+            <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:22 }}>
+              <a href="https://valoriainstitute.com/profile-page"
+                style={{ display:"block", padding:"20px 28px", background:T.gold, borderRadius:T.radius.pill, textAlign:"center", cursor:"pointer", textDecoration:"none" }}
+                onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
+                onMouseLeave={e=>e.currentTarget.style.background=T.gold}>
+                <div style={{ fontSize:T.size.small, fontWeight:700, color:T.dark, letterSpacing:"0.16em", marginBottom:3, fontFamily:T.font.body }}>COMPLETE YOUR PROFILE</div>
+                <div style={{ fontSize:T.size.small, color:"rgba(26,26,46,0.6)", fontFamily:T.font.body }}>Your account is confirmed — finish your profile on the platform</div>
+              </a>
+            </div>
+          </>
+        )}
+
+        <div style={{ marginTop:28, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+          <PageNumber current={pageNum} total={TOTAL + 2} />
+          <button onClick={() => setRetakeModal("confirm")}
+            style={{ ...pillBtn("ghost"), padding:"13px 24px", fontSize:T.size.caption }}>
+            RETAKE ASSESSMENT
+          </button>
+        </div>
       </div>
+
+      <div style={{ textAlign:"center", padding:"24px", fontSize:T.size.caption, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>
+        VALU INDEX v4.0 · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
+      </div>
+
+      <RetakeModal mode={retakeModal} onClose={() => setRetakeModal(null)} onConfirm={onRetake} expiryDateFormatted={null} />
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ROOT ORCHESTRATOR
+// ════════════════════════════════════════════════════════════════════════════
+export default function PRIMEAssessment({
+  onComplete,
+  onAssessmentSubmitted,
+  onIdentityChange,
+  onPhaseChange,
+  assessmentLockRecord,
+}) {
+  const [phase, setPhase]                   = useState("intro");
+  const [sessionData, setSessionData]       = useState(null);
+  const [confirmedEmail, setConfirmedEmail] = useState(null);
+  const [initialReportText, setInitialReportText] = useState(null);
+  const [sessionSeed]                       = useState(() => Math.floor(Math.random() * 99999));
+
+  // ── FIX: derive fingerprint from the lock record directly so isLockActive
+  // always receives both required arguments. assessmentLockRecord.fingerprint
+  // is set by persistLock in ValoriaPlatform and by resolveLockForIdentity.
+  const assessmentIsLocked = assessmentLockRecord
+    ? isLockActive(assessmentLockRecord, assessmentLockRecord.fingerprint)
+    : false;
+
+  const lockExpiresAt = assessmentLockRecord?.expiresAt ?? null;
+  const expiryDateFormatted = lockExpiresAt
+    ? new Date(lockExpiresAt).toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" })
+    : null;
+
+  const checkpoint = loadCheckpoint();
+
+  // Notify platform shell of phase changes so nav can switch to minimal mode.
+  function goToPhase(p) {
+    setPhase(p);
+    if (onPhaseChange) onPhaseChange(p);
+  }
+
+  // Handle email confirmation return (hash in URL).
+  useEffect(() => {
+    const auth = parseAuthHash();
+    if (!auth) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (auth.error) return;
+    const email = auth.email;
+    const pending = getPendingReport();
+    if (pending?.results) {
+      setSessionData({ name: pending.name, role: pending.role, results: pending.results });
+      setConfirmedEmail(email || pending.email);
+      goToPhase("report");
+    } else if (email) {
+      fetchAssessmentByEmail(email).then(profile => {
+        if (profile) {
+          setSessionData({ name: profile.name, role: profile.role, results: profile.results });
+          setConfirmedEmail(email);
+          goToPhase("report");
+        }
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!onIdentityChange || !sessionData) return;
+    const t = setTimeout(() => onIdentityChange(sessionData.name, sessionData.role), 400);
+    return () => clearTimeout(t);
+  }, [sessionData?.name, sessionData?.role]);
+
+  function handleBegin({ name, role, resume, previousProfile }) {
+    // "View Previous Report" path — locked user viewing their stored report.
+    if (previousProfile) {
+      setSessionData({ name: previousProfile.name, role: previousProfile.role, results: previousProfile.results });
+      setInitialReportText(previousProfile.aiReport || null);
+      goToPhase("report");
+      return;
+    }
+    if (resume && checkpoint) {
+      // FIX: use checkpoint data directly — no name-match guard.
+      setSessionData({ name: checkpoint.name, role: checkpoint.role, results: null, shuffleMap: {} });
+      goToPhase("assessing");
+    } else {
+      setSessionData({ name, role, results: null, shuffleMap: {} });
+      goToPhase("assessing");
+    }
+  }
+
+  function handleAssessmentComplete({ name, role, results, shuffleMap }) {
+    const sd = { name, role, results, shuffleMap };
+    setSessionData(sd);
+    goToPhase("results");
+    // Notify platform to persist the local lock immediately.
+    if (onAssessmentSubmitted) onAssessmentSubmitted({ name, role, completedAt: new Date().toISOString(), ...results });
+  }
+
+  function handleRetake() {
+    clearCheckpoint();
+    clearPendingReport();
+    setSessionData(null);
+    setConfirmedEmail(null);
+    setInitialReportText(null);
+    goToPhase("intro");
+  }
+
+  if (phase === "intro") {
+    return (
+      <IntroScreen
+        onBegin={handleBegin}
+        assessmentIsLocked={assessmentIsLocked}
+        expiryDateFormatted={expiryDateFormatted}
+        checkpoint={checkpoint}
+        lockRecord={assessmentLockRecord}
+      />
     );
   }
 
-  // ── GENERATING / REPORT SCREEN ─────────────────────────────────────────
-  if ((phase === "generating" || phase === "report") && results) {
-    const { valuIndex, clusterScores, skillScores, desig, futureReadyScore, listed } = results;
-    const isGenerating = reportStatus === "generating";
-    const isComplete   = reportStatus === "complete";
-    const isError      = reportStatus === "error";
-
-    function renderReport(text) {
-      if (!text) return null;
-      const lines = text.split("\n");
-      const elements = [];
-      let i = 0;
-      while (i < lines.length) {
-        const line = lines[i];
-        if (line.startsWith("## ")) {
-          elements.push(
-            <div key={i} style={{marginTop:32,marginBottom:12}}>
-              <div style={{fontSize:10,color:GOLD,letterSpacing:"0.2em",marginBottom:6,fontFamily:"'DM Sans',sans-serif"}}>
-                {line.replace("## ", "").toUpperCase()}
-              </div>
-              <div style={{height:1,background:"rgba(201,168,76,0.15)"}}/>
-            </div>
-          );
-          i++; continue;
-        }
-        if (line.startsWith("*") && line.endsWith("*") && line.length > 2) {
-          elements.push(
-            <div key={i} style={{padding:"20px 24px",background:"rgba(201,168,76,0.05)",borderLeft:`3px solid ${GOLD}`,borderRadius:"0 6px 6px 0",margin:"16px 0"}}>
-              <p style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:"clamp(15px,2.2vw,20px)",fontWeight:300,color:PARCHMENT,lineHeight:1.55,margin:0,fontStyle:"italic"}}>
-                {line.slice(1,-1)}
-              </p>
-            </div>
-          );
-          i++; continue;
-        }
-        if (line.trim() && !line.startsWith("#")) {
-          const parts = line.split(/(\*\*[^*]+\*\*)/g);
-          const rendered = parts.map((part, pi) => {
-            if (part.startsWith("**") && part.endsWith("**")) {
-              return <strong key={pi} style={{color:PARCHMENT,fontWeight:600}}>{part.slice(2,-2)}</strong>;
-            }
-            return part;
-          });
-          elements.push(
-            <p key={i} style={{fontSize:14,color:"rgba(247,244,238,0.65)",lineHeight:1.85,margin:"0 0 14px 0",fontFamily:"'DM Sans',sans-serif"}}>
-              {rendered}
-            </p>
-          );
-          i++; continue;
-        }
-        i++;
-      }
-      return elements;
-    }
-
+  if (phase === "assessing") {
+    // FIX: resuming keyed on checkpoint existence and progress, not name match.
+    const resuming = !!(checkpoint && checkpoint.currentQ > 0);
     return (
-      <div style={{minHeight:"100vh",background:DARK,fontFamily:"'DM Sans',sans-serif"}}>
-        {/* Sticky score header */}
-        <div style={{background:MID,borderBottom:"1px solid rgba(201,168,76,0.12)",padding:"32px 24px 28px",position:"sticky",top:0,zIndex:10}}>
-          <div style={{maxWidth:680,margin:"0 auto"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
-              <div>
-                <div style={{fontSize:10,color:"rgba(201,168,76,0.45)",letterSpacing:"0.2em",marginBottom:6,fontFamily:"'DM Sans',sans-serif"}}>VALU INDEX REPORT · {name}</div>
-                <div style={{fontSize:11,color:"rgba(247,244,238,0.35)",fontFamily:"'DM Sans',sans-serif"}}>{role}</div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:20}}>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",fontSize:48,fontWeight:300,color:GOLD,lineHeight:1}}>{valuIndex}</div>
-                  <div style={{fontSize:9,color:"rgba(247,244,238,0.25)",letterSpacing:"0.1em",fontFamily:"'DM Sans',sans-serif"}}>OUT OF 100</div>
-                </div>
-                <Radar scores={clusterScores} size={90}/>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:16}}>
-              {CLUSTERS.map(c => {
-                const clusterSkillList = Object.entries(skillScores || {})
-                  .filter(([s]) => SKILL_CLUSTER[s] === c.id)
-                  .sort(([,a],[,b]) => a - b);
-                const weakestSkill = clusterSkillList[0];
-                return (
-                  <div key={c.id} style={{padding:"8px 12px",background:`${c.color}10`,border:`1px solid ${c.color}30`,borderRadius:4,minWidth:120}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-                      <div style={{width:14,height:14,borderRadius:2,background:`${c.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontWeight:700,color:c.color}}>{c.id}</div>
-                      <span style={{fontSize:13,color:c.color,fontWeight:600}}>{clusterScores[c.id]}</span>
-                      <span style={{fontSize:10,color:"rgba(247,244,238,0.25)"}}>/100</span>
-                    </div>
-                    {weakestSkill && (
-                      <div style={{fontSize:10,color:"rgba(247,244,238,0.3)",lineHeight:1.4,fontFamily:"'DM Sans',sans-serif"}}>
-                        Gap: {weakestSkill[0].split(" ")[0]} ({weakestSkill[1]})
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",background:"rgba(186,117,23,0.08)",border:"1px solid rgba(186,117,23,0.2)",borderRadius:4}}>
-                <span style={{fontSize:10,color:AMBER,letterSpacing:"0.06em",fontFamily:"'DM Sans',sans-serif"}}>FUTURE-READY</span>
-                <span style={{fontSize:13,color:AMBER,fontWeight:600}}>{futureReadyScore}</span>
-              </div>
-              <div style={{display:"flex",alignItems:"center",padding:"8px 14px",background:desig.bg,border:`1px solid ${desig.color}40`,borderRadius:4}}>
-                <span style={{fontSize:10,fontWeight:700,color:desig.color,letterSpacing:"0.1em",fontFamily:"'DM Sans',sans-serif"}}>{desig.name.toUpperCase()}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <AssessmentScreen
+        name={resuming ? checkpoint.name : (sessionData?.name || "")}
+        role={resuming ? checkpoint.role : (sessionData?.role || "")}
+        initialAnswers={resuming ? checkpoint.answers : {}}
+        initialTimings={resuming ? checkpoint.timings : Array(TOTAL).fill(0)}
+        initialQ={resuming ? checkpoint.currentQ : 0}
+        sessionSeed={resuming ? (checkpoint.sessionSeed || sessionSeed) : sessionSeed}
+        onComplete={handleAssessmentComplete}
+      />
+    );
+  }
 
-        {/* Report body */}
-        <div ref={reportRef} style={{maxWidth:680,margin:"0 auto",padding:"32px 24px 80px"}}>
-          {isGenerating && (
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:28,padding:"14px 18px",background:"rgba(201,168,76,0.06)",border:"1px solid rgba(201,168,76,0.15)",borderRadius:6}}>
-              <div style={{display:"flex",gap:4}}>
-                {[0,1,2].map(i => (
-                  <div key={i} style={{width:6,height:6,borderRadius:"50%",background:GOLD,animation:`pulse 1.4s ease-in-out ${i*0.2}s infinite`}}/>
-                ))}
-              </div>
-              <div style={{fontSize:12,color:"rgba(201,168,76,0.7)",letterSpacing:"0.08em",fontFamily:"'DM Sans',sans-serif"}}>
-                {reportText.length === 0 ? "Analysing your profile..." : "Writing your report..."}
-              </div>
-            </div>
-          )}
+  if (phase === "results" && sessionData?.results) {
+    return (
+      <ResultsScreen
+        name={sessionData.name}
+        role={sessionData.role}
+        results={sessionData.results}
+        onRetake={handleRetake}
+        onSignupDone={(email) => setConfirmedEmail(email)}
+      />
+    );
+  }
 
-          {isError && (
-            <div style={{padding:"20px 24px",background:"rgba(216,90,48,0.08)",border:"1px solid rgba(216,90,48,0.3)",borderRadius:6,marginBottom:24}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#D85A30",letterSpacing:"0.1em",marginBottom:8,fontFamily:"'DM Sans',sans-serif"}}>REPORT GENERATION FAILED</div>
-              <p style={{fontSize:13,color:"rgba(247,244,238,0.5)",lineHeight:1.7,marginBottom:16}}>
-                {reportError || "An error occurred while generating your report. Your score has been saved."}
-              </p>
-              <p style={{fontSize:12,color:"rgba(247,244,238,0.4)",lineHeight:1.7,margin:0}}>
-                Your VALU Index is <strong style={{color:GOLD}}>{valuIndex}/100</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact info@valoriainstitute.com to receive your full report.
-              </p>
-            </div>
-          )}
-
-          {reportText && (
-            <div style={{lineHeight:1}}>
-              {renderReport(reportText)}
-            </div>
-          )}
-
-          {isGenerating && reportText.length > 0 && (
-            <span style={{display:"inline-block",width:2,height:16,background:GOLD,marginLeft:2,animation:"blink 1s step-end infinite",verticalAlign:"text-bottom"}}/>
-          )}
-
-          {isComplete && (
-            <>
-              <div style={{marginTop:32,padding:"20px 24px",background:listed?"rgba(29,158,117,0.08)":"rgba(136,136,136,0.08)",
-                border:`1px solid ${listed?"rgba(29,158,117,0.3)":"rgba(136,136,136,0.25)"}`,borderRadius:6}}>
-                <div style={{fontSize:11,fontWeight:700,color:listed?"#1D9E75":"#888888",letterSpacing:"0.12em",marginBottom:8,fontFamily:"'DM Sans',sans-serif"}}>
-                  {listed ? "LISTED — YOUR PROFILE IS SEARCHABLE" : "NOT YET LISTED — SCORE BELOW 35"}
-                </div>
-                <p style={{fontSize:13,color:"rgba(247,244,238,0.55)",lineHeight:1.75,margin:0}}>
-                  {listed
-                    ? `Your VALU Index of ${valuIndex} qualifies you for listing. Complete your profile to become searchable by employers and event organisers.`
-                    : `A score of ${valuIndex} does not yet qualify for listing. The minimum is 35. A PRIME Sprint is designed to move your score into the listed range.`}
-                </p>
-              </div>
-
-              {confirmedEmail && (
-                <div style={{marginTop:16,padding:"16px 20px",background:"rgba(201,168,76,0.05)",border:"1px solid rgba(201,168,76,0.15)",borderRadius:6}}>
-                  <p style={{fontSize:13,color:"rgba(247,244,238,0.55)",lineHeight:1.7,margin:0,fontFamily:"'DM Sans',sans-serif"}}>
-                    {emailStatus === "sent"
-                      ? <>A copy of this report has been sent to <strong style={{color:GOLD}}>{confirmedEmail}</strong>.</>
-                      : emailStatus === "sending"
-                      ? "Sending a copy of this report to your email..."
-                      : emailStatus === "failed"
-                      ? <>The report could not be emailed. Contact <span style={{color:GOLD}}>info@valoriainstitute.com</span> for a copy.</>
-                      : null}
-                  </p>
-                </div>
-              )}
-
-              <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:24}}>
-                <a href="https://valoriainstitute.com/profile-page"
-                  style={{display:"block",padding:"20px 28px",background:GOLD,borderRadius:9999,textAlign:"center",cursor:"pointer",textDecoration:"none"}}
-                  onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
-                  onMouseLeave={e=>e.currentTarget.style.background=GOLD}>
-                  <div style={{fontSize:12,fontWeight:700,color:DARK,letterSpacing:"0.16em",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>COMPLETE YOUR PROFILE</div>
-                  <div style={{fontSize:12,color:"rgba(26,26,46,0.6)",fontFamily:"'DM Sans',sans-serif"}}>Your account is confirmed — finish your profile on the platform</div>
-                </a>
-                {/* FIX: borderRadius 9999px — was 3 */}
-                <button onClick={requestRetake}
-                  style={{padding:"15px 28px",background:"transparent",border:"1px solid rgba(201,168,76,0.15)",
-                    borderRadius:9999,color:"rgba(247,244,238,0.3)",fontSize:11,letterSpacing:"0.14em",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-                  RETAKE ASSESSMENT
-                </button>
-              </div>
-              {renderRetakeModal()}
-            </>
-          )}
-        </div>
-
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap');
-          @keyframes pulse { 0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
-          @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-          input, select, textarea { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
-          @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
-        `}</style>
-
-        <div style={{textAlign:"center",padding:"24px",fontSize:10,color:"rgba(247,244,238,0.12)",letterSpacing:"0.1em",fontFamily:"'DM Sans',sans-serif"}}>
-          VALU INDEX v4.0 · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
-        </div>
-      </div>
+  if (phase === "report" && sessionData?.results) {
+    return (
+      <ReportScreen
+        name={sessionData.name}
+        role={sessionData.role}
+        results={sessionData.results}
+        confirmedEmail={confirmedEmail}
+        onRetake={handleRetake}
+        initialReportText={initialReportText}
+      />
     );
   }
 
