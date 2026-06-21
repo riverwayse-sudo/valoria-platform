@@ -59,7 +59,7 @@ export default async function handler(req) {
           ${reportHtml}
         </div>
         <div style="text-align:center;margin-bottom:40px;">
-          <a href="https://assessment.valoriainstitute.com" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">VIEW YOUR PROFILE &rarr;</a>
+          <a href="https://valoriainstitute.com/profile/edit" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">COMPLETE YOUR PROFILE &rarr;</a>
         </div>
         <p style="font-size:11px;color:rgba(247,244,238,0.2);text-align:center;border-top:1px solid rgba(255,255,255,0.06);padding-top:24px;">
           Valoria Institute &middot; Africa's Professional Capability Index<br>

@@ -1831,6 +1831,7 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
 function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
   const [signupEmail, setSignupEmail]       = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirm, setSignupConfirm]   = useState("");
   const [signupError, setSignupError]       = useState("");
   const [signupLoading, setSignupLoading]   = useState(false);
   const [signupDone, setSignupDone]         = useState(false);
@@ -1869,20 +1870,58 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
       setSignupError("Your password must be at least 8 characters.");
       return;
     }
+    if (signupPassword !== signupConfirm) {
+      setSignupError("Passwords don't match — please check and try again.");
+      return;
+    }
     setSignupLoading(true);
     setSignupError("");
     try {
-      // 1. Create Supabase Auth account — sends confirmation email automatically.
-      await signUpWithSupabase(signupEmail.trim(), signupPassword, name, role);
+      // 1. Create Supabase Auth account
+      const authData = await signUpWithSupabase(signupEmail.trim(), signupPassword, name, role);
+      const userId = authData?.user?.id || null;
 
-      // 2. Store pending report payload so the hash-return flow can resume.
+      // 2. Store pending report payload so hash-return flow can resume
       setPendingReport({ name, role, email: signupEmail.trim(), results });
 
-      // 3. Patch the existing row with the email — no new row created.
+      // 3. Patch the assessment row with email + user_id
       const fp = computeFingerprint(name, role);
-      await updateAssessmentByFingerprint(fp, { email: signupEmail.trim() }).catch(() => {});
+      await updateAssessmentByFingerprint(fp, {
+        email: signupEmail.trim(),
+        ...(userId ? { user_id: userId } : {}),
+      }).catch(() => {});
 
-      // 4. Add to waitlist table (idempotent — 409 is silently swallowed).
+      // 4. Write scores to profiles table so marketplace shows real VALU data
+      if (userId) {
+        const tierMap = {
+          "Elite Professional": "elite",
+          "Distinguished Professional": "distinguished",
+          "Proficient Professional": "proficient",
+          "Developing Professional": "standard",
+        };
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Prefer": "return=minimal,resolution=merge-duplicates",
+          },
+          body: JSON.stringify({
+            id: userId,
+            display_name: name,
+            headline: role,
+            user_type: "talent",
+            valu_score: valuIndex,
+            cluster_scores: clusterScores,
+            valu_tier: tierMap[desig?.name] || "standard",
+            assessment_completed_at: new Date().toISOString(),
+            is_visible: false, // stays hidden until they complete profile
+          }),
+        }).catch(() => {});
+      }
+
+      // 5. Add to waitlist (idempotent)
       await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(() => {});
 
       setSignupDone(true);
@@ -1973,12 +2012,29 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
         {/* Signup / email confirmation card */}
         {signupDone ? (
           <div style={{ background:"rgba(29,158,117,0.05)", border:"1px solid rgba(29,158,117,0.25)", borderRadius:T.radius.card, padding:"32px 28px" }}>
-            <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#1D9E75", letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>CHECK YOUR EMAIL</div>
+            <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#1D9E75", letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>✦ ACCOUNT CREATED</div>
             <p style={{ fontSize:T.size.body, color:T.text.secondary, lineHeight:1.8, margin:"0 0 12px", fontFamily:T.font.body }}>
               A confirmation link has been sent to <strong style={{color:T.parchment}}>{signupEmail}</strong>.
             </p>
-            <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>
-              Confirm your email to unlock your full AI report. Your VALU Index of {valuIndex} is saved. Check your spam folder if you don't see it within a minute.
+            <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:"0 0 24px", fontFamily:T.font.body }}>
+              Confirm your email to unlock your full AI report — it generates immediately after confirmation. Your VALU Index of <strong style={{color:T.gold}}>{valuIndex}/100</strong> is saved and linked to your profile.
+            </p>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <a
+                href="https://valoriainstitute.com/profile/edit"
+                style={{ display:"block", textAlign:"center", padding:"14px 24px", background:T.gold, color:"#0F0F1A", fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none" }}
+              >
+                COMPLETE YOUR PROFILE →
+              </a>
+              <a
+                href="https://valoriainstitute.com/dashboard"
+                style={{ display:"block", textAlign:"center", padding:"14px 24px", background:"transparent", color:T.gold, fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none", border:"1px solid rgba(201,168,76,0.3)" }}
+              >
+                GO TO DASHBOARD
+              </a>
+            </div>
+            <p style={{ fontSize:T.size.micro, color:T.text.ghost, lineHeight:1.6, marginTop:16, fontFamily:T.font.body }}>
+              Check your spam folder if you don't see the confirmation email within a minute.
             </p>
           </div>
         ) : (
@@ -2003,6 +2059,20 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
                 onChange={e=>setSignupPassword(e.target.value)} style={inputBase}
                 onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
                 onBlur={e=>e.target.style.borderColor="rgba(247,244,238,0.1)"} />
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={labelBase} htmlFor="signup-confirm">Confirm Password</label>
+              <input id="signup-confirm" type="password" placeholder="Re-enter your password" value={signupConfirm}
+                onChange={e=>setSignupConfirm(e.target.value)} style={{
+                  ...inputBase,
+                  borderColor: signupConfirm && signupConfirm !== signupPassword
+                    ? "rgba(216,90,48,0.5)"
+                    : signupConfirm && signupConfirm === signupPassword
+                    ? "rgba(29,158,117,0.5)"
+                    : "rgba(247,244,238,0.1)"
+                }}
+                onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
+                onBlur={e=>e.target.style.borderColor=signupConfirm && signupConfirm !== signupPassword ? "rgba(216,90,48,0.5)" : signupConfirm && signupConfirm === signupPassword ? "rgba(29,158,117,0.5)" : "rgba(247,244,238,0.1)"} />
             </div>
             {signupError && (
               <div style={{ fontSize:T.size.small, color:T.coral, marginBottom:14, padding:"10px 14px", background:"rgba(216,90,48,0.06)", borderLeft:`2px solid rgba(216,90,48,0.6)`, borderRadius:`0 ${T.radius.chip}px ${T.radius.chip}px 0`, fontFamily:T.font.body }}>
