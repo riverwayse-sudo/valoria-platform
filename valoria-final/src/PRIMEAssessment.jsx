@@ -1372,8 +1372,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
         {isDesktop && (
           <div style={{ flex:1.2, paddingRight:20 }}>
             <div style={{ marginBottom:40 }}>
-              <div style={{ fontFamily:T.font.display, fontSize:34, fontWeight:600, color:T.gold, letterSpacing:"0.22em", lineHeight:1, marginBottom:4 }}>VALORIA</div>
-              <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.4)", letterSpacing:"0.3em", fontFamily:T.font.label }}>INSTITUTE</div>
+              <img src="/logo.png" alt="Valoria Institute" style={{ height:52, width:'auto', display:'block' }} />
             </div>
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"5px 14px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:28 }}>
               <div style={{ width:6, height:6, borderRadius:"50%", background:T.gold }} />
@@ -1415,8 +1414,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
         <div style={{ flex:isDesktop ? 1 : "unset", width:isDesktop ? "auto" : "100%" }}>
           {!isDesktop && (
             <div style={{ marginBottom:28, animation:"fadeUp 0.7s ease 0.05s both" }}>
-              <div style={{ fontFamily:T.font.display, fontSize:26, fontWeight:600, color:T.gold, letterSpacing:"0.2em", lineHeight:1, marginBottom:3 }}>VALORIA</div>
-              <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.4)", letterSpacing:"0.3em", marginBottom:16, fontFamily:T.font.label }}>INSTITUTE</div>
+              <img src="/logo.png" alt="Valoria Institute" style={{ height:44, width:'auto', display:'block', marginBottom:16 }} />
               <div style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"4px 12px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:18 }}>
                 <div style={{ width:5, height:5, borderRadius:"50%", background:T.gold }} />
                 <span style={{ fontSize:T.size.micro, fontWeight:600, color:T.gold, letterSpacing:"0.18em", fontFamily:T.font.label }}>FOUNDING COHORT — NOW OPEN</span>
@@ -2101,7 +2099,7 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
       </div>
 
       <div style={{ textAlign:"center", padding:"24px", fontSize:T.size.caption, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>
-        VALU INDEX v4.0 · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
+        VALU INDEX v4.0 · PRIME FRAMEWORK · © 2026
       </div>
 
       <RetakeModal mode={retakeModal} onClose={() => setRetakeModal(null)} onConfirm={onRetake} expiryDateFormatted={null} />
@@ -2378,7 +2376,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
       </div>
 
       <div style={{ textAlign:"center", padding:"24px", fontSize:T.size.caption, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>
-        VALU INDEX v4.0 · PRIME FRAMEWORK · VALORIA INSTITUTE · © 2026
+        VALU INDEX v4.0 · PRIME FRAMEWORK · © 2026
       </div>
 
       <RetakeModal mode={retakeModal} onClose={() => setRetakeModal(null)} onConfirm={onRetake} expiryDateFormatted={null} />
