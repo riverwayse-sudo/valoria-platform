@@ -28,7 +28,7 @@ if (typeof document !== "undefined") {
   if (!document.getElementById(FONT_ID)) {
     const s = document.createElement("style");
     s.id = FONT_ID;
-    s.textContent = `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=Raleway:ital,wght@0,400;0,600;1,300;1,400&family=DM+Mono:wght@400&display=swap');
+    s.textContent = `@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,200;0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Mono:wght@400&display=swap');
     *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     input, select, textarea { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
     input::placeholder { color: rgba(247,244,238,0.2) !important; }
@@ -73,8 +73,8 @@ const T = {
     chip: 6,
   },
   font: {
-    display: "'Cormorant Garamond', Georgia, serif",
-    body:    "'DM Sans', sans-serif",
+    display: "'Raleway', sans-serif",
+    body:    "'Raleway', sans-serif",
     label:   "'Raleway', sans-serif",
     mono:    "'DM Mono', monospace",
   },

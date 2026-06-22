@@ -21,7 +21,7 @@ export const BRAND = {
   },
 
   // Typography (loaded in main.jsx)
-  FONT_DISPLAY: "'Cormorant Garamond', Georgia, serif",
+  FONT_DISPLAY: "'Raleway', sans-serif",
   FONT_BODY:    "'Raleway', 'DM Sans', sans-serif",
   FONT_UI:      "'Raleway', sans-serif",
   FONT_MONO:    "'DM Mono', monospace",

@@ -175,7 +175,7 @@ export function ValoriaFooter() {
               The marketplace where African professionals rise. One assessed standard. Three ways to engage.
             </p>
             {/* Tagline — 30% secondary text */}
-            <div style={{ fontFamily: BRAND.FONT_DISPLAY, fontSize: 15, fontStyle: 'italic', fontWeight: 300, color: 'rgba(201,168,76,0.45)', letterSpacing: '0.06em' }}>
+            <div style={{ fontFamily: BRAND.FONT_UI, fontSize: 13, fontStyle: 'italic', fontWeight: 300, color: 'rgba(201,168,76,0.45)', letterSpacing: '0.06em' }}>
               Worth. Built.
             </div>
           </div>

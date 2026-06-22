@@ -5,7 +5,7 @@ import ValoriaPlatform from './ValoriaPlatform.jsx'
 // Global brand reset — applied before any component renders
 const brandStyles = document.createElement('style')
 brandStyles.textContent = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&family=Raleway:wght@200;300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Raleway:wght@200;300;400;500;600;700&display=swap');
 
   *, *::before, *::after {
     box-sizing: border-box;
