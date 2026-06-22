@@ -36,12 +36,13 @@ export function ValoriaNav({ minimal = false }) {
   ];
 
   const linkStyle = {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: BRAND.FONT_UI,
     fontWeight: 400,
     color: 'rgba(247,244,238,0.45)',
     textDecoration: 'none',
-    letterSpacing: '0.08em',
+    letterSpacing: '0.07em',
+    padding: '8px 14px',
     transition: 'color 0.2s',
   };
 
@@ -75,7 +76,7 @@ export function ValoriaNav({ minimal = false }) {
       >
         {/* LOGO — real image, not wordmark */}
         <a href="https://valoriainstitute.com" aria-label="Valoria Institute — home" style={{ lineHeight: 0, flexShrink: 0 }}>
-          <img src="/logo.png" alt="Valoria Institute" style={{ height: 48, width: 'auto', display: 'block' }} />
+          <img src="/logo.png" alt="Valoria Institute" style={{ height: 40, width: 'auto', display: 'block' }} />
         </a>
 
         {/* Desktop nav links — hidden during assessment */}
@@ -108,9 +109,9 @@ export function ValoriaNav({ minimal = false }) {
                 background: BRAND.GOLD,
                 color: BRAND.DARK,
                 fontFamily: BRAND.FONT_UI,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
-                letterSpacing: '0.12em',
+                letterSpacing: '0.14em',
                 borderRadius: BRAND.RADIUS_PILL,
                 textDecoration: 'none',
                 transition: 'opacity 0.2s',
