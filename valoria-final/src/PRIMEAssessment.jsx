@@ -1371,14 +1371,12 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
         {/* DESKTOP LEFT — marketing column */}
         {isDesktop && (
           <div style={{ flex:1.2, paddingRight:20 }}>
-            <div style={{ marginBottom:40 }}>
-              <img src="/logo.png" alt="Valoria Institute" style={{ height:52, width:'auto', display:'block' }} />
-            </div>
-            <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"5px 14px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:28 }}>
+            <div style={{ marginBottom:28 }}>
+              <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"5px 14px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:28 }}>
               <div style={{ width:6, height:6, borderRadius:"50%", background:T.gold }} />
               <span style={{ fontSize:T.size.micro, fontWeight:600, color:T.gold, letterSpacing:"0.2em", fontFamily:T.font.label }}>FOUNDING COHORT — NOW OPEN</span>
             </div>
-            <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(48px,5vw,68px)", fontWeight:300, lineHeight:1, letterSpacing:"-0.02em", color:T.parchment, margin:"0 0 20px" }}>
+            <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(48px,5vw,68px)", fontWeight:200, lineHeight:1, letterSpacing:"-0.02em", color:T.parchment, margin:"0 0 20px" }}>
               Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
             </h1>
             <p style={{ fontSize:16, fontWeight:300, color:T.text.tertiary, lineHeight:1.75, margin:"0 0 40px", maxWidth:460, fontFamily:T.font.body }}>
@@ -1414,12 +1412,12 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
         <div style={{ flex:isDesktop ? 1 : "unset", width:isDesktop ? "auto" : "100%" }}>
           {!isDesktop && (
             <div style={{ marginBottom:28, animation:"fadeUp 0.7s ease 0.05s both" }}>
-              <img src="/logo.png" alt="Valoria Institute" style={{ height:44, width:'auto', display:'block', marginBottom:16 }} />
+              <div style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"4px 12px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:18 }}>
               <div style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"4px 12px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:18 }}>
                 <div style={{ width:5, height:5, borderRadius:"50%", background:T.gold }} />
                 <span style={{ fontSize:T.size.micro, fontWeight:600, color:T.gold, letterSpacing:"0.18em", fontFamily:T.font.label }}>FOUNDING COHORT — NOW OPEN</span>
               </div>
-              <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(34px,8vw,48px)", fontWeight:300, lineHeight:1.05, color:T.parchment, margin:"0 0 12px" }}>
+              <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(34px,8vw,48px)", fontWeight:200, lineHeight:1.05, color:T.parchment, margin:"0 0 12px" }}>
                 Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
               </h1>
               <p style={{ fontSize:T.size.body, color:T.text.tertiary, lineHeight:1.65, margin:"0 0 24px", fontFamily:T.font.body }}>55 questions across five PRIME clusters.</p>
