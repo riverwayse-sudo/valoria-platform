@@ -35,6 +35,15 @@ export const BRAND = {
   RADIUS_SM:   '8px',
 };
 
+// ── LOCK ENGINE — single source of truth ───────────────────────────────────
+// computeFingerprint, isLockActive, and buildLockRecord are defined ONCE in
+// lockEngine.js and re-exported here. Do NOT redefine them in this file —
+// that was the exact bug pattern the scoring engine extraction already fixed
+// once. Any future server/Edge Function lock logic must import from
+// lockEngine.js directly, never duplicate this file's copy.
+export { computeFingerprint, isLockActive, buildLockRecord } from './lockEngine.js';
+import { isLockActive as _isLockActive, computeFingerprint as _computeFingerprint } from './lockEngine.js';
+
 // ── LOCK STORAGE ──────────────────────────────────────────────────────────
 const LOCK_KEY = 'valu_assessment_lock_v1';
 
@@ -44,16 +53,6 @@ export const SUPABASE_URL =
 export const SUPABASE_ANON_KEY =
   env.VITE_SUPABASE_ANON_KEY ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNia2dwaXNna3VoYmFsc3hxa2RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMjI2NjEsImV4cCI6MjA5Mzg5ODY2MX0.iRPs_W6O6JkkHyVlH-9XkEgA1HNo8xtaMakoV5kwLEY';
-
-export function computeFingerprint(name, role) {
-  const normalized = `${(name || '').trim().toLowerCase()}|${(role || '').trim().toLowerCase()}`;
-  let hash = 0;
-  for (let i = 0; i < normalized.length; i++) {
-    hash = (hash << 5) - hash + normalized.charCodeAt(i);
-    hash |= 0;
-  }
-  return `fp_${Math.abs(hash).toString(36)}`;
-}
 
 export function getAssessmentLock() {
   try {
@@ -72,12 +71,6 @@ export function setAssessmentLock({ fingerprint, expiresAt, completedAt }) {
     LOCK_KEY,
     JSON.stringify({ fingerprint, expiresAt, completedAt })
   );
-}
-
-export function isLockActive(lock, fingerprint) {
-  if (!lock?.expiresAt || !lock?.fingerprint || !fingerprint) return false;
-  if (lock.fingerprint !== fingerprint) return false;
-  return new Date() < new Date(lock.expiresAt);
 }
 
 /** Server-side lock: active assessment row for this identity within validity window. */
@@ -112,15 +105,15 @@ export async function fetchServerLock(fingerprint) {
 }
 
 export async function resolveLockForIdentity(name, role) {
-  const fingerprint = computeFingerprint(name, role);
+  const fingerprint = _computeFingerprint(name, role);
   if (!name?.trim() || !role?.trim()) return null;
   const serverLock = await fetchServerLock(fingerprint);
-  if (serverLock && isLockActive(serverLock, fingerprint)) {
+  if (serverLock && _isLockActive(serverLock, fingerprint)) {
     setAssessmentLock(serverLock);
     return serverLock;
   }
   const localLock = getAssessmentLock();
-  if (localLock && isLockActive(localLock, fingerprint)) {
+  if (localLock && _isLockActive(localLock, fingerprint)) {
     return localLock;
   }
   return null;
