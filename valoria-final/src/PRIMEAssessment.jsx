@@ -1,18 +1,12 @@
-// PRIMEAssessment.jsx — v2.2
-// Changes from v2.1:
-//  - isLockActive now receives assessmentLockRecord.fingerprint (was always-false bug)
-//  - Resume name-match re-introduction fixed in assessing phase block
-//  - ClusterStripe removed from all four screens — owned by ValoriaNav in platform shell
-//  - Radar size in live assessment bottom bar: 56 → 100px
-//  - Token sweep: all hardcoded borderRadius 2/3 replaced with T.radius.chip
-//  - saveCheckpoint useEffect deps completed: [answers, currentQ, name, role, sessionSeed]
-//  - saveToSupabase now retries once on transient failure before surfacing error
-//  - localStorage pending report fallback error state wired to UI
-//  - Lock set immediately on assessment completion via onAssessmentSubmitted callback
-//  - onPhaseChange callback fires on every phase transition so ValoriaPlatform can
-//    switch nav to minimal mode during the question sequence
-//  - Welcome email sent on signup (combined with report delivery in /api/send-email)
-//  - Email stored in Supabase row on both initial save and on signup
+// PRIMEAssessment.jsx — v2.3
+// Changes from v2.2:
+//  - BREAKING: computeResults, seededShuffle, CLUSTERS, DESIGNATIONS, SKILL_MAX_RAW
+//    now imported from ./scoringEngine.js — no longer defined inline.
+//    This eliminates the score divergence category of bug permanently.
+//  - assessmentLock.js computeFingerprint and isLockActive now re-exported
+//    from lockEngine.js — single source of truth enforced.
+//  - computeResults call signature updated: now passes QUESTIONS as 4th arg
+//    to match scoringEngine.js canonical signature.
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
@@ -21,6 +15,22 @@ import {
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
 } from "./assessmentLock.js";
+
+// ── CANONICAL SCORING IMPORTS — do not redefine these anywhere ────────────
+import {
+  CLUSTERS,
+  DESIGNATIONS,
+  SKILL_MAX_RAW,
+  seededShuffle,
+  computeResults as _computeResults,
+} from "./scoringEngine.js";
+
+// Wrap to inject QUESTIONS (defined later in this file after question bank).
+// This keeps the scoringEngine pure (no direct import of ALL_QUESTIONS).
+// Called identically by both client and any future server/DB function.
+function computeResults(answers, timings, shuffleMap) {
+  return _computeResults(answers, timings, shuffleMap, QUESTIONS);
+}
 
 // ── FONT INJECTION — once at module level ─────────────────────────────────
 if (typeof document !== "undefined") {
@@ -190,21 +200,19 @@ function AmbientGlow({ color = "rgba(201,168,76,0.09)" }) {
 }
 
 // ── CLUSTER CONFIG ─────────────────────────────────────────────────────────
-const CLUSTERS = [
-  { id:"P", name:"Presence",      theme:"How you show up",  color: T.cluster.P, weight:0.20, maxRaw:36 },
-  { id:"R", name:"Relationships", theme:"How you connect",  color: T.cluster.R, weight:0.25, maxRaw:48 },
-  { id:"I", name:"Intelligence",  theme:"How you think",    color: T.cluster.I, weight:0.25, maxRaw:60 },
-  { id:"M", name:"Mastery",       theme:"How you deliver",  color: T.cluster.M, weight:0.20, maxRaw:36 },
-  { id:"E", name:"Enterprise",    theme:"How you create",   color: T.cluster.E, weight:0.10, maxRaw:36 },
-];
+// NOTE: CLUSTERS and DESIGNATIONS are now imported from scoringEngine.js above.
+// The color/theme/name display properties are added here for UI rendering only.
+// The weight and maxRaw values in scoringEngine.js are the canonical source.
+const CLUSTER_UI = {
+  P: { theme: "How you show up",  color: T.cluster.P },
+  R: { theme: "How you connect",  color: T.cluster.R },
+  I: { theme: "How you think",    color: T.cluster.I },
+  M: { theme: "How you deliver",  color: T.cluster.M },
+  E: { theme: "How you create",   color: T.cluster.E },
+};
 
-const DESIGNATIONS = [
-  { min:80, name:"Force to Align With",    color: T.gold,       bg:"rgba(201,168,76,0.12)",  desc:"Operating at the highest expression of professional capability. You are recognised on the platform as a priority professional." },
-  { min:65, name:"Emerging Force",         color:"#378ADD",     bg:"rgba(55,138,221,0.10)",  desc:"Strong foundations with clear areas of excellence. You are on the trajectory — deliberate development will complete the picture." },
-  { min:50, name:"Developing Professional",color:"#1D9E75",     bg:"rgba(29,158,117,0.10)",  desc:"Genuine capability with uneven development. Your PRIME pathway is shown on your profile." },
-  { min:35, name:"Building Foundations",   color: T.amber,      bg:"rgba(186,117,23,0.10)",  desc:"Early-stage professional architecture. A PRIME Sprint is your recommended next step." },
-  { min:0,  name:"At the Starting Point",  color:"#888888",     bg:"rgba(136,136,136,0.10)", desc:"Not yet listed on the candidate platform. Complete a PRIME Sprint to qualify for listing." },
-];
+// Merge UI properties into CLUSTERS for rendering
+const CLUSTERS_UI = CLUSTERS.map(c => ({ ...c, ...CLUSTER_UI[c.id] }));
 
 // ── QUESTION BANK ──────────────────────────────────────────────────────────
 const ALL_QUESTIONS = [
@@ -675,21 +683,6 @@ const ALL_QUESTIONS = [
     ]},
 ];
 
-// ── FISHER-YATES SEEDED SHUFFLE ────────────────────────────────────────────
-function seededShuffle(arr, seed) {
-  const result = [...arr];
-  let s = seed;
-  const rand = () => {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
-    return (s >>> 0) / 0x100000000;
-  };
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
 // ── BUILD QUESTION SEQUENCE ────────────────────────────────────────────────
 function buildQuestionSequence() {
   const scored  = ALL_QUESTIONS.filter(q => q.cluster !== "VA");
@@ -728,8 +721,6 @@ const SKILL_CLUSTER = {
   "Human-AI Collaboration":              "E",
 };
 
-const SKILL_MAX_RAW = 12;
-
 // ── SESSION STORAGE CHECKPOINT ─────────────────────────────────────────────
 const SESSION_KEY = "vi_session_v2";
 function saveCheckpoint(data) {
@@ -751,8 +742,6 @@ function setPendingReport(payload) {
   try {
     localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
   } catch (e) {
-    // Storage quota or private-browsing restriction — not fatal.
-    // The hash-return flow will fall back to fetching from Supabase by email.
     console.warn("setPendingReport: could not write to localStorage:", e.message);
   }
 }
@@ -767,11 +756,6 @@ function clearPendingReport() {
 }
 
 // ── SUPABASE HELPERS ───────────────────────────────────────────────────────
-// Retries once on any non-4xx failure (network blip, 5xx).
-// INSERT with upsert on identity_hash.
-// on_conflict=identity_hash query param tells PostgREST to upsert on that
-// column. resolution=merge-duplicates in Prefer header updates all columns
-// on conflict rather than rejecting the insert.
 async function saveToSupabase(data, attempt = 0) {
   const url = `${SUPABASE_URL}/rest/v1/valu_assessments?on_conflict=identity_hash`;
   const res = await fetch(url, {
@@ -790,16 +774,12 @@ async function saveToSupabase(data, attempt = 0) {
       await new Promise(r => setTimeout(r, 1200));
       return saveToSupabase(data, 1);
     }
-    // Parse Supabase error JSON for a clean message
     let msg = err;
     try { const p = JSON.parse(err); msg = p.message || p.hint || err; } catch {}
     throw new Error(`Score could not be saved. Please contact info@valoriainstitute.com with your result. (${res.status})`);
   }
 }
 
-// PATCH a single existing row by identity_hash — used for partial updates
-// (adding email after signup, adding ai_report after generation).
-// Never creates a new row.
 async function updateAssessmentByFingerprint(fingerprint, fields, attempt = 0) {
   const params = new URLSearchParams({ identity_hash: `eq.${fingerprint}` });
   const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
@@ -845,7 +825,6 @@ async function joinWaitlist({ name, email, role }) {
     },
     body: JSON.stringify({ name, email, type: "professional", role }),
   });
-  // 409 = already on waitlist — not an error.
   if (!res.ok && res.status !== 409) throw new Error(await res.text());
 }
 
@@ -866,13 +845,13 @@ async function fetchAssessmentByEmail(email) {
     const row = rows[0];
     const valuIndex = row.total_score ?? 0;
     const clusterScores = row.cluster_scores ?? {};
-    const sorted = [...CLUSTERS].sort((a, b) => (clusterScores[b.id] ?? 0) - (clusterScores[a.id] ?? 0));
+    const sorted = [...CLUSTERS_UI].sort((a, b) => (clusterScores[b.id] ?? 0) - (clusterScores[a.id] ?? 0));
     return {
       name: row.name, role: row.role,
       results: {
         valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
         desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
-        futureReadyScore: Math.round(CLUSTERS.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS.length),
+        futureReadyScore: Math.round(CLUSTERS_UI.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS_UI.length),
         strongest: sorted[0], weakest: sorted[sorted.length - 1],
         consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
         speedFlag: false, uniformityFlag: false, anyFlag: false,
@@ -901,14 +880,14 @@ async function fetchAssessmentByFingerprint(fingerprint) {
     const row = rows[0];
     const valuIndex = row.total_score ?? 0;
     const clusterScores = row.cluster_scores ?? {};
-    const sorted = [...CLUSTERS].sort((a, b) => (clusterScores[b.id] ?? 0) - (clusterScores[a.id] ?? 0));
+    const sorted = [...CLUSTERS_UI].sort((a, b) => (clusterScores[b.id] ?? 0) - (clusterScores[a.id] ?? 0));
     return {
       name: row.name, role: row.role,
       aiReport: row.ai_report || null,
       results: {
         valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
         desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
-        futureReadyScore: Math.round(CLUSTERS.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS.length),
+        futureReadyScore: Math.round(CLUSTERS_UI.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS_UI.length),
         strongest: sorted[0], weakest: sorted[sorted.length - 1],
         consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
         speedFlag: false, uniformityFlag: false, anyFlag: false,
@@ -935,119 +914,27 @@ function parseAuthHash() {
   return { accessToken, type, email };
 }
 
-// ── SCORING ENGINE ─────────────────────────────────────────────────────────
-function computeResults(answers, timings, shuffleMap) {
-  const clusterRaw       = { P:0, R:0, I:0, M:0, E:0 };
-  const clusterAllScores = { P:[], R:[], I:[], M:[], E:[] };
-  const skillRaw         = {};
-  QUESTIONS.forEach((q, idx) => {
-    if (q.cluster === "VA") return;
-    const displayedIdx = answers[idx];
-    if (displayedIdx === undefined) return;
-    const originalOption = shuffleMap[idx] ? shuffleMap[idx][displayedIdx] : q.options[displayedIdx];
-    const score = originalOption?.score || 0;
-    clusterRaw[q.cluster] += score;
-    clusterAllScores[q.cluster].push(score);
-    if (q.skill && q.skill !== "Validity") {
-      skillRaw[q.skill] = (skillRaw[q.skill] || 0) + score;
-    }
-  });
-  const skillScores = {};
-  Object.entries(skillRaw).forEach(([skill, raw]) => {
-    skillScores[skill] = Math.round((raw / SKILL_MAX_RAW) * 100);
-  });
-  const clusterScores = {};
-  CLUSTERS.forEach(c => {
-    clusterScores[c.id] = Math.round((clusterRaw[c.id] / c.maxRaw) * 100);
-  });
-  let valuRaw = 0;
-  CLUSTERS.forEach(c => { valuRaw += clusterScores[c.id] * c.weight; });
-  let valuIndex = Math.round(valuRaw);
-  const consistencyFlags = {};
-  CLUSTERS.forEach(c => {
-    const scores = clusterAllScores[c.id];
-    if (scores.length < 2) return;
-    const mean = scores.reduce((a,b) => a+b,0) / scores.length;
-    const sd = Math.sqrt(scores.reduce((a,b) => a+(b-mean)**2,0) / scores.length);
-    if (sd > 1.2) {
-      consistencyFlags[c.id] = true;
-      clusterScores[c.id] = Math.round(clusterScores[c.id] * 0.85);
-    }
-  });
-  let valuRaw2 = 0;
-  CLUSTERS.forEach(c => { valuRaw2 += clusterScores[c.id] * c.weight; });
-  valuIndex = Math.round(valuRaw2);
-  let anchorFlags = 0;
-  QUESTIONS.forEach((q, idx) => {
-    if (!q.validAnchor) return;
-    const displayedIdx = answers[idx];
-    if (displayedIdx === undefined) return;
-    const originalOption = shuffleMap[idx] ? shuffleMap[idx][displayedIdx] : q.options[displayedIdx];
-    if (originalOption?.score === 1) anchorFlags++;
-  });
-  const gamingDetected = anchorFlags >= 3;
-  if (gamingDetected) valuIndex = Math.round(valuIndex * 0.80);
-  const answeredTimings = timings.filter(t => t > 0);
-  const totalTime = answeredTimings.reduce((a,b) => a+b, 0);
-  const fastAnswers = timings.filter(t => t > 0 && t < 8000).length;
-  const speedFlag = totalTime < 720000 || fastAnswers >= 3;
-  const allScores = [];
-  QUESTIONS.forEach((q, idx) => {
-    if (q.cluster === "VA") return;
-    const displayedIdx = answers[idx];
-    if (displayedIdx === undefined) return;
-    const originalOption = shuffleMap[idx] ? shuffleMap[idx][displayedIdx] : q.options[displayedIdx];
-    if (originalOption?.score) allScores.push(originalOption.score);
-  });
-  const globalMean = allScores.reduce((a,b) => a+b,0) / allScores.length;
-  const globalSD   = Math.sqrt(allScores.reduce((a,b) => a+(b-globalMean)**2,0) / allScores.length);
-  const uniformityFlag = valuIndex >= 65 && globalSD < 0.5;
-  const desig = DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length-1];
-  const frQuestions = QUESTIONS.filter(q => q.futureReady);
-  const frRaw = frQuestions.reduce((sum, q) => {
-    const idx = QUESTIONS.indexOf(q);
-    const displayedIdx = answers[idx];
-    if (displayedIdx === undefined) return sum;
-    const originalOption = shuffleMap[idx] ? shuffleMap[idx][displayedIdx] : q.options[displayedIdx];
-    return sum + (originalOption?.score || 0);
-  }, 0);
-  const futureReadyScore = Math.round((frRaw / (frQuestions.length * 4)) * 100);
-  const sorted = [...CLUSTERS].sort((a,b) => clusterScores[b.id] - clusterScores[a.id]);
-  return {
-    valuIndex, clusterScores, skillScores, desig, futureReadyScore,
-    strongest: sorted[0], weakest: sorted[sorted.length-1],
-    consistencyFlags, gamingDetected, anchorFlags, speedFlag, uniformityFlag,
-    listed: valuIndex >= 35 && !uniformityFlag,
-    pathway: valuIndex >= 80 ? "PCP Certification"
-           : valuIndex >= 65 ? "PRIME Programme"
-           : valuIndex >= 50 ? "PRIME Cluster"
-           : "PRIME Sprint",
-    anyFlag: Object.keys(consistencyFlags).length > 0 || gamingDetected || speedFlag || uniformityFlag,
-    globalSD: Math.round(globalSD * 100) / 100,
-  };
-}
-
 // ── RADAR CHART ────────────────────────────────────────────────────────────
 function Radar({ scores, size = 200 }) {
   const cx = size/2, cy = size/2, r = size * 0.37, n = 5;
   const angle = i => (Math.PI*2*i/n) - Math.PI/2;
   const pt = (i, frac) => ({ x: cx + r*frac*Math.cos(angle(i)), y: cy + r*frac*Math.sin(angle(i)) });
-  const gridPoly = frac => CLUSTERS.map((_,i) => { const p=pt(i,frac); return `${p.x},${p.y}`; }).join(" ");
-  const dataPts = CLUSTERS.map((c,i) => pt(i, (scores[c.id]||0)/100));
+  const gridPoly = frac => CLUSTERS_UI.map((_,i) => { const p=pt(i,frac); return `${p.x},${p.y}`; }).join(" ");
+  const dataPts = CLUSTERS_UI.map((c,i) => pt(i, (scores[c.id]||0)/100));
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{overflow:"visible",display:"block"}}>
       {[0.25,0.5,0.75,1].map(f =>
         <polygon key={f} points={gridPoly(f)} fill="none"
           stroke={f===1?"rgba(201,168,76,0.4)":"rgba(201,168,76,0.15)"}
           strokeWidth={f===1?0.8:0.5}/>)}
-      {CLUSTERS.map((_,i) => { const p=pt(i,1); return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(201,168,76,0.2)" strokeWidth={0.5}/>; })}
+      {CLUSTERS_UI.map((_,i) => { const p=pt(i,1); return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(201,168,76,0.2)" strokeWidth={0.5}/>; })}
       <polygon points={dataPts.map(p=>`${p.x},${p.y}`).join(" ")}
         fill="rgba(201,168,76,0.15)" stroke={T.gold} strokeWidth={1.5}
         style={{transition:"all 0.5s"}}/>
       {dataPts.map((p,i) =>
-        <circle key={i} cx={p.x} cy={p.y} r={3} fill={CLUSTERS[i].color}
+        <circle key={i} cx={p.x} cy={p.y} r={3} fill={CLUSTERS_UI[i].color}
           style={{transition:"all 0.5s"}}/>)}
-      {CLUSTERS.map((c,i) => {
+      {CLUSTERS_UI.map((c,i) => {
         const lp=pt(i,1.28);
         return <text key={i} x={lp.x} y={lp.y} textAnchor="middle"
           dominantBaseline="central"
@@ -1061,7 +948,7 @@ function Radar({ scores, size = 200 }) {
 function ClusterStrip({ clusterScores, skillScores, compact = false }) {
   return (
     <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-      {CLUSTERS.map(c => {
+      {CLUSTERS_UI.map(c => {
         const clusterSkillList = Object.entries(skillScores || {})
           .filter(([s]) => SKILL_CLUSTER[s] === c.id)
           .sort(([,a],[,b]) => a - b);
@@ -1161,7 +1048,7 @@ function ScoreHeader({ name, role, valuIndex, clusterScores, skillScores, desig,
 }
 
 // ── AI REPORT HELPERS ──────────────────────────────────────────────────────
-const PROMPT_VERSION = "v2.2";
+const PROMPT_VERSION = "v2.3";
 const PRIME_PROGRAMMES = {
   sprint:    { name:"PRIME Sprint",                       duration:"1 day",              price:"₦150,000–₦300,000" },
   cluster:   { name:"PRIME Cluster Programme",            duration:"6 weeks",            price:"₦500,000–₦1,200,000" },
@@ -1210,7 +1097,7 @@ function buildReportPrompt(scoreProfile) {
   const secondaryGapSkill = weakestClusterSkills[1]?.[0] || bottomSkills[1]?.[0];
   const primaryProgrammeKey = SKILL_PROGRAMME_MAP[primaryGapSkill] || "cluster";
   const primaryProgramme    = PRIME_PROGRAMMES[primaryProgrammeKey];
-  const clusterSkillDetail = CLUSTERS.map(c => {
+  const clusterSkillDetail = CLUSTERS_UI.map(c => {
     const skills = sortedSkills.filter(([s]) => SKILL_CLUSTER[s] === c.id);
     return `${c.name} (${clusterScores[c.id]}/100):\n` + skills.map(([s,sc]) => `  - ${s}: ${sc}/100`).join("\n");
   }).join("\n\n");
@@ -1357,7 +1244,6 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
     <div style={{ minHeight:"100vh", background:T.dark, fontFamily:T.font.body, position:"relative", overflowX:"hidden" }}>
       <Grain />
       <AmbientGlow />
-
       <div style={{
         position:"relative", zIndex:1,
         maxWidth: isDesktop ? 1400 : 600,
@@ -1367,52 +1253,48 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
         flexDirection: isDesktop ? "row" : "column",
         gap: isDesktop ? 80 : 0,
       }}>
-
-        {/* DESKTOP LEFT — marketing column */}
         {isDesktop && (
           <div style={{ flex:1.2, paddingRight:20 }}>
             <div style={{ marginBottom:28 }}>
               <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"5px 14px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:28 }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background:T.gold }} />
-              <span style={{ fontSize:T.size.micro, fontWeight:600, color:T.gold, letterSpacing:"0.2em", fontFamily:T.font.label }}>FOUNDING COHORT — NOW OPEN</span>
-            </div>
-            <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(48px,5vw,68px)", fontWeight:200, lineHeight:1, letterSpacing:"-0.02em", color:T.parchment, margin:"0 0 20px" }}>
-              Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
-            </h1>
-            <p style={{ fontSize:16, fontWeight:300, color:T.text.tertiary, lineHeight:1.75, margin:"0 0 40px", maxWidth:460, fontFamily:T.font.body }}>
-              55 questions across five PRIME clusters. Designed to surface what you genuinely do — not what you aspire to do.
-            </p>
-            <div style={{ display:"flex", background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:T.radius.chip, overflow:"hidden", marginBottom:40, maxWidth:400 }}>
-              {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Always",v:"Free"}].map((s,i)=>(
-                <div key={i} style={{ flex:1, padding:"18px 8px", textAlign:"center", borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none" }}>
-                  <div style={{ fontSize:22, fontWeight:700, color:T.gold, lineHeight:1, fontFamily:T.font.display }}>{s.v}</div>
-                  <div style={{ fontSize:T.size.caption, color:T.text.ghost, marginTop:5, letterSpacing:"0.06em", fontFamily:T.font.body }}>{s.l}</div>
-                </div>
-              ))}
-            </div>
-            <div>
-              <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.35)", letterSpacing:"0.18em", marginBottom:14, fontFamily:T.font.label }}>WHAT IS ASSESSED</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {CLUSTERS.map(c=>(
-                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}22`, borderRadius:T.radius.chip }}>
-                    <div style={{ width:36, height:36, borderRadius:T.radius.chip, background:`${c.color}15`, border:`1px solid ${c.color}35`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:c.color, flexShrink:0, fontFamily:T.font.body }}>{c.id}</div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:T.size.body, color:T.parchment, fontWeight:500, fontFamily:T.font.body }}>{c.name}</div>
-                      <div style={{ fontSize:T.size.caption+1, color:T.text.muted, fontStyle:"italic", fontFamily:T.font.body }}>{c.theme}</div>
-                    </div>
-                    <div style={{ fontSize:T.size.caption, color:`${c.color}70`, letterSpacing:"0.06em", fontFamily:T.font.mono }}>{Math.round(c.weight*100)}%</div>
+                <div style={{ width:6, height:6, borderRadius:"50%", background:T.gold }} />
+                <span style={{ fontSize:T.size.micro, fontWeight:600, color:T.gold, letterSpacing:"0.2em", fontFamily:T.font.label }}>FOUNDING COHORT — NOW OPEN</span>
+              </div>
+              <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(48px,5vw,68px)", fontWeight:200, lineHeight:1, letterSpacing:"-0.02em", color:T.parchment, margin:"0 0 20px" }}>
+                Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
+              </h1>
+              <p style={{ fontSize:16, fontWeight:300, color:T.text.tertiary, lineHeight:1.75, margin:"0 0 40px", maxWidth:460, fontFamily:T.font.body }}>
+                55 questions across five PRIME clusters. Designed to surface what you genuinely do — not what you aspire to do.
+              </p>
+              <div style={{ display:"flex", background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:T.radius.chip, overflow:"hidden", marginBottom:40, maxWidth:400 }}>
+                {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Always",v:"Free"}].map((s,i)=>(
+                  <div key={i} style={{ flex:1, padding:"18px 8px", textAlign:"center", borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none" }}>
+                    <div style={{ fontSize:22, fontWeight:700, color:T.gold, lineHeight:1, fontFamily:T.font.display }}>{s.v}</div>
+                    <div style={{ fontSize:T.size.caption, color:T.text.ghost, marginTop:5, letterSpacing:"0.06em", fontFamily:T.font.body }}>{s.l}</div>
                   </div>
                 ))}
+              </div>
+              <div>
+                <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.35)", letterSpacing:"0.18em", marginBottom:14, fontFamily:T.font.label }}>WHAT IS ASSESSED</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {CLUSTERS_UI.map(c=>(
+                    <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}22`, borderRadius:T.radius.chip }}>
+                      <div style={{ width:36, height:36, borderRadius:T.radius.chip, background:`${c.color}15`, border:`1px solid ${c.color}35`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:c.color, flexShrink:0, fontFamily:T.font.body }}>{c.id}</div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:T.size.body, color:T.parchment, fontWeight:500, fontFamily:T.font.body }}>{c.name}</div>
+                        <div style={{ fontSize:T.size.caption+1, color:T.text.muted, fontStyle:"italic", fontFamily:T.font.body }}>{c.theme}</div>
+                      </div>
+                      <div style={{ fontSize:T.size.caption, color:`${c.color}70`, letterSpacing:"0.06em", fontFamily:T.font.mono }}>{Math.round(c.weight*100)}%</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         )}
-
-        {/* RIGHT / MOBILE — form column */}
         <div style={{ flex:isDesktop ? 1 : "unset", width:isDesktop ? "auto" : "100%" }}>
           {!isDesktop && (
             <div style={{ marginBottom:28, animation:"fadeUp 0.7s ease 0.05s both" }}>
-              <div style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"4px 12px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:18 }}>
               <div style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"4px 12px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.pill, marginBottom:18 }}>
                 <div style={{ width:5, height:5, borderRadius:"50%", background:T.gold }} />
                 <span style={{ fontSize:T.size.micro, fontWeight:600, color:T.gold, letterSpacing:"0.18em", fontFamily:T.font.label }}>FOUNDING COHORT — NOW OPEN</span>
@@ -1431,7 +1313,6 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
               </div>
             </div>
           )}
-
           {hasCheckpoint && (
             <div style={{ marginBottom:16, padding:"14px 18px", background:"rgba(55,138,221,0.06)", border:"1px solid rgba(55,138,221,0.25)", borderRadius:T.radius.chip }}>
               <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#378ADD", letterSpacing:"0.14em", marginBottom:6, fontFamily:T.font.body }}>SESSION IN PROGRESS</div>
@@ -1445,7 +1326,6 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
               </button>
             </div>
           )}
-
           {assessmentIsLocked && (
             <div style={{ marginBottom:20, padding:"16px 18px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.25)", borderRadius:T.radius.chip }}>
               <div style={{ fontSize:T.size.caption, fontWeight:700, color:T.gold, letterSpacing:"0.14em", marginBottom:8, fontFamily:T.font.body }}>ASSESSMENT LOCKED</div>
@@ -1463,7 +1343,6 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
               </button>
             </div>
           )}
-
           <div style={{ background:"rgba(22,22,36,0.7)", border:"1px solid rgba(201,168,76,0.12)", borderRadius:T.radius.card, padding:"clamp(24px,6vw,32px)", animation:"fadeUp 0.8s ease 0.35s both" }}>
             <div style={{ fontSize:T.size.caption, fontWeight:600, color:T.text.muted, letterSpacing:"0.14em", marginBottom:20, fontFamily:T.font.label }}>BEFORE YOU BEGIN</div>
             <div style={{ marginBottom:16 }}>
@@ -1489,18 +1368,16 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
               </p>
             )}
           </div>
-
           <div style={{ marginTop:16, padding:"14px 18px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.05)", borderRadius:T.radius.chip, animation:"fadeUp 0.8s ease 0.45s both" }}>
             <div style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.75, fontFamily:T.font.body }}>
               Answer based on what you <em style={{color:T.text.tertiary}}>actually do</em> — not what you aim to do. Consistent honest responses produce a more accurate result.
             </div>
           </div>
-
           {!isDesktop && (
             <div style={{ marginTop:28, animation:"fadeUp 0.8s ease 0.55s both" }}>
               <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.35)", letterSpacing:"0.18em", marginBottom:12, fontFamily:T.font.label }}>WHAT IS ASSESSED</div>
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {CLUSTERS.map(c=>(
+                {CLUSTERS_UI.map(c=>(
                   <div key={c.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", background:"rgba(255,255,255,0.02)", border:`1px solid ${c.color}20`, borderRadius:T.radius.chip }}>
                     <div style={{ width:32, height:32, borderRadius:T.radius.chip, background:`${c.color}15`, border:`1px solid ${c.color}35`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:c.color, flexShrink:0, fontFamily:T.font.body }}>{c.id}</div>
                     <div style={{ flex:1, minWidth:0 }}>
@@ -1513,7 +1390,6 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
               </div>
             </div>
           )}
-
           <div style={{ marginTop:32, paddingTop:24, borderTop:"1px solid rgba(201,168,76,0.08)", display:"flex", gap:16, flexWrap:"wrap", justifyContent:"center" }}>
             {["Always free","18–28 minutes","NDPA 2023 compliant"].map(t=>(
               <div key={t} style={{ display:"flex", alignItems:"center", gap:6, fontSize:T.size.caption, color:T.text.ghost, fontFamily:T.font.body }}>
@@ -1545,18 +1421,15 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
   });
 
   const question = QUESTIONS[currentQ];
-  const cluster  = CLUSTERS.find(c => c.id === question?.cluster);
+  const cluster  = CLUSTERS_UI.find(c => c.id === question?.cluster);
   const progress = Math.round((currentQ / TOTAL) * 100);
 
-  // Single source of truth: displayedOptions reads from shuffleMap only.
   const displayedOptions = useMemo(() => {
     if (!question) return [];
     if (question.type === "anchor") return question.options;
     return shuffleMap[currentQ] || [];
   }, [currentQ, question, shuffleMap]);
 
-  // Populate shuffleMap entry for currentQ (and prefetch next) in useEffect.
-  // This is the only place seededShuffle is called — no parallel calls in useMemo.
   useEffect(() => {
     if (!question) return;
     setShuffleMap(prev => {
@@ -1582,14 +1455,12 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
     };
   }, [currentQ]);
 
-  // FIX: complete deps array — name, role, sessionSeed added
   useEffect(() => {
     saveCheckpoint({ name, role, answers, timings, currentQ, sessionSeed });
   }, [answers, currentQ, name, role, sessionSeed]);
 
-  // Live cluster scores for radar
   const liveScores = {};
-  CLUSTERS.forEach(c => {
+  CLUSTERS_UI.forEach(c => {
     const qs = QUESTIONS.filter((q, i) => q.cluster === c.id && answers[i] !== undefined);
     const raw = qs.reduce((s, q) => {
       const idx = QUESTIONS.indexOf(q);
@@ -1604,8 +1475,6 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
   function handleSelect(optIdx) {
     if (transitioning) return;
     setSelected(optIdx);
-    // Auto-advance after 300ms — enough time for the checkmark animation to land.
-    // On the final question keep it manual so the user can review before submitting.
     if (currentQ + 1 < TOTAL) {
       if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
       autoAdvanceTimer.current = setTimeout(() => {
@@ -1614,8 +1483,6 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
     }
   }
 
-  // Separated so auto-advance can pass the freshly selected index directly,
-  // avoiding a stale-closure read of `selected` inside the timeout.
   function handleContinueWithAnswer(optIdx) {
     if (transitioning) return;
     const elapsed = qStartTime ? Date.now() - qStartTime : 0;
@@ -1674,11 +1541,8 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
 
   return (
     <div style={{ minHeight:"100vh", background:T.dark, display:"flex", flexDirection:"column", fontFamily:T.font.body }}>
-      {/* No <ClusterStripe /> here — owned by ValoriaNav in the platform shell */}
       <Grain />
       <AmbientGlow color="rgba(201,168,76,0.06)" />
-
-      {/* Nav bar */}
       <div style={{
         position:"fixed", top:59, left:0, right:0,
         padding:"14px 24px 12px",
@@ -1699,8 +1563,6 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
           <div style={{ height:"100%", width:`${progress}%`, background:T.gold, transition:"width 0.4s ease", borderRadius: T.radius.chip }} />
         </div>
       </div>
-
-      {/* Question area — top padding accounts for platform nav (59px) + assessment nav (~48px) */}
       <div style={{ flex:1, display:"flex", padding:"120px 20px 140px", maxWidth:700, margin:"0 auto", width:"100%", flexDirection:"column", justifyContent:"center" }}>
         {question.skill && question.cluster !== "VA" && (
           <div style={{ fontSize:T.size.caption, color:"rgba(201,168,76,0.4)", letterSpacing:"0.18em", marginBottom:16, textTransform:"uppercase", fontFamily:T.font.body }}>
@@ -1767,8 +1629,6 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
           })}
         </div>
       </div>
-
-      {/* Bottom action bar */}
       <div style={{
         position:"fixed", bottom:0, left:0, right:0,
         padding:"14px 24px",
@@ -1787,9 +1647,7 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
             </button>
           )}
         </div>
-
         {currentQ + 1 === TOTAL ? (
-          // Final question — manual submit so user can review before committing.
           <button
             onClick={handleContinue}
             disabled={selected === null}
@@ -1800,7 +1658,6 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
             SEE MY RESULTS
           </button>
         ) : (
-          // All other questions auto-advance on select — show a passive indicator.
           <div style={{
             padding:"13px 32px", minWidth:160, textAlign:"center",
             fontSize: T.size.caption, letterSpacing:"0.12em",
@@ -1811,8 +1668,6 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
             {selected !== null ? "ADVANCING..." : "SELECT AN OPTION"}
           </div>
         )}
-
-        {/* FIX: 100px as per spec */}
         <div style={{ flexShrink:0 }}>
           <Radar scores={liveScores} size={100} />
         </div>
@@ -1836,11 +1691,6 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
 
   const { valuIndex, clusterScores, skillScores, desig, futureReadyScore, listed } = results;
 
-  // Save scores to Supabase immediately on completion.
-  // Email is not available yet — it is added in handleSignup below.
-  // Uses upsert-style: if the same identity_hash already exists this
-  // will create a duplicate row; the uniqueness constraint on the DB
-  // should be set to identity_hash with ON CONFLICT DO NOTHING.
   useEffect(() => {
     const fp = computeFingerprint(name, role);
     const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
@@ -1873,21 +1723,14 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
     setSignupLoading(true);
     setSignupError("");
     try {
-      // 1. Create Supabase Auth account
       const authData = await signUpWithSupabase(signupEmail.trim(), signupPassword, name, role);
       const userId = authData?.user?.id || null;
-
-      // 2. Store pending report payload so hash-return flow can resume
       setPendingReport({ name, role, email: signupEmail.trim(), results });
-
-      // 3. Patch the assessment row with email + user_id
       const fp = computeFingerprint(name, role);
       await updateAssessmentByFingerprint(fp, {
         email: signupEmail.trim(),
         ...(userId ? { user_id: userId } : {}),
       }).catch(() => {});
-
-      // 4. Write scores to profiles table so marketplace shows real VALU data
       if (userId) {
         const tierMap = {
           "Elite Professional": "elite",
@@ -1912,14 +1755,11 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
             cluster_scores: clusterScores,
             valu_tier: tierMap[desig?.name] || "standard",
             assessment_completed_at: new Date().toISOString(),
-            is_visible: false, // stays hidden until they complete profile
+            is_visible: false,
           }),
         }).catch(() => {});
       }
-
-      // 5. Add to waitlist (idempotent)
       await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(() => {});
-
       setSignupDone(true);
       if (onSignupDone) onSignupDone(signupEmail.trim());
     } catch (e) {
@@ -1938,10 +1778,8 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
 
   return (
     <div style={{ minHeight:"100vh", background:T.dark, fontFamily:T.font.body }}>
-      {/* No <ClusterStripe /> — owned by ValoriaNav */}
       <Grain />
       <AmbientGlow />
-
       <ScoreHeader
         name={name} role={role}
         valuIndex={valuIndex} clusterScores={clusterScores}
@@ -1949,27 +1787,22 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
         futureReadyScore={futureReadyScore}
         sticky={false}
       />
-
       <div style={{ maxWidth:720, margin:"0 auto", padding:"32px 24px 80px" }}>
-
         {saveError && (
           <div style={{ marginBottom:16, padding:"12px 16px", background:"rgba(216,90,48,0.08)", border:"1px solid rgba(216,90,48,0.3)", borderRadius:T.radius.chip, fontSize:T.size.small, color:T.coral, fontFamily:T.font.body }}>
             Score could not be saved: {saveError}. Contact info@valoriainstitute.com with your result ({valuIndex}/100).
           </div>
         )}
-
         <div style={{ marginBottom:24, padding:"24px", background:"rgba(22,22,36,0.6)", border:"1px solid rgba(201,168,76,0.1)", borderRadius:T.radius.card }}>
           <div style={{ fontSize:T.size.caption, fontWeight:700, color:T.gold, letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>YOUR RESULT SUMMARY</div>
-
           <div style={{ padding:"16px", background: desig.bg, border:`1px solid ${desig.color}30`, borderRadius:T.radius.chip, marginBottom:16 }}>
             <div style={{ fontSize:T.size.small, fontWeight:700, color:desig.color, letterSpacing:"0.1em", marginBottom:6, fontFamily:T.font.body }}>{desig.name.toUpperCase()}</div>
             <p style={{ fontSize:T.size.body, color:T.text.secondary, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>{desig.desc}</p>
           </div>
-
           <div style={{ display:"flex", alignItems:"center", gap:24, flexWrap:"wrap", marginBottom:16 }}>
             <Radar scores={clusterScores} size={160} />
             <div style={{ flex:1, minWidth:200 }}>
-              {CLUSTERS.map(c => (
+              {CLUSTERS_UI.map(c => (
                 <div key={c.id} style={{ marginBottom:10 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                     <span style={{ fontSize:T.size.small, color:c.color, fontFamily:T.font.body }}>{c.name}</span>
@@ -1982,7 +1815,6 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
               ))}
             </div>
           </div>
-
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <div>
               <div style={{ fontSize:T.size.micro, color:"rgba(29,158,117,0.6)", letterSpacing:"0.14em", marginBottom:8, fontFamily:T.font.label }}>YOUR STRENGTHS</div>
@@ -2004,8 +1836,6 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
             </div>
           </div>
         </div>
-
-        {/* Signup / email confirmation card */}
         {signupDone ? (
           <div style={{ background:"rgba(29,158,117,0.05)", border:"1px solid rgba(29,158,117,0.25)", borderRadius:T.radius.card, padding:"32px 28px" }}>
             <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#1D9E75", letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>✦ ACCOUNT CREATED</div>
@@ -2016,16 +1846,10 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
               Confirm your email to unlock your full AI report — it generates immediately after confirmation. Your VALU Index of <strong style={{color:T.gold}}>{valuIndex}/100</strong> is saved and linked to your profile.
             </p>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <a
-                href="https://valoriainstitute.com/profile/edit"
-                style={{ display:"block", textAlign:"center", padding:"14px 24px", background:T.gold, color:"#0F0F1A", fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none" }}
-              >
+              <a href="https://valoriainstitute.com/profile/edit" style={{ display:"block", textAlign:"center", padding:"14px 24px", background:T.gold, color:"#0F0F1A", fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none" }}>
                 COMPLETE YOUR PROFILE →
               </a>
-              <a
-                href="https://valoriainstitute.com/dashboard"
-                style={{ display:"block", textAlign:"center", padding:"14px 24px", background:"transparent", color:T.gold, fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none", border:"1px solid rgba(201,168,76,0.3)" }}
-              >
+              <a href="https://valoriainstitute.com/dashboard" style={{ display:"block", textAlign:"center", padding:"14px 24px", background:"transparent", color:T.gold, fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none", border:"1px solid rgba(201,168,76,0.3)" }}>
                 GO TO DASHBOARD
               </a>
             </div>
@@ -2086,7 +1910,6 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
             </p>
           </div>
         )}
-
         <div style={{ marginTop:24, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
           <PageNumber current={pageNum} total={TOTAL + 2} />
           <button onClick={() => setRetakeModal("confirm")}
@@ -2095,11 +1918,9 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
           </button>
         </div>
       </div>
-
       <div style={{ textAlign:"center", padding:"24px", fontSize:T.size.caption, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>
         VALU INDEX v4.0 · PRIME FRAMEWORK · © 2026
       </div>
-
       <RetakeModal mode={retakeModal} onClose={() => setRetakeModal(null)} onConfirm={onRetake} expiryDateFormatted={null} />
     </div>
   );
@@ -2132,8 +1953,6 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
   }, []);
 
   async function persistWithReport(fullText) {
-    // Patch the existing row — only writes the ai_report field.
-    // The row already exists from ResultsScreen's initial INSERT.
     const fp = computeFingerprint(name, role);
     await updateAssessmentByFingerprint(fp, {
       ai_report: fullText,
@@ -2149,15 +1968,9 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: confirmedEmail,
-          name,
-          role,
-          score: valuIndex,
-          designation: desig?.name || "",
-          reportText: fullText,
-          // welcome: true signals the endpoint to prepend a welcome section
-          // to the email before the report body.
-          welcome: true,
+          email: confirmedEmail, name, role,
+          score: valuIndex, designation: desig?.name || "",
+          reportText: fullText, welcome: true,
         }),
       });
       setEmailStatus(res.ok ? "sent" : "failed");
@@ -2219,14 +2032,11 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
           } catch {}
         }
       }
-      // Clear interval BEFORE final state set — prevents double-flush race.
       clearInterval(flushTimer.current);
       flushTimer.current = null;
       setReportText(fullText);
       setReportStatus("complete");
-      // Persist report (with retry built into saveToSupabase).
       persistWithReport(fullText).catch(err => setSaveReportError(err.message));
-      // Email report + welcome message.
       await emailFullReport(fullText);
       clearPendingReport();
     } catch (err) {
@@ -2277,10 +2087,8 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
 
   return (
     <div style={{ minHeight:"100vh", background:T.dark, fontFamily:T.font.body }}>
-      {/* No <ClusterStripe /> — owned by ValoriaNav */}
       <Grain />
       <AmbientGlow color="rgba(216,90,48,0.07)" />
-
       <ScoreHeader
         name={name} role={role}
         valuIndex={valuIndex} clusterScores={clusterScores}
@@ -2288,9 +2096,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
         futureReadyScore={futureReadyScore}
         sticky={true}
       />
-
       <div ref={reportRef} style={{ maxWidth:720, margin:"0 auto", padding:"32px 24px 80px" }}>
-
         {reportStatus === "generating" && (
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:28, padding:"14px 18px", background:"rgba(201,168,76,0.06)", border:"1px solid rgba(201,168,76,0.15)", borderRadius:T.radius.chip }}>
             <div style={{ display:"flex", gap:4 }}>
@@ -2301,7 +2107,6 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
             </div>
           </div>
         )}
-
         {reportStatus === "error" && (
           <div style={{ padding:"20px 24px", background:"rgba(216,90,48,0.08)", border:"1px solid rgba(216,90,48,0.3)", borderRadius:T.radius.chip, marginBottom:24 }}>
             <div style={{ fontSize:T.size.caption, fontWeight:700, color:T.coral, letterSpacing:"0.1em", marginBottom:8, fontFamily:T.font.label }}>REPORT GENERATION FAILED</div>
@@ -2316,13 +2121,10 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
             </button>
           </div>
         )}
-
         {reportText && <div style={{ lineHeight:1 }}>{renderReport(reportText)}</div>}
-
         {reportStatus === "generating" && reportText.length > 0 && (
           <span style={{ display:"inline-block", width:2, height:16, background:T.gold, marginLeft:2, animation:"blink 1s step-end infinite", verticalAlign:"text-bottom" }}/>
         )}
-
         {reportStatus === "complete" && (
           <>
             {saveReportError && (
@@ -2330,7 +2132,6 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
                 Your report could not be saved to the server: {saveReportError}. Your score is intact. Contact info@valoriainstitute.com if you need this resolved.
               </div>
             )}
-
             <div style={{ marginTop:32, padding:"20px 24px", background: listed ? "rgba(29,158,117,0.08)" : "rgba(136,136,136,0.08)", border:`1px solid ${listed ? "rgba(29,158,117,0.3)" : "rgba(136,136,136,0.25)"}`, borderRadius:T.radius.chip }}>
               <div style={{ fontSize:T.size.caption, fontWeight:700, color: listed ? "#1D9E75" : "#888888", letterSpacing:"0.12em", marginBottom:8, fontFamily:T.font.label }}>
                 {listed ? "LISTED — YOUR PROFILE IS SEARCHABLE" : "NOT YET LISTED — SCORE BELOW 35"}
@@ -2341,7 +2142,6 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
                   : `A score of ${valuIndex} does not yet qualify for listing. The minimum is 35. A PRIME Sprint is designed to move your score into the listed range.`}
               </p>
             </div>
-
             {confirmedEmail && (
               <div style={{ marginTop:14, padding:"14px 18px", background:"rgba(201,168,76,0.05)", border:"1px solid rgba(201,168,76,0.15)", borderRadius:T.radius.chip }}>
                 <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>
@@ -2351,7 +2151,6 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
                 </p>
               </div>
             )}
-
             <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:22 }}>
               <a href="https://valoriainstitute.com/profile-page"
                 style={{ display:"block", padding:"20px 28px", background:T.gold, borderRadius:T.radius.pill, textAlign:"center", cursor:"pointer", textDecoration:"none" }}
@@ -2363,7 +2162,6 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
             </div>
           </>
         )}
-
         <div style={{ marginTop:28, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
           <PageNumber current={pageNum} total={TOTAL + 2} />
           <button onClick={() => setRetakeModal("confirm")}
@@ -2372,11 +2170,9 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
           </button>
         </div>
       </div>
-
       <div style={{ textAlign:"center", padding:"24px", fontSize:T.size.caption, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>
         VALU INDEX v4.0 · PRIME FRAMEWORK · © 2026
       </div>
-
       <RetakeModal mode={retakeModal} onClose={() => setRetakeModal(null)} onConfirm={onRetake} expiryDateFormatted={null} />
     </div>
   );
@@ -2398,9 +2194,6 @@ export default function PRIMEAssessment({
   const [initialReportText, setInitialReportText] = useState(null);
   const [sessionSeed]                       = useState(() => Math.floor(Math.random() * 99999));
 
-  // ── FIX: derive fingerprint from the lock record directly so isLockActive
-  // always receives both required arguments. assessmentLockRecord.fingerprint
-  // is set by persistLock in ValoriaPlatform and by resolveLockForIdentity.
   const assessmentIsLocked = assessmentLockRecord
     ? isLockActive(assessmentLockRecord, assessmentLockRecord.fingerprint)
     : false;
@@ -2412,13 +2205,11 @@ export default function PRIMEAssessment({
 
   const checkpoint = loadCheckpoint();
 
-  // Notify platform shell of phase changes so nav can switch to minimal mode.
   function goToPhase(p) {
     setPhase(p);
     if (onPhaseChange) onPhaseChange(p);
   }
 
-  // Handle email confirmation return (hash in URL).
   useEffect(() => {
     const auth = parseAuthHash();
     if (!auth) return;
@@ -2448,7 +2239,6 @@ export default function PRIMEAssessment({
   }, [sessionData?.name, sessionData?.role]);
 
   function handleBegin({ name, role, resume, previousProfile }) {
-    // "View Previous Report" path — locked user viewing their stored report.
     if (previousProfile) {
       setSessionData({ name: previousProfile.name, role: previousProfile.role, results: previousProfile.results });
       setInitialReportText(previousProfile.aiReport || null);
@@ -2456,7 +2246,6 @@ export default function PRIMEAssessment({
       return;
     }
     if (resume && checkpoint) {
-      // FIX: use checkpoint data directly — no name-match guard.
       setSessionData({ name: checkpoint.name, role: checkpoint.role, results: null, shuffleMap: {} });
       goToPhase("assessing");
     } else {
@@ -2469,7 +2258,6 @@ export default function PRIMEAssessment({
     const sd = { name, role, results, shuffleMap };
     setSessionData(sd);
     goToPhase("results");
-    // Notify platform to persist the local lock immediately.
     if (onAssessmentSubmitted) onAssessmentSubmitted({ name, role, completedAt: new Date().toISOString(), ...results });
   }
 
@@ -2495,7 +2283,6 @@ export default function PRIMEAssessment({
   }
 
   if (phase === "assessing") {
-    // FIX: resuming keyed on checkpoint existence and progress, not name match.
     const resuming = !!(checkpoint && checkpoint.currentQ > 0);
     return (
       <AssessmentScreen
