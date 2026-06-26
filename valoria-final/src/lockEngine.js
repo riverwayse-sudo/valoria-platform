@@ -2,8 +2,6 @@
 // Extracted from assessmentLock.js v2.2.
 // Covers: fingerprint generation, lock read/write, lock validation.
 
-"use strict";
-
 /**
  * computeFingerprint — deterministic identity hash from name + role.
  * MUST produce identical output to the frontend version in assessmentLock.js.
@@ -46,7 +44,7 @@ function buildLockRecord(fingerprint, completedAt) {
   };
 }
 
-module.exports = {
+export {
   computeFingerprint,
   isLockActive,
   buildLockRecord,
