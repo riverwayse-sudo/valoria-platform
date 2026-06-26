@@ -1,11 +1,3 @@
-// scoringEngine.js — Single source of truth for all VALU Index scoring.
-// Extracted from PRIMEAssessment.jsx v2.2.
-// This module is imported by:
-//   - PRIMEAssessment.jsx (frontend scoring)
-//   - Any future DB trigger / Edge Function (backend scoring)
-//   - All tests
-// NEVER duplicate this logic elsewhere.
-
 const CLUSTERS = [
   { id: "P", name: "Presence",      weight: 0.20, maxRaw: 36 },
   { id: "R", name: "Relationships", weight: 0.25, maxRaw: 48 },
@@ -15,16 +7,15 @@ const CLUSTERS = [
 ];
 
 const DESIGNATIONS = [
-  { min: 80, name: "Force to Align With" },
-  { min: 65, name: "Emerging Force" },
-  { min: 50, name: "Developing Professional" },
-  { min: 35, name: "Building Foundations" },
-  { min: 0,  name: "At the Starting Point" },
+  { min: 80, name: "Force to Align With",      color: "#C9A84C", bg: "rgba(201,168,76,0.08)" },
+  { min: 65, name: "Emerging Force",           color: "#378ADD", bg: "rgba(55,138,221,0.08)" },
+  { min: 50, name: "Developing Professional",  color: "#7F77DD", bg: "rgba(127,119,221,0.08)" },
+  { min: 35, name: "Building Foundations",     color: "#1D9E75", bg: "rgba(29,158,117,0.08)" },
+  { min: 0,  name: "At the Starting Point",    color: "#888888", bg: "rgba(136,136,136,0.08)" },
 ];
 
 const SKILL_MAX_RAW = 12;
 
-// Fisher-Yates seeded shuffle — deterministic for same seed+index pair.
 function seededShuffle(arr, seed) {
   const result = [...arr];
   let s = seed;
@@ -39,14 +30,6 @@ function seededShuffle(arr, seed) {
   return result;
 }
 
-/**
- * computeResults — canonical scoring function.
- * @param {object} answers      - { [questionIndex]: displayedOptionIndex }
- * @param {number[]} timings    - ms per question
- * @param {object} shuffleMap  - { [questionIndex]: shuffledOptions[] }
- * @param {object[]} questions  - full QUESTIONS array (passed in to avoid import coupling)
- * @returns {object} scored result object
- */
 function computeResults(answers, timings, shuffleMap, questions) {
   const clusterRaw       = { P: 0, R: 0, I: 0, M: 0, E: 0 };
   const clusterAllScores = { P: [], R: [], I: [], M: [], E: [] };
@@ -67,24 +50,20 @@ function computeResults(answers, timings, shuffleMap, questions) {
     }
   });
 
-  // Skill scores: raw / SKILL_MAX_RAW * 100
   const skillScores = {};
   Object.entries(skillRaw).forEach(([skill, raw]) => {
     skillScores[skill] = Math.round((raw / SKILL_MAX_RAW) * 100);
   });
 
-  // Cluster scores: raw / maxRaw * 100
   const clusterScores = {};
   CLUSTERS.forEach(c => {
     clusterScores[c.id] = Math.round((clusterRaw[c.id] / c.maxRaw) * 100);
   });
 
-  // Weighted VALU Index (first pass)
   let valuRaw = 0;
   CLUSTERS.forEach(c => { valuRaw += clusterScores[c.id] * c.weight; });
   let valuIndex = Math.round(valuRaw);
 
-  // Consistency penalty: SD > 1.2 within a cluster → 15% reduction
   const consistencyFlags = {};
   CLUSTERS.forEach(c => {
     const scores = clusterAllScores[c.id];
@@ -97,12 +76,10 @@ function computeResults(answers, timings, shuffleMap, questions) {
     }
   });
 
-  // Recalculate after consistency adjustments
   let valuRaw2 = 0;
   CLUSTERS.forEach(c => { valuRaw2 += clusterScores[c.id] * c.weight; });
   valuIndex = Math.round(valuRaw2);
 
-  // Validity anchors: 3+ score-1 answers → gaming detected → 20% reduction
   let anchorFlags = 0;
   questions.forEach((q, idx) => {
     if (!q.validAnchor) return;
@@ -116,13 +93,11 @@ function computeResults(answers, timings, shuffleMap, questions) {
   const gamingDetected = anchorFlags >= 3;
   if (gamingDetected) valuIndex = Math.round(valuIndex * 0.80);
 
-  // Speed flag: total < 12 min OR 3+ questions under 8s
   const answeredTimings = timings.filter(t => t > 0);
   const totalTime = answeredTimings.reduce((a, b) => a + b, 0);
   const fastAnswers = timings.filter(t => t > 0 && t < 8000).length;
   const speedFlag = totalTime < 720000 || fastAnswers >= 3;
 
-  // Uniformity flag: score >= 65 but global SD < 0.5
   const allScores = [];
   questions.forEach((q, idx) => {
     if (q.cluster === "VA") return;
@@ -134,14 +109,13 @@ function computeResults(answers, timings, shuffleMap, questions) {
     if (originalOption?.score) allScores.push(originalOption.score);
   });
   const globalMean = allScores.reduce((a, b) => a + b, 0) / (allScores.length || 1);
-  const globalSD   = Math.sqrt(
+  const globalSD = Math.sqrt(
     allScores.reduce((a, b) => a + (b - globalMean) ** 2, 0) / (allScores.length || 1)
   );
   const uniformityFlag = valuIndex >= 65 && globalSD < 0.5;
 
   const desig = DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1];
 
-  // Future-ready score
   const frQuestions = questions.filter(q => q.futureReady);
   const frRaw = frQuestions.reduce((sum, q) => {
     const idx = questions.indexOf(q);
@@ -184,12 +158,6 @@ function computeResults(answers, timings, shuffleMap, questions) {
   };
 }
 
-/**
- * computeClusterScoresOnly — lightweight version for DB/server use.
- * Accepts raw cluster totals directly (no shuffleMap needed).
- * @param {object} clusterRaw - { P, R, I, M, E } raw scores
- * @returns {object} clusterScores as percentages
- */
 function computeClusterScoresOnly(clusterRaw) {
   const clusterScores = {};
   CLUSTERS.forEach(c => {
@@ -198,26 +166,16 @@ function computeClusterScoresOnly(clusterRaw) {
   return clusterScores;
 }
 
-/**
- * computeWeightedIndex — takes cluster scores (0-100) → weighted VALU Index.
- * This is what any DB trigger should call — identical math to frontend.
- */
 function computeWeightedIndex(clusterScores) {
   let valuRaw = 0;
   CLUSTERS.forEach(c => { valuRaw += (clusterScores[c.id] || 0) * c.weight; });
   return Math.round(valuRaw);
 }
 
-/**
- * getDesignation — maps VALU Index to designation band.
- */
 function getDesignation(valuIndex) {
   return DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1];
 }
 
-/**
- * getPathway — maps VALU Index to recommended programme.
- */
 function getPathway(valuIndex) {
   if (valuIndex >= 80) return "PCP Certification";
   if (valuIndex >= 65) return "PRIME Programme";
