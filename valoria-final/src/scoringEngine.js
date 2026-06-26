@@ -6,8 +6,6 @@
 //   - All tests
 // NEVER duplicate this logic elsewhere.
 
-"use strict";
-
 const CLUSTERS = [
   { id: "P", name: "Presence",      weight: 0.20, maxRaw: 36 },
   { id: "R", name: "Relationships", weight: 0.25, maxRaw: 48 },
@@ -227,7 +225,7 @@ function getPathway(valuIndex) {
   return "PRIME Sprint";
 }
 
-module.exports = {
+export {
   CLUSTERS,
   DESIGNATIONS,
   SKILL_MAX_RAW,
