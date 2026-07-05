@@ -25,6 +25,11 @@ import {
   computeResults as _computeResults,
 } from "./scoringEngine.js";
 
+// ── CANONICAL QUESTION BANK — do not redefine this anywhere ───────────────
+// Shared with api/submit-assessment.js so client and server always score
+// against the exact same question set.
+import { QUESTIONS } from "./questions.js";
+
 // Wrap to inject QUESTIONS (defined later in this file after question bank).
 // This keeps the scoringEngine pure (no direct import of ALL_QUESTIONS).
 // Called identically by both client and any future server/DB function.
@@ -214,491 +219,8 @@ const CLUSTER_UI = {
 // Merge UI properties into CLUSTERS for rendering
 const CLUSTERS_UI = CLUSTERS.map(c => ({ ...c, ...CLUSTER_UI[c.id] }));
 
-// ── QUESTION BANK ──────────────────────────────────────────────────────────
-const ALL_QUESTIONS = [
-  { id:"P1a", cluster:"P", skill:"Communication", type:"behavioural",
-    q:"You need to explain a complex decision to a mixed audience — some technical, some not. What do you do?",
-    options:[
-      {text:"I share the full picture so everyone starts from the same information.",score:1},
-      {text:"I lead with the decision and its implications, then add detail based on who asks.",score:3},
-      {text:"I prepare a version for each audience type before the conversation.",score:4},
-      {text:"I simplify the technical parts and signal that more detail is available.",score:2},
-    ]},
-  { id:"P1b", cluster:"P", skill:"Communication", type:"situational",
-    q:"You are presenting a recommendation to leadership when you sense they have already decided differently. What do you do?",
-    options:[
-      {text:"Finish the presentation — they should hear everything before I adjust.",score:1},
-      {text:"Name what I am sensing and ask what their current thinking is before continuing.",score:3},
-      {text:"Pivot to the one point most likely to shift their position and invite the disagreement.",score:4},
-      {text:"Accelerate through the key points before I lose the room entirely.",score:2},
-    ]},
-  { id:"P1c", cluster:"P", skill:"Communication", type:"reflective",
-    q:"Think of the last time someone told you they did not understand your explanation. What was your honest reaction?",
-    options:[
-      {text:"I assumed the explanation was clear and wondered if they had followed it properly.",score:1},
-      {text:"I treated it as a signal that my explanation was the problem and redesigned it.",score:4},
-      {text:"I went through it again using simpler language to make it clearer.",score:2},
-      {text:"I stopped and asked what specifically was unclear before rebuilding the explanation.",score:3},
-    ]},
-  { id:"P2a", cluster:"P", skill:"Negotiation", type:"behavioural",
-    q:"Before entering a significant negotiation — salary, contract, or partnership — what do you actually do to prepare?",
-    options:[
-      {text:"I research comparable benchmarks and prepare a clear justification for my position.",score:2},
-      {text:"I map both sides — what I need, what they likely care about — before deciding my opening.",score:3},
-      {text:"I know what I want and go in ready to make the case.",score:1},
-      {text:"I map interests, trade-offs, walk-away positions, and what I will and will not concede — before the conversation starts.",score:4},
-    ]},
-  { id:"P2b", cluster:"P", skill:"Negotiation", type:"situational",
-    q:"You are negotiating and the other party opens significantly below your expectation. What is your move?",
-    options:[
-      {text:"State that it is too low and name what I actually need.",score:1},
-      {text:"Ask what is driving their number before deciding how to respond.",score:3},
-      {text:"Counter firmly with my number and a strong rationale for why it is justified.",score:2},
-      {text:"Probe the interest behind their position, then explore whether non-price variables can close the gap.",score:4},
-    ]},
-  { id:"P2c", cluster:"P", skill:"Negotiation", type:"reflective",
-    q:"Describe a negotiation where you settled for less than you wanted. What actually went wrong?",
-    options:[
-      {text:"I had not defined my walk-away position, so I did not recognise the moment to use it.",score:4},
-      {text:"The other side had stronger leverage or was better prepared than I expected.",score:1},
-      {text:"I did not anchor high enough at the start, which limited the final range.",score:2},
-      {text:"I did not fully understand what they valued, so I could not find a trade that worked for both sides.",score:3},
-    ]},
-  { id:"P3a", cluster:"P", skill:"Personal Brand & Executive Presence", type:"behavioural",
-    q:"How would a professional who can only see your digital presence describe what you stand for?",
-    options:[
-      {text:"They would know my role and industry but probably not much more.",score:1},
-      {text:"They would know precisely what I stand for and why I am worth a conversation.",score:4},
-      {text:"They would get a clear sense of my expertise and the kind of professional I am.",score:3},
-      {text:"They would see my field and some of my thinking, though not a complete picture.",score:2},
-    ]},
-  { id:"P3b", cluster:"P", skill:"Personal Brand & Executive Presence", type:"situational",
-    q:"You walk into a high-stakes room where you know nobody — a client pitch, a leadership meeting, a major conference. How do you show up?",
-    options:[
-      {text:"I research who will be in the room and arrive knowing exactly who I want to reach.",score:3},
-      {text:"I let the conversation come to me and wait for the right introduction.",score:1},
-      {text:"I introduce myself and make sure key people know my role and organisation.",score:2},
-      {text:"I know precisely what impression I want to leave and have planned how I will create it — entry, approach, conversation, and close.",score:4},
-    ]},
-  { id:"P3c", cluster:"P", skill:"Personal Brand & Executive Presence", type:"reflective",
-    q:"When did you last receive feedback about how you come across professionally — and what did you do with it?",
-    options:[
-      {text:"I treat how I come across as a practised skill — I seek feedback and track whether changes are landing.",score:4},
-      {text:"I do not recall specific feedback of this kind in recent memory.",score:1},
-      {text:"I have received feedback and I keep it in mind when relevant situations come up.",score:2},
-      {text:"I actively seek this type of feedback and have made specific, traceable changes based on it.",score:3},
-    ]},
-  { id:"R1a", cluster:"R", skill:"Emotional Intelligence", type:"behavioural",
-    q:"You are in a high-pressure meeting and someone says something that genuinely irritates you. What actually happens next?",
-    options:[
-      {text:"I notice the reaction, give myself a beat, and choose my response rather than react.",score:3},
-      {text:"I address it in the moment — it is better than letting it sit.",score:1},
-      {text:"I hold back but the irritation probably shapes how I engage for the rest of the meeting.",score:2},
-      {text:"I name the emotion to myself, regulate it in real time, and decide whether to address it now or later.",score:4},
-    ]},
-  { id:"R1b", cluster:"R", skill:"Emotional Intelligence", type:"situational",
-    q:"A colleague who is usually high-performing has become visibly disengaged over the past two weeks. Nobody else has noticed. What do you do?",
-    options:[
-      {text:"Find a quiet moment to check in directly without framing it as a performance conversation.",score:3},
-      {text:"Let it unfold — they will address it themselves if it becomes a real problem.",score:1},
-      {text:"Check in privately, create genuine space for what they want to share, and think carefully about what they actually need.",score:4},
-      {text:"Mention it to their manager so someone with authority is aware of the change.",score:2},
-    ]},
-  { id:"R1c", cluster:"R", skill:"Emotional Intelligence", type:"reflective",
-    q:"Think of a time you handled a difficult emotion badly at work. What happened and what do you understand now that you did not then?",
-    options:[
-      {text:"I generally keep things professional — I cannot think of a clear example of handling emotion badly.",score:1},
-      {text:"I have a specific example, a clear analysis of the trigger, and a practice I have built since then to catch it earlier.",score:4},
-      {text:"I can think of a time. I would handle it differently now, though I am not entirely sure how.",score:2},
-      {text:"I can name the situation, what triggered me, and how I would regulate it earlier if it happened again.",score:3},
-    ]},
-  { id:"R2a", cluster:"R", skill:"Conflict Resolution", type:"behavioural",
-    q:"You are aware of unspoken tension between two team members that is starting to affect group performance. What do you do?",
-    options:[
-      {text:"Give it time — most tensions resolve without intervention if not made worse.",score:1},
-      {text:"Have a deliberate sequence — understand each side privately, diagnose whether it is relational or task-based, then design a resolution conversation.",score:4},
-      {text:"Mention it to each of them separately and see if that shifts things.",score:2},
-      {text:"Speak to each person individually to understand what is happening, then create a structure to address it.",score:3},
-    ]},
-  { id:"R2b", cluster:"R", skill:"Conflict Resolution", type:"situational",
-    q:"Two senior people are in open disagreement in a meeting and the conversation is breaking down. You are not the most senior person in the room. What do you do?",
-    options:[
-      {text:"Stay quiet — it is not my place to intervene when I am not the most senior.",score:1},
-      {text:"Redirect toward the agenda to keep the meeting moving and limit further damage.",score:2},
-      {text:"Name the breakdown, separate positions from interests, and redirect toward what both parties actually need.",score:4},
-      {text:"Name what is happening and suggest a short pause or a reframe of the question.",score:3},
-    ]},
-  { id:"R2c", cluster:"R", skill:"Conflict Resolution", type:"reflective",
-    q:"Think of a workplace conflict you were involved in — directly or as a mediator. What made it difficult and what would you do differently?",
-    options:[
-      {text:"I have a specific example, a precise analysis of what each party needed, and an intervention that would have resolved it sooner — which I have since used successfully.",score:4},
-      {text:"Most conflicts I have experienced were mainly driven by the other party — I tend to be reasonable in these situations.",score:1},
-      {text:"I understand what made it difficult and know specifically what I would do differently — go to understand their position earlier and with more genuine curiosity.",score:3},
-      {text:"I can think of one. Emotions were high and I was focused on being right rather than resolving it.",score:2},
-    ]},
-  { id:"R3a", cluster:"R", skill:"People Development", type:"behavioural",
-    q:"Someone on your team makes a significant mistake on an important piece of work. What is your first move?",
-    options:[
-      {text:"Fix it — the outcome is the priority in the moment.",score:1},
-      {text:"Use it as a deliberate development moment — diagnosis, structured reflection, a specific action, and a follow-up to confirm the learning has landed.",score:4},
-      {text:"Correct it and walk them through what they should have done differently.",score:2},
-      {text:"Ask them to walk me through their thinking, then help them identify where it went wrong.",score:3},
-    ]},
-  { id:"R3b", cluster:"R", skill:"People Development", type:"situational",
-    q:"You have a team member who is highly capable but consistently underdelivering. Their potential is obvious but something is blocking it. How do you approach this?",
-    options:[
-      {text:"Have a direct conversation about the performance gap and what needs to change.",score:1},
-      {text:"Give them clearer direction and more scaffolding to help them get back on track.",score:2},
-      {text:"Start with genuine curiosity about what is happening for them — capability gaps usually have context that is not visible.",score:3},
-      {text:"Treat it as a diagnostic challenge — separate capability, motivation, and context to identify the actual blocker and design a specific intervention for it.",score:4},
-    ]},
-  { id:"R3c", cluster:"R", skill:"People Development", type:"reflective",
-    q:"Who is the person whose professional growth you are most proud to have contributed to? What specifically did you do?",
-    options:[
-      {text:"I can name someone and describe the capability gaps I identified, the deliberate interventions I designed, and the measurable difference in their trajectory.",score:4},
-      {text:"I have supported people but struggle to identify specific growth I directly caused.",score:1},
-      {text:"I can name someone and describe specific things I did that I can trace to their development.",score:3},
-      {text:"I can name someone. I gave them opportunities and encouragement when they needed it.",score:2},
-    ]},
-  { id:"R4a", cluster:"R", skill:"Stakeholder Management", type:"behavioural",
-    q:"You are about to lead a significant initiative requiring support from people across multiple functions. Where do you start?",
-    options:[
-      {text:"Build a stakeholder influence map — interests, concerns, level of support needed — and create a deliberate alignment sequence before I need it.",score:4},
-      {text:"Start the work and bring stakeholders in as they become relevant to their area.",score:1},
-      {text:"Brief all key stakeholders early so they are aware of what is coming.",score:2},
-      {text:"Map who needs to be involved, understand what each person cares about, and sequence conversations before work begins.",score:3},
-    ]},
-  { id:"R4b", cluster:"R", skill:"Stakeholder Management", type:"situational",
-    q:"You are mid-project when a senior stakeholder who was supportive at the start becomes resistant. What do you do?",
-    options:[
-      {text:"Continue and trust that progress will bring them back around.",score:1},
-      {text:"Request a conversation and go in with genuine curiosity about what has changed for them.",score:4},
-      {text:"Escalate to my manager to help manage the stakeholder relationship.",score:2},
-      {text:"Request a direct conversation to understand what has shifted and address it.",score:3},
-    ]},
-  { id:"R4c", cluster:"R", skill:"Stakeholder Management", type:"reflective",
-    q:"Tell me about a project that stalled or failed because of a relationship or political dynamic you did not manage well. What did you miss?",
-    options:[
-      {text:"I cannot think of a project that failed for this reason — I tend to manage relationships well.",score:1},
-      {text:"I have a specific example with a precise analysis of what I misread, what they actually needed, and the mapping practice I now use to prevent it.",score:4},
-      {text:"I have a clear example. I underestimated someone's concerns, did not address them early, and paid for it.",score:3},
-      {text:"Something comes to mind. I did not communicate well enough with a key person and lost their support.",score:2},
-    ]},
-  { id:"I1a", cluster:"I", skill:"Critical Thinking", type:"behavioural",
-    q:"A respected colleague presents data that strongly supports a decision the team is aligned on. You notice something in the analysis that does not add up. What do you actually do?",
-    options:[
-      {text:"Trust the analysis — they are experienced and the team is already aligned.",score:1},
-      {text:"Raise it specifically — naming what I noticed, why it matters to the decision, and the question that forces it to be interrogated properly.",score:4},
-      {text:"Mention it quietly to the colleague after the meeting rather than disrupting the group.",score:2},
-      {text:"Raise it in the room — the decision should not move forward on flawed analysis regardless of who produced it.",score:3},
-    ]},
-  { id:"I1b", cluster:"I", skill:"Critical Thinking", type:"situational",
-    q:"You are asked to validate a business case that has already been signed off by leadership. You find assumptions that seem optimistic. What do you do?",
-    options:[
-      {text:"Treat the validation as genuinely independent — stress-test every assumption and present a complete picture including downside scenarios.",score:4},
-      {text:"Validate it as requested — raising issues on an approved case creates problems without solving them.",score:1},
-      {text:"Flag the assumptions informally to the person who asked me to validate it.",score:2},
-      {text:"Document the assumptions, stress-test them, and present the risk they create — even though the case is already approved.",score:3},
-    ]},
-  { id:"I1c", cluster:"I", skill:"Critical Thinking", type:"reflective",
-    q:"When did you last genuinely change your mind about something important at work — not updating a detail, but shifting your position entirely? What caused it?",
-    options:[
-      {text:"I have a specific example — I can trace the disconfirming evidence I encountered, the resistance I initially had, and the reasoning that finally moved me.",score:4},
-      {text:"I generally land in the right place from the start, so complete reversals are unusual for me.",score:1},
-      {text:"I can think of something. Someone made a strong argument and I updated my position.",score:2},
-      {text:"I have a clear example. I encountered evidence that contradicted my position and worked through it seriously before updating.",score:3},
-    ]},
-  { id:"I2a", cluster:"I", skill:"Strategic Thinking", type:"behavioural",
-    q:"Your manager gives you a task that is clearly important. Before starting, what goes through your mind?",
-    options:[
-      {text:"How to do it well and deliver it on time.",score:1},
-      {text:"How this task connects to longer-term direction, what it enables or constrains, and whether this is the right task to be doing at all.",score:4},
-      {text:"How this connects to the team's current priorities and where it sits in the queue.",score:2},
-      {text:"How it fits the broader goal, who will use the output, and what success looks like beyond task completion.",score:3},
-    ]},
-  { id:"I2b", cluster:"I", skill:"Strategic Thinking", type:"situational",
-    q:"Your organisation is about to launch a product. You are not on the leadership team but you can see a market dynamic that makes the timing risky. What do you do?",
-    options:[
-      {text:"Trust that leadership has thought through the timing — they have more context than I do.",score:1},
-      {text:"Prepare a structured analysis — what I am seeing, why it matters, the alternatives, and my recommendation — and get it to the decision-maker.",score:4},
-      {text:"Flag my concern to my manager and leave it with them to handle.",score:2},
-      {text:"Build a clear, evidence-based view of the risk and find the right channel to get it into the decision.",score:3},
-    ]},
-  { id:"I2c", cluster:"I", skill:"Strategic Thinking", type:"reflective",
-    q:"Describe a decision you made that looked right in the short term but created a problem further down the line. What did you not see?",
-    options:[
-      {text:"Most of my decisions hold up well over time — I struggle to think of a clear example.",score:1},
-      {text:"I have a specific example — the second-order consequence I missed, why I missed it, and the thinking practice I now use to surface those consequences before deciding.",score:4},
-      {text:"Something comes to mind. I focused on the immediate problem and did not think far enough ahead.",score:2},
-      {text:"I have a clear example. I optimised for the near term and did not trace the downstream consequences.",score:3},
-    ]},
-  { id:"I3a", cluster:"I", skill:"Business Acumen", type:"behavioural",
-    q:"If someone asked you to explain how your current or most recent organisation actually makes money — the mechanics of it — how confident are you?",
-    options:[
-      {text:"I can explain unit economics, key metrics, where value is created and destroyed, and how my role connects to commercial outcomes.",score:4},
-      {text:"I know what we do and roughly what we charge — beyond that I am less certain.",score:1},
-      {text:"I understand the core revenue model and the main things we spend money on.",score:2},
-      {text:"I can walk through the revenue model, the key cost drivers, and where the margin is actually made.",score:3},
-    ]},
-  { id:"I3b", cluster:"I", skill:"Business Acumen", type:"situational",
-    q:"You are proposing a new initiative that needs investment. A finance leader asks you to walk through the commercial case. How prepared are you?",
-    options:[
-      {text:"I can present a fully worked commercial case — cost, return, assumption ranges, downside scenarios, payback period, and the metrics I would use to track it.",score:4},
-      {text:"I can explain what the initiative does and why it matters to the organisation.",score:1},
-      {text:"I can explain the cost and the expected benefit at a high level.",score:2},
-      {text:"I can present the cost, projected return, key assumptions, and the timeline to value.",score:3},
-    ]},
-  { id:"I3c", cluster:"I", skill:"Business Acumen", type:"reflective",
-    q:"Describe a decision you made or contributed to that had a meaningful commercial impact. How did you think about it?",
-    options:[
-      {text:"I have a specific example — I built the commercial case, modelled the options, made a recommendation based on financial reasoning, and can trace what the outcome was against what I projected.",score:4},
-      {text:"Most of my decisions are not directly commercial — my focus is functional rather than financial.",score:1},
-      {text:"I can think of something. I made a call that saved costs or generated value, though I did not formally model it.",score:2},
-      {text:"I have a clear example where I thought through the commercial implications deliberately before deciding.",score:3},
-    ]},
-  { id:"I4a", cluster:"I", skill:"Managing Ambiguity", type:"behavioural",
-    q:"You are asked to lead something where the goal is clear but the method is entirely undefined. How do you respond?",
-    options:[
-      {text:"Frame the ambiguity explicitly, make a directional move, communicate the uncertainty to stakeholders, and build in review points.",score:4},
-      {text:"Ask for more direction before starting — I want to move in the right direction from the beginning.",score:1},
-      {text:"Make a start and check in regularly to make sure I am not too far off course.",score:2},
-      {text:"Define what I know, identify the smallest reversible step to generate new information, and move from there.",score:3},
-    ]},
-  { id:"I4b", cluster:"I", skill:"Managing Ambiguity", type:"situational",
-    q:"Your organisation is going through significant change and nobody can tell you clearly how your role will be affected. Work still needs to get done. How do you operate?",
-    options:[
-      {text:"Treat the uncertainty as the operating context — define short-term priorities, communicate them upward, and stay curious rather than anxious about how things are unfolding.",score:4},
-      {text:"I find it genuinely hard to commit fully until I know where things are going to land.",score:1},
-      {text:"Focus on what I can control and try not to let the uncertainty affect my output.",score:2},
-      {text:"Name the uncertainty to my manager, agree on what to prioritise in the short term, and operate with full commitment within that frame.",score:3},
-    ]},
-  { id:"I4c", cluster:"I", skill:"Managing Ambiguity", type:"reflective",
-    q:"Tell me about a time you had to make a consequential decision with significantly less information than you wanted. What did you do?",
-    options:[
-      {text:"I have a specific example — what I knew, what I treated as an assumption, how I reduced reversibility risk, what happened, and what it taught me about the right threshold for action under uncertainty.",score:4},
-      {text:"I generally try to gather enough information before making decisions with significant consequences.",score:1},
-      {text:"I can think of an example. I made a call with incomplete information — it either worked out or it did not.",score:2},
-      {text:"I have a clear example where I defined the decision threshold — enough information to act responsibly — made the call, and owned the outcome.",score:3},
-    ]},
-  { id:"I5a", cluster:"I", skill:"AI Fluency", type:"behavioural", futureReady:true,
-    q:"How are you currently using AI in your professional work — not what you have tried once, but what is genuinely part of how you work?",
-    options:[
-      {text:"I have explored AI tools but they are not yet a consistent part of my regular workflow.",score:1},
-      {text:"I have deliberately redesigned how I work around AI — I know which tasks I delegate to it, which I keep human, and I refine how I work with it regularly.",score:4},
-      {text:"I use AI for specific tasks like drafting and summarising, though not in a systematic way.",score:2},
-      {text:"I have integrated AI into several parts of my workflow and I evaluate its outputs critically before using them.",score:3},
-    ]},
-  { id:"I5b", cluster:"I", skill:"AI Fluency", type:"situational", futureReady:true,
-    q:"An AI tool produces a confident-sounding output that is central to a piece of work you are delivering. You do not have time to fully verify it. What do you do?",
-    options:[
-      {text:"Use it — AI confidence is generally a reasonable signal of accuracy.",score:1},
-      {text:"Identify exactly which parts are load-bearing, verify those specifically, and be explicit with the recipient about what was verified and what was not.",score:4},
-      {text:"Add a note that the output was AI-generated so the recipient can evaluate accordingly.",score:2},
-      {text:"Run a targeted spot-check on the specific claims most critical to the work before using it.",score:3},
-    ]},
-  { id:"I5c", cluster:"I", skill:"AI Fluency", type:"reflective", futureReady:true,
-    q:"What is your honest assessment of what AI does better than you in your professional work right now — and what remains genuinely yours?",
-    options:[
-      {text:"I have mapped my work explicitly against AI capability — I know precisely which tasks AI does better, which require human judgment, and I have restructured my time accordingly.",score:4},
-      {text:"I am not certain AI is yet better than me at the things that matter most in my work.",score:1},
-      {text:"AI is better at some routine tasks but the work that really matters still requires human judgment.",score:2},
-      {text:"I have a clear picture of where AI outperforms me on specific tasks and where human judgment is essential — and I have started reorganising my work around that boundary.",score:3},
-    ]},
-  { id:"M1a", cluster:"M", skill:"Execution & Accountability", type:"behavioural",
-    q:"You realise partway through a project that you are not going to meet a commitment you made. What do you do?",
-    options:[
-      {text:"Flag it immediately with a revised timeline, an impact assessment, a recovery plan, and an honest account of what I missed in the original commitment.",score:4},
-      {text:"Deliver what I can and explain the situation when I submit.",score:1},
-      {text:"Let the relevant people know as soon as I am certain I will miss it.",score:2},
-      {text:"Flag it the moment I see the risk — before certainty — and arrive with a revised plan and an impact assessment.",score:3},
-    ]},
-  { id:"M1b", cluster:"M", skill:"Execution & Accountability", type:"situational",
-    q:"A colleague who was supposed to deliver a key input has not delivered and is now unreachable. Your deadline is tomorrow. What do you do?",
-    options:[
-      {text:"Miss the deadline and make clear that the dependency was not delivered.",score:1},
-      {text:"Make every reasonable attempt to resolve the dependency, deliver the best version possible, document what was missing, and escalate the dependency separately — never using it as cover for my own accountability.",score:4},
-      {text:"Do what I can without the input and flag the gap clearly in what I deliver.",score:2},
-      {text:"Find a way to deliver with what I have, escalate the dependency failure clearly, and keep my accountability separate from theirs.",score:3},
-    ]},
-  { id:"M1c", cluster:"M", skill:"Execution & Accountability", type:"reflective",
-    q:"Tell me about a commitment you made that you did not keep. What happened and what did you take from it?",
-    options:[
-      {text:"I have a specific example with a clear analysis of where my commitment-making process failed and the specific practices I have built since then.",score:4},
-      {text:"I am generally reliable — I cannot think of a significant missed commitment.",score:1},
-      {text:"Something comes to mind. Circumstances changed and I was not able to deliver what I had committed to.",score:2},
-      {text:"I have a clear example. I overcommitted and underdelivered — and now I think much more carefully about what I agree to.",score:3},
-    ]},
-  { id:"M2a", cluster:"M", skill:"Resilience & Self-Leadership", type:"behavioural",
-    q:"After a significant professional setback — a failed project, a difficult performance conversation, a lost opportunity — how do you actually recover?",
-    options:[
-      {text:"I take time and eventually return to normal, though it can take longer than I would like.",score:1},
-      {text:"I have a structured recovery practice — specific steps to process the emotion, extract the learning, and rebuild momentum — and my recovery time has shortened because of it.",score:4},
-      {text:"I process it privately and try not to let it affect my work for too long.",score:2},
-      {text:"I have a deliberate process — feel the setback, extract the lesson, make a conscious decision to move forward.",score:3},
-    ]},
-  { id:"M2b", cluster:"M", skill:"Resilience & Self-Leadership", type:"situational",
-    q:"You are in a sustained period of high pressure — competing demands, insufficient resources, no clear end in sight. How do you manage yourself?",
-    options:[
-      {text:"I push through — it is temporary and the work needs to get done.",score:1},
-      {text:"I have a clear framework for sustained pressure — how I manage cognitive, emotional, and physical energy, what signals I watch for, and when I escalate.",score:4},
-      {text:"I try to manage my time better and accept that some things will have to slip.",score:2},
-      {text:"I actively manage my energy — not just my time — and make deliberate choices about what to protect and what to let go.",score:3},
-    ]},
-  { id:"M2c", cluster:"M", skill:"Resilience & Self-Leadership", type:"reflective",
-    q:"Have you ever come close to burnout or noticed your performance dropping significantly under sustained pressure? What did it teach you?",
-    options:[
-      {text:"I have a specific experience — what signals I missed, where my self-management failed, and the specific practices I have built since then to catch it earlier.",score:4},
-      {text:"I handle pressure well — I have not experienced anything I would describe as close to burnout.",score:1},
-      {text:"I have had difficult periods. I got through them, though I am not sure I handled them as well as I could have.",score:2},
-      {text:"I have a clear experience. I now understand what my warning signs are and what I need to do when I see them.",score:3},
-    ]},
-  { id:"M3a", cluster:"M", skill:"Adaptability", type:"behavioural",
-    q:"Your organisation announces a significant change that affects how you work — new structure, new process, new direction. What is your honest first reaction?",
-    options:[
-      {text:"Frustration — I had a system that worked and rebuilding it feels like wasted effort.",score:1},
-      {text:"Opportunity — I move quickly to understand the new landscape and where I can add the most value within it.",score:4},
-      {text:"Uncertainty — I tend to wait and see how things settle before committing to the new way.",score:2},
-      {text:"Curiosity — I start thinking about how to position myself well within the new context.",score:3},
-    ]},
-  { id:"M3b", cluster:"M", skill:"Adaptability", type:"situational",
-    q:"You are asked to take on a piece of work that is significantly outside your expertise. You have limited time to get up to speed. How do you approach it?",
-    options:[
-      {text:"Flag that this is outside my area and recommend someone who is better suited.",score:1},
-      {text:"Take it on, map the specific knowledge gaps that matter most, fill them deliberately, and treat the unfamiliarity as a potential advantage.",score:4},
-      {text:"Take it on and learn as I go, being transparent when I reach the edges of my knowledge.",score:2},
-      {text:"Take it on, identify the specific gaps that matter most, fill them deliberately, and be transparent about what I am learning as I go.",score:3},
-    ]},
-  { id:"M3c", cluster:"M", skill:"Adaptability", type:"reflective",
-    q:"What is something you used to believe or do professionally that you have since completely changed? What caused the shift?",
-    options:[
-      {text:"My core professional approach has been consistent — I have refined it but not fundamentally reversed anything.",score:1},
-      {text:"I have a specific example of a fundamental shift — what I believed, what challenged it, how I unlearned it, what replaced it, and why this kind of adaptability is one of the most important things I have built.",score:4},
-      {text:"Something comes to mind. I changed my approach when I could see it was not producing the results I wanted.",score:2},
-      {text:"I have a clear example of a significant belief I abandoned — I encountered clear evidence it was wrong and updated deliberately.",score:3},
-    ]},
-  { id:"E1a", cluster:"E", skill:"Commercial Creativity", type:"behavioural",
-    q:"You are facing a significant constraint — budget cut, resource reduction, policy restriction — that threatens something you are trying to deliver. How do you respond?",
-    options:[
-      {text:"Deliver what is possible within the constraint and communicate clearly about what is not.",score:1},
-      {text:"Treat the constraint as potentially generative — some of the best solutions come from working around limitations you never would have encountered otherwise.",score:4},
-      {text:"Push back and make the case for more resource or greater flexibility.",score:2},
-      {text:"Treat the constraint as a design problem — look for a different way to achieve the same outcome.",score:3},
-    ]},
-  { id:"E1b", cluster:"E", skill:"Commercial Creativity", type:"situational",
-    q:"You spot an opportunity your organisation has not seen — a new revenue line, a partnership, an untapped market. You are not in the role that would normally pursue it. What do you do?",
-    options:[
-      {text:"Note it and wait for the right person or moment to raise it.",score:1},
-      {text:"Develop it enough to be taken seriously — what it is, why it is real, what it would take, and what it costs to ignore — and navigate it to the right decision-maker.",score:4},
-      {text:"Mention it to my manager and let them decide whether it is worth pursuing.",score:2},
-      {text:"Build a basic case for the opportunity and find the right channel to put it in front of someone who can act on it.",score:3},
-    ]},
-  { id:"E1c", cluster:"E", skill:"Commercial Creativity", type:"reflective",
-    q:"Tell me about an idea you had that created real value — commercial, operational, or strategic. Where did it come from and how did you turn it into something real?",
-    options:[
-      {text:"I have a specific example — where the insight came from, how I developed it into a proposal, who I had to persuade, how I navigated the resistance, and what the outcome actually was.",score:4},
-      {text:"I tend to contribute to other people's ideas more than originate my own.",score:1},
-      {text:"I can think of an idea that worked. It came from noticing a problem and suggesting a practical fix.",score:2},
-      {text:"I have a clear example of an idea I originated, developed into a real proposal, and drove to implementation with measurable impact.",score:3},
-    ]},
-  { id:"E2a", cluster:"E", skill:"Influence Without Authority", type:"behavioural",
-    q:"You need cooperation from someone who does not report to you — and they are currently not prioritising what you need. How do you approach it?",
-    options:[
-      {text:"Escalate to someone who has authority over them.",score:1},
-      {text:"Invest in the relationship before I need something, understand their pressures, frame my request in terms of their interests, and make it easy for them to say yes.",score:4},
-      {text:"Make the request clearly and explain why it matters to the organisation.",score:2},
-      {text:"Take time to understand what they are prioritising and find a way to connect my need to something they already care about.",score:3},
-    ]},
-  { id:"E2b", cluster:"E", skill:"Influence Without Authority", type:"situational",
-    q:"You believe strongly in an idea that needs support from three people who are currently indifferent or mildly resistant. How do you build the coalition?",
-    options:[
-      {text:"Present the idea to all three together and make the strongest possible case.",score:1},
-      {text:"Map each person's interests, sequence conversations to build momentum, address each objection with something that genuinely resolves it, and bring them together only when alignment is already close.",score:4},
-      {text:"Start with the most sympathetic person and use their support to help move the others.",score:2},
-      {text:"Meet each person separately first, understand their specific concerns, and tailor each conversation before bringing them together.",score:3},
-    ]},
-  { id:"E2c", cluster:"E", skill:"Influence Without Authority", type:"reflective",
-    q:"Tell me about a time you moved something forward — a decision, a project, an outcome — that you had no formal authority to push. What did you actually do?",
-    options:[
-      {text:"I have a specific example — the stakeholder map I built, how I sequenced conversations, what I offered each person, and how I maintained momentum through the resistance.",score:4},
-      {text:"I generally work through the proper channels rather than trying to influence things outside my remit.",score:1},
-      {text:"I can think of a time. I made the case clearly and kept making it until people came around.",score:2},
-      {text:"I have a clear example. I mapped who mattered, had deliberate conversations, and built enough support to move it.",score:3},
-    ]},
-  { id:"E3a", cluster:"E", skill:"Human-AI Collaboration", type:"behavioural", futureReady:true,
-    q:"How have you actually changed how you work because of AI — not in theory, but in practice?",
-    options:[
-      {text:"I have not made significant changes yet — I am still working out where AI genuinely fits in my work.",score:1},
-      {text:"I have comprehensively redesigned how I work around the human-AI boundary — I can name precisely which tasks I have moved to AI, what I have kept human, and how that has changed my output.",score:4},
-      {text:"I have added AI to tasks at the edges of my workflow but my core approach has not changed significantly.",score:2},
-      {text:"I have deliberately redesigned parts of my workflow around AI — deciding what to delegate and what to keep — and I can see a real difference in what I produce.",score:3},
-    ]},
-  { id:"E3b", cluster:"E", skill:"Human-AI Collaboration", type:"situational", futureReady:true,
-    q:"Your organisation is introducing AI tools across your function. Some colleagues are resisting, others are adopting everything uncritically. What is your position?",
-    options:[
-      {text:"Wait until the adoption settles before deciding how to change how I work.",score:1},
-      {text:"Lead the thinking in my function — map decisions against AI capability, define what stays human and why, build genuine fluency in the team, and establish governance that protects quality.",score:4},
-      {text:"Adopt the tools that seem useful and avoid the ones that feel like they are replacing work that matters.",score:2},
-      {text:"Think through each tool systematically — what it does well, what risks it creates, what it should and should not be used for — and develop a clear position.",score:3},
-    ]},
-  { id:"E3c", cluster:"E", skill:"Human-AI Collaboration", type:"reflective", futureReady:true,
-    q:"What is genuinely irreplaceable about what you bring to your work — the thing AI cannot do, even in principle?",
-    options:[
-      {text:"Honestly, I am not certain there are things AI cannot eventually do that I currently do.",score:1},
-      {text:"I have a precise and reasoned answer — what I bring that AI cannot replicate structurally, why it matters commercially, and how I am investing in deepening exactly those capabilities.",score:4},
-      {text:"Relationships and judgment are areas where I think human presence will remain essential.",score:2},
-      {text:"I have a clear view of where my specific value lies that AI cannot replicate — particular types of judgment, contextual knowledge, or relational work that requires genuine human presence.",score:3},
-    ]},
-  // ── VALIDITY ANCHORS ────────────────────────────────────────────────────
-  { id:"VA1", cluster:"VA", skill:"Validity", type:"anchor", validAnchor:true,
-    q:"When you receive feedback from someone you genuinely respect, your first response is always to implement it.",
-    options:[
-      {text:"Yes — if someone I respect has taken the time to give feedback, acting on it is the right response.",score:1},
-      {text:"Almost always — I occasionally push back but my default is to implement.",score:2},
-      {text:"Not always — good feedback still needs to fit the context, even from people I respect.",score:4},
-      {text:"Rarely — feedback is one input and I weigh it carefully against everything else I know.",score:2},
-    ]},
-  { id:"VA2", cluster:"VA", skill:"Validity", type:"anchor", validAnchor:true,
-    q:"You always know exactly what is driving your emotions in a professional setting.",
-    options:[
-      {text:"Yes — self-awareness is something I have worked hard to build and I have strong insight into my emotional drivers.",score:1},
-      {text:"Usually — I sometimes need time to understand what is behind a strong reaction.",score:2},
-      {text:"Not always — even with strong self-awareness, emotions in complex situations are not always immediately legible.",score:4},
-      {text:"Rarely — I am not naturally introspective about my emotional drivers.",score:1},
-    ]},
-  { id:"VA3", cluster:"VA", skill:"Validity", type:"anchor", validAnchor:true,
-    q:"When you prepare thoroughly for a negotiation, you reliably get the outcome you are aiming for.",
-    options:[
-      {text:"Yes — thorough preparation is the consistent differentiator between winning and losing.",score:1},
-      {text:"Usually — preparation significantly increases my success rate.",score:2},
-      {text:"Often, but not always — even excellent preparation cannot overcome every structural constraint or the other party's position.",score:4},
-      {text:"Not always — preparation is essential but the outcome also depends on variables outside my control.",score:3},
-    ]},
-  { id:"VA4", cluster:"VA", skill:"Validity", type:"anchor", validAnchor:true,
-    q:"You have never made a significant people decision you later regretted.",
-    options:[
-      {text:"Correct — I take people decisions seriously and my track record is strong.",score:1},
-      {text:"Almost — there are minor things I would do differently but nothing significant.",score:2},
-      {text:"No — people decisions are genuinely complex and some of my most important learning has come from the ones I got wrong.",score:4},
-      {text:"No — I have made people decisions I later regretted, and I have thought carefully about why.",score:3},
-    ]},
-];
-
-// ── BUILD QUESTION SEQUENCE ────────────────────────────────────────────────
-function buildQuestionSequence() {
-  const scored  = ALL_QUESTIONS.filter(q => q.cluster !== "VA");
-  const anchors = ALL_QUESTIONS.filter(q => q.cluster === "VA");
-  const seq = [...scored];
-  const step = Math.floor(scored.length / (anchors.length + 1));
-  [...anchors].reverse().forEach((a, ri) => {
-    const i = anchors.length - 1 - ri;
-    const pos = step * (i + 1) + i;
-    seq.splice(Math.min(pos, seq.length), 0, a);
-  });
-  return seq;
-}
-
-const QUESTIONS = buildQuestionSequence();
-const TOTAL     = QUESTIONS.length;
+// ── QUESTION BANK — imported from ./questions.js (see import above) ──────
+const TOTAL = QUESTIONS.length;
 
 const SKILL_CLUSTER = {
   "Communication":                        "P",
@@ -756,41 +278,38 @@ function clearPendingReport() {
 }
 
 // ── SUPABASE HELPERS ───────────────────────────────────────────────────────
-async function saveToSupabase(data, attempt = 0) {
-  const url = `${SUPABASE_URL}/rest/v1/valu_assessments?on_conflict=identity_hash`;
-  const res = await fetch(url, {
+
+/**
+ * submitAssessment — sends raw answers (never the computed score) to the
+ * server, which recomputes the result itself and is the only writer of
+ * valu_assessments. This is what makes the VALU Index tamper-resistant:
+ * the number an employer sees always comes from a server-side recompute
+ * against the canonical question bank, never from a value the browser sent.
+ */
+async function submitAssessment({ name, role, answers, timings, shuffleMap }, attempt = 0) {
+  const res = await fetch("/api/submit-assessment", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      "Prefer": "return=minimal,resolution=merge-duplicates",
-    },
-    body: JSON.stringify(data),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, role, answers, timings, shuffleMap }),
   });
   if (!res.ok) {
     const err = await res.text();
     if (attempt === 0 && res.status >= 500) {
       await new Promise(r => setTimeout(r, 1200));
-      return saveToSupabase(data, 1);
+      return submitAssessment({ name, role, answers, timings, shuffleMap }, 1);
     }
     let msg = err;
-    try { const p = JSON.parse(err); msg = p.message || p.hint || err; } catch {}
-    throw new Error(`Score could not be saved. Please contact info@valoriainstitute.com with your result. (${res.status})`);
+    try { const p = JSON.parse(err); msg = p.error || err; } catch {}
+    throw new Error(`Score could not be saved. Please contact info@valoriainstitute.com with your result. (${res.status}) ${msg}`);
   }
+  return res.json();
 }
 
 async function updateAssessmentByFingerprint(fingerprint, fields, attempt = 0) {
-  const params = new URLSearchParams({ identity_hash: `eq.${fingerprint}` });
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      "Prefer": "return=minimal",
-    },
-    body: JSON.stringify(fields),
+  const res = await fetch("/api/update-assessment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identity_hash: fingerprint, fields }),
   });
   if (!res.ok) {
     const err = await res.text();
@@ -798,7 +317,7 @@ async function updateAssessmentByFingerprint(fingerprint, fields, attempt = 0) {
       await new Promise(r => setTimeout(r, 1200));
       return updateAssessmentByFingerprint(fingerprint, fields, 1);
     }
-    throw new Error(`Supabase update failed (${res.status}): ${err}`);
+    throw new Error(`Update failed (${res.status}): ${err}`);
   }
 }
 
@@ -1504,7 +1023,10 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
       } else {
         const r = computeResults(newAnswers, newTimings, shuffleMap);
         clearCheckpoint();
-        onComplete({ name, role, results: r, shuffleMap });
+        // answers/timings passed through so ResultsScreen can send them to the
+        // server for authoritative recomputation. `r` here is optimistic-UI
+        // only and is never the value that gets persisted.
+        onComplete({ name, role, results: r, shuffleMap, answers: newAnswers, timings: newTimings });
       }
     }, 220);
   }
@@ -1526,7 +1048,7 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
       } else {
         const r = computeResults(newAnswers, newTimings, shuffleMap);
         clearCheckpoint();
-        onComplete({ name, role, results: r, shuffleMap });
+        onComplete({ name, role, results: r, shuffleMap, answers: newAnswers, timings: newTimings });
       }
     }, 220);
   }
@@ -1679,7 +1201,7 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
 // ════════════════════════════════════════════════════════════════════════════
 // SCREEN: RESULTS
 // ════════════════════════════════════════════════════════════════════════════
-function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
+function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRetake, onSignupDone }) {
   const [signupEmail, setSignupEmail]       = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirm, setSignupConfirm]   = useState("");
@@ -1692,19 +1214,16 @@ function ResultsScreen({ name, role, results, onRetake, onSignupDone }) {
   const { valuIndex, clusterScores, skillScores, desig, futureReadyScore, listed } = results;
 
   useEffect(() => {
-    const fp = computeFingerprint(name, role);
-    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-    saveToSupabase({
-      total_score: valuIndex,
-      designation: desig?.name || "",
-      completed_at: new Date().toISOString(),
-      ai_report: null,
-      name, role,
-      identity_hash: fp,
-      expires_at: expiresAt,
-      cluster_scores: clusterScores,
-      skill_scores: skillScores,
-    }).catch(err => setSaveError(err.message));
+    // IMPORTANT: we do NOT write the client-computed score directly to
+    // Supabase anymore. Anyone with devtools open could otherwise POST an
+    // arbitrary total_score/designation straight to the anon-key REST
+    // endpoint and forge a credential. Instead we send the raw answers,
+    // timings, and shuffle map to a server route which recomputes the score
+    // itself (same scoringEngine + question bank) and is the only thing
+    // allowed to write to valu_assessments (via the service-role key). RLS
+    // must deny anon INSERT/UPDATE on this table — see api/submit-assessment.js.
+    submitAssessment({ name, role, answers, timings, shuffleMap })
+      .catch(err => setSaveError(err.message));
   }, []);
 
   async function handleSignup() {
@@ -1968,9 +1487,9 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: confirmedEmail, name, role,
-          score: valuIndex, designation: desig?.name || "",
-          reportText: fullText, welcome: true,
+          email: confirmedEmail,
+          identity_hash: computeFingerprint(name, role),
+          reportText: fullText,
         }),
       });
       setEmailStatus(res.ok ? "sent" : "failed");
@@ -1999,10 +1518,11 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
 
     try {
       const scoreProfile = { name, role, ...results };
+      const fingerprint = computeFingerprint(name, role);
       const response = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: buildReportPrompt(scoreProfile) }),
+        body: JSON.stringify({ prompt: buildReportPrompt(scoreProfile), identity_hash: fingerprint }),
         signal: controller.signal,
       });
       if (!response.ok) {
@@ -2254,8 +1774,8 @@ export default function PRIMEAssessment({
     }
   }
 
-  function handleAssessmentComplete({ name, role, results, shuffleMap }) {
-    const sd = { name, role, results, shuffleMap };
+  function handleAssessmentComplete({ name, role, results, shuffleMap, answers, timings }) {
+    const sd = { name, role, results, shuffleMap, answers, timings };
     setSessionData(sd);
     goToPhase("results");
     if (onAssessmentSubmitted) onAssessmentSubmitted({ name, role, completedAt: new Date().toISOString(), ...results });
@@ -2303,6 +1823,9 @@ export default function PRIMEAssessment({
         name={sessionData.name}
         role={sessionData.role}
         results={sessionData.results}
+        shuffleMap={sessionData.shuffleMap}
+        answers={sessionData.answers}
+        timings={sessionData.timings}
         onRetake={handleRetake}
         onSignupDone={(email) => setConfirmedEmail(email)}
       />

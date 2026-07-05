@@ -8,7 +8,7 @@ const {
   computeFingerprint,
   isLockActive,
   buildLockRecord,
-} = require("../src/lockEngine");
+} = require("../lockEngine");
 
 // ── SECTION 1: computeFingerprint ─────────────────────────────────────────
 describe("computeFingerprint", () => {

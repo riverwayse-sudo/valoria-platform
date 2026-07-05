@@ -7,8 +7,8 @@
 
 "use strict";
 
-const { computeFingerprint, buildLockRecord, isLockActive } = require("../src/lockEngine");
-const { getDesignation, getPathway, computeWeightedIndex, computeClusterScoresOnly } = require("../src/scoringEngine");
+const { computeFingerprint, buildLockRecord, isLockActive } = require("../lockEngine");
+const { getDesignation, getPathway, computeWeightedIndex, computeClusterScoresOnly } = require("../scoringEngine");
 
 // ── SHARED RESULT SHAPE ───────────────────────────────────────────────────
 // Every path that produces a "results" object must return ALL of these fields.
@@ -348,7 +348,7 @@ describe("sessionSeed contract", () => {
   });
 
   test("different session seeds produce different question orders", () => {
-    const { seededShuffle } = require("../src/scoringEngine");
+    const { seededShuffle } = require("../scoringEngine");
     const options = [
       { text: "A", score: 1 }, { text: "B", score: 2 },
       { text: "C", score: 3 }, { text: "D", score: 4 },

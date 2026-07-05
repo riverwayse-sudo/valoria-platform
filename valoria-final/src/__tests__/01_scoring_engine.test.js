@@ -14,7 +14,7 @@ const {
   getDesignation,
   getPathway,
   computeResults,
-} = require("../src/scoringEngine");
+} = require("../scoringEngine");
 
 // ── MINIMAL QUESTION FIXTURE ──────────────────────────────────────────────
 // 3 questions per cluster (P,R,I,M,E) + 1 anchor = 16 total.
@@ -414,7 +414,7 @@ describe("computeResults (full pipeline)", () => {
   test("frontend and backend produce identical index for same raw scores", () => {
     // Simulate: frontend computes cluster scores → backend recomputes from them
     const clusterRaw = { P: 27, R: 36, I: 45, M: 27, E: 27 };
-    const { computeClusterScoresOnly, computeWeightedIndex } = require("../src/scoringEngine");
+    const { computeClusterScoresOnly, computeWeightedIndex } = require("../scoringEngine");
     const clusterScores = computeClusterScoresOnly(clusterRaw);
     const backendIndex  = computeWeightedIndex(clusterScores);
     // Frontend would compute same cluster scores and weighted index
