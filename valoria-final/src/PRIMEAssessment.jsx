@@ -1251,13 +1251,15 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
         ...(userId ? { user_id: userId } : {}),
       }).catch(() => {});
       if (userId) {
-        const tierMap = {
-          "Elite Professional": "elite",
-          "Distinguished Professional": "distinguished",
-          "Proficient Professional": "proficient",
-          "Developing Professional": "standard",
-        };
-        await fetch(`${SUPABASE_URL}/rest/v1/profiles`, {
+        // NOTE: this used to POST to /rest/v1/profiles — an older, abandoned
+        // table from before the schema migration to professional_profiles.
+        // Every real marketplace page (spotlight, atb-connect, dashboard,
+        // profile/[id]) reads from professional_profiles, not profiles, so
+        // writing there meant completed assessments were creating accounts
+        // that could never actually appear anywhere. Fixed to target the
+        // live table, with its real column names, and listed immediately
+        // (listing_status: 'active') per the instant-listing decision.
+        await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1269,12 +1271,13 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
             id: userId,
             display_name: name,
             headline: role,
-            user_type: "talent",
-            valu_score: valuIndex,
+            valu_index: valuIndex,
             cluster_scores: clusterScores,
-            valu_tier: tierMap[desig?.name] || "standard",
+            skill_scores: skillScores,
+            designation: desig?.name || "",
             assessment_completed_at: new Date().toISOString(),
-            is_visible: false,
+            assessment_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+            listing_status: "listed",
           }),
         }).catch(() => {});
       }
