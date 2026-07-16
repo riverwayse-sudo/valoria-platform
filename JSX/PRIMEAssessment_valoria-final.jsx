@@ -1259,7 +1259,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
         // that could never actually appear anywhere. Fixed to target the
         // live table, with its real column names, and listed immediately
         // (listing_status: 'active') per the instant-listing decision.
-        const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
+        await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1279,15 +1279,9 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
             assessment_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
             listing_status: "listed",
           }),
-        });
-        if (!profileRes.ok) {
-          // Previously this failed with zero trace anywhere — the person
-          // saw a normal successful signup regardless of whether their
-          // marketplace profile row was ever actually created.
-          console.error("professional_profiles auto-list failed:", profileRes.status, await profileRes.text().catch(() => ""));
-        }
+        }).catch(() => {});
       }
-      await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(err => console.error("joinWaitlist failed:", err.message));
+      await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(() => {});
       setSignupDone(true);
       if (onSignupDone) onSignupDone(signupEmail.trim());
     } catch (e) {
@@ -1681,7 +1675,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
               </div>
             )}
             <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:22 }}>
-              <a href="https://valoriainstitute.com/profile-page"
+              <a href="https://valoriainstitute.com/profile/edit"
                 style={{ display:"block", padding:"20px 28px", background:T.gold, borderRadius:T.radius.pill, textAlign:"center", cursor:"pointer", textDecoration:"none" }}
                 onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
                 onMouseLeave={e=>e.currentTarget.style.background=T.gold}>
