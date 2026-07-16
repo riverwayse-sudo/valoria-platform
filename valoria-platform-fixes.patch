@@ -1,0 +1,22 @@
+--- a/valoria-final/src/PRIMEAssessment.jsx	2026-07-16 07:13:26.906007721 +0000
++++ b/valoria-final/src/PRIMEAssessment.jsx	2026-07-16 07:13:26.909761980 +0000
+@@ -1675,7 +1675,7 @@
+               </div>
+             )}
+             <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:22 }}>
+-              <a href="https://valoriainstitute.com/profile-page"
++              <a href="https://valoriainstitute.com/profile/edit"
+                 style={{ display:"block", padding:"20px 28px", background:T.gold, borderRadius:T.radius.pill, textAlign:"center", cursor:"pointer", textDecoration:"none" }}
+                 onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
+                 onMouseLeave={e=>e.currentTarget.style.background=T.gold}>
+--- a/src/PRIMEAssessment.jsx	2026-07-16 07:13:26.911442915 +0000
++++ b/src/PRIMEAssessment.jsx	2026-07-16 07:13:26.913289280 +0000
+@@ -2165,7 +2165,7 @@
+               </div>
+             )}
+             <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:22 }}>
+-              <a href="https://valoriainstitute.com/profile-page"
++              <a href="https://valoriainstitute.com/profile/edit"
+                 style={{ display:"block", padding:"20px 28px", background:T.gold, borderRadius:T.radius.pill, textAlign:"center", cursor:"pointer", textDecoration:"none" }}
+                 onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
+                 onMouseLeave={e=>e.currentTarget.style.background=T.gold}>
