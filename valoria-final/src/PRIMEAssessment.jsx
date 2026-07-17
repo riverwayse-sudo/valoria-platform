@@ -1672,7 +1672,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
               </div>
             )}
             <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:22 }}>
-              <a href="https://valoriainstitute.com/profile-page"
+              <a href="https://valoriainstitute.com/profile/edit"
                 style={{ display:"block", padding:"20px 28px", background:T.gold, borderRadius:T.radius.pill, textAlign:"center", cursor:"pointer", textDecoration:"none" }}
                 onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
                 onMouseLeave={e=>e.currentTarget.style.background=T.gold}>
