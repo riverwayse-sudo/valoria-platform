@@ -321,6 +321,23 @@ async function updateAssessmentByFingerprint(fingerprint, fields, attempt = 0) {
   }
 }
 
+async function claimListing(fingerprint, userId, attempt = 0) {
+  const res = await fetch("/api/claim-listing", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identity_hash: fingerprint, user_id: userId }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    if (attempt === 0 && res.status >= 500) {
+      await new Promise(r => setTimeout(r, 1200));
+      return claimListing(fingerprint, userId, 1);
+    }
+    throw new Error(`Listing failed (${res.status}): ${err}`);
+  }
+  return res.json();
+}
+
 async function signUpWithSupabase(email, password, name, role) {
   const redirectTo = encodeURIComponent(window.location.origin + "/");
   const res = await fetch(`${SUPABASE_URL}/auth/v1/signup?redirect_to=${redirectTo}`, {
@@ -1251,41 +1268,15 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
         ...(userId ? { user_id: userId } : {}),
       }).catch(() => {});
       if (userId) {
-        // NOTE: this used to POST to /rest/v1/profiles — an older, abandoned
-        // table from before the schema migration to professional_profiles.
-        // Every real marketplace page (spotlight, atb-connect, dashboard,
-        // profile/[id]) reads from professional_profiles, not profiles, so
-        // writing there meant completed assessments were creating accounts
-        // that could never actually appear anywhere. Fixed to target the
-        // live table, with its real column names, and listed immediately
-        // (listing_status: 'active') per the instant-listing decision.
-        const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Prefer": "return=minimal,resolution=merge-duplicates",
-          },
-          body: JSON.stringify({
-            id: userId,
-            display_name: name,
-            headline: role,
-            valu_index: valuIndex,
-            cluster_scores: clusterScores,
-            skill_scores: skillScores,
-            designation: desig?.name || "",
-            assessment_completed_at: new Date().toISOString(),
-            assessment_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-            listing_status: "listed",
-          }),
+        // Server-side: re-reads the authoritative score from valu_assessments
+        // and creates/updates professional_profiles with the service-role
+        // key, since the client anon key can never satisfy this table's
+        // auth.uid() = id RLS policy. See api/claim-listing.js. This also
+        // replaces the old hardcoded listing_status: "listed" with the real
+        // 35-point threshold, computed server-side from the same score.
+        await claimListing(fp, userId).catch(err => {
+          console.error("claimListing failed:", err.message);
         });
-        if (!profileRes.ok) {
-          // Previously this failed with zero trace anywhere — the person
-          // saw a normal successful signup regardless of whether their
-          // marketplace profile row was ever actually created.
-          console.error("professional_profiles auto-list failed:", profileRes.status, await profileRes.text().catch(() => ""));
-        }
       }
       await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(err => console.error("joinWaitlist failed:", err.message));
       setSignupDone(true);
