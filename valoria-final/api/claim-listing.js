@@ -98,6 +98,16 @@ export default async function handler(req, res) {
         assessment_completed_at: assessment.completed_at,
         assessment_expires_at: assessment.expires_at,
         listing_status: listingStatus,
+        // Explicitly initialize rather than leaving the column unset.
+        // The assessment flow (PRIMEAssessment.jsx) doesn't collect
+        // candidate/speaker/facilitator track yet — that's still only
+        // collected in /profile/setup, which writes active_tracks itself
+        // on a later upsert (merge-duplicates, so it won't be clobbered
+        // by a repeat call here). Until setup is completed, this column
+        // should read as genuinely empty, not silently default to
+        // 'candidate' — see the dashboard/profile-page fix for the
+        // corresponding read-side change.
+        active_tracks: [],
       }),
     });
     if (!upsertRes.ok) {
