@@ -321,32 +321,17 @@ async function updateAssessmentByFingerprint(fingerprint, fields, attempt = 0) {
   }
 }
 
-async function claimListing(fingerprint, userId, attempt = 0) {
-  const res = await fetch("/api/claim-listing", {
+async function signUpWithSupabase(email, password, name, role) {
+  const res = await fetch("/api/create-account", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ identity_hash: fingerprint, user_id: userId }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    if (attempt === 0 && res.status >= 500) {
-      await new Promise(r => setTimeout(r, 1200));
-      return claimListing(fingerprint, userId, 1);
-    }
-    throw new Error(`Listing failed (${res.status}): ${err}`);
-  }
-  return res.json();
-}
-
-async function signUpWithSupabase(email, password, name, role) {
-  const redirectTo = encodeURIComponent(window.location.origin + "/");
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup?redirect_to=${redirectTo}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
-    body: JSON.stringify({ email, password, data: { full_name: name, role } }),
+    body: JSON.stringify({ email, password, name, role }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.msg || data.error_description || data.error || "Signup failed.");
+  if (!res.ok) throw new Error(data.error || "Signup failed.");
+  if (data.warning) {
+    console.warn(data.warning);
+  }
   return data;
 }
 
@@ -1268,17 +1253,48 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
         ...(userId ? { user_id: userId } : {}),
       }).catch(() => {});
       if (userId) {
-        // Server-side: re-reads the authoritative score from valu_assessments
-        // and creates/updates professional_profiles with the service-role
-        // key, since the client anon key can never satisfy this table's
-        // auth.uid() = id RLS policy. See api/claim-listing.js. This also
-        // replaces the old hardcoded listing_status: "listed" with the real
-        // 35-point threshold, computed server-side from the same score.
-        await claimListing(fp, userId).catch(err => {
-          console.error("claimListing failed:", err.message);
-        });
+        // NOTE: this used to POST to /rest/v1/profiles — an older, abandoned
+        // table from before the schema migration to professional_profiles.
+        // Every real marketplace page (spotlight, atb-connect, dashboard,
+        // profile/[id]) reads from professional_profiles, not profiles, so
+        // writing there meant completed assessments were creating accounts
+        // that could never actually appear anywhere. Fixed to target the
+        // live table, with its real column names, and listed immediately
+        // (listing_status: 'active') per the instant-listing decision.
+        // FIXED (this pass): this used to POST straight to PostgREST with
+        // the anon key. That sends Authorization: Bearer <anon key> instead
+        // of the user's own session token, so auth.uid() is null and the
+        // RLS policy (auth.uid() = id) silently rejects the insert every
+        // time — no real signup has ever actually been listed through this
+        // path. It also hardcoded listing_status: "listed" regardless of
+        // score, and never set active_tracks, so the profile fell back to
+        // showing as "candidate" until /profile/setup was completed.
+        //
+        // Now delegates to /api/claim-listing, which runs server-side with
+        // the service-role key (legitimately bypasses RLS), re-reads the
+        // authoritative score from valu_assessments by identity_hash rather
+        // than trusting the client, and applies the same 35-point listing
+        // threshold used everywhere else in the app.
+        try {
+          const listingRes = await fetch(`/api/claim-listing`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ identity_hash: fp, user_id: userId }),
+          });
+          if (!listingRes.ok) {
+            const errText = await listingRes.text().catch(() => "");
+            console.error("claim-listing failed:", listingRes.status, errText);
+          }
+        } catch (listingErr) {
+          console.error("claim-listing threw:", listingErr);
+        }
       }
-      await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(err => console.error("joinWaitlist failed:", err.message));
+      // joinWaitlist() correctly checks response.ok and throws on failure —
+      // but previously that thrown error was swallowed here too. Logging it
+      // now instead of silently discarding it.
+      await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(err => {
+        console.error("joinWaitlist failed:", err);
+      });
       setSignupDone(true);
       if (onSignupDone) onSignupDone(signupEmail.trim());
     } catch (e) {
