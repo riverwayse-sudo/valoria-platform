@@ -1,27 +1,5 @@
 export const config = { runtime: "edge" };
 
-// Decouples account creation from email delivery.
-//
-// The old flow called Supabase's built-in POST /auth/v1/signup, which does
-// both "create the user" and "send the confirmation email" as a single
-// atomic operation. When Supabase's SMTP relay (Brevo) rejects the send —
-// as it has been tonight, with `535 5.7.8 Authentication failed` — the
-// entire request fails and NO user is created at all, even though the
-// account itself had nothing wrong with it.
-//
-// This endpoint splits that into two independent steps:
-//   1. Create the user via the Admin API (service role key). This is a
-//      pure database insert — it does not touch SMTP and cannot fail
-//      because of it.
-//   2. Generate a signup confirmation link via the Admin API (also no
-//      email sent). We then deliver that link ourselves through Resend —
-//      the same provider /api/send-email.js already uses successfully,
-//      independent of Supabase's mailer and Brevo entirely.
-//
-// If step 2 or the email delivery fails, the account still exists — the
-// user can request a fresh confirmation link (via /api/resend-confirmation,
-// same pattern) without ever losing their signup.
-
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -62,31 +40,10 @@ function confirmationEmailHtml(name, actionLink) {
 export default async function handler(req) {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    // NEW
-  // Stitch email + confirmation-sent timestamp onto the assessment row
-  // server-side, right here — not left to the client's follow-up call.
-  // This is what makes the sweep able to detect confirmation failures at
-  // all: without this, a closed tab after signup means email never lands
-  // on the row and nothing can ever find or retry the failure.
-  if (identity_hash) {
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`, {
-        method: "PATCH",
-        headers: { ...adminHeaders, Prefer: "return=minimal" },
-        body: JSON.stringify({ email, confirmation_email_sent_at: new Date().toISOString() }),
-      });
-    } catch (err) {
-      // Non-fatal — signup + confirmation email both already succeeded.
-      // Worst case the sweep won't see this row as "email attached" and
-      // will just keep trying resend-confirmation, which is idempotent-safe.
-      console.error("create-account: failed to stitch email onto assessment row", err);
-    }
+    return new Response(JSON.stringify({ error: "Server misconfigured." }), {
+      status: 500, headers: { "Content-Type": "application/json" },
+    });
   }
-
-  return new Response(JSON.stringify({ success: true, user_id: userId }), {
-    status: 200, headers: { "Content-Type": "application/json" },
-  });
-}
 
   let payload;
   try {
@@ -97,7 +54,7 @@ export default async function handler(req) {
     });
   }
 
-  const { email, password, name, role } = payload;
+  const { email, password, name, role, identity_hash } = payload;
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRe.test(email)) {
     return new Response(JSON.stringify({ error: "A valid email is required." }), {
@@ -116,10 +73,6 @@ export default async function handler(req) {
     "Content-Type": "application/json",
   };
 
-  // Step 1 + 2 combined: generate_link creates the user (if they don't
-  // already exist) AND returns a confirmation action_link — with no email
-  // sent by Supabase at any point. This is the step that used to be
-  // bundled with a forced SMTP send; now it's just a database operation.
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
@@ -130,6 +83,11 @@ export default async function handler(req) {
         email,
         password,
         data: { full_name: name, role },
+        options: {
+          redirectTo: identity_hash
+            ? `https://valoria-final.vercel.app/?identity_hash=${encodeURIComponent(identity_hash)}`
+            : "https://valoria-final.vercel.app/",
+        },
       }),
     });
     genData = await genRes.json();
@@ -140,7 +98,6 @@ export default async function handler(req) {
   }
 
   if (!genRes.ok) {
-    // Most common real case: email already registered.
     return new Response(JSON.stringify({ error: genData.msg || genData.error_description || genData.error || "Could not create account." }), {
       status: genRes.status, headers: { "Content-Type": "application/json" },
     });
@@ -149,9 +106,6 @@ export default async function handler(req) {
   const actionLink = genData.action_link || genData.properties?.action_link;
   const userId = genData.id || genData.user?.id;
 
-  // Account now exists in auth.users regardless of what happens below.
-  // If email delivery fails, the account is NOT lost — this is the whole
-  // point of splitting these two steps apart.
   if (!actionLink) {
     return new Response(JSON.stringify({
       warning: "Account created, but no confirmation link was returned. Contact support to resend.",
@@ -182,7 +136,6 @@ export default async function handler(req) {
     });
     if (!resendRes.ok) {
       const err = await resendRes.text();
-      // Account still exists — this is a soft failure, not a signup failure.
       return new Response(JSON.stringify({
         warning: "Account created, but confirmation email failed to send. Contact support to resend.",
         user_id: userId,
@@ -194,6 +147,20 @@ export default async function handler(req) {
       warning: "Account created, but confirmation email failed to send. Contact support to resend.",
       user_id: userId,
     }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
+
+  // Stitch email + confirmation-sent timestamp onto the assessment row
+  // server-side, right here — not left to the client's follow-up call.
+  if (identity_hash) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`, {
+        method: "PATCH",
+        headers: { ...adminHeaders, Prefer: "return=minimal" },
+        body: JSON.stringify({ email, confirmation_email_sent_at: new Date().toISOString() }),
+      });
+    } catch (err) {
+      console.error("create-account: failed to stitch email onto assessment row", err);
+    }
   }
 
   return new Response(JSON.stringify({ success: true, user_id: userId }), {
