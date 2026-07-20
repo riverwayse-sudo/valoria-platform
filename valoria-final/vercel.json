@@ -1,5 +1,10 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/generate-and-send-report.js": {
+      "maxDuration": 60
+    }
+  }
 }
