@@ -421,6 +421,37 @@ async function fetchAssessmentByFingerprint(fingerprint) {
   } catch { return null; }
 }
 
+async function fetchAssessmentByFingerprintServer(fingerprint) {
+  try {
+    const res = await fetch("/api/get-assessment-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identity_hash: fingerprint }),
+    });
+    if (!res.ok) return null;
+    const { row } = await res.json();
+    if (!row) return null;
+    const valuIndex = row.total_score ?? 0;
+    const clusterScores = row.cluster_scores ?? {};
+    const sorted = [...CLUSTERS_UI].sort((a, b) => (clusterScores[b.id] ?? 0) - (clusterScores[a.id] ?? 0));
+    return {
+      name: row.name, role: row.role,
+      aiReport: row.ai_report || null,
+      results: {
+        valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
+        desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
+        futureReadyScore: Math.round(CLUSTERS_UI.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS_UI.length),
+        strongest: sorted[0], weakest: sorted[sorted.length - 1],
+        consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
+        speedFlag: false, uniformityFlag: false, anyFlag: false,
+        listed: valuIndex >= 35,
+        pathway: valuIndex >= 80 ? "PCP Certification" : valuIndex >= 65 ? "PRIME Programme" : valuIndex >= 50 ? "PRIME Cluster" : "PRIME Sprint",
+        globalSD: 1,
+      },
+    };
+  } catch { return null; }
+}
+
 function parseAuthHash() {
   if (typeof window === "undefined" || !window.location.hash) return null;
   const hash = window.location.hash.replace(/^#/, "");
@@ -741,7 +772,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
     setPrevLoading(true);
     setPrevError(null);
     try {
-      const profile = await fetchAssessmentByFingerprint(lockRecord.fingerprint);
+      const profile = await fetchAssessmentByFingerprintServer(lockRecord.fingerprint);
       if (!profile) {
         setPrevError("Your previous result could not be retrieved. Contact info@valoriainstitute.com.");
         return;
@@ -1752,16 +1783,20 @@ export default function PRIMEAssessment({
     const identityHash = qp.get("identity_hash");
     if (identityHash) {
       window.history.replaceState(null, "", window.location.pathname);
-      fetchAssessmentByFingerprint(identityHash).then(profile => {
+      // Fire report generation immediately and unconditionally — this must
+      // not depend on the profile fetch below succeeding. The profile fetch
+      // is only for populating the UI; if it fails or is slow, the report
+      // should still generate and send server-side.
+      fetch("/api/generate-and-send-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identity_hash: identityHash }),
+      }).catch(() => {});
+      fetchAssessmentByFingerprintServer(identityHash).then(profile => {
         if (profile) {
           setSessionData({ name: profile.name, role: profile.role, results: profile.results });
           setInitialReportText(profile.aiReport || null);
           goToPhase(profile.aiReport ? "report" : "results");
-          fetch("/api/generate-and-send-report", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ identity_hash: identityHash }),
-          }).catch(() => {});
         }
       });
       return;
