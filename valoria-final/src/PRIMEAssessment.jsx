@@ -328,6 +328,11 @@ async function signUpWithSupabase(email, password, name, role) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password, name, role, identity_hash }),
   });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Signup failed.");
+  if (data.warning) {
+    console.warn(data.warning);
+  }
   return data;
 }
 
