@@ -66,7 +66,7 @@ export default async function handler(req) {
   const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
   const params = new URLSearchParams({
     identity_hash: `eq.${identity_hash}`,
-    select: "name,role,email,total_score,cluster_scores,skill_scores,designation,ai_report",
+    select: "name,role,email,total_score,cluster_scores,skill_scores,designation,ai_report,report_email_sent_at",
     limit: "1",
   });
 
@@ -85,6 +85,13 @@ export default async function handler(req) {
   const row = rows?.[0];
 
   if (!row) return new Response(JSON.stringify({ error: "No assessment found." }), { status: 404 });
+
+  // Guard against double-sending: previously this endpoint had no check here,
+  // so calling it twice for the same person (e.g. a page reload, or the
+  // client and the cron sweep both firing) would email them the report twice.
+  if (row.report_email_sent_at) {
+    return new Response(JSON.stringify({ ok: true, already_sent: true }), { status: 200 });
+  }
   if (!row.email) return new Response(JSON.stringify({ ok: true, skipped: "no_email" }), { status: 200 });
 
   let reportText = row.ai_report;
@@ -103,7 +110,7 @@ export default async function handler(req) {
             "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
+            model: "claude-sonnet-4-6",
             max_tokens: 1500,
             messages: [{ role: "user", content: prompt }],
           }),
