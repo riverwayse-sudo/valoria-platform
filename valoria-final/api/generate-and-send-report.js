@@ -31,6 +31,23 @@ WRITE IN THESE SECTIONS:
 Start directly with ## YOUR SCORE, no introduction.`;
 }
 
+function fetchWithTimeout(url, options, ms, label) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  console.log(`[generate-and-send-report] starting: ${label}`);
+  return fetch(url, { ...options, signal: controller.signal })
+    .then((res) => {
+      clearTimeout(timer);
+      console.log(`[generate-and-send-report] finished: ${label} (status ${res.status})`);
+      return res;
+    })
+    .catch((err) => {
+      clearTimeout(timer);
+      console.log(`[generate-and-send-report] FAILED: ${label} — ${err.name}: ${err.message}`);
+      throw err;
+    });
+}
+
 export default async function handler(req) {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
   if (!ANTHROPIC_API_KEY) {
@@ -52,7 +69,18 @@ export default async function handler(req) {
     select: "name,role,email,total_score,cluster_scores,skill_scores,designation,ai_report",
     limit: "1",
   });
-  const lookupRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers });
+
+  let lookupRes;
+  try {
+    lookupRes = await fetchWithTimeout(
+      `${SUPABASE_URL}/rest/v1/valu_assessments?${params}`,
+      { headers },
+      15000,
+      "supabase lookup"
+    );
+  } catch (err) {
+    return new Response(JSON.stringify({ error: "Supabase lookup timed out or failed", detail: err.message }), { status: 504 });
+  }
   const rows = await lookupRes.json();
   const row = rows?.[0];
 
@@ -63,19 +91,29 @@ export default async function handler(req) {
 
   if (!reportText) {
     const prompt = buildPrompt(row);
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1500,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+    let claudeRes;
+    try {
+      claudeRes = await fetchWithTimeout(
+        "https://api.anthropic.com/v1/messages",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 1500,
+            messages: [{ role: "user", content: prompt }],
+          }),
+        },
+        30000,
+        "claude api call"
+      );
+    } catch (err) {
+      return new Response(JSON.stringify({ error: "Claude API timed out or failed", detail: err.message }), { status: 504 });
+    }
     if (!claudeRes.ok) {
       const err = await claudeRes.text();
       return new Response(JSON.stringify({ error: "Claude API failed", detail: err }), { status: 502 });
@@ -83,28 +121,56 @@ export default async function handler(req) {
     const claudeData = await claudeRes.json();
     reportText = claudeData.content?.[0]?.text || "";
 
-    await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`, {
-      method: "PATCH",
-      headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ ai_report: reportText }),
-    });
+    try {
+      await fetchWithTimeout(
+        `${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`,
+        {
+          method: "PATCH",
+          headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
+          body: JSON.stringify({ ai_report: reportText }),
+        },
+        15000,
+        "supabase save ai_report"
+      );
+    } catch (err) {
+      console.log(`[generate-and-send-report] non-fatal: failed to save ai_report — ${err.message}`);
+    }
   }
 
-  const sendRes = await fetch(`${new URL(req.url).origin}/api/send-email`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: row.email, identity_hash, reportText }),
-  });
+  let sendRes;
+  try {
+    sendRes = await fetchWithTimeout(
+      `${new URL(req.url).origin}/api/send-email`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: row.email, identity_hash, reportText }),
+      },
+      20000,
+      "send-email call"
+    );
+  } catch (err) {
+    return new Response(JSON.stringify({ error: "send-email timed out or failed", detail: err.message }), { status: 504 });
+  }
   if (!sendRes.ok) {
     const err = await sendRes.text();
     return new Response(JSON.stringify({ error: "send-email failed", detail: err }), { status: 502 });
   }
 
-  await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`, {
-    method: "PATCH",
-    headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ report_email_sent_at: new Date().toISOString() }),
-  });
+  try {
+    await fetchWithTimeout(
+      `${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`,
+      {
+        method: "PATCH",
+        headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ report_email_sent_at: new Date().toISOString() }),
+      },
+      15000,
+      "supabase save report_email_sent_at"
+    );
+  } catch (err) {
+    console.log(`[generate-and-send-report] non-fatal: failed to save report_email_sent_at — ${err.message}`);
+  }
 
   return new Response(JSON.stringify({ ok: true, sent: true }), { status: 200 });
 }
