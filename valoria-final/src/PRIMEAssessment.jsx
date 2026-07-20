@@ -1757,7 +1757,7 @@ export default function PRIMEAssessment({
           setSessionData({ name: profile.name, role: profile.role, results: profile.results });
           setInitialReportText(profile.aiReport || null);
           goToPhase(profile.aiReport ? "report" : "results");
-          fetch("/api/finalize-report", {
+          fetch("/api/generate-and-send-report", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ identity_hash: identityHash }),
