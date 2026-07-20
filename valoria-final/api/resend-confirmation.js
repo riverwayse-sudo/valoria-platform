@@ -71,7 +71,7 @@ export default async function handler(req) {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
       method: "POST",
       headers: adminHeaders,
-      body: JSON.stringify({ type: "signup", email: row.email }),
+      body: JSON.stringify({ type: "magiclink", email: row.email }),
     });
     genData = await genRes.json();
   } catch (err) {
