@@ -322,16 +322,12 @@ async function updateAssessmentByFingerprint(fingerprint, fields, attempt = 0) {
 }
 
 async function signUpWithSupabase(email, password, name, role) {
+  const identity_hash = computeFingerprint(name, role);
   const res = await fetch("/api/create-account", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name, role }),
+    body: JSON.stringify({ email, password, name, role, identity_hash }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Signup failed.");
-  if (data.warning) {
-    console.warn(data.warning);
-  }
   return data;
 }
 
@@ -1747,6 +1743,25 @@ export default function PRIMEAssessment({
   }
 
   useEffect(() => {
+    const qp = new URLSearchParams(window.location.search);
+    const identityHash = qp.get("identity_hash");
+    if (identityHash) {
+      window.history.replaceState(null, "", window.location.pathname);
+      fetchAssessmentByFingerprint(identityHash).then(profile => {
+        if (profile) {
+          setSessionData({ name: profile.name, role: profile.role, results: profile.results });
+          setInitialReportText(profile.aiReport || null);
+          goToPhase(profile.aiReport ? "report" : "results");
+          fetch("/api/finalize-report", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ identity_hash: identityHash }),
+          }).catch(() => {});
+        }
+      });
+      return;
+    }
+
     const auth = parseAuthHash();
     if (!auth) return;
     window.history.replaceState(null, "", window.location.pathname);
