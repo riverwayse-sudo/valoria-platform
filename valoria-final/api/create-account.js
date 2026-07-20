@@ -62,10 +62,31 @@ function confirmationEmailHtml(name, actionLink) {
 export default async function handler(req) {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "Server misconfigured." }), {
-      status: 500, headers: { "Content-Type": "application/json" },
-    });
+    // NEW
+  // Stitch email + confirmation-sent timestamp onto the assessment row
+  // server-side, right here — not left to the client's follow-up call.
+  // This is what makes the sweep able to detect confirmation failures at
+  // all: without this, a closed tab after signup means email never lands
+  // on the row and nothing can ever find or retry the failure.
+  if (identity_hash) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`, {
+        method: "PATCH",
+        headers: { ...adminHeaders, Prefer: "return=minimal" },
+        body: JSON.stringify({ email, confirmation_email_sent_at: new Date().toISOString() }),
+      });
+    } catch (err) {
+      // Non-fatal — signup + confirmation email both already succeeded.
+      // Worst case the sweep won't see this row as "email attached" and
+      // will just keep trying resend-confirmation, which is idempotent-safe.
+      console.error("create-account: failed to stitch email onto assessment row", err);
+    }
   }
+
+  return new Response(JSON.stringify({ success: true, user_id: userId }), {
+    status: 200, headers: { "Content-Type": "application/json" },
+  });
+}
 
   let payload;
   try {
