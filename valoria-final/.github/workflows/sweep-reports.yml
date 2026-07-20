@@ -1,0 +1,17 @@
+name: Sweep Unsent Reports
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call sweep-unsent-reports
+        run: |
+          curl -sf -X POST "https://valoria-final.vercel.app/api/sweep-unsent-reports" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -o response.json -w "\nHTTP %{http_code}\n"
+          cat response.json
