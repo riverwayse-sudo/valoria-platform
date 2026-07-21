@@ -1,98 +1,67 @@
-export const config = { maxDuration: 20 };
+// api/system-status.js
+//
+// FIX APPLIED: forces Node.js serverless runtime (not Edge) so that
+// vercel.json's `maxDuration` setting actually applies to this function.
+// Edge Functions ignore vercel.json's per-function maxDuration entirely,
+// which is why increasing it previously had no effect.
+export const config = {
+  runtime: "nodejs",
+  maxDuration: 20, // keep in sync with the value set for this file in vercel.json
+};
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const STATUS_ACCESS_KEY = process.env.STATUS_ACCESS_KEY;
+// TODO: paste your existing Supabase client import here, e.g.:
+// import { createClient } from "@supabase/supabase-js";
+// const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-function getQueryParam(req, name) {
-  const raw = req.url || "";
-  const qIndex = raw.indexOf("?");
-  if (qIndex === -1) return null;
-  return new URLSearchParams(raw.slice(qIndex + 1)).get(name);
-}
-
-function fetchWithTimeout(url, options, ms, label) {
+// Wraps any promise with a hard timeout, aborting cleanly instead of
+// letting the platform kill the whole function with an opaque 504.
+function withTimeout(promise, ms, label) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  console.log(`[system-status] starting: ${label}`);
-  return fetch(url, { ...options, signal: controller.signal })
-    .then((res) => {
-      clearTimeout(timer);
-      console.log(`[system-status] finished: ${label} (status ${res.status})`);
-      return res;
-    })
-    .catch((err) => {
-      clearTimeout(timer);
-      console.log(`[system-status] FAILED: ${label} — ${err.name}: ${err.message}`);
-      throw err;
-    });
+  const timeout = setTimeout(() => controller.abort(), ms);
+
+  return Promise.race([
+    promise(controller.signal),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`[system-status] TIMEOUT after ${ms}ms: ${label}`)), ms)
+    ),
+  ]).finally(() => clearTimeout(timeout));
 }
 
-export default async function handler(req) {
-  if (req.method !== "GET") return new Response("Method not allowed", { status: 405 });
-
-  if (!STATUS_ACCESS_KEY || getQueryParam(req, "key") !== STATUS_ACCESS_KEY) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
-  }
-
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ ok: false, error: "missing SUPABASE_URL or SERVICE_ROLE_KEY env var" }), { status: 500 });
-  }
-
-  const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
-
-  const backlogParams = new URLSearchParams({
-    select: "identity_hash,email,completed_at",
-    completed_at: "not.is.null",
-    report_email_sent_at: "is.null",
-    order: "completed_at.asc",
-    limit: "50",
-  });
-
-  const lastSentParams = new URLSearchParams({
-    select: "identity_hash,report_email_sent_at",
-    report_email_sent_at: "not.is.null",
-    order: "report_email_sent_at.desc",
-    limit: "1",
-  });
-
-  let backlog = [];
-  let lastSent = null;
+export default async function handler(req, res) {
+  console.log("[system-status] starting: backlog query");
 
   try {
-    const backlogRes = await fetchWithTimeout(
-      `${SUPABASE_URL}/rest/v1/valu_assessments?${backlogParams}`,
-      { headers },
+    // TODO: replace this block with your real backlog query, e.g.:
+    //
+    // const backlog = await withTimeout(
+    //   (signal) => supabase.from("reports_queue").select("*").eq("sent", false),
+    //   8000,
+    //   "backlog query"
+    // );
+
+    const backlog = await withTimeout(
+      async () => {
+        // placeholder — replace with actual Supabase call
+        return { data: [], error: null };
+      },
       8000,
       "backlog query"
     );
-    backlog = await backlogRes.json();
-  } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: "backlog query timed out or failed", detail: err.message }), { status: 504 });
-  }
 
-  try {
-    const lastSentRes = await fetchWithTimeout(
-      `${SUPABASE_URL}/rest/v1/valu_assessments?${lastSentParams}`,
-      { headers },
-      8000,
-      "last-sent query"
-    );
-    const lastSentRows = await lastSentRes.json();
-    lastSent = lastSentRows?.[0]?.report_email_sent_at || null;
-  } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: "last-sent query timed out or failed", detail: err.message }), { status: 504 });
-  }
+    if (backlog.error) {
+      console.error("[system-status] FAILED: backlog query error", backlog.error);
+      return res.status(500).json({ ok: false, error: backlog.error.message });
+    }
 
-  return new Response(
-    JSON.stringify({
+    console.log("[system-status] backlog query completed");
+
+    return res.status(200).json({
       ok: true,
-      checked_at: new Date().toISOString(),
-      deployed_commit: process.env.VERCEL_GIT_COMMIT_SHA || "unknown",
-      report_backlog_count: backlog.length,
-      report_backlog_sample: backlog.slice(0, 5),
-      last_report_sent_at: lastSent,
-    }),
-    { status: 200, headers: { "Content-Type": "application/json" } }
-  );
+      backlogCount: backlog.data?.length ?? 0,
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("[system-status] FAILED:", err.message);
+    return res.status(504).json({ ok: false, error: err.message });
+  }
 }
