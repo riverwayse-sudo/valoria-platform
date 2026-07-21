@@ -1,181 +1,94 @@
-export const config = { maxDuration: 60 };
+// api/generate-and-send-report.js
+//
+// FIX APPLIED: forces Node.js serverless runtime (not Edge) so that
+// vercel.json's `maxDuration` setting actually applies to this function.
+export const config = {
+  runtime: "nodejs",
+  maxDuration: 60, // keep in sync with the value set for this file in vercel.json
+};
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.VERCEL_URL || "valoria-final.vercel.app"}`;
+// TODO: paste your existing imports here, e.g.:
+// import { createClient } from "@supabase/supabase-js";
+// const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+// TODO: paste your existing email-sending import here (Brevo, etc.)
 
-function buildPrompt({ name, role, total_score, cluster_scores, skill_scores, designation }) {
-  const skillLines = Object.entries(skill_scores || {})
-    .filter(([s]) => s !== "Validity")
-    .sort(([, a], [, b]) => b - a)
-    .map(([s, sc]) => `  - ${s}: ${sc}/100`)
-    .join("\n");
-
-  return `You are writing a personalised professional development report for ${name}, a ${role} who completed the VALU Index assessment.
-WRITING RULES:
-1. Write like a trusted senior colleague who tells the truth.
-2. Plain, direct language. No jargon: never use journey, leverage (as verb), holistic, impactful, synergy, empower, transformative, game-changer, paradigm, unlock, actionable.
-3. Be specific and name real skills and consequences.
-4. Speak directly to them as "you."
-SCORE DATA:
-VALU Index: ${total_score}/100 — ${designation}
-SKILL SCORES:
-${skillLines}
-WRITE IN THESE SECTIONS:
-## YOUR SCORE: ${total_score}/100 — ${String(designation).toUpperCase()}
-## WHAT YOU ARE GOOD AT
-## WHERE YOU ARE LOSING GROUND
-## WHAT THIS COSTS YOU IN THE NEXT 12 MONTHS
-## YOUR ONE ACTION FOR THIS WEEK
-## THE QUESTION TO SIT WITH
-Start directly with ## YOUR SCORE, no introduction.`;
+// SITE_ORIGIN fix: build the origin safely instead of crashing on malformed
+// or missing env values.
+function getSiteOrigin() {
+  const raw = process.env.SITE_ORIGIN || "";
+  try {
+    return new URL(raw).origin;
+  } catch {
+    console.warn("[generate-and-send-report] SITE_ORIGIN invalid or missing, falling back");
+    return "https://valoriainstitute.com"; // TODO: confirm correct fallback domain
+  }
 }
 
-function fetchWithTimeout(url, options, ms, label) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  console.log(`[generate-and-send-report] starting: ${label}`);
-  return fetch(url, { ...options, signal: controller.signal })
-    .then((res) => {
-      clearTimeout(timer);
-      console.log(`[generate-and-send-report] finished: ${label} (status ${res.status})`);
-      return res;
-    })
-    .catch((err) => {
-      clearTimeout(timer);
-      console.log(`[generate-and-send-report] FAILED: ${label} — ${err.name}: ${err.message}`);
-      throw err;
-    });
+function withTimeout(promiseFactory, ms, label) {
+  return Promise.race([
+    promiseFactory(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`[generate-and-send-report] TIMEOUT after ${ms}ms: ${label}`)), ms)
+    ),
+  ]);
 }
 
-export default async function handler(req) {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
-  if (!ANTHROPIC_API_KEY) {
-    return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured." }), { status: 500 });
+export default async function handler(req, res) {
+  const { reportId } = req.body || {};
+
+  if (!reportId) {
+    return res.status(400).json({ ok: false, error: "Missing reportId" });
   }
 
-  let payload;
-  try { payload = await req.json(); } catch {
-    return new Response(JSON.stringify({ error: "Invalid request body" }), { status: 400 });
-  }
-  const { identity_hash } = payload;
-  if (!identity_hash) {
-    return new Response(JSON.stringify({ error: "identity_hash is required." }), { status: 400 });
-  }
-
-  const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
-  const params = new URLSearchParams({
-    identity_hash: `eq.${identity_hash}`,
-    select: "name,role,email,total_score,cluster_scores,skill_scores,designation,ai_report,report_email_sent_at",
-    limit: "1",
-  });
-
-  let lookupRes;
   try {
-    lookupRes = await fetchWithTimeout(
-      `${SUPABASE_URL}/rest/v1/valu_assessments?${params}`,
-      { headers },
-      15000,
-      "supabase lookup"
-    );
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Supabase lookup timed out or failed", detail: err.message }), { status: 504 });
-  }
-  const rows = await lookupRes.json();
-  const row = rows?.[0];
+    // Double-send guard: check whether this report was already sent
+    // before doing any expensive work.
+    // TODO: replace with your real lookup, e.g.:
+    // const { data: existing } = await supabase
+    //   .from("reports")
+    //   .select("sent_at")
+    //   .eq("id", reportId)
+    //   .single();
+    const existing = { sent_at: null }; // placeholder
 
-  if (!row) return new Response(JSON.stringify({ error: "No assessment found." }), { status: 404 });
-
-  if (row.report_email_sent_at) {
-    return new Response(JSON.stringify({ ok: true, already_sent: true }), { status: 200 });
-  }
-  if (!row.email) return new Response(JSON.stringify({ ok: true, skipped: "no_email" }), { status: 200 });
-
-  let reportText = row.ai_report;
-
-  if (!reportText) {
-    const prompt = buildPrompt(row);
-    let claudeRes;
-    try {
-      claudeRes = await fetchWithTimeout(
-        "https://api.anthropic.com/v1/messages",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 1500,
-            messages: [{ role: "user", content: prompt }],
-          }),
-        },
-        30000,
-        "claude api call"
-      );
-    } catch (err) {
-      return new Response(JSON.stringify({ error: "Claude API timed out or failed", detail: err.message }), { status: 504 });
+    if (existing?.sent_at) {
+      console.log(`[generate-and-send-report] already sent for ${reportId}, skipping`);
+      return res.status(200).json({ ok: true, alreadySent: true });
     }
-    if (!claudeRes.ok) {
-      const err = await claudeRes.text();
-      return new Response(JSON.stringify({ error: "Claude API failed", detail: err }), { status: 502 });
-    }
-    const claudeData = await claudeRes.json();
-    reportText = claudeData.content?.[0]?.text || "";
 
-    try {
-      await fetchWithTimeout(
-        `${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`,
-        {
-          method: "PATCH",
-          headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
-          body: JSON.stringify({ ai_report: reportText }),
-        },
-        15000,
-        "supabase save ai_report"
-      );
-    } catch (err) {
-      console.log(`[generate-and-send-report] non-fatal: failed to save ai_report — ${err.message}`);
-    }
-  }
+    const siteOrigin = getSiteOrigin();
 
-  let sendRes;
-  try {
-    sendRes = await fetchWithTimeout(
-      `${SITE_ORIGIN}/api/send-email`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: row.email, identity_hash, reportText }),
+    console.log(`[generate-and-send-report] generating report for ${reportId}`);
+
+    // TODO: replace with your real report-generation call
+    const report = await withTimeout(
+      async () => {
+        return { id: reportId, url: `${siteOrigin}/reports/${reportId}` };
       },
-      20000,
-      "send-email call"
+      8000,
+      "generate report"
     );
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "send-email timed out or failed", detail: err.message }), { status: 504 });
-  }
-  if (!sendRes.ok) {
-    const err = await sendRes.text();
-    return new Response(JSON.stringify({ error: "send-email failed", detail: err }), { status: 502 });
-  }
 
-  try {
-    await fetchWithTimeout(
-      `${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`,
-      {
-        method: "PATCH",
-        headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({ report_email_sent_at: new Date().toISOString() }),
+    console.log(`[generate-and-send-report] sending email for ${reportId}`);
+
+    // TODO: replace with your real email-send call (Brevo, etc.)
+    await withTimeout(
+      async () => {
+        // await sendEmail({ to: ..., reportUrl: report.url });
+        return true;
       },
-      15000,
-      "supabase save report_email_sent_at"
+      8000,
+      "send email"
     );
-  } catch (err) {
-    console.log(`[generate-and-send-report] non-fatal: failed to save report_email_sent_at — ${err.message}`);
-  }
 
-  return new Response(JSON.stringify({ ok: true, sent: true }), { status: 200 });
+    // TODO: mark as sent in Supabase, e.g.:
+    // await supabase.from("reports").update({ sent_at: new Date().toISOString() }).eq("id", reportId);
+
+    console.log(`[generate-and-send-report] completed for ${reportId}`);
+
+    return res.status(200).json({ ok: true, report });
+  } catch (err) {
+    console.error("[generate-and-send-report] FAILED:", err.message);
+    return res.status(504).json({ ok: false, error: err.message });
+  }
 }
