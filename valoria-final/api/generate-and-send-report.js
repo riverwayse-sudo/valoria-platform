@@ -3,6 +3,7 @@ export const config = { maxDuration: 60 };
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.VERCEL_URL || "valoria-final.vercel.app"}`;
 
 function buildPrompt({ name, role, total_score, cluster_scores, skill_scores, designation }) {
   const skillLines = Object.entries(skill_scores || {})
@@ -86,9 +87,6 @@ export default async function handler(req) {
 
   if (!row) return new Response(JSON.stringify({ error: "No assessment found." }), { status: 404 });
 
-  // Guard against double-sending: previously this endpoint had no check here,
-  // so calling it twice for the same person (e.g. a page reload, or the
-  // client and the cron sweep both firing) would email them the report twice.
   if (row.report_email_sent_at) {
     return new Response(JSON.stringify({ ok: true, already_sent: true }), { status: 200 });
   }
@@ -147,7 +145,7 @@ export default async function handler(req) {
   let sendRes;
   try {
     sendRes = await fetchWithTimeout(
-      `${new URL(req.url).origin}/api/send-email`,
+      `${SITE_ORIGIN}/api/send-email`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
