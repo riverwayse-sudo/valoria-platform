@@ -3,11 +3,12 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/generate-and-send-report.js": {
-      "maxDuration": 60
-    },
-    "api/system-status.js": {
-      "maxDuration": 20
-    }
+    "api/generate-and-send-report.js": { "maxDuration": 60 },
+    "api/system-status.js": { "maxDuration": 20 },
+    "api/get-assessment-data.js": { "maxDuration": 20 },
+    "api/save-report.js": { "maxDuration": 20 },
+    "api/send-email.js": { "maxDuration": 20 },
+    "api/sweep-unsent-reports.js": { "maxDuration": 60 },
+    "api/submit-assessment.js": { "maxDuration": 20 }
   }
 }
