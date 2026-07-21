@@ -4,6 +4,9 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
+// Redirect to Valoria Institute login after confirmation, not the assessment app
+const VALORIA_SITE_URL = "https://valoriainstitute.com";
+
 function escapeHtml(str) {
   return String(str ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -66,12 +69,21 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ ok: true, skipped: "no_email_on_record" }), { status: 200 });
   }
 
+  // Build redirect URL: go to Valoria Institute login with identity_hash
+  const redirectUrl = `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}`;
+
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
       method: "POST",
       headers: adminHeaders,
-      body: JSON.stringify({ type: "magiclink", email: row.email }),
+      body: JSON.stringify({
+        type: "magiclink",
+        email: row.email,
+        options: {
+          redirectTo: redirectUrl,
+        },
+      }),
     });
     genData = await genRes.json();
   } catch (err) {

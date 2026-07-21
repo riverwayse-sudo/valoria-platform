@@ -4,6 +4,9 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
+// Redirect to Valoria Institute login after confirmation, not the assessment app
+const VALORIA_SITE_URL = "https://valoriainstitute.com";
+
 function escapeHtml(str) {
   return String(str ?? "")
     .replace(/&/g, "&amp;")
@@ -73,6 +76,12 @@ export default async function handler(req) {
     "Content-Type": "application/json",
   };
 
+  // Build redirect URL: go to Valoria Institute login with identity_hash as param
+  // so they land on their profile/report after logging in
+  const redirectUrl = identity_hash
+    ? `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}`
+    : `${VALORIA_SITE_URL}/dashboard`;
+
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
@@ -84,9 +93,7 @@ export default async function handler(req) {
         password,
         data: { full_name: name, role },
         options: {
-          redirectTo: identity_hash
-            ? `https://valoria-final.vercel.app/?identity_hash=${encodeURIComponent(identity_hash)}`
-            : "https://valoria-final.vercel.app/",
+          redirectTo: redirectUrl,
         },
       }),
     });
