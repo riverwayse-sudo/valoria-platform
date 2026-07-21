@@ -5,6 +5,9 @@
   "functions": {
     "api/generate-and-send-report.js": {
       "maxDuration": 60
+    },
+    "api/system-status.js": {
+      "maxDuration": 20
     }
   }
 }
