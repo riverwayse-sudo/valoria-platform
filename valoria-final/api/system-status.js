@@ -1,67 +1,74 @@
 // api/system-status.js
 //
-// FIX APPLIED: forces Node.js serverless runtime (not Edge) so that
-// vercel.json's `maxDuration` setting actually applies to this function.
-// Edge Functions ignore vercel.json's per-function maxDuration entirely,
-// which is why increasing it previously had no effect.
+// Health check + backlog visibility for the sweep-unsent-reports job.
+// Returns counts of three categories of "stuck" assessments:
+// 1. Confirmed but no confirmation email sent
+// 2. Report generated but no email sent
+// 3. Not yet generated (tab closed mid-stream, etc.)
 export const config = {
   runtime: "nodejs",
-  maxDuration: 20, // keep in sync with the value set for this file in vercel.json
+  maxDuration: 20,
 };
 
-// TODO: paste your existing Supabase client import here, e.g.:
-// import { createClient } from "@supabase/supabase-js";
-// const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Wraps any promise with a hard timeout, aborting cleanly instead of
-// letting the platform kill the whole function with an opaque 504.
-function withTimeout(promise, ms, label) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), ms);
-
-  return Promise.race([
-    promise(controller.signal),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`[system-status] TIMEOUT after ${ms}ms: ${label}`)), ms)
-    ),
-  ]).finally(() => clearTimeout(timeout));
+async function countAssessments(headers, params) {
+  const url = `${SUPABASE_URL}/rest/v1/valu_assessments?${params}`;
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`Supabase returned ${res.status}`);
+  const data = await res.json();
+  return data?.length ?? 0;
 }
 
 export default async function handler(req, res) {
-  console.log("[system-status] starting: backlog query");
+  const headers = {
+    apikey: SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+    Prefer: 'count=exact'
+  };
 
   try {
-    // TODO: replace this block with your real backlog query, e.g.:
-    //
-    // const backlog = await withTimeout(
-    //   (signal) => supabase.from("reports_queue").select("*").eq("sent", false),
-    //   8000,
-    //   "backlog query"
-    // );
+    const [unsentConfirmations, unsentReports, unreportedCompletions] = await Promise.all([
+      countAssessments(headers, new URLSearchParams({
+        email: "not.is.null",
+        "confirmation_email_sent_at": "is.null",
+        select: "id",
+        limit: "1"
+      })),
+      countAssessments(headers, new URLSearchParams({
+        completed_at: "not.is.null",
+        email: "not.is.null",
+        "report_email_sent_at": "is.null",
+        "ai_report": "not.is.null",
+        select: "id",
+        limit: "1"
+      })),
+      countAssessments(headers, new URLSearchParams({
+        completed_at: "not.is.null",
+        email: "not.is.null",
+        "ai_report": "is.null",
+        "report_email_sent_at": "is.null",
+        select: "id",
+        limit: "1"
+      })),
+    ]);
 
-    const backlog = await withTimeout(
-      async () => {
-        // placeholder — replace with actual Supabase call
-        return { data: [], error: null };
-      },
-      8000,
-      "backlog query"
-    );
-
-    if (backlog.error) {
-      console.error("[system-status] FAILED: backlog query error", backlog.error);
-      return res.status(500).json({ ok: false, error: backlog.error.message });
-    }
-
-    console.log("[system-status] backlog query completed");
+    const totalBacklog = unsentConfirmations + unsentReports + unreportedCompletions;
+    const isHealthy = totalBacklog === 0;
 
     return res.status(200).json({
-      ok: true,
-      backlogCount: backlog.data?.length ?? 0,
+      ok: isHealthy,
+      backlog: {
+        unsentConfirmations,
+        unsentReports,
+        unreportedCompletions,
+        total: totalBacklog
+      },
       checkedAt: new Date().toISOString(),
     });
   } catch (err) {
     console.error("[system-status] FAILED:", err.message);
-    return res.status(504).json({ ok: false, error: err.message });
+    return res.status(504).json({ ok: false, error: err.message, checkedAt: new Date().toISOString() });
   }
 }

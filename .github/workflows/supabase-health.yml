@@ -1,0 +1,25 @@
+name: Supabase Health Check
+
+# Prevents Supabase free-tier projects from auto-pausing after 7 days of inactivity.
+# Runs every 5 minutes to keep the project active.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:         # Allow manual trigger
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health check valoria-platform
+        run: |
+          # Ping the production site to keep Supabase active
+          # Replace with your actual production URL
+          curl -f -s -o /dev/null "https://valoriainstitute.com" || \
+          curl -f -s -o /dev/null "https://assessment.valoriainstitute.com" || \
+          echo "Health check attempted"
+        
+      - name: Log timestamp
+        run: |
+          echo "Last health check: $(date -u)"

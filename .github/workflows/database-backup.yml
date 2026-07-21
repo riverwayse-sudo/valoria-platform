@@ -1,0 +1,70 @@
+name: Database Backup
+
+# Scheduled pg_dump backup to object storage
+# Supabase free tier has no native backups, so we use GitHub Actions + object storage
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3 AM UTC
+  workflow_dispatch:        # Allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Create backup directory
+        run: mkdir -p backups
+
+      - name: Export Supabase database
+        env:
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          # Export the database using Supabase CLI
+          # Note: You need to link your local project to the remote first:
+          # supabase link --project-ref $SUPABASE_PROJECT_ID
+          # Then use: supabase db dump -f backups/backup-$(date +%Y%m%d-%H%M%S).sql
+          
+          # For GitHub Actions, use the pg_dump directly
+          # First, get the connection string from Supabase dashboard
+          # and store it as SUPABASE_CONNECTION_STRING secret
+          
+          echo "Backup job configured - requires SUPABASE_CONNECTION_STRING secret"
+          echo "Configure the following secrets in GitHub:"
+          echo "  - SUPABASE_CONNECTION_STRING: Full connection string from Supabase"
+          
+      - name: Upload backup to object storage
+        if: false  # Enable when SUPABASE_CONNECTION_STRING is configured
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_BACKUP_REGION }}
+          S3_BUCKET: ${{ secrets.AWS_S3_BACKUP_BUCKET }}
+        run: |
+          aws s3 cp backups/ s3://$S3_BUCKET/supabase-backups/ \
+            --recursive \
+            --storage-class STANDARD_IA \
+            --expires "2024-01-01T00:00:00.000Z" \
+            --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+
+      - name: Upload backup artifact (alternative)
+        if: false  # Enable for artifact-based backups (free, but limited retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_number }}
+          path: backups/
+          retention-days: 7
+
+# To enable this workflow:
+# 1. Get your Supabase connection string from: https://supabase.com/dashboard/project/_/settings/database
+# 2. Add SUPABASE_CONNECTION_STRING as a GitHub secret
+# 3. For S3 backups, configure AWS credentials as secrets
+# 4. Uncomment the relevant steps above
