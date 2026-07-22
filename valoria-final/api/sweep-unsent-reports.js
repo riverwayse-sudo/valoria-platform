@@ -17,7 +17,12 @@ async function sweepOne(origin, headers, query, endpoint) {
     try {
       const r = await fetch(`${origin}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          // Forward the same secret this endpoint itself required — needed
+          // now that generate-and-send-report checks for it too.
+          ...(CRON_SECRET ? { Authorization: `Bearer ${CRON_SECRET}` } : {}),
+        },
         body: JSON.stringify({ identity_hash: row.identity_hash }),
       });
       return { identity_hash: row.identity_hash, status: r.status };

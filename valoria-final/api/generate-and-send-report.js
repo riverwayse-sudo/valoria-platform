@@ -12,6 +12,7 @@ export const config = {
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const CRON_SECRET = process.env.CRON_SECRET;
 
 function getSiteOrigin() {
   const raw = process.env.SITE_ORIGIN || "";
@@ -140,6 +141,14 @@ async function sendReportEmail(email, identityHash, reportText, scoreProfile) {
 }
 
 export default async function handler(req, res) {
+  // Same protection as sweep-unsent-reports.js — this endpoint makes a real
+  // Anthropic API call and sends a real email per request, so it can't be
+  // left open to anyone who obtains an identity_hash.
+  const auth = req.headers.authorization;
+  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
+    return res.status(401).json({ ok: false, error: "Unauthorized" });
+  }
+
   const { identity_hash } = req.body || {};
 
   if (!identity_hash) {
