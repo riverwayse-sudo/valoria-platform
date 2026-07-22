@@ -336,20 +336,6 @@ async function signUpWithSupabase(email, password, name, role) {
   return data;
 }
 
-async function joinWaitlist({ name, email, role }) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      "Prefer": "return=minimal",
-    },
-    body: JSON.stringify({ name, email, type: "professional", role }),
-  });
-  if (!res.ok && res.status !== 409) throw new Error(await res.text());
-}
-
 async function fetchAssessmentByEmail(email) {
   try {
     const params = new URLSearchParams({
@@ -1321,12 +1307,11 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
           console.error("claim-listing threw:", listingErr);
         }
       }
-      // joinWaitlist() correctly checks response.ok and throws on failure —
-      // but previously that thrown error was swallowed here too. Logging it
-      // now instead of silently discarding it.
-      await joinWaitlist({ name, email: signupEmail.trim(), role }).catch(err => {
-        console.error("joinWaitlist failed:", err);
-      });
+      // joinWaitlist() call removed (post-launch, focus is back on the
+      // assessment itself — every real signup already gets a full
+      // professional_profiles row via /api/claim-listing above, so writing
+      // it into the old pre-launch `waitlist` table too was redundant noise
+      // left over from the founding-cohort push).
       setSignupDone(true);
       if (onSignupDone) onSignupDone(signupEmail.trim());
     } catch (e) {
