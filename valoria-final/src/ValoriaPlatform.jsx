@@ -186,7 +186,6 @@ export function ValoriaFooter() {
               { label: 'About Us', href: 'https://valoriainstitute.com/about-us' },
               { label: 'Programmes', href: 'https://valoriainstitute.com/programmes' },
               { label: 'Contact', href: 'https://valoriainstitute.com/contact-us' },
-              { label: 'Founding Cohort', href: 'https://valoriainstitute.com/waitlist' },
             ].map(({ label, href }) => (
               <a key={label} href={href} style={colLink}
                 onMouseEnter={e => e.currentTarget.style.color = BRAND.GOLD}
