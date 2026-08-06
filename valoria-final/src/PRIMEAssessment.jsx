@@ -783,6 +783,24 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
     <div style={{ minHeight:"100vh", background:T.dark, fontFamily:T.font.body, position:"relative", overflowX:"hidden" }}>
       <Grain />
       <AmbientGlow />
+      {/* This landing screen had no header at all — no way back to the main
+          site, and no way for someone who already has an account (and a
+          profile) to get there without knowing the URL by heart. The
+          post-completion report screen already links to /profile/edit and
+          /dashboard, but that only helps someone who stays on that exact
+          screen right after finishing — anyone returning here later had no
+          path out. */}
+      <div style={{
+        position:"relative", zIndex:2, display:"flex", alignItems:"center", justifyContent:"space-between",
+        maxWidth: isDesktop ? 1400 : 600, margin:"0 auto", padding: isDesktop ? "24px 48px 0" : "20px 20px 0",
+      }}>
+        <a href="https://valoriainstitute.com" style={{ fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.12em", color:T.gold, textDecoration:"none", fontFamily:T.font.body }}>
+          VALORIA INSTITUTE
+        </a>
+        <a href="https://valoriainstitute.com/login" style={{ fontSize:T.size.caption, color:T.text.muted, textDecoration:"none", fontFamily:T.font.body }}>
+          Already have a profile? Sign in →
+        </a>
+      </div>
       <div style={{
         position:"relative", zIndex:1,
         maxWidth: isDesktop ? 1400 : 600,
