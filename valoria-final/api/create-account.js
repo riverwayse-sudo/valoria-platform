@@ -170,6 +170,18 @@ export default async function handler(req) {
     }
   }
 
+  // Branded "welcome" message, distinct from the confirm-your-email
+  // transactional one above — reuses valoria-site's /api/welcome-email
+  // (same Brevo setup as waitlist/enquiries) rather than duplicating a
+  // second email provider's logic into this app. Per the 2 Aug audit: the
+  // professional signup path never sent anything beyond a bare/transactional
+  // confirmation link. Fire-and-forget — must never block account creation.
+  fetch("https://valoriainstitute.com/api/welcome-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, name, accountType: "professional" }),
+  }).catch(err => console.error("create-account: welcome-email call failed", err));
+
   return new Response(JSON.stringify({ success: true, user_id: userId }), {
     status: 200, headers: { "Content-Type": "application/json" },
   });
