@@ -44,7 +44,8 @@ export default async function handler(req) {
   // The three phases query independent sets of rows, so run them
   // concurrently as well rather than one phase fully finishing before
   // the next starts.
-  const [unsentConfirmations, unsentReports, unreportedCompletions] = await Promise.all([
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const [unsentConfirmations, unsentReports, unreportedCompletions, profileReminders] = await Promise.all([
     sweepOne(origin, headers, {
       email: "not.is.null",
       confirmation_email_sent_at: "is.null",
@@ -76,9 +77,24 @@ export default async function handler(req) {
       select: "identity_hash",
       limit: "50",
     }, "/api/generate-and-send-report"),
+
+    // Finished the assessment (and already got their score report — no
+    // point nudging someone before they've even seen their result), but
+    // never completed their profile. Give it 24 hours before nagging —
+    // completed_at=lt.<cutoff> excludes anyone who only just finished.
+    // send-profile-reminder checks profile_complete itself and no-ops the
+    // email (but still marks the row handled) if they've since finished it.
+    sweepOne(origin, headers, {
+      completed_at: `lt.${oneDayAgo}`,
+      email: "not.is.null",
+      report_email_sent_at: "not.is.null",
+      profile_reminder_sent_at: "is.null",
+      select: "identity_hash",
+      limit: "50",
+    }, "/api/send-profile-reminder"),
   ]);
 
-  return new Response(JSON.stringify({ unsentConfirmations, unsentReports, unreportedCompletions }), {
+  return new Response(JSON.stringify({ unsentConfirmations, unsentReports, unreportedCompletions, profileReminders }), {
     status: 200, headers: { "Content-Type": "application/json" },
   });
 }
