@@ -52,7 +52,7 @@ export default async function handler(req, res) {
   try {
     const params = new URLSearchParams({
       identity_hash: `eq.${identity_hash.trim()}`,
-      select: 'name,role,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at',
+      select: 'id,name,role,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at',
       order: 'completed_at.desc',
       limit: '1',
     });
@@ -118,6 +118,30 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('claim-listing: profile upsert network error', err);
     return res.status(502).json({ error: 'Could not create marketplace profile.' });
+  }
+
+  // 3) Link the assessment row to this account. professional_profiles gets
+  //    a *copy* of the score above, but the original valu_assessments row
+  //    itself was never being connected back to the user who took it —
+  //    anything reading valu_assessments by user_id (e.g. the admin
+  //    analytics' career-type/training-priority breakdown) would silently
+  //    never see this person, even though their listing is real and
+  //    complete. Best-effort: a failure here shouldn't fail the signup,
+  //    since the profile itself is already correctly created.
+  if (assessment.id) {
+    try {
+      const linkRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${assessment.id}`, {
+        method: 'PATCH',
+        headers: { ...serviceHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ user_id: user_id.trim() }),
+      });
+      if (!linkRes.ok) {
+        const err = await linkRes.text();
+        console.error('claim-listing: linking valu_assessments.user_id failed', linkRes.status, err);
+      }
+    } catch (err) {
+      console.error('claim-listing: linking valu_assessments.user_id network error', err);
+    }
   }
 
   return res.status(200).json({ ok: true, listed: listingStatus === 'listed', valu_index: assessment.total_score });
