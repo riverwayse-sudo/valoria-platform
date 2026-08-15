@@ -2,13 +2,8 @@ export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const CRON_SECRET = process.env.CRON_SECRET;
 
-// This endpoint calls Anthropic using our own API key, so it must never be
-// reachable by an arbitrary request. We require the caller to present the
-// identity_hash of a real, already-scored assessment (which can only exist
-// because /api/submit-assessment.js wrote it server-side) before spending
-// any tokens. This closes the "anyone can POST any prompt and burn our
-// Anthropic budget" hole this endpoint used to have.
 async function hasCompletedAssessment(identityHash) {
   if (!identityHash || !SUPABASE_URL || !SERVICE_ROLE_KEY) return false;
   try {
@@ -29,12 +24,18 @@ async function hasCompletedAssessment(identityHash) {
 }
 
 export default async function handler(req) {
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+
+  if (!CRON_SECRET || req.headers.get("authorization") !== `Bearer ${CRON_SECRET}`) {
+    return new Response(JSON.stringify({ error: { message: "Unauthorized" } }), { status: 401 });
   }
 
-  const { prompt, identity_hash } = await req.json();
+  let payload;
+  try { payload = await req.json(); } catch {
+    return new Response(JSON.stringify({ error: { message: "Invalid request body." } }), { status: 400 });
+  }
 
+  const { prompt, identity_hash } = payload;
   if (!prompt || typeof prompt !== "string" || prompt.length > 8000) {
     return new Response(JSON.stringify({ error: { message: "Invalid prompt." } }), { status: 400 });
   }
@@ -60,14 +61,10 @@ export default async function handler(req) {
   });
 
   if (!response.ok) {
-    const err = await response.text();
-    return new Response(err, { status: response.status });
+    return new Response(JSON.stringify({ error: { message: "AI report generation failed." } }), { status: 502 });
   }
 
   return new Response(response.body, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-    },
+    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-store" },
   });
 }
