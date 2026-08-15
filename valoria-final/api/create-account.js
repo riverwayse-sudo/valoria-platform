@@ -3,9 +3,14 @@ export const config = { runtime: "edge" };
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-
-// Redirect to Valoria Institute login after confirmation, not the assessment app
 const VALORIA_SITE_URL = "https://valoriainstitute.com";
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
+}
 
 function escapeHtml(str) {
   return String(str ?? "")
@@ -24,7 +29,7 @@ function confirmationEmailHtml(name, actionLink) {
     <body style="margin:0;padding:0;background:#0F0F1A;font-family:Georgia,serif;color:#F7F4EE;">
       <div style="max-width:600px;margin:0 auto;padding:48px 32px;text-align:center;">
         <img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:40px;margin-bottom:32px;">
-        <h1 style="font-size:26px;font-weight:300;color:#F7F4EE;margin-bottom:12px;">Confirm your email, ${escapeHtml(name)}.</h1>
+        <h1 style="font-size:26px;font-weight:300;font-weight:300;color:#F7F4EE;margin-bottom:12px;">Confirm your email, ${escapeHtml(name)}.</h1>
         <p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,0.6);margin-bottom:32px;">
           Click below to confirm your address and unlock your VALU Index report.
         </p>
@@ -41,33 +46,23 @@ function confirmationEmailHtml(name, actionLink) {
 }
 
 export default async function handler(req) {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "Server misconfigured." }), {
-      status: 500, headers: { "Content-Type": "application/json" },
-    });
-  }
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server misconfigured." }, 500);
 
   let payload;
   try {
     payload = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid request body" }), {
-      status: 400, headers: { "Content-Type": "application/json" },
-    });
+    return json({ error: "Invalid request body" }, 400);
   }
 
   const { email, password, name, role, identity_hash } = payload;
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!email || !emailRe.test(email)) {
-    return new Response(JSON.stringify({ error: "A valid email is required." }), {
-      status: 400, headers: { "Content-Type": "application/json" },
-    });
-  }
-  if (!password || password.length < 8) {
-    return new Response(JSON.stringify({ error: "Password must be at least 8 characters." }), {
-      status: 400, headers: { "Content-Type": "application/json" },
-    });
+  if (!email || !emailRe.test(email)) return json({ error: "A valid email is required." }, 400);
+  if (!password || password.length < 8) return json({ error: "Password must be at least 8 characters." }, 400);
+  if (identity_hash !== undefined && identity_hash !== null &&
+      (typeof identity_hash !== "string" || !/^fp_[a-f0-9]{16,128}$/i.test(identity_hash))) {
+    return json({ error: "Invalid identity reference." }, 400);
   }
 
   const adminHeaders = {
@@ -76,8 +71,27 @@ export default async function handler(req) {
     "Content-Type": "application/json",
   };
 
-  // Build redirect URL: go to Valoria Institute login with identity_hash as param
-  // so they land on their profile/report after logging in
+  // If an assessment is being stitched to the new account, verify that the
+  // submitted email matches the assessment before creating the account.
+  if (identity_hash) {
+    let assessmentRes;
+    try {
+      assessmentRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/valu_assessments?select=id,email,user_id&identity_hash=eq.${encodeURIComponent(identity_hash)}&limit=1`,
+        { headers: adminHeaders }
+      );
+    } catch {
+      return json({ error: "Could not verify the assessment reference." }, 502);
+    }
+    if (!assessmentRes.ok) return json({ error: "Could not verify the assessment reference." }, 502);
+    const assessments = await assessmentRes.json();
+    const assessment = assessments?.[0];
+    if (!assessment || String(assessment.email || "").trim().toLowerCase() !== email.trim().toLowerCase()) {
+      return json({ error: "The account details do not match the assessment." }, 403);
+    }
+    if (assessment.user_id) return json({ error: "This assessment is already linked to an account." }, 409);
+  }
+
   const redirectUrl = identity_hash
     ? `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}`
     : `${VALORIA_SITE_URL}/dashboard`;
@@ -89,88 +103,53 @@ export default async function handler(req) {
       headers: adminHeaders,
       body: JSON.stringify({
         type: "signup",
-        email,
+        email: email.trim().toLowerCase(),
         password,
         data: { full_name: name, role },
-        options: {
-          redirectTo: redirectUrl,
-        },
+        options: { redirectTo: redirectUrl },
       }),
     });
     genData = await genRes.json();
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Could not reach auth service." }), {
-      status: 502, headers: { "Content-Type": "application/json" },
-    });
+  } catch {
+    return json({ error: "Could not reach auth service." }, 502);
   }
 
-  if (!genRes.ok) {
-    return new Response(JSON.stringify({ error: genData.msg || genData.error_description || genData.error || "Could not create account." }), {
-      status: genRes.status, headers: { "Content-Type": "application/json" },
-    });
-  }
+  if (!genRes.ok) return json({ error: "Could not create account." }, genRes.status >= 400 && genRes.status < 500 ? genRes.status : 502);
 
   const actionLink = genData.action_link || genData.properties?.action_link;
-  const userId = genData.id || genData.user?.id;
+  if (!actionLink) return json({ warning: "Account created, but confirmation email could not be prepared. Contact support to resend." });
 
-  if (!actionLink) {
-    return new Response(JSON.stringify({
-      warning: "Account created, but no confirmation link was returned. Contact support to resend.",
-      user_id: userId,
-    }), { status: 200, headers: { "Content-Type": "application/json" } });
-  }
-
-  if (!RESEND_API_KEY) {
-    return new Response(JSON.stringify({
-      warning: "Account created, but email service is not configured. Contact support to resend confirmation.",
-      user_id: userId,
-    }), { status: 200, headers: { "Content-Type": "application/json" } });
-  }
+  if (!RESEND_API_KEY) return json({ warning: "Account created, but email service is not configured. Contact support to resend confirmation." });
 
   try {
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify({
         from: "Valoria Institute <hello@valoriainstitute.com>",
-        to: email,
+        to: email.trim().toLowerCase(),
         subject: "Confirm Your Signup — Valoria Institute",
         html: confirmationEmailHtml(name || "there", actionLink),
       }),
     });
-    if (!resendRes.ok) {
-      const err = await resendRes.text();
-      return new Response(JSON.stringify({
-        warning: "Account created, but confirmation email failed to send. Contact support to resend.",
-        user_id: userId,
-        email_error: err,
-      }), { status: 200, headers: { "Content-Type": "application/json" } });
-    }
-  } catch (err) {
-    return new Response(JSON.stringify({
-      warning: "Account created, but confirmation email failed to send. Contact support to resend.",
-      user_id: userId,
-    }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (!resendRes.ok) return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." });
+  } catch {
+    return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." });
   }
 
-  // Stitch email + confirmation-sent timestamp onto the assessment row
-  // server-side, right here — not left to the client's follow-up call.
   if (identity_hash) {
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`, {
+      const stitchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identity_hash)}&user_id=is.null`, {
         method: "PATCH",
         headers: { ...adminHeaders, Prefer: "return=minimal" },
-        body: JSON.stringify({ email, confirmation_email_sent_at: new Date().toISOString() }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), confirmation_email_sent_at: new Date().toISOString() }),
       });
-    } catch (err) {
-      console.error("create-account: failed to stitch email onto assessment row", err);
+      if (!stitchRes.ok) console.error("create-account: assessment stitch failed", stitchRes.status);
+    } catch {
+      console.error("create-account: assessment stitch failed");
     }
   }
 
-  return new Response(JSON.stringify({ success: true, user_id: userId }), {
-    status: 200, headers: { "Content-Type": "application/json" },
-  });
+  // Do not return internal Supabase user IDs or provider error details.
+  return json({ success: true });
 }
