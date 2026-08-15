@@ -7,22 +7,13 @@ const CRON_SECRET = process.env.CRON_SECRET;
 async function sweepOne(origin, headers, query, endpoint) {
   const params = new URLSearchParams(query);
   const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers });
+  if (!res.ok) throw new Error(`Sweep lookup failed for ${endpoint}`);
   const rows = await res.json();
-  // Fire all rows in this batch in parallel rather than one at a time —
-  // sequential awaiting means total time = sum of every call (e.g. 7 AI
-  // report generations back to back can easily exceed a minute), which
-  // blows past the edge runtime's execution cap and the whole sweep 504s.
-  // Parallel means total time ≈ the single slowest call in the batch.
   return Promise.all(rows.map(async (row) => {
     try {
       const r = await fetch(`${origin}${endpoint}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Forward the same secret this endpoint itself required — needed
-          // now that generate-and-send-report checks for it too.
-          ...(CRON_SECRET ? { Authorization: `Bearer ${CRON_SECRET}` } : {}),
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` },
         body: JSON.stringify({ identity_hash: row.identity_hash }),
       });
       return { identity_hash: row.identity_hash, status: r.status };
@@ -34,67 +25,24 @@ async function sweepOne(origin, headers, query, endpoint) {
 
 export default async function handler(req) {
   const auth = req.headers.get("authorization");
-  if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) return new Response("Unauthorized", { status: 401 });
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return new Response("Server configuration error", { status: 500 });
 
   const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
   const origin = new URL(req.url).origin;
-
-  // The three phases query independent sets of rows, so run them
-  // concurrently as well rather than one phase fully finishing before
-  // the next starts.
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const [unsentConfirmations, unsentReports, unreportedCompletions, profileReminders] = await Promise.all([
-    sweepOne(origin, headers, {
-      email: "not.is.null",
-      confirmation_email_sent_at: "is.null",
-      select: "identity_hash",
-      limit: "50",
-    }, "/api/resend-confirmation"),
 
-    // Confirmed + report already generated, just needs the email sent.
-    sweepOne(origin, headers, {
-      completed_at: "not.is.null",
-      email: "not.is.null",
-      report_email_sent_at: "is.null",
-      ai_report: "not.is.null",
-      select: "identity_hash",
-      limit: "50",
-    }, "/api/finalize-report"),
+  try {
+    const [unsentConfirmations, unsentReports, unreportedCompletions, profileReminders] = await Promise.all([
+      sweepOne(origin, headers, { email: "not.is.null", confirmation_email_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/resend-confirmation"),
+      sweepOne(origin, headers, { completed_at: "not.is.null", email: "not.is.null", report_email_sent_at: "is.null", ai_report: "not.is.null", select: "identity_hash", limit: "50" }, "/api/finalize-report"),
+      sweepOne(origin, headers, { completed_at: "not.is.null", email: "not.is.null", ai_report: "is.null", report_email_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/generate-and-send-report"),
+      sweepOne(origin, headers, { completed_at: `lt.${oneDayAgo}`, email: "not.is.null", report_email_sent_at: "not.is.null", profile_reminder_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/send-profile-reminder"),
+    ]);
 
-    // Confirmed but the report itself was never generated (e.g. they closed
-    // the tab before the assessment's streaming report finished, or landed
-    // back on the app via the identity_hash redirect before this was wired
-    // up). generate-and-send-report handles both generating it and sending it,
-    // and is now safe to call repeatedly (it no-ops once report_email_sent_at
-    // is set).
-    sweepOne(origin, headers, {
-      completed_at: "not.is.null",
-      email: "not.is.null",
-      ai_report: "is.null",
-      report_email_sent_at: "is.null",
-      select: "identity_hash",
-      limit: "50",
-    }, "/api/generate-and-send-report"),
-
-    // Finished the assessment (and already got their score report — no
-    // point nudging someone before they've even seen their result), but
-    // never completed their profile. Give it 24 hours before nagging —
-    // completed_at=lt.<cutoff> excludes anyone who only just finished.
-    // send-profile-reminder checks profile_complete itself and no-ops the
-    // email (but still marks the row handled) if they've since finished it.
-    sweepOne(origin, headers, {
-      completed_at: `lt.${oneDayAgo}`,
-      email: "not.is.null",
-      report_email_sent_at: "not.is.null",
-      profile_reminder_sent_at: "is.null",
-      select: "identity_hash",
-      limit: "50",
-    }, "/api/send-profile-reminder"),
-  ]);
-
-  return new Response(JSON.stringify({ unsentConfirmations, unsentReports, unreportedCompletions, profileReminders }), {
-    status: 200, headers: { "Content-Type": "application/json" },
-  });
+    return new Response(JSON.stringify({ unsentConfirmations, unsentReports, unreportedCompletions, profileReminders }), { status: 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+  } catch (err) {
+    console.error("[sweep-unsent-reports] failed:", err.message);
+    return new Response(JSON.stringify({ error: "Report sweep failed" }), { status: 500, headers: { "Content-Type": "application/json" } });
+  }
 }
