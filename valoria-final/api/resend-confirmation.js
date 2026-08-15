@@ -3,9 +3,14 @@ export const config = { runtime: "edge" };
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-
-// Redirect to Valoria Institute login after confirmation, not the assessment app
 const VALORIA_SITE_URL = "https://valoriainstitute.com";
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
+}
 
 function escapeHtml(str) {
   return String(str ?? "")
@@ -35,15 +40,20 @@ function confirmationEmailHtml(name, actionLink) {
 }
 
 export default async function handler(req) {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !RESEND_API_KEY) {
+    console.error("resend-confirmation: missing server configuration");
+    return json({ error: "Service temporarily unavailable." }, 503);
+  }
 
   let payload;
   try { payload = await req.json(); } catch {
-    return new Response(JSON.stringify({ error: "Invalid request body" }), { status: 400 });
+    return json({ error: "Invalid request body" }, 400);
   }
-  const { identity_hash } = payload;
-  if (!identity_hash) {
-    return new Response(JSON.stringify({ error: "identity_hash is required." }), { status: 400 });
+
+  const identityHash = String(payload?.identity_hash || "").trim();
+  if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) {
+    return json({ error: "Invalid identity reference." }, 400);
   }
 
   const adminHeaders = {
@@ -53,24 +63,34 @@ export default async function handler(req) {
   };
 
   const params = new URLSearchParams({
-    identity_hash: `eq.${identity_hash}`,
+    identity_hash: `eq.${identityHash}`,
     select: "name,email,confirmation_email_sent_at",
     limit: "1",
   });
-  const lookupRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: adminHeaders });
-  const rows = await lookupRes.json();
+
+  let lookupRes;
+  try {
+    lookupRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: adminHeaders });
+  } catch (err) {
+    console.error("resend-confirmation: assessment lookup failed", err);
+    return json({ error: "Could not process confirmation request." }, 502);
+  }
+
+  if (!lookupRes.ok) {
+    console.error("resend-confirmation: assessment lookup failed", lookupRes.status);
+    return json({ error: "Could not process confirmation request." }, 502);
+  }
+
+  let rows;
+  try { rows = await lookupRes.json(); } catch {
+    return json({ error: "Could not process confirmation request." }, 502);
+  }
+
   const row = rows?.[0];
+  if (!row) return json({ ok: true });
+  if (row.confirmation_email_sent_at || !row.email) return json({ ok: true });
 
-  if (!row) return new Response(JSON.stringify({ error: "No assessment found." }), { status: 404 });
-  if (row.confirmation_email_sent_at) {
-    return new Response(JSON.stringify({ ok: true, already_sent: true }), { status: 200 });
-  }
-  if (!row.email) {
-    return new Response(JSON.stringify({ ok: true, skipped: "no_email_on_record" }), { status: 200 });
-  }
-
-  // Build redirect URL: go to Valoria Institute login with identity_hash
-  const redirectUrl = `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}`;
+  const redirectUrl = `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identityHash)}`;
 
   let genRes, genData;
   try {
@@ -79,45 +99,59 @@ export default async function handler(req) {
       headers: adminHeaders,
       body: JSON.stringify({
         type: "magiclink",
-        email: row.email,
-        options: {
-          redirectTo: redirectUrl,
-        },
+        email: String(row.email).trim().toLowerCase(),
+        options: { redirectTo: redirectUrl },
       }),
     });
     genData = await genRes.json();
   } catch (err) {
-    return new Response(JSON.stringify({ error: "Could not reach auth service." }), { status: 502 });
+    console.error("resend-confirmation: auth link generation failed", err);
+    return json({ error: "Could not process confirmation request." }, 502);
   }
+
   if (!genRes.ok) {
-    return new Response(JSON.stringify({ error: genData.msg || genData.error || "Could not regenerate link." }), { status: genRes.status });
+    console.error("resend-confirmation: auth link generation failed", genRes.status);
+    return json({ error: "Could not process confirmation request." }, 502);
   }
 
   const actionLink = genData.action_link || genData.properties?.action_link;
   if (!actionLink) {
-    return new Response(JSON.stringify({ error: "No action link returned." }), { status: 502 });
+    console.error("resend-confirmation: no action link returned");
+    return json({ error: "Could not process confirmation request." }, 502);
   }
 
-  const resendRes = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-    body: JSON.stringify({
-      from: "Valoria Institute <hello@valoriainstitute.com>",
-      to: row.email,
-      subject: "Confirm Your Signup — Valoria Institute",
-      html: confirmationEmailHtml(row.name || "there", actionLink),
-    }),
-  });
+  let resendRes;
+  try {
+    resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+      body: JSON.stringify({
+        from: "Valoria Institute <hello@valoriainstitute.com>",
+        to: String(row.email).trim().toLowerCase(),
+        subject: "Confirm Your Signup — Valoria Institute",
+        html: confirmationEmailHtml(row.name || "there", actionLink),
+      }),
+    });
+  } catch (err) {
+    console.error("resend-confirmation: email delivery failed", err);
+    return json({ error: "Could not process confirmation request." }, 502);
+  }
+
   if (!resendRes.ok) {
-    const err = await resendRes.text();
-    return new Response(JSON.stringify({ error: "Resend failed", detail: err }), { status: 502 });
+    console.error("resend-confirmation: email delivery failed", resendRes.status);
+    return json({ error: "Could not process confirmation request." }, 502);
   }
 
-  await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${identity_hash}`, {
-    method: "PATCH",
-    headers: { ...adminHeaders, Prefer: "return=minimal" },
-    body: JSON.stringify({ confirmation_email_sent_at: new Date().toISOString() }),
-  });
+  try {
+    const markRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identityHash)}&confirmation_email_sent_at=is.null`, {
+      method: "PATCH",
+      headers: { ...adminHeaders, Prefer: "return=minimal" },
+      body: JSON.stringify({ confirmation_email_sent_at: new Date().toISOString() }),
+    });
+    if (!markRes.ok) console.error("resend-confirmation: send marker update failed", markRes.status);
+  } catch (err) {
+    console.error("resend-confirmation: send marker update failed", err);
+  }
 
-  return new Response(JSON.stringify({ ok: true, sent: true }), { status: 200 });
+  return json({ ok: true, sent: true });
 }
