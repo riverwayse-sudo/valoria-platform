@@ -1,44 +1,63 @@
 // api/claim-listing.js
 //
-// Creates/updates a person's professional_profiles row right after they sign
-// up post-assessment. This replaces the old client-side POST straight to
-// PostgREST with the anon key — that POST sent
-// `Authorization: Bearer ${SUPABASE_ANON_KEY}` instead of the user's own
-// session token, so auth.uid() was always null and RLS (auth.uid() = id)
-// silently rejected every single insert. No real user has ever actually
-// been listed through that path.
-//
-// Two things fixed here at once:
-//   1. The auth problem — this runs server-side with the service-role key,
-//      which legitimately bypasses RLS, instead of depending on a client
-//      session token that may not even exist yet (Supabase often withholds
-//      a usable session immediately after signup if email confirmation is
-//      required on this project).
-//   2. The score problem — listing_status is no longer hardcoded to
-//      "listed". The score is re-read here from valu_assessments by
-//      identity_hash (never trusted from the client) and the existing
-//      35-point threshold used everywhere else in the app (PRIMEAssessment.jsx,
-//      profile/setup, spotlight, atb-connect) is applied the same way here.
+// Authenticated account-claim endpoint. `identity_hash` is an identifier,
+// not an authorization credential. The caller must prove ownership of the
+// assessment email through a verified Supabase Auth session before the
+// service-role key is used.
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const LISTING_THRESHOLD = 35;
+
+function getBearerToken(req) {
+  const value = req.headers?.authorization || req.headers?.Authorization || '';
+  if (!value.startsWith('Bearer ')) return null;
+  return value.slice(7).trim() || null;
+}
+
+async function getAuthenticatedUser(req) {
+  const token = getBearerToken(req);
+  if (!token || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) return null;
+  return response.json();
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  if (!SERVICE_ROLE_KEY || !SUPABASE_URL) {
-    console.error('claim-listing: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env var');
+  if (!SERVICE_ROLE_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.error('claim-listing: missing Supabase server configuration');
     return res.status(500).json({ error: 'Server misconfigured.' });
   }
 
-  const { identity_hash, user_id } = req.body || {};
-  if (!identity_hash?.trim()) {
-    return res.status(400).json({ error: 'identity_hash is required.' });
+  // Never trust user_id from the request body. Resolve the account from a
+  // verified Supabase Auth token instead.
+  let user;
+  try {
+    user = await getAuthenticatedUser(req);
+  } catch (err) {
+    console.error('claim-listing: auth verification failed', err);
+    return res.status(401).json({ error: 'Authentication required.' });
   }
-  if (!user_id?.trim()) {
-    return res.status(400).json({ error: 'user_id is required.' });
+
+  if (!user?.id || !user?.email) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
+
+  const { identity_hash } = req.body || {};
+  const identityHash = typeof identity_hash === 'string' ? identity_hash.trim() : '';
+  if (!identityHash) {
+    return res.status(400).json({ error: 'identity_hash is required.' });
   }
 
   const serviceHeaders = {
@@ -46,13 +65,16 @@ export default async function handler(req, res) {
     Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
   };
 
-  // 1) Pull the authoritative assessment result. Never trust a score the
-  //    client sends — same principle as submit-assessment.js.
+  // A claim is allowed only when the assessment email belongs to the
+  // authenticated account and the assessment has not already been claimed
+  // by a different account. Email ownership is established by Supabase Auth
+  // (the project requires/should require email verification for production).
   let assessment;
   try {
     const params = new URLSearchParams({
-      identity_hash: `eq.${identity_hash.trim()}`,
-      select: 'id,name,role,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at',
+      identity_hash: `eq.${identityHash}`,
+      email: `eq.${user.email}`,
+      select: 'id,user_id,name,email,role,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at',
       order: 'completed_at.desc',
       limit: '1',
     });
@@ -66,7 +88,7 @@ export default async function handler(req, res) {
     }
     const rows = await fetchRes.json();
     if (!rows?.length) {
-      return res.status(404).json({ error: 'No assessment found for this identity_hash.' });
+      return res.status(403).json({ error: 'This assessment cannot be claimed by the authenticated account.' });
     }
     assessment = rows[0];
   } catch (err) {
@@ -74,11 +96,13 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: 'Could not look up assessment result.' });
   }
 
+  if (assessment.user_id && assessment.user_id !== user.id) {
+    return res.status(403).json({ error: 'This assessment is already linked to another account.' });
+  }
+
   const listingStatus = (assessment.total_score ?? 0) >= LISTING_THRESHOLD ? 'listed' : 'pending';
 
-  // 2) Upsert professional_profiles with the service-role key. merge-duplicates
-  //    on id means this is safe to call again later (e.g. a retake) without
-  //    creating a second row.
+  // Upsert using the verified Auth user ID, never a caller-supplied ID.
   try {
     const upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
       method: 'POST',
@@ -88,7 +112,7 @@ export default async function handler(req, res) {
         Prefer: 'return=minimal,resolution=merge-duplicates',
       },
       body: JSON.stringify({
-        id: user_id.trim(),
+        id: user.id,
         display_name: assessment.name,
         headline: assessment.role,
         valu_index: assessment.total_score,
@@ -98,15 +122,6 @@ export default async function handler(req, res) {
         assessment_completed_at: assessment.completed_at,
         assessment_expires_at: assessment.expires_at,
         listing_status: listingStatus,
-        // Explicitly initialize rather than leaving the column unset.
-        // The assessment flow (PRIMEAssessment.jsx) doesn't collect
-        // candidate/speaker/facilitator track yet — that's still only
-        // collected in /profile/setup, which writes active_tracks itself
-        // on a later upsert (merge-duplicates, so it won't be clobbered
-        // by a repeat call here). Until setup is completed, this column
-        // should read as genuinely empty, not silently default to
-        // 'candidate' — see the dashboard/profile-page fix for the
-        // corresponding read-side change.
         active_tracks: [],
       }),
     });
@@ -120,27 +135,23 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: 'Could not create marketplace profile.' });
   }
 
-  // 3) Link the assessment row to this account. professional_profiles gets
-  //    a *copy* of the score above, but the original valu_assessments row
-  //    itself was never being connected back to the user who took it —
-  //    anything reading valu_assessments by user_id (e.g. the admin
-  //    analytics' career-type/training-priority breakdown) would silently
-  //    never see this person, even though their listing is real and
-  //    complete. Best-effort: a failure here shouldn't fail the signup,
-  //    since the profile itself is already correctly created.
+  // Link the assessment to the verified account. If it is already linked to
+  // the same account, this remains idempotent.
   if (assessment.id) {
     try {
       const linkRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${assessment.id}`, {
         method: 'PATCH',
         headers: { ...serviceHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ user_id: user_id.trim() }),
+        body: JSON.stringify({ user_id: user.id }),
       });
       if (!linkRes.ok) {
         const err = await linkRes.text();
         console.error('claim-listing: linking valu_assessments.user_id failed', linkRes.status, err);
+        return res.status(502).json({ error: 'Could not link the assessment to the account.' });
       }
     } catch (err) {
       console.error('claim-listing: linking valu_assessments.user_id network error', err);
+      return res.status(502).json({ error: 'Could not link the assessment to the account.' });
     }
   }
 
