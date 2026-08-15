@@ -26,8 +26,6 @@ export default async function handler(req) {
   if (!match) return json({ error: 'Authentication required.' }, 401);
   const accessToken = match[1];
 
-  // Verify the caller with Supabase Auth. Never trust a client-supplied
-  // user_id as proof of ownership.
   let authUser;
   try {
     const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -55,7 +53,7 @@ export default async function handler(req) {
   }
 
   const identityHash = String(payload?.identity_hash || '').trim();
-  if (!identityHash || identityHash.length > 200) {
+  if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) {
     return json({ error: 'A valid identity_hash is required.' }, 400);
   }
 
@@ -64,8 +62,6 @@ export default async function handler(req) {
     Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
   };
 
-  // Pull the authoritative assessment. The client cannot supply a score,
-  // name, email, or user_id for the profile.
   let assessment;
   try {
     const params = new URLSearchParams({
@@ -89,18 +85,36 @@ export default async function handler(req) {
     return json({ error: 'Could not look up assessment result.' }, 502);
   }
 
-  // The assessment must belong to the same email/account being claimed.
   const assessmentEmail = String(assessment.email || '').trim().toLowerCase();
   if (!assessmentEmail || assessmentEmail !== authEmail) {
     return json({ error: 'This assessment cannot be claimed by this account.' }, 403);
   }
 
-  // An assessment already linked to a different account cannot be claimed.
   if (assessment.user_id && assessment.user_id !== userId) {
     return json({ error: 'This assessment is already linked to another account.' }, 409);
   }
 
   const listingStatus = (assessment.total_score ?? 0) >= LISTING_THRESHOLD ? 'listed' : 'pending';
+
+  // Capture whether a profile already existed. If this request creates a new
+  // profile and the subsequent assessment link fails, we can safely remove the
+  // newly-created row instead of leaving an orphaned professional identity.
+  let profileExisted = false;
+  try {
+    const profileCheck = await fetch(
+      `${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}&select=id&limit=1`,
+      { headers: serviceHeaders }
+    );
+    if (!profileCheck.ok) {
+      console.error('claim-listing: profile preflight failed', profileCheck.status);
+      return json({ error: 'Could not verify marketplace profile state.' }, 502);
+    }
+    const existingProfiles = await profileCheck.json();
+    profileExisted = Array.isArray(existingProfiles) && existingProfiles.length > 0;
+  } catch (err) {
+    console.error('claim-listing: profile preflight failed', err);
+    return json({ error: 'Could not verify marketplace profile state.' }, 502);
+  }
 
   try {
     const upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
@@ -135,18 +149,59 @@ export default async function handler(req) {
 
   if (assessment.id) {
     try {
-      const linkRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}`, {
-        method: 'PATCH',
-        headers: { ...serviceHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ user_id: userId }),
-      });
+      // Only claim an unowned assessment. This closes the race where another
+      // request could claim the same assessment between the initial read and
+      // this write.
+      const linkRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}&user_id=is.null`,
+        {
+          method: 'PATCH',
+          headers: { ...serviceHeaders, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+          body: JSON.stringify({ user_id: userId }),
+        }
+      );
       if (!linkRes.ok) {
         console.error('claim-listing: assessment ownership link failed', linkRes.status);
-        return json({ error: 'Profile created, but assessment ownership could not be finalized.' }, 502);
+        if (!profileExisted) {
+          try {
+            await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}`, {
+              method: 'DELETE',
+              headers: { ...serviceHeaders, Prefer: 'return=minimal' },
+            });
+          } catch (cleanupErr) {
+            console.error('claim-listing: profile cleanup failed', cleanupErr);
+          }
+        }
+        return json({ error: 'Assessment ownership could not be finalized.' }, 502);
+      }
+      const linkedRows = await linkRes.json();
+      if (!Array.isArray(linkedRows) || linkedRows.length !== 1) {
+        console.error('claim-listing: assessment was already claimed or not updated');
+        if (!profileExisted) {
+          try {
+            await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}`, {
+              method: 'DELETE',
+              headers: { ...serviceHeaders, Prefer: 'return=minimal' },
+            });
+          } catch (cleanupErr) {
+            console.error('claim-listing: profile cleanup failed', cleanupErr);
+          }
+        }
+        return json({ error: 'This assessment could not be claimed. Please try again.' }, 409);
       }
     } catch (err) {
       console.error('claim-listing: assessment ownership link failed', err);
-      return json({ error: 'Profile created, but assessment ownership could not be finalized.' }, 502);
+      if (!profileExisted) {
+        try {
+          await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}`, {
+            method: 'DELETE',
+            headers: { ...serviceHeaders, Prefer: 'return=minimal' },
+          });
+        } catch (cleanupErr) {
+          console.error('claim-listing: profile cleanup failed', cleanupErr);
+        }
+      }
+      return json({ error: 'Assessment ownership could not be finalized.' }, 502);
     }
   }
 
