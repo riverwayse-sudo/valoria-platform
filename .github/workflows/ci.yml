@@ -1,11 +1,4 @@
-# .github/workflows/ci.yml
-# Place this file in BOTH repos:
-#   valoria-platform/.github/workflows/ci.yml
-#   valoria-site/.github/workflows/ci.yml
-#
-# For valoria-platform: set REPO_TYPE to "platform"
-# For valoria-site:     set REPO_TYPE to "site"
-
+# Valoria CI — platform repository
 name: Valoria CI
 
 on:
@@ -14,114 +7,83 @@ on:
   pull_request:
     branches: [main]
 
+# CI should be read-only unless a job explicitly needs more.
+permissions:
+  contents: read
+
 jobs:
-  # ── JOB 1: Unit tests (runs on every push/PR) ────────────────────────────
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4.2.2
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
       - name: Run unit tests
         run: npm test
         env:
           CI: true
 
-  # ── JOB 2: Build check (catches production-only failures) ─────────────────
   build-check:
     name: Production Build Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4.2.2
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: '20'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
-      # Provide dummy env vars so build doesn't fail on missing keys
-      - name: Create .env for build
+      - name: Create CI-only build environment
         run: |
-          echo "VITE_SUPABASE_URL=https://placeholder.supabase.co" >> .env
-          echo "VITE_SUPABASE_ANON_KEY=placeholder_key" >> .env
-          echo "NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co" >> .env
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder_key" >> .env
-
+          printf '%s\n' \
+            'VITE_SUPABASE_URL=https://placeholder.supabase.co' \
+            'VITE_SUPABASE_ANON_KEY=placeholder_key' \
+            > .env
       - name: Run production build
         run: npm run build
         env:
           CI: true
-          # Prevents Next.js from failing on warnings
           NEXT_TELEMETRY_DISABLED: 1
 
-  # ── JOB 3: Secret scanning (PAT incident prevention) ────────────────────
   secret-scan:
     name: Secret Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
         with:
-          fetch-depth: 0  # Full history needed for gitleaks
-
+          fetch-depth: 0
+      # Pin the scanner to a reviewed release rather than a floating major tag.
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── JOB 4: Env var parity check ──────────────────────────────────────────
   env-parity:
     name: Env Var Parity
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4.2.2
       - name: Check .env.example exists
         run: |
-          if [ ! -f .env.example ]; then
-            echo "ERROR: .env.example is missing. Create it so CI can verify env var parity."
-            exit 1
-          fi
-          echo ".env.example found ✓"
-
+          test -f .env.example || { echo 'ERROR: .env.example is missing.'; exit 1; }
       - name: Verify no .env file committed
         run: |
-          if [ -f .env ]; then
-            echo "ERROR: .env file is committed to the repo. Remove it immediately."
-            exit 1
-          fi
-          echo "No .env committed ✓"
-
+          test ! -f .env || { echo 'ERROR: .env file is committed to the repo.'; exit 1; }
       - name: Check required env keys present in .env.example
         run: |
-          REQUIRED_PLATFORM="VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY"
-          REQUIRED_SITE="NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY ANTHROPIC_API_KEY"
-
-          # Detect repo type by package.json
-          if grep -q '"next"' package.json 2>/dev/null; then
-            REQUIRED="$REQUIRED_SITE"
-            echo "Detected: valoria-site (Next.js)"
-          else
-            REQUIRED="$REQUIRED_PLATFORM"
-            echo "Detected: valoria-platform (Vite)"
-          fi
-
+          REQUIRED='VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY'
           for KEY in $REQUIRED; do
-            if ! grep -q "$KEY" .env.example; then
-              echo "ERROR: $KEY is missing from .env.example"
-              exit 1
-            fi
-            echo "$KEY found in .env.example ✓"
+            grep -q "^${KEY}=" .env.example || { echo "ERROR: ${KEY} is missing from .env.example"; exit 1; }
+            echo "${KEY} documented ✓"
           done
