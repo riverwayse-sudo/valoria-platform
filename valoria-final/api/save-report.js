@@ -1,14 +1,19 @@
+import { isInternalRequest } from "../src/internalAuth.js";
+
 export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Pure persistence step — just writes fields to the row. No Anthropic call,
-// no email call, so it's fast and safe on Hobby's 10s function cap.
-// Pass either or both of report_text / mark_sent in the body.
+// Internal-only persistence endpoint. Never expose a service-role-backed write
+// endpoint to the public internet without an authenticated server caller.
 export default async function handler(req) {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+
+  if (!isInternalRequest(req)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
   let payload;
@@ -19,11 +24,14 @@ export default async function handler(req) {
   }
 
   const { identity_hash, report_text, mark_sent } = payload;
-  if (!identity_hash) {
-    return new Response(JSON.stringify({ error: "identity_hash is required." }), { status: 400 });
+  if (!identity_hash || !/^fp_[a-z0-9]+$/i.test(identity_hash)) {
+    return new Response(JSON.stringify({ error: "Valid identity_hash is required." }), { status: 400 });
   }
   if (!report_text && !mark_sent) {
     return new Response(JSON.stringify({ error: "Nothing to save — pass report_text and/or mark_sent." }), { status: 400 });
+  }
+  if (report_text && (typeof report_text !== "string" || report_text.length > 30000)) {
+    return new Response(JSON.stringify({ error: "Invalid report_text." }), { status: 400 });
   }
 
   const patchBody = {};
@@ -42,8 +50,7 @@ export default async function handler(req) {
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    return new Response(JSON.stringify({ error: "Supabase save failed", detail: err }), { status: 502 });
+    return new Response(JSON.stringify({ error: "Supabase save failed" }), { status: 502 });
   }
 
   return new Response(JSON.stringify({ ok: true, saved: Object.keys(patchBody) }), {

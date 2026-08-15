@@ -1,25 +1,19 @@
+import { isInternalRequest } from "../src/internalAuth.js";
+
 export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// HTML-escape any string interpolated into the email template. Without this,
-// name/role/reportText were being dropped into the outbound HTML verbatim —
-// meaning anyone calling this endpoint directly could inject arbitrary HTML
-// into an email sent "from" our own domain to any address they supplied.
 function escapeHtml(str) {
   return String(str ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 
-// Look up the real, server-computed score/designation for this identity
-// instead of trusting whatever the client's request body says. This also
-// doubles as the auth check: this endpoint sends email "from" our domain,
-// so it must only fire for a real completed assessment.
 async function getStoredAssessment(identityHash) {
   if (!identityHash || !SUPABASE_URL || !SERVICE_ROLE_KEY) return null;
   try {
@@ -39,12 +33,16 @@ async function getStoredAssessment(identityHash) {
   }
 }
 
-// Sends the completed VALU Index report by email.
-// The AI report is generated separately (streamed via /api/report) and passed
-// in as `reportText` — this function only formats and delivers it, which keeps
-// it well within the edge runtime time budget.
+// Internal-only delivery endpoint. It sends email from Valoria's domain and
+// therefore must never be callable by an arbitrary browser request.
 export default async function handler(req) {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+
+  if (!isInternalRequest(req)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { "Content-Type": "application/json" },
+    });
+  }
 
   let payload;
   try {
@@ -69,16 +67,15 @@ export default async function handler(req) {
       status: 403, headers: { "Content-Type": "application/json" },
     });
   }
+
   const name = stored.name;
   const role = stored.role;
   const score = stored.total_score;
   const designation = stored.designation;
-
   const rawReport = reportText && reportText.trim()
     ? reportText
     : `Your VALU Index is ${score}/100 — ${designation}. Your full AI report will follow shortly.`;
 
-  // Format report as HTML — escape every line's text content first.
   const reportHtml = rawReport
     .split("\n")
     .map(line => {
