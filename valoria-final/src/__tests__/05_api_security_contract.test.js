@@ -73,11 +73,11 @@ describe("Identity ownership contracts", () => {
 });
 
 describe("Assessment integrity contracts", () => {
-  test("submission identity is generated with cryptographic randomness", () => {
+  test("submission cannot overwrite an existing identity assessment", () => {
     const source = readApi("submit-assessment.js");
-    expect(source).toContain("randomUUID");
-    expect(source).not.toContain("computeFingerprint");
+    expect(source).toContain("computeFingerprint");
     expect(source).not.toContain("resolution=merge-duplicates");
+    expect(source).toContain("status === 409");
   });
 
   test("submission bounds attacker-controlled collections", () => {
