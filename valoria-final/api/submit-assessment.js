@@ -22,6 +22,10 @@ import { QUESTIONS } from '../src/questions.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const MAX_NAME_LENGTH = 200;
+const MAX_ROLE_LENGTH = 160;
+const MAX_TIMINGS_LENGTH = QUESTIONS.length;
+const MAX_SHUFFLE_KEYS = QUESTIONS.length * 2;
 
 function json(res, status, data) {
   res.status(status).setHeader('Cache-Control', 'no-store');
@@ -35,6 +39,10 @@ function createAssessmentToken() {
   return `fp_${randomUUID().replace(/-/g, '')}`;
 }
 
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Method not allowed' });
@@ -46,20 +54,37 @@ export default async function handler(req, res) {
 
   const { name, role, answers, timings, shuffleMap } = req.body || {};
 
-  if (!name?.trim() || !role?.trim()) {
-    return json(res, 400, { error: 'Name and role are required.' });
+  if (typeof name !== 'string' || !name.trim() || name.trim().length > MAX_NAME_LENGTH) {
+    return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   }
-  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+  if (typeof role !== 'string' || !role.trim() || role.trim().length > MAX_ROLE_LENGTH) {
+    return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
+  }
+  if (!isPlainObject(answers)) {
     return json(res, 400, { error: 'Missing answers.' });
   }
-  if (!Array.isArray(timings)) {
-    return json(res, 400, { error: 'Missing timings.' });
+  if (!Array.isArray(timings) || timings.length > MAX_TIMINGS_LENGTH) {
+    return json(res, 400, { error: 'Invalid assessment timings.' });
+  }
+  if (shuffleMap !== undefined && !isPlainObject(shuffleMap)) {
+    return json(res, 400, { error: 'Invalid shuffle map.' });
+  }
+  if (shuffleMap && Object.keys(shuffleMap).length > MAX_SHUFFLE_KEYS) {
+    return json(res, 400, { error: 'Invalid shuffle map.' });
   }
 
   // Basic completeness check — reject anything that isn't a full submission.
-  const answeredCount = Object.keys(answers).length;
-  if (answeredCount < QUESTIONS.length) {
-    return json(res, 400, { error: 'Assessment is incomplete.' });
+  // Extra answer keys are also rejected so attackers cannot inflate the input
+  // passed into the scoring engine with arbitrary objects.
+  const answerKeys = Object.keys(answers);
+  if (answerKeys.length !== QUESTIONS.length) {
+    return json(res, 400, { error: 'Assessment is incomplete or invalid.' });
+  }
+
+  // Timings must be finite, non-negative numbers. A generous upper bound
+  // prevents pathological values from reaching scoring calculations.
+  if (timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) {
+    return json(res, 400, { error: 'Invalid assessment timings.' });
   }
 
   let results;
