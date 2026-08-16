@@ -5,6 +5,17 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
+const REQUEST_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function getSiteOrigin() {
   try { return new URL(process.env.SITE_ORIGIN || "https://valoriainstitute.com").origin; }
@@ -17,14 +28,14 @@ function isValidIdentityHash(value) {
 
 async function fetchAssessment(identityHash) {
   const params = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: "name,role,email,total_score,designation,cluster_scores,skill_scores,ai_report,report_email_sent_at,report_status,report_attempts", limit: "1" });
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` }, cache: "no-store" });
+  const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` }, cache: "no-store" });
   if (!res.ok) throw new Error("Assessment lookup failed");
   const rows = await res.json();
   return rows?.[0] || null;
 }
 
 async function claimReport(identityHash, idempotencyKey) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_report_generation`, {
+  const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/claim_report_generation`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
     body: JSON.stringify({ p_identity_hash: identityHash, p_idempotency_key: idempotencyKey })
@@ -35,24 +46,16 @@ async function claimReport(identityHash, idempotencyKey) {
 }
 
 async function patchAssessment(identityHash, body) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identityHash)}`, { method: "PATCH", headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: "return=minimal" }, body: JSON.stringify(body) });
+  const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identityHash)}`, { method: "PATCH", headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: "return=minimal" }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error("Failed to update report state");
 }
 
-async function saveAiReport(identityHash, report) {
-  await patchAssessment(identityHash, { ai_report: report, report_status: "READY", report_locked_at: null });
-}
-
-async function markEmailPending(identityHash) {
-  await patchAssessment(identityHash, { report_status: "EMAIL_PENDING", report_locked_at: null });
-}
-
-async function markEmailSent(identityHash) {
-  await patchAssessment(identityHash, { report_email_sent_at: new Date().toISOString(), report_status: "SENT", report_locked_at: null });
-}
-
+async function saveAiReport(identityHash, report) { await patchAssessment(identityHash, { ai_report: report, report_status: "READY", report_locked_at: null }); }
+async function markEmailPending(identityHash) { await patchAssessment(identityHash, { report_status: "EMAIL_PENDING", report_locked_at: null }); }
+async function markEmailSent(identityHash) { await patchAssessment(identityHash, { report_email_sent_at: new Date().toISOString(), report_status: "SENT", report_locked_at: null }); }
 async function markFailed(identityHash) {
-  try { await patchAssessment(identityHash, { report_status: "FAILED", report_locked_at: null }); } catch (error) { console.error("[generate-and-send-report] failed to persist failure state"); }
+  try { await patchAssessment(identityHash, { report_status: "FAILED", report_locked_at: null }); }
+  catch { console.error("[generate-and-send-report] failed to persist failure state"); }
 }
 
 async function generateAiReport({ name, role, valuIndex, designation, clusterScores, skillScores }) {
@@ -84,14 +87,14 @@ WRITE THE REPORT IN THESE EXACT SECTIONS:
 ## THE QUESTION TO SIT WITH
 ---
 Start directly with ## YOUR SCORE. No introduction before it.`;
-  const response = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2500, messages: [{ role: "user", content: prompt }] }) });
+  const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2500, messages: [{ role: "user", content: prompt }] }) });
   if (!response.ok) throw new Error("AI report generation failed");
   const data = await response.json();
   return data.content?.[0]?.text || null;
 }
 
 async function sendReportEmail(email, identityHash, reportText) {
-  const res = await fetch(`${getSiteOrigin()}/api/send-email`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` }, body: JSON.stringify({ email, identity_hash: identityHash, reportText }) });
+  const res = await fetchWithTimeout(`${getSiteOrigin()}/api/send-email`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` }, body: JSON.stringify({ email, identity_hash: identityHash, reportText }) });
   if (!res.ok) throw new Error("send-email failed");
 }
 
