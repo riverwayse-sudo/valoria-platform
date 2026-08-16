@@ -71,3 +71,21 @@ describe("Identity ownership contracts", () => {
     expect(source).toContain("identity_hash");
   });
 });
+
+describe("Assessment integrity contracts", () => {
+  test("submission identity is generated with cryptographic randomness", () => {
+    const source = readApi("submit-assessment.js");
+    expect(source).toContain("randomUUID");
+    expect(source).not.toContain("computeFingerprint");
+    expect(source).not.toContain("resolution=merge-duplicates");
+  });
+
+  test("submission bounds attacker-controlled collections", () => {
+    const source = readApi("submit-assessment.js");
+    expect(source).toContain("MAX_NAME_LENGTH");
+    expect(source).toContain("MAX_ROLE_LENGTH");
+    expect(source).toContain("MAX_TIMINGS_LENGTH");
+    expect(source).toContain("MAX_SHUFFLE_KEYS");
+    expect(source).toContain("Number.isFinite");
+  });
+});
