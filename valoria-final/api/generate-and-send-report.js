@@ -11,22 +11,48 @@ function getSiteOrigin() {
   catch { return "https://valoriainstitute.com"; }
 }
 
+function isValidIdentityHash(value) {
+  return typeof value === "string" && /^fp_[a-z0-9]{8,120}$/i.test(value);
+}
+
 async function fetchAssessment(identityHash) {
-  const params = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: "name,role,email,total_score,designation,cluster_scores,skill_scores,ai_report,report_email_sent_at", limit: "1" });
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } });
+  const params = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: "name,role,email,total_score,designation,cluster_scores,skill_scores,ai_report,report_email_sent_at,report_status,report_attempts", limit: "1" });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` }, cache: "no-store" });
   if (!res.ok) throw new Error("Assessment lookup failed");
   const rows = await res.json();
   return rows?.[0] || null;
 }
 
+async function claimReport(identityHash, idempotencyKey) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_report_generation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    body: JSON.stringify({ p_identity_hash: identityHash, p_idempotency_key: idempotencyKey })
+  });
+  if (!res.ok) throw new Error("Report claim failed");
+  const rows = await res.json();
+  return rows?.[0] || null;
+}
+
+async function patchAssessment(identityHash, body) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identityHash)}`, { method: "PATCH", headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: "return=minimal" }, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error("Failed to update report state");
+}
+
 async function saveAiReport(identityHash, report) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identityHash)}`, { method: "PATCH", headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: "return=minimal" }, body: JSON.stringify({ ai_report: report }) });
-  if (!res.ok) throw new Error("Failed to save AI report");
+  await patchAssessment(identityHash, { ai_report: report, report_status: "READY", report_locked_at: null });
+}
+
+async function markEmailPending(identityHash) {
+  await patchAssessment(identityHash, { report_status: "EMAIL_PENDING", report_locked_at: null });
 }
 
 async function markEmailSent(identityHash) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identityHash)}`, { method: "PATCH", headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: "return=minimal" }, body: JSON.stringify({ report_email_sent_at: new Date().toISOString() }) });
-  if (!res.ok) throw new Error("Failed to mark report sent");
+  await patchAssessment(identityHash, { report_email_sent_at: new Date().toISOString(), report_status: "SENT", report_locked_at: null });
+}
+
+async function markFailed(identityHash) {
+  try { await patchAssessment(identityHash, { report_status: "FAILED", report_locked_at: null }); } catch (error) { console.error("[generate-and-send-report] failed to persist failure state"); }
 }
 
 async function generateAiReport({ name, role, valuIndex, designation, clusterScores, skillScores }) {
@@ -70,15 +96,28 @@ async function sendReportEmail(email, identityHash, reportText) {
 }
 
 export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
   if (!CRON_SECRET || req.headers.authorization !== `Bearer ${CRON_SECRET}`) return res.status(401).json({ ok: false, error: "Unauthorized" });
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANTHROPIC_API_KEY) return res.status(503).json({ ok: false, error: "Service unavailable" });
+
   const { identity_hash } = req.body || {};
-  if (!identity_hash || typeof identity_hash !== "string" || identity_hash.length > 128) return res.status(400).json({ ok: false, error: "Invalid identity_hash" });
+  if (!isValidIdentityHash(identity_hash)) return res.status(400).json({ ok: false, error: "Invalid identity_hash" });
+
+  const idempotencyKey = typeof req.headers["idempotency-key"] === "string" && /^[A-Za-z0-9._:-]{16,128}$/.test(req.headers["idempotency-key"])
+    ? req.headers["idempotency-key"]
+    : `report-${identity_hash}`;
 
   try {
     const assessment = await fetchAssessment(identity_hash);
     if (!assessment) return res.status(404).json({ ok: false, error: "Assessment not found" });
-    if (assessment.report_email_sent_at) return res.status(200).json({ ok: true, alreadySent: true });
+    if (assessment.report_email_sent_at || assessment.report_status === "SENT") return res.status(200).json({ ok: true, alreadySent: true });
     if (!assessment.email) return res.status(200).json({ ok: true, skipped: "no_email" });
+
+    const claim = await claimReport(identity_hash, idempotencyKey);
+    if (!claim?.claimed) {
+      if (claim?.status === "SENT") return res.status(200).json({ ok: true, alreadySent: true });
+      return res.status(202).json({ ok: true, status: claim?.status || "IN_PROGRESS" });
+    }
 
     let reportText = assessment.ai_report;
     if (!reportText) {
@@ -87,11 +126,13 @@ export default async function handler(req, res) {
       await saveAiReport(identity_hash, reportText);
     }
 
+    await markEmailPending(identity_hash);
     await sendReportEmail(assessment.email, identity_hash, reportText);
     await markEmailSent(identity_hash);
     return res.status(200).json({ ok: true, sent: true });
   } catch (err) {
     console.error("[generate-and-send-report] failed:", err.message);
+    await markFailed(identity_hash);
     return res.status(500).json({ ok: false, error: "Report generation failed" });
   }
 }
