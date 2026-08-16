@@ -6,19 +6,20 @@
 // the exact same scoringEngine + question bank the client uses, then writes
 // the result using the service-role key.
 //
-// IMPORTANT: identity_hash is a server-generated bearer identifier, NOT an
-// authorization mechanism. It must never be derived from name/role because
-// those values are guessable and would let one person predict another
-// assessment's identifier and collide with the upsert key.
+// IMPORTANT: identity_hash is an identifier only, not authorization. It is
+// currently derived by the shared lock engine for backwards compatibility.
+// Authorization is enforced separately by authenticated account linking and
+// internal-only report endpoints. A future protocol migration should replace
+// this deterministic identifier with a server-issued assessment token.
 //
 // RLS on valu_assessments MUST deny INSERT/UPDATE to anon/authenticated for
 // this to actually mean anything — see supabase/rls-lockdown.sql. Without
 // that, a client can still bypass this file entirely by POSTing straight to
 // PostgREST with the anon key, exactly like before.
 
-import { randomUUID } from 'node:crypto';
 import { computeResults } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
+import { computeFingerprint } from '../src/lockEngine.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -30,13 +31,6 @@ const MAX_SHUFFLE_KEYS = QUESTIONS.length * 2;
 function json(res, status, data) {
   res.status(status).setHeader('Cache-Control', 'no-store');
   return res.json(data);
-}
-
-function createAssessmentToken() {
-  // 128 bits of randomness, encoded as 32 hex characters. The fp_ prefix is
-  // retained for compatibility with existing API validation and downstream
-  // account/claim flows.
-  return `fp_${randomUUID().replace(/-/g, '')}`;
 }
 
 function isPlainObject(value) {
@@ -73,16 +67,11 @@ export default async function handler(req, res) {
     return json(res, 400, { error: 'Invalid shuffle map.' });
   }
 
-  // Basic completeness check — reject anything that isn't a full submission.
-  // Extra answer keys are also rejected so attackers cannot inflate the input
-  // passed into the scoring engine with arbitrary objects.
   const answerKeys = Object.keys(answers);
   if (answerKeys.length !== QUESTIONS.length) {
     return json(res, 400, { error: 'Assessment is incomplete or invalid.' });
   }
 
-  // Timings must be finite, non-negative numbers. A generous upper bound
-  // prevents pathological values from reaching scoring calculations.
   if (timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) {
     return json(res, 400, { error: 'Invalid assessment timings.' });
   }
@@ -97,18 +86,14 @@ export default async function handler(req, res) {
     return json(res, 400, { error: 'Could not score this submission.' });
   }
 
-  // Never derive the database identity from user-controlled, low-entropy
-  // attributes such as name + role. A fresh random token prevents predictable
-  // identifiers and prevents one person's submission from colliding with or
-  // overwriting another person's assessment.
-  const identityHash = createAssessmentToken();
+  const fingerprint = computeFingerprint(name, role);
   const completedAt = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
 
   const row = {
     name: name.trim(),
     role: role.trim(),
-    identity_hash: identityHash,
+    identity_hash: fingerprint,
     total_score: results.valuIndex,
     designation: results.desig?.name || '',
     cluster_scores: results.clusterScores,
@@ -119,25 +104,25 @@ export default async function handler(req, res) {
   };
 
   try {
-    // identity_hash remains unique for backwards-compatible schema use, but
-    // is now unpredictable. No client-controlled value is used as the upsert
-    // conflict key.
-    const upsertRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/valu_assessments?on_conflict=identity_hash`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-          Prefer: 'return=minimal,resolution=merge-duplicates',
-        },
-        body: JSON.stringify(row),
+    // Do NOT upsert on identity_hash. A predictable identifier must never be
+    // allowed to overwrite an existing assessment. If the same identity is
+    // submitted again, the unique constraint should reject it instead.
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(row),
+    });
+    if (!insertRes.ok) {
+      const err = await insertRes.text();
+      console.error('submit-assessment: insert failed', insertRes.status, err);
+      if (insertRes.status === 409) {
+        return json(res, 409, { error: 'An assessment already exists for this identity.' });
       }
-    );
-    if (!upsertRes.ok) {
-      const err = await upsertRes.text();
-      console.error('submit-assessment: upsert failed', upsertRes.status, err);
       return json(res, 502, { error: 'Could not save your result. Please try again.' });
     }
   } catch (err) {
@@ -145,8 +130,5 @@ export default async function handler(req, res) {
     return json(res, 502, { error: 'Could not save your result. Please try again.' });
   }
 
-  // Return the authoritative, server-computed result so the client can
-  // reconcile its optimistic UI if it ever drifts. The token is required by
-  // downstream account/claim flows and is deliberately high-entropy.
-  return json(res, 200, { identity_hash: identityHash, results });
+  return json(res, 200, { identity_hash: fingerprint, results });
 }
