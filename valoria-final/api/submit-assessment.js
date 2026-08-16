@@ -1,21 +1,8 @@
 // api/submit-assessment.js
 //
-// This is the ONLY thing allowed to write total_score / cluster_scores /
-// skill_scores / designation to valu_assessments. The client sends raw
-// answers + timings + shuffleMap; this endpoint recomputes the result with
-// the exact same scoringEngine + question bank the client uses, then writes
-// the result using the service-role key.
-//
-// IMPORTANT: identity_hash is an identifier only, not authorization. It is
-// currently derived by the shared lock engine for backwards compatibility.
-// Authorization is enforced separately by authenticated account linking and
-// internal-only report endpoints. A future protocol migration should replace
-// this deterministic identifier with a server-issued assessment token.
-//
-// RLS on valu_assessments MUST deny INSERT/UPDATE to anon/authenticated for
-// this to actually mean anything — see supabase/rls-lockdown.sql. Without
-// that, a client can still bypass this file entirely by POSTing straight to
-// PostgREST with the anon key, exactly like before.
+// Server-authoritative assessment submission. The browser may submit answers
+// and presentation mappings, but it may not invent score-bearing options.
+// The canonical question bank remains the source of truth for scoring.
 
 import { computeResults } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
@@ -26,7 +13,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MAX_NAME_LENGTH = 200;
 const MAX_ROLE_LENGTH = 160;
 const MAX_TIMINGS_LENGTH = QUESTIONS.length;
-const MAX_SHUFFLE_KEYS = QUESTIONS.length * 2;
+const MAX_SHUFFLE_KEYS = QUESTIONS.length;
 
 function json(res, status, data) {
   res.status(status).setHeader('Cache-Control', 'no-store');
@@ -37,12 +24,48 @@ function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return json(res, 405, { error: 'Method not allowed' });
+function optionKey(option) {
+  if (!option || typeof option !== 'object') return null;
+  // Include all score-bearing/display fields that define a canonical option.
+  return JSON.stringify({
+    text: option.text ?? option.label ?? null,
+    score: option.score ?? null,
+  });
+}
+
+function validateShuffleMap(shuffleMap) {
+  if (!isPlainObject(shuffleMap)) return false;
+
+  for (let idx = 0; idx < QUESTIONS.length; idx += 1) {
+    const question = QUESTIONS[idx];
+    const mapped = shuffleMap[idx];
+    if (mapped === undefined) continue;
+    if (!Array.isArray(mapped) || mapped.length !== question.options.length) return false;
+
+    const canonical = question.options.map(optionKey).sort();
+    const submitted = mapped.map(optionKey).sort();
+    if (canonical.length !== submitted.length) return false;
+    for (let i = 0; i < canonical.length; i += 1) {
+      if (canonical[i] !== submitted[i]) return false;
+    }
   }
+  return true;
+}
+
+function validateAnswers(answers) {
+  if (!isPlainObject(answers)) return false;
+  if (Object.keys(answers).length !== QUESTIONS.length) return false;
+
+  return QUESTIONS.every((question, idx) => {
+    const value = answers[idx];
+    return Number.isInteger(value) && value >= 0 && value < question.options.length;
+  });
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SERVICE_ROLE_KEY || !SUPABASE_URL) {
-    console.error('submit-assessment: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env var');
+    console.error('submit-assessment: missing Supabase server configuration');
     return json(res, 500, { error: 'Server misconfigured.' });
   }
 
@@ -54,33 +77,25 @@ export default async function handler(req, res) {
   if (typeof role !== 'string' || !role.trim() || role.trim().length > MAX_ROLE_LENGTH) {
     return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   }
-  if (!isPlainObject(answers)) {
-    return json(res, 400, { error: 'Missing answers.' });
+  if (!validateAnswers(answers)) {
+    return json(res, 400, { error: 'Assessment answers are incomplete or invalid.' });
   }
-  if (!Array.isArray(timings) || timings.length > MAX_TIMINGS_LENGTH) {
+  if (!Array.isArray(timings) || timings.length !== QUESTIONS.length) {
     return json(res, 400, { error: 'Invalid assessment timings.' });
   }
-  if (shuffleMap !== undefined && !isPlainObject(shuffleMap)) {
-    return json(res, 400, { error: 'Invalid shuffle map.' });
-  }
-  if (shuffleMap && Object.keys(shuffleMap).length > MAX_SHUFFLE_KEYS) {
-    return json(res, 400, { error: 'Invalid shuffle map.' });
-  }
-
-  const answerKeys = Object.keys(answers);
-  if (answerKeys.length !== QUESTIONS.length) {
-    return json(res, 400, { error: 'Assessment is incomplete or invalid.' });
-  }
-
   if (timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) {
     return json(res, 400, { error: 'Invalid assessment timings.' });
+  }
+  if (!validateShuffleMap(shuffleMap)) {
+    return json(res, 400, { error: 'Invalid assessment presentation mapping.' });
+  }
+  if (Object.keys(shuffleMap).length > MAX_SHUFFLE_KEYS) {
+    return json(res, 400, { error: 'Invalid assessment presentation mapping.' });
   }
 
   let results;
   try {
-    // Server recomputes from scratch. The client's own `results` value, if it
-    // sent one, is ignored entirely — it is never read here.
-    results = computeResults(answers, timings, shuffleMap || {}, QUESTIONS);
+    results = computeResults(answers, timings, shuffleMap, QUESTIONS);
   } catch (err) {
     console.error('submit-assessment: scoring failed', err);
     return json(res, 400, { error: 'Could not score this submission.' });
@@ -104,9 +119,6 @@ export default async function handler(req, res) {
   };
 
   try {
-    // Do NOT upsert on identity_hash. A predictable identifier must never be
-    // allowed to overwrite an existing assessment. If the same identity is
-    // submitted again, the unique constraint should reject it instead.
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments`, {
       method: 'POST',
       headers: {
@@ -117,6 +129,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify(row),
     });
+
     if (!insertRes.ok) {
       const err = await insertRes.text();
       console.error('submit-assessment: insert failed', insertRes.status, err);
