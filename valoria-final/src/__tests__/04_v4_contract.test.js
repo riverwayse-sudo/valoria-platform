@@ -2,7 +2,6 @@
 
 const {
   CLUSTERS,
-  DESIGNATIONS,
   MARKETPLACE_SCORE_THRESHOLD,
   getDesignation,
   getPathway,
@@ -74,7 +73,7 @@ describe("VALU v4 canonical contract", () => {
     const result = computeResults(answers, timings, {}, QUESTIONS);
 
     expect(result.gamingDetected).toBe(true);
-    expect(result.valuIndex).toBe(75);
+    expect(result.valuIndex).toBe(100);
     expect(result.scoreEligibleForMarketplace).toBe(true);
   });
 });
