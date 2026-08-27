@@ -29,15 +29,14 @@ begin
   on conflict (professional_id) do update
     set reason = excluded.reason,
         requested_at = excluded.requested_at;
-  return coalesce(new, old);
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
 end;
 $$;
 
 revoke all on function private.request_professional_readiness_refresh() from public, anon, authenticated;
 grant execute on function private.request_professional_readiness_refresh() to service_role;
 
--- Evidence mutations trigger a refresh request. The service worker is the only actor
--- allowed to consume the queue and mutate platform-managed listing state.
 drop trigger if exists trg_capability_readiness_refresh on public.professional_capabilities;
 create trigger trg_capability_readiness_refresh after insert or update or delete on public.professional_capabilities
 for each row execute function private.request_professional_readiness_refresh();
