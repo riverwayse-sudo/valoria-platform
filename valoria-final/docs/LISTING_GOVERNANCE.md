@@ -6,18 +6,36 @@ Valoria separates three concepts:
 - `listing_status`: governed marketplace state (`NOT_LISTED`, `LISTED`, `SUSPENDED`, `REVOKED`).
 - `availability_status`: current availability (`AVAILABLE`, `LIMITED`, `UNAVAILABLE`).
 
+## VALU v4 score boundary
+
+The authoritative full VALU Index produces a 0–100 score. A score of **35 or higher** is the minimum assessment score required for automated marketplace eligibility consideration.
+
+`valu_index >= 35 → score-eligible`
+
+It does **not** mean:
+
+`valu_index >= 35 → LISTED`
+
+Score eligibility is one input into `eligible_for_listing`. Listing remains a separate governed state and also depends on profile completeness, account/identity validity, capability selection/evidence, verification requirements, and governance controls.
+
 ## Normal flow
 
 ```text
-Assessment completed
+Authoritative VALU assessment completed
       ↓
-Eligibility evaluation
-      ↓
-Eligible
-      ↓
-Automatic listing
-      ↓
-Marketplace discovery
+VALU score >= 35?
+   ┌──┴──┐
+  NO    YES
+   ↓      ↓
+Not   Eligibility evaluation
+eligible     ↓
+          Eligible?
+          ┌──┴──┐
+         NO    YES
+          ↓      ↓
+      NOT_LISTED  LISTED
+                    ↓
+              Marketplace discovery
 ```
 
 ## Governance override
