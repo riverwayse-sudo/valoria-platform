@@ -3,8 +3,8 @@
 Valoria separates three concepts:
 
 - `eligible_for_listing`: automated platform decision based on required trust and assessment conditions.
-- `listing_status`: governed marketplace state (`NOT_LISTED`, `LISTED`, `SUSPENDED`, `REVOKED`).
-- `availability_status`: current availability (`AVAILABLE`, `LIMITED`, `UNAVAILABLE`).
+- `listing_status`: governed marketplace state (`pending`, `unlisted`, `listed`, `suspended`, `revoked`).
+- `availability_status`: current availability (`available`, `limited`, `unavailable`).
 
 ## VALU v4 score boundary
 
@@ -14,7 +14,7 @@ The authoritative full VALU Index produces a 0–100 score. A score of **35 or h
 
 It does **not** mean:
 
-`valu_index >= 35 → LISTED`
+`valu_index >= 35 → listed`
 
 Score eligibility is one input into `eligible_for_listing`. Listing remains a separate governed state and also depends on profile completeness, account/identity validity, capability selection/evidence, verification requirements, and governance controls.
 
@@ -33,7 +33,7 @@ eligible     ↓
           ┌──┴──┐
          NO    YES
           ↓      ↓
-      NOT_LISTED  LISTED
+      unlisted   listed
                     ↓
               Marketplace discovery
 ```
@@ -41,10 +41,10 @@ eligible     ↓
 ## Governance override
 
 ```text
-LISTED → ADMIN_REVOKED
-LISTED → ADMIN_SUSPENDED
-REVOKED → ADMIN_RESTORED (only after eligibility is re-confirmed)
-SUSPENDED → ADMIN_UNSUSPENDED (only after eligibility is re-confirmed)
+listed → suspended
+listed → revoked
+revoked → listed (only after eligibility is re-confirmed)
+suspended → listed (only after eligibility is re-confirmed)
 ```
 
 A professional can be listed but unavailable. Revoked or suspended professionals must not appear in marketplace discovery regardless of availability.
