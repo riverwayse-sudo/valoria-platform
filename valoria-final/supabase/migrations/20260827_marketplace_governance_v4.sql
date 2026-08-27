@@ -1,6 +1,6 @@
 -- VALU v4 marketplace governance aligned to the live Valoria schema.
 -- Score eligibility and listing status are separate concepts.
--- Governance functions are server-only and are revoked from PUBLIC/API roles.
+-- Core governance logic remains in private schema; public wrappers are service-role-only for PostgREST invocation.
 
 create schema if not exists private;
 
@@ -40,8 +40,7 @@ begin
  eligible:=jsonb_array_length(missing)=0 and not blocked;
  return jsonb_build_object('professional_id',p_professional_id,'profile_complete',profile_complete,'valu_complete',valu_complete,'blocked',blocked,'eligible',eligible,'missing',missing);
 end; $$;
-revoke all on function private.evaluate_professional_readiness(uuid) from public,anon,authenticated;
-grant execute on function private.evaluate_professional_readiness(uuid) to service_role;
+revoke all on function private.evaluate_professional_readiness(uuid) from public,anon,authenticated; grant execute on function private.evaluate_professional_readiness(uuid) to service_role;
 
 create or replace function private.compute_professional_listing_eligibility(p_professional_id uuid) returns boolean language plpgsql security definer set search_path=public,private as $$ declare readiness jsonb; begin readiness:=private.evaluate_professional_readiness(p_professional_id); return coalesce((readiness->>'eligible')::boolean,false); end; $$;
 revoke all on function private.compute_professional_listing_eligibility(uuid) from public,anon,authenticated; grant execute on function private.compute_professional_listing_eligibility(uuid) to service_role;
@@ -59,7 +58,14 @@ begin
 end; $$;
 revoke all on function private.sync_professional_listing_status(uuid) from public,anon,authenticated; grant execute on function private.sync_professional_listing_status(uuid) to service_role;
 
-drop function if exists public.evaluate_professional_readiness(uuid); drop function if exists public.compute_professional_listing_eligibility(uuid); drop function if exists public.sync_professional_listing_status(uuid);
+-- PostgREST exposes only public schema. These wrappers are intentionally executable by service_role only.
+create or replace function public.evaluate_professional_readiness(p_professional_id uuid) returns jsonb language sql security invoker set search_path=public,private as $$ select private.evaluate_professional_readiness(p_professional_id); $$;
+create or replace function public.compute_professional_listing_eligibility(p_professional_id uuid) returns boolean language sql security invoker set search_path=public,private as $$ select private.compute_professional_listing_eligibility(p_professional_id); $$;
+create or replace function public.sync_professional_listing_status(p_professional_id uuid) returns jsonb language sql security invoker set search_path=public,private as $$ select private.sync_professional_listing_status(p_professional_id); $$;
+revoke all on function public.evaluate_professional_readiness(uuid) from public,anon,authenticated; grant execute on function public.evaluate_professional_readiness(uuid) to service_role;
+revoke all on function public.compute_professional_listing_eligibility(uuid) from public,anon,authenticated; grant execute on function public.compute_professional_listing_eligibility(uuid) to service_role;
+revoke all on function public.sync_professional_listing_status(uuid) from public,anon,authenticated; grant execute on function public.sync_professional_listing_status(uuid) to service_role;
+
 drop view if exists public.marketplace_professionals;
 create view public.marketplace_professionals with (security_invoker=true) as select p.id as professional_id,p.display_name as full_name,p.bio,p.location,p.languages,p.headline,p.listing_status,p.availability_status,p.visibility,coalesce(c.capabilities,'{}'::text[]) as capabilities from public.professional_profiles p left join lateral (select array_agg(distinct lower(pc.capability) order by lower(pc.capability)) as capabilities from public.professional_capabilities pc where pc.professional_id=p.id and pc.is_active=true) c on true where p.listing_status='listed' and p.availability_status in ('available','limited') and p.visibility='public' and coalesce(p.eligible_for_listing,false)=true;
 revoke all on public.marketplace_professionals from public,anon; grant select on public.marketplace_professionals to authenticated;
