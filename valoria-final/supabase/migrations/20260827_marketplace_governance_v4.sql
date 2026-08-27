@@ -11,12 +11,14 @@ alter table public.professional_profiles
   add column if not exists revoked_by uuid,
   add column if not exists revocation_reason text;
 
-drop constraint if exists professional_profiles_listing_status_check on public.professional_profiles;
+alter table public.professional_profiles
+  drop constraint if exists professional_profiles_listing_status_check;
 alter table public.professional_profiles
   add constraint professional_profiles_listing_status_check
   check (listing_status in ('pending','listed','unlisted','suspended','revoked'));
 
-drop constraint if exists professional_profiles_availability_status_check on public.professional_profiles;
+alter table public.professional_profiles
+  drop constraint if exists professional_profiles_availability_status_check;
 alter table public.professional_profiles
   add constraint professional_profiles_availability_status_check
   check (availability_status in ('available','limited','unavailable'));
