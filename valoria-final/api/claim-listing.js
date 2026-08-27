@@ -1,7 +1,7 @@
 // api/claim-listing.js
-//
-// Claims the completed assessment for the currently authenticated user and
-// creates/updates the corresponding professional profile.
+// Claims a completed assessment for the authenticated user and creates/updates
+// the professional profile. A 35+ VALU score is score eligibility only; actual
+// listing is decided separately by the server-side readiness/governance engine.
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -95,11 +95,13 @@ export default async function handler(req) {
     return json({ error: 'This assessment is already linked to another account.' }, 409);
   }
 
-  const listingStatus = (assessment.total_score ?? 0) >= LISTING_THRESHOLD ? 'listed' : 'pending';
+  const scoreEligibleForMarketplace = (assessment.total_score ?? 0) >= LISTING_THRESHOLD;
 
-  // Capture whether a profile already existed. If this request creates a new
-  // profile and the subsequent assessment link fails, we can safely remove the
-  // newly-created row instead of leaving an orphaned professional identity.
+  // A claim creates the professional identity but never grants LISTED solely
+  // because the assessment score is >=35. The readiness/governance engine is
+  // the only authority allowed to transition listing_status.
+  const listingStatus = 'unlisted';
+
   let profileExisted = false;
   try {
     const profileCheck = await fetch(
@@ -150,9 +152,6 @@ export default async function handler(req) {
 
   if (assessment.id) {
     try {
-      // Only claim an unowned assessment. This closes the race where another
-      // request could claim the same assessment between the initial read and
-      // this write.
       const linkRes = await fetch(
         `${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}&user_id=is.null`,
         {
@@ -206,5 +205,33 @@ export default async function handler(req) {
     }
   }
 
-  return json({ ok: true, listed: listingStatus === 'listed', valu_index: assessment.total_score });
+  // Re-run the authoritative readiness engine. With no capability selected yet,
+  // this normally remains unlisted even when the score is >=35.
+  let listingStatusAfterReadiness = listingStatus;
+  let eligibility = false;
+  try {
+    const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/sync_professional_listing_status`, {
+      method: 'POST',
+      headers: { ...serviceHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_professional_id: userId }),
+    });
+    if (rpcRes.ok) {
+      const rpcData = await rpcRes.json();
+      listingStatusAfterReadiness = rpcData?.listing_status || listingStatus;
+      eligibility = rpcData?.eligible_for_listing === true;
+    } else {
+      console.error('claim-listing: readiness sync failed', rpcRes.status);
+    }
+  } catch (err) {
+    console.error('claim-listing: readiness sync failed', err);
+  }
+
+  return json({
+    ok: true,
+    listed: listingStatusAfterReadiness === 'listed',
+    listing_status: listingStatusAfterReadiness,
+    score_eligible_for_marketplace: scoreEligibleForMarketplace,
+    eligible_for_listing: eligibility,
+    valu_index: assessment.total_score,
+  });
 }
