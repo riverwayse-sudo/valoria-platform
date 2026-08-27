@@ -1,6 +1,5 @@
 -- VALU v4 lifecycle: keep marketplace eligibility/listing state synchronized.
--- The refresh path is service-role only; mutations schedule a refresh request rather than
--- invoking privileged governance logic directly inside user-owned writes.
+-- Mutations enqueue a refresh request; the privileged worker consumes it.
 
 create table if not exists public.professional_readiness_refresh_queue (
   professional_id uuid primary key references public.professional_profiles(id) on delete cascade,
@@ -18,21 +17,27 @@ language plpgsql
 security definer
 set search_path = public, private
 as $$
+declare
+  target_id uuid;
 begin
+  target_id := coalesce(new.professional_id, new.id, old.professional_id, old.id);
+  if target_id is null then
+    raise exception 'Cannot enqueue readiness refresh without professional id';
+  end if;
   insert into public.professional_readiness_refresh_queue (professional_id, reason, requested_at)
-  values (coalesce(new.professional_id, new.id), tg_table_name, now())
+  values (target_id, tg_table_name, now())
   on conflict (professional_id) do update
     set reason = excluded.reason,
         requested_at = excluded.requested_at;
-  return new;
+  return coalesce(new, old);
 end;
 $$;
 
 revoke all on function private.request_professional_readiness_refresh() from public, anon, authenticated;
 grant execute on function private.request_professional_readiness_refresh() to service_role;
 
--- These triggers only enqueue. The authoritative service-role worker consumes the queue
--- and calls private.sync_professional_listing_status(uuid).
+-- Evidence mutations trigger a refresh request. The service worker is the only actor
+-- allowed to consume the queue and mutate platform-managed listing state.
 drop trigger if exists trg_capability_readiness_refresh on public.professional_capabilities;
 create trigger trg_capability_readiness_refresh after insert or update or delete on public.professional_capabilities
 for each row execute function private.request_professional_readiness_refresh();
@@ -84,7 +89,4 @@ $$;
 revoke all on function private.refresh_professional_readiness_queue(integer) from public, anon, authenticated;
 grant execute on function private.refresh_professional_readiness_queue(integer) to service_role;
 
--- Assessment/profile changes are handled by explicit application/service calls because
--- their source tables use different ownership keys. The canonical service flow must call
--- private.sync_professional_listing_status after an authoritative assessment completion
--- and after profile verification changes.
+comment on table public.professional_readiness_refresh_queue is 'Internal queue of professional IDs whose marketplace readiness must be re-evaluated after governed evidence changes.';
