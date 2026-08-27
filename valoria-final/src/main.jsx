@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import ValoriaPlatform from './ValoriaPlatform.jsx'
+import VALUIndexV4App from './VALUIndexV4App.jsx'
 
 // Global brand reset — applied before any component renders
 const brandStyles = document.createElement('style')
@@ -27,18 +27,13 @@ brandStyles.textContent = `
     overflow-x: hidden;
   }
 
-  /* Brand scrollbar */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.45); }
 
-  /* Input reset — brand-compliant */
-  input, textarea, select {
-    font-family: 'DM Sans', sans-serif;
-  }
+  input, textarea, select { font-family: 'DM Sans', sans-serif; }
 
-  /* Focus ring — brand gold */
   :focus-visible {
     outline: 2px solid rgba(201,168,76,0.5);
     outline-offset: 2px;
@@ -48,6 +43,6 @@ document.head.appendChild(brandStyles)
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ValoriaPlatform />
+    <VALUIndexV4App />
   </StrictMode>,
 )
