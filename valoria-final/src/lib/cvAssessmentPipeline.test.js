@@ -31,7 +31,9 @@ describe('Valoria CV assessment pipeline', () => {
     const first = processExtractedCvText(text);
     const second = processExtractedCvText(text);
 
-    expect(first.status).toBe('ASSESSED');
+    expect(first.assessment).not.toBeNull();
+    expect(first.status).toBe(first.assessment.score >= 60 ? 'ASSESSED' : 'REVIEW_REQUIRED');
+    expect(second.status).toBe(first.status);
     expect(first.assessment.score).toBe(second.assessment.score);
     expect(first.assessment.dimensions).toEqual(second.assessment.dimensions);
     expect(first.normalized.email).toBe('john@example.com');

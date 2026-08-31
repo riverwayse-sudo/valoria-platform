@@ -51,16 +51,20 @@ describe("Privileged API security contracts", () => {
 describe("Identity ownership contracts", () => {
   test("claim-listing derives ownership from the verified auth user", () => {
     const source = readApi("claim-listing.js");
-    expect(source).toContain("auth.getUser");
+    expect(source).toContain("/auth/v1/user");
+    // Ownership must be derived from the verified Supabase identity, never from client payload.
+
     expect(source).toContain("authUser.id");
     expect(source).toContain("authUser.email");
-    expect(source).toContain("user_id: authUser.id");
+    expect(source).toContain("userId");
+    expect(source).toContain("assessment.user_id");
     expect(source).not.toMatch(/user_id\s*=\s*fields\.user_id/);
   });
 
   test("update-assessment verifies the authenticated user", () => {
     const source = readApi("update-assessment.js");
-    expect(source).toContain("auth.getUser");
+    expect(source).toContain("/auth/v1/user");
+    expect(source).toContain("verifiedUser");
     expect(source).toContain("user_id");
   });
 
