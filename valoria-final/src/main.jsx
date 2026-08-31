@@ -22,17 +22,19 @@ brandStyles.textContent = `
   }
 
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Raleway', sans-serif;
     color: #F7F4EE;
     overflow-x: hidden;
+  }
+
+  button, input, textarea, select {
+    font-family: 'Raleway', sans-serif;
   }
 
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.45); }
-
-  input, textarea, select { font-family: 'DM Sans', sans-serif; }
 
   :focus-visible {
     outline: 2px solid rgba(201,168,76,0.5);
