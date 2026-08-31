@@ -117,7 +117,7 @@ const TASTER_QUESTIONS = [
     ]},
 ];
 
-// ── FULL QUESTION BANK (unchanged from v2) ──────────────────────────────────
+// ── FULL QUESTION BANK (unchanged from v2, v4 keeps these canonical) ─────────────────
 const ALL_QUESTIONS = [
   // ─ PRESENCE ────────────────────────────────────────────────────────────────
   { id:"P1a",cluster:"P",skill:"Communication",type:"behavioural",
@@ -637,7 +637,7 @@ function computeTasterResult(answers) {
   return { normalisedScores, strongest, weakest, secondWeakest, insights };
 }
 
-// ── FULL SCORING ENGINE (unchanged from v2) ──────────────────────────────────
+// ── FULL SCORING ENGINE (unchanged from v2, v4 keeps these canonical) ────────
 function computeResults(answers, timings) {
   const clusterRaw = { P:0, R:0, I:0, M:0, E:0 };
   const clusterCounts = { P:0, R:0, I:0, M:0, E:0 };
@@ -1125,7 +1125,7 @@ export default function PRIMEAssessment() {
     );
   }
 
-  // ── FULL RESULTS (unchanged from v2 with experience context added) ──────────
+  // ── FULL RESULTS (unchanged from v2 with experience context added, v4 keeps these) ─
   if (phase === "results" && results) {
     const { valuIndex, clusterScores, desig, futureReadyScore, strongest, weakest, listed, pathway, speedFlag, gamingDetected, consistencyFlags } = results;
     const anyFlag = speedFlag || gamingDetected || Object.keys(consistencyFlags).length > 0;
@@ -1246,7 +1246,7 @@ export default function PRIMEAssessment() {
           </div>
 
           <div style={{textAlign:"center",paddingTop:20,borderTop:"1px solid rgba(201,168,76,0.1)",fontSize:11,color:"rgba(247,244,238,0.2)",letterSpacing:"0.1em",fontFamily:"sans-serif",lineHeight:1.8}}>
-            VALU INDEX v3.0  ·  PRIME FRAMEWORK  ·  VALORIA INSTITUTE  ·  (c) 2026<br/>
+            VALU INDEX v4.0  ·  PRIME FRAMEWORK  ·  VALORIA INSTITUTE  ·  (c) 2026<br/>
             CONFIDENTIAL  ·  AFRICAN TALENT BUREAU LTD
           </div>
         </div>
