@@ -21,6 +21,10 @@
     "api/save-report.js": { "maxDuration": 20 },
     "api/send-email.js": { "maxDuration": 20 },
     "api/sweep-unsent-reports.js": { "maxDuration": 60 },
-    "api/submit-assessment.js": { "maxDuration": 20 }
-  }
+    "api/submit-assessment.js": { "maxDuration": 20 },
+    "api/process-readiness-queue.js": { "maxDuration": 20 }
+  },
+  "crons": [
+    { "path": "/api/process-readiness-queue", "schedule": "*/5 * * * *" }
+  ]
 }

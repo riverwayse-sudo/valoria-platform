@@ -15,9 +15,17 @@ function json(data, status = 200) {
   });
 }
 
+function getHeader(req, name) {
+  const headers = req?.headers;
+  if (!headers) return '';
+  if (typeof headers.get === 'function') return headers.get(name) || '';
+  const value = headers[name] ?? headers[name.toLowerCase()];
+  return Array.isArray(value) ? value[0] || '' : String(value || '');
+}
+
 export default async function handler(req) {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
-  const auth = req.headers.get('authorization') || '';
+  const auth = getHeader(req, 'authorization');
   if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) return json({ error: 'Unauthorized' }, 401);
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     console.error('send-profile-reminder: missing server environment');
