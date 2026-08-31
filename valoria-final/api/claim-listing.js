@@ -41,8 +41,9 @@ export default async function handler(req) {
     return json({ error: 'Could not verify authentication.' }, 502);
   }
 
-  const userId = authUser?.id;
-  const authEmail = String(authUser?.email || '').trim().toLowerCase();
+  // Ownership always comes from the verified Supabase auth identity.
+  const userId = authUser.id;
+  const authEmail = String(authUser.email || '').trim().toLowerCase();
   if (!userId || !authEmail) return json({ error: 'Authenticated account is incomplete.' }, 403);
 
   let payload;

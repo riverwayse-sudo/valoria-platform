@@ -7,11 +7,20 @@ describe('VALU v4 taster', () => {
     expect(new Set(TASTER_QUESTIONS.map(q => q.cluster))).toEqual(new Set(['P','R','I','M','E']));
   });
 
+  test('keeps every question and answer option as a complete sentence', () => {
+    for (const question of TASTER_QUESTIONS) {
+      expect(question.q.trim()).toMatch(/[.!?]$/);
+      for (const option of question.options) {
+        expect(option.text.trim().endsWith('.')).toBe(true);
+      }
+    }
+  });
+
   test('uses the declared experience bands as metadata options', () => {
     expect(EXPERIENCE_BANDS.map(b => b.id)).toEqual(['0-3','4-8','9-15','15+']);
   });
 
-  test('normalises each cluster independently and returns strongest/weakest', () => {
+  test('normalises each cluster independently and uses canonical PRIME order for ties', () => {
     const answers = Object.fromEntries(TASTER_QUESTIONS.map((q, i) => [i, i === 0 ? 3 : 0]));
     const result = computeTasterResult(answers);
     expect(result.completedQuestions).toBe(9);

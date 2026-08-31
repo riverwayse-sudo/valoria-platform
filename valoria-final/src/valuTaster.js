@@ -84,11 +84,13 @@ export function computeTasterResult(answers = {}) {
   const clusters = [
     {id:"P",name:"Presence"},{id:"R",name:"Relationships"},{id:"I",name:"Intelligence"},{id:"M",name:"Mastery"},{id:"E",name:"Enterprise"}
   ];
-  const sorted = [...clusters].sort((a,b) => normalisedScores[b.id] - normalisedScores[a.id]);
+  const order = Object.fromEntries(clusters.map((cluster, index) => [cluster.id, index]));
+  const strongest = [...clusters].sort((a,b) => (normalisedScores[b.id] - normalisedScores[a.id]) || (order[a.id] - order[b.id]))[0];
+  const weakest = [...clusters].sort((a,b) => (normalisedScores[a.id] - normalisedScores[b.id]) || (order[a.id] - order[b.id]))[0];
   return {
     normalisedScores,
-    strongest: sorted[0],
-    weakest: sorted[sorted.length - 1],
+    strongest,
+    weakest,
     completedQuestions: Object.keys(answers).length,
   };
 }
