@@ -1,50 +1,21 @@
-import React, { useEffect, useState } from "react";
-import ValoriaPlatform from "./ValoriaPlatform.jsx";
+import React from "react";
 import VALUIndexV4Gate from "./VALUIndexV4Gate.jsx";
-import PRIMEAssessmentV4 from "./prime-assessment-v4.jsx";
 
-const TASTER_SEEN_KEY = "valu_v4_taster_seen";
+// VALU Index v4 production entry.
+// The public assessment is intentionally the canonical 15-question directional
+// snapshot only. The legacy 55-question assessment is not part of this route.
+// After the directional result, the user continues into the Valoria platform
+// to complete their professional identity/profile and enter the marketplace.
 
-function hasSeenTaster() {
-  try { return localStorage.getItem(TASTER_SEEN_KEY) === "1"; } catch { return false; }
-}
-
-// Opt-in standalone route for the drop-in two-stage v4 component. Kept
-// separate from the default production flow (ValoriaPlatform + taster gate)
-// so the shipped path is unchanged. Reach via ?flow=v4-standalone.
-
-
-function isStandaloneV4() {
-  try {
-    const qp = new URLSearchParams(window.location.search);
-    return qp.get("flow") === "v4-standalone" || qp.get("v4") === "standalone";
-  } catch { return false; }
-}
+const VALORIA_PROFILE_SETUP = "https://valoriainstitute.com/profile/setup";
 
 export default function VALUIndexV4App() {
-  const [showTaster, setShowTaster] = useState(() => !hasSeenTaster());
-
-  if (isStandaloneV4()) return <PRIMEAssessmentV4 />;
-
-  useEffect(() => {
-    if (showTaster) {
-      try { document.body.style.overflow = "hidden"; } catch {}
-    } else {
-      try { document.body.style.overflow = ""; } catch {}
-    }
-    return () => { try { document.body.style.overflow = ""; } catch {} };
-  }, [showTaster]);
-
-  function continueToFullAssessment() {
-    try { localStorage.setItem(TASTER_SEEN_KEY, "1"); } catch {}
-    setShowTaster(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  function continueToValoria() {
+    try {
+      localStorage.setItem("valu_v4_profile_intent", "1");
+    } catch {}
+    window.location.assign(VALORIA_PROFILE_SETUP);
   }
 
-  return (
-    <>
-      <ValoriaPlatform />
-      {showTaster && <VALUIndexV4Gate onComplete={continueToFullAssessment} />}
-    </>
-  );
+  return <VALUIndexV4Gate onComplete={continueToValoria} />;
 }
