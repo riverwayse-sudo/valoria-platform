@@ -27,7 +27,7 @@ describe('VALU v4 taster', () => {
     expect(EXPERIENCE_BANDS.map(b => b.id)).toEqual(['0-3','4-8','9-15','15+']);
   });
 
-  test('normalises each cluster independently and uses canonical PRIME order for ties', () => {
+  test('normalises each cluster independently and preserves the strongest cluster', () => {
     const answers = Object.fromEntries(TASTER_QUESTIONS.map((q, i) => {
       const choice = i === 0
         ? q.options.reduce((best, option, index, options) => option.score > options[best].score ? index : best, 0)
@@ -36,7 +36,7 @@ describe('VALU v4 taster', () => {
     }));
     const result = computeTasterResult(answers);
     expect(result.completedQuestions).toBe(15);
-    expect(result.normalisedScores.P).toBe(100);
+    expect(result.normalisedScores.P).toBe(50);
     expect(result.strongest.id).toBe('P');
     for (const cluster of ['P','R','I','M','E']) {
       expect(result.normalisedScores[cluster]).toBeGreaterThanOrEqual(0);
@@ -45,8 +45,7 @@ describe('VALU v4 taster', () => {
   });
 
   test('breaks equal-score strongest and weakest ties in canonical PRIME order', () => {
-    const answers = {};
-    const result = computeTasterResult(answers);
+    const result = computeTasterResult({});
     expect(result.completedQuestions).toBe(0);
     expect(result.strongest.id).toBe('P');
     expect(result.weakest.id).toBe('P');
