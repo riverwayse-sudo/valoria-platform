@@ -8,11 +8,22 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const BREVO_KEY = process.env.BREVO_API_KEY;
 const VALORIA_SITE_URL = process.env.VALORIA_SITE_URL || 'https://valoriainstitute.com';
 
-function json(data, status = 200) {
+function send(res, status, data) {
+  if (res && typeof res.status === 'function' && typeof res.json === 'function') {
+    return res.status(status).setHeader('Cache-Control', 'no-store').json(data);
+  }
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
+}
+
+function parseBody(req) {
+  if (req?.body && typeof req.body === 'object') return req.body;
+  if (typeof req?.body === 'string') {
+    try { return JSON.parse(req.body); } catch { return null; }
+  }
+  return null;
 }
 
 function getHeader(req, name) {
@@ -23,19 +34,19 @@ function getHeader(req, name) {
   return Array.isArray(value) ? value[0] || '' : String(value || '');
 }
 
-export default async function handler(req) {
-  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
   const auth = getHeader(req, 'authorization');
-  if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) return json({ error: 'Unauthorized' }, 401);
+  if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) return send(res, 401, { error: 'Unauthorized' });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     console.error('send-profile-reminder: missing server environment');
-    return json({ error: 'Server misconfigured.' }, 500);
+    return send(res, 500, { error: 'Server misconfigured.' });
   }
 
-  let payload;
-  try { payload = await req.json(); } catch { return json({ error: 'Invalid request body.' }, 400); }
+  const payload = parseBody(req);
+  if (!payload) return send(res, 400, { error: 'Invalid request body.' });
   const identityHash = String(payload?.identity_hash || '').trim();
-  if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) return json({ error: 'Invalid identity_hash.' }, 400);
+  if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) return send(res, 400, { error: 'Invalid identity_hash.' });
 
   const headers = {
     apikey: SERVICE_ROLE_KEY,
@@ -51,10 +62,10 @@ export default async function handler(req) {
     );
     if (!assessRes.ok) {
       console.error('send-profile-reminder: assessment lookup failed', assessRes.status);
-      return json({ error: 'Could not look up assessment.' }, 502);
+      return send(res, 502, { error: 'Could not look up assessment.' });
     }
     const [assessment] = await assessRes.json();
-    if (!assessment?.email) return json({ error: 'No assessment/email found.' }, 404);
+    if (!assessment?.email) return send(res, 404, { error: 'No assessment/email found.' });
 
     const email = String(assessment.email).trim().toLowerCase();
     const profRes = await fetch(
@@ -63,7 +74,7 @@ export default async function handler(req) {
     );
     if (!profRes.ok) {
       console.error('send-profile-reminder: profile lookup failed', profRes.status);
-      return json({ error: 'Could not verify profile status.' }, 502);
+      return send(res, 502, { error: 'Could not verify profile status.' });
     }
     const [profile] = await profRes.json();
     const alreadyComplete = !!profile?.profile_complete;
@@ -105,12 +116,12 @@ export default async function handler(req) {
     );
     if (!markRes.ok) {
       console.error('send-profile-reminder: mark handled failed', markRes.status);
-      return json({ error: 'Could not finalize reminder state.' }, 502);
+      return send(res, 502, { error: 'Could not finalize reminder state.' });
     }
 
-    return json({ reminded: !alreadyComplete, alreadyComplete });
+    return send(res, 200, { reminded: !alreadyComplete, alreadyComplete });
   } catch (err) {
     console.error('send-profile-reminder error:', err);
-    return json({ error: 'Server error.' }, 500);
+    return send(res, 500, { error: 'Server error.' });
   }
 }
