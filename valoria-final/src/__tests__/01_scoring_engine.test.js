@@ -163,30 +163,30 @@ describe("computeWeightedIndex", () => {
 // ── SECTION 3: getDesignation ─────────────────────────────────────────────
 describe("getDesignation", () => {
   const cases = [
-    [100, "Force to Align With"],
-    [80,  "Force to Align With"],
-    [79,  "Emerging Force"],
-    [65,  "Emerging Force"],
-    [64,  "Developing Professional"],
-    [50,  "Developing Professional"],
-    [49,  "Building Foundations"],
-    [35,  "Building Foundations"],
-    [34,  "At the Starting Point"],
-    [0,   "At the Starting Point"],
+    [100, "Elite"],
+    [80,  "Elite"],
+    [79,  "Distinguished"],
+    [65,  "Distinguished"],
+    [64,  "Proficient"],
+    [50,  "Proficient"],
+    [49,  "Standard"],
+    [35,  "Standard"],
+    [34,  "Standard"],
+    [0,   "Standard"],
   ];
 
   test.each(cases)("score %i → %s", (score, expectedName) => {
     expect(getDesignation(score).name).toBe(expectedName);
   });
 
-  test("boundary at exactly 80 is Force to Align With not Emerging Force", () => {
-    expect(getDesignation(80).name).toBe("Force to Align With");
-    expect(getDesignation(79).name).toBe("Emerging Force");
+  test("boundary at exactly 80 is Elite not Distinguished", () => {
+    expect(getDesignation(80).name).toBe("Elite");
+    expect(getDesignation(79).name).toBe("Distinguished");
   });
 
-  test("boundary at exactly 35 is Building Foundations not At the Starting Point", () => {
-    expect(getDesignation(35).name).toBe("Building Foundations");
-    expect(getDesignation(34).name).toBe("At the Starting Point");
+  test("boundary at exactly 35 is Standard not Standard", () => {
+    expect(getDesignation(35).name).toBe("Standard");
+    expect(getDesignation(34).name).toBe("Standard");
   });
 
   test("returns object with min property", () => {
@@ -199,24 +199,24 @@ describe("getDesignation", () => {
 // ── SECTION 4: getPathway ─────────────────────────────────────────────────
 describe("getPathway", () => {
   const cases = [
-    [100, "PCP Certification"],
-    [80,  "PCP Certification"],
-    [79,  "PRIME Programme"],
-    [65,  "PRIME Programme"],
-    [64,  "PRIME Cluster"],
-    [50,  "PRIME Cluster"],
-    [49,  "PRIME Sprint"],
-    [35,  "PRIME Sprint"],
-    [0,   "PRIME Sprint"],
+    [100, "Advanced Development Pathway"],
+    [80,  "Advanced Development Pathway"],
+    [79,  "Advanced Development Pathway"],
+    [65,  "Advanced Development Pathway"],
+    [64,  "Cluster Development Pathway"],
+    [50,  "Cluster Development Pathway"],
+    [49,  "Assessment Follow-up Pathway"],
+    [35,  "Assessment Follow-up Pathway"],
+    [0,   "Assessment Follow-up Pathway"],
   ];
 
   test.each(cases)("score %i → %s", (score, expected) => {
     expect(getPathway(score)).toBe(expected);
   });
 
-  test("PRIME Sprint boundary is < 50, not ≤ 50", () => {
-    expect(getPathway(50)).toBe("PRIME Cluster");
-    expect(getPathway(49)).toBe("PRIME Sprint");
+  test("Assessment Follow-up Pathway boundary is < 50, not ≤ 50", () => {
+    expect(getPathway(50)).toBe("Cluster Development Pathway");
+    expect(getPathway(49)).toBe("Assessment Follow-up Pathway");
   });
 });
 
