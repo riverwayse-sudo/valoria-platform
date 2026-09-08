@@ -49,17 +49,18 @@ export default async function handler(req, res) {
   try {
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions`, {
       method:'POST',
-      headers:{'Content-Type':'application/json',apikey:SERVICE_ROLE_KEY,Authorization:`Bearer ${SERVICE_ROLE_KEY}`,Prefer:'return=minimal'},
+      headers:{'Content-Type':'application/json',apikey:SERVICE_ROLE_KEY,Authorization:`Bearer ${SERVICE_ROLE_KEY}`,Prefer:'return=representation'},
       body:JSON.stringify(row),
     });
     if (!insertRes.ok) {
       console.error('submit-taster: insert failed', insertRes.status);
       return json(res, 502, { error:'Could not save your taster result.' });
     }
+    const inserted = await insertRes.json();
+    const session = Array.isArray(inserted) ? inserted[0] : inserted;
+    return json(res, 200, { results, taster_id: session?.id || null });
   } catch (err) {
     console.error('submit-taster: network error', err?.message || 'unknown');
     return json(res, 502, { error:'Could not save your taster result.' });
   }
-
-  return json(res, 200, { results });
 }
