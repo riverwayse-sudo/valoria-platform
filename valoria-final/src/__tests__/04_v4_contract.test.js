@@ -49,14 +49,14 @@ describe("VALU v4 canonical contract", () => {
   });
 
   test("designation and pathway boundaries remain canonical", () => {
-    expect(getDesignation(34).name).toBe("At the Starting Point");
-    expect(getDesignation(35).name).toBe("Building Foundations");
-    expect(getDesignation(65).name).toBe("Emerging Force");
-    expect(getDesignation(80).name).toBe("Force to Align With");
-    expect(getPathway(49)).toBe("PRIME Sprint");
-    expect(getPathway(50)).toBe("PRIME Cluster");
-    expect(getPathway(65)).toBe("PRIME Programme");
-    expect(getPathway(80)).toBe("PCP Certification");
+    expect(getDesignation(34).name).toBe("Standard");
+    expect(getDesignation(35).name).toBe("Standard");
+    expect(getDesignation(65).name).toBe("Distinguished");
+    expect(getDesignation(80).name).toBe("Elite");
+    expect(getPathway(49)).toBe("Assessment Follow-up Pathway");
+    expect(getPathway(50)).toBe("Cluster Development Pathway");
+    expect(getPathway(65)).toBe("Advanced Development Pathway");
+    expect(getPathway(80)).toBe("Advanced Development Pathway");
   });
 
   test("weighted index is the only score aggregation step", () => {
