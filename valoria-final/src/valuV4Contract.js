@@ -1,7 +1,5 @@
 // VALU v4 canonical contract.
-// This module is the single source of truth for score math, designations,
-// pathways, and the assessment score threshold used by marketplace eligibility.
-// It intentionally does NOT decide listing status: listing is governed separately.
+// Governed by Valoria Institute Brand Guidelines VI-BG-2026-001.
 
 export const VALU_VERSION = 4;
 export const MAX_SCORE = 100;
@@ -15,19 +13,20 @@ export const CLUSTERS = Object.freeze([
   Object.freeze({ id: "E", name: "Enterprise", weight: 0.10, maxRaw: 36 }),
 ]);
 
+// Merit bands are score-based credentials. They are never paid subscription tiers.
 export const DESIGNATIONS = Object.freeze([
-  Object.freeze({ min: 80, name: "Force to Align With", color: "#C9A84C", bg: "rgba(201,168,76,0.08)" }),
-  Object.freeze({ min: 65, name: "Emerging Force", color: "#378ADD", bg: "rgba(55,138,221,0.08)" }),
-  Object.freeze({ min: 50, name: "Developing Professional", color: "#7F77DD", bg: "rgba(127,119,221,0.08)" }),
-  Object.freeze({ min: 35, name: "Building Foundations", color: "#1D9E75", bg: "rgba(29,158,117,0.08)" }),
-  Object.freeze({ min: 0, name: "At the Starting Point", color: "#888888", bg: "rgba(136,136,136,0.08)" }),
+  Object.freeze({ min: 90, name: "Elite", stars: "✦✦✦", color: "#C9A84C", bg: "#C9A84C" }),
+  Object.freeze({ min: 75, name: "Distinguished", stars: "✦✦", color: "#C9A84C", bg: "#1A1A2E" }),
+  Object.freeze({ min: 55, name: "Proficient", stars: "✦", color: "#2E2E4A", bg: "#EDE8DC" }),
+  Object.freeze({ min: 35, name: "Standard", stars: "", color: "#2E2E4A", bg: "#F7F4EE" }),
 ]);
 
+// Development pathways are separate from merit credentials.
 export const PATHWAYS = Object.freeze([
-  Object.freeze({ min: 80, name: "PCP Certification" }),
-  Object.freeze({ min: 65, name: "PRIME Programme" }),
-  Object.freeze({ min: 50, name: "PRIME Cluster" }),
-  Object.freeze({ min: 0, name: "PRIME Sprint" }),
+  Object.freeze({ min: 75, name: "Advanced Development Pathway" }),
+  Object.freeze({ min: 55, name: "Cluster Development Pathway" }),
+  Object.freeze({ min: 35, name: "Foundation Development Pathway" }),
+  Object.freeze({ min: 0, name: "Assessment Follow-up Pathway" }),
 ]);
 
 export function getDesignation(score) {
