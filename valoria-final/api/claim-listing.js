@@ -14,6 +14,14 @@ function json(data, status = 200) {
   });
 }
 
+function getHeader(req, name) {
+  const headers = req?.headers;
+  if (!headers) return '';
+  if (typeof headers.get === 'function') return headers.get(name) || '';
+  const value = headers[name] ?? headers[name.toLowerCase()];
+  return Array.isArray(value) ? value[0] || '' : String(value || '');
+}
+
 export default async function handler(req) {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   if (!SERVICE_ROLE_KEY || !SUPABASE_URL) {
@@ -21,7 +29,7 @@ export default async function handler(req) {
     return json({ error: 'Server misconfigured.' }, 500);
   }
 
-  const authHeader = req.headers.get('authorization') || '';
+  const authHeader = getHeader(req, 'authorization');
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   if (!match) return json({ error: 'Authentication required.' }, 401);
   const accessToken = match[1];
@@ -41,27 +49,17 @@ export default async function handler(req) {
     return json({ error: 'Could not verify authentication.' }, 502);
   }
 
-  // Ownership always comes from the verified Supabase auth identity.
   const userId = authUser.id;
   const authEmail = String(authUser.email || '').trim().toLowerCase();
   if (!userId || !authEmail) return json({ error: 'Authenticated account is incomplete.' }, 403);
 
   let payload;
-  try {
-    payload = await req.json();
-  } catch {
-    return json({ error: 'Invalid request body.' }, 400);
-  }
+  try { payload = await req.json(); } catch { return json({ error: 'Invalid request body.' }, 400); }
 
   const identityHash = String(payload?.identity_hash || '').trim();
-  if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) {
-    return json({ error: 'A valid identity_hash is required.' }, 400);
-  }
+  if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) return json({ error: 'A valid identity_hash is required.' }, 400);
 
-  const serviceHeaders = {
-    apikey: SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-  };
+  const serviceHeaders = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
 
   let assessment;
   try {
@@ -71,9 +69,7 @@ export default async function handler(req) {
       order: 'completed_at.desc',
       limit: '1',
     });
-    const fetchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
-      headers: serviceHeaders,
-    });
+    const fetchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: serviceHeaders });
     if (!fetchRes.ok) {
       console.error('claim-listing: assessment lookup failed', fetchRes.status);
       return json({ error: 'Could not look up assessment result.' }, 502);
@@ -87,27 +83,15 @@ export default async function handler(req) {
   }
 
   const assessmentEmail = String(assessment.email || '').trim().toLowerCase();
-  if (!assessmentEmail || assessmentEmail !== authEmail) {
-    return json({ error: 'This assessment cannot be claimed by this account.' }, 403);
-  }
-
-  if (assessment.user_id && assessment.user_id !== userId) {
-    return json({ error: 'This assessment is already linked to another account.' }, 409);
-  }
+  if (!assessmentEmail || assessmentEmail !== authEmail) return json({ error: 'This assessment cannot be claimed by this account.' }, 403);
+  if (assessment.user_id && assessment.user_id !== userId) return json({ error: 'This assessment is already linked to another account.' }, 409);
 
   const scoreEligibleForMarketplace = (assessment.total_score ?? 0) >= LISTING_THRESHOLD;
-
-  // A claim creates the professional identity but never grants LISTED solely
-  // because the assessment score is >=35. The readiness/governance engine is
-  // the only authority allowed to transition listing_status.
   const listingStatus = 'unlisted';
 
   let profileExisted = false;
   try {
-    const profileCheck = await fetch(
-      `${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}&select=id&limit=1`,
-      { headers: serviceHeaders }
-    );
+    const profileCheck = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}&select=id&limit=1`, { headers: serviceHeaders });
     if (!profileCheck.ok) {
       console.error('claim-listing: profile preflight failed', profileCheck.status);
       return json({ error: 'Could not verify marketplace profile state.' }, 502);
@@ -122,11 +106,7 @@ export default async function handler(req) {
   try {
     const upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
       method: 'POST',
-      headers: {
-        ...serviceHeaders,
-        'Content-Type': 'application/json',
-        Prefer: 'return=minimal,resolution=merge-duplicates',
-      },
+      headers: { ...serviceHeaders, 'Content-Type': 'application/json', Prefer: 'return=minimal,resolution=merge-duplicates' },
       body: JSON.stringify({
         id: userId,
         display_name: assessment.name,
@@ -152,25 +132,16 @@ export default async function handler(req) {
 
   if (assessment.id) {
     try {
-      const linkRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}&user_id=is.null`,
-        {
-          method: 'PATCH',
-          headers: { ...serviceHeaders, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-          body: JSON.stringify({ user_id: userId }),
-        }
-      );
+      const linkRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}&user_id=is.null`, {
+        method: 'PATCH',
+        headers: { ...serviceHeaders, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        body: JSON.stringify({ user_id: userId }),
+      });
       if (!linkRes.ok) {
         console.error('claim-listing: assessment ownership link failed', linkRes.status);
         if (!profileExisted) {
-          try {
-            await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}`, {
-              method: 'DELETE',
-              headers: { ...serviceHeaders, Prefer: 'return=minimal' },
-            });
-          } catch (cleanupErr) {
-            console.error('claim-listing: profile cleanup failed', cleanupErr);
-          }
+          try { await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}`, { method: 'DELETE', headers: { ...serviceHeaders, Prefer: 'return=minimal' } }); }
+          catch (cleanupErr) { console.error('claim-listing: profile cleanup failed', cleanupErr); }
         }
         return json({ error: 'Assessment ownership could not be finalized.' }, 502);
       }
@@ -178,53 +149,33 @@ export default async function handler(req) {
       if (!Array.isArray(linkedRows) || linkedRows.length !== 1) {
         console.error('claim-listing: assessment was already claimed or not updated');
         if (!profileExisted) {
-          try {
-            await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}`, {
-              method: 'DELETE',
-              headers: { ...serviceHeaders, Prefer: 'return=minimal' },
-            });
-          } catch (cleanupErr) {
-            console.error('claim-listing: profile cleanup failed', cleanupErr);
-          }
+          try { await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}`, { method: 'DELETE', headers: { ...serviceHeaders, Prefer: 'return=minimal' } }); }
+          catch (cleanupErr) { console.error('claim-listing: profile cleanup failed', cleanupErr); }
         }
         return json({ error: 'This assessment could not be claimed. Please try again.' }, 409);
       }
     } catch (err) {
       console.error('claim-listing: assessment ownership link failed', err);
       if (!profileExisted) {
-        try {
-          await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}`, {
-            method: 'DELETE',
-            headers: { ...serviceHeaders, Prefer: 'return=minimal' },
-          });
-        } catch (cleanupErr) {
-          console.error('claim-listing: profile cleanup failed', cleanupErr);
-        }
+        try { await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?id=eq.${encodeURIComponent(userId)}`, { method: 'DELETE', headers: { ...serviceHeaders, Prefer: 'return=minimal' } }); }
+        catch (cleanupErr) { console.error('claim-listing: profile cleanup failed', cleanupErr); }
       }
       return json({ error: 'Assessment ownership could not be finalized.' }, 502);
     }
   }
 
-  // Re-run the authoritative readiness engine. With no capability selected yet,
-  // this normally remains unlisted even when the score is >=35.
   let listingStatusAfterReadiness = listingStatus;
   let eligibility = false;
   try {
     const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/sync_professional_listing_status`, {
-      method: 'POST',
-      headers: { ...serviceHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_professional_id: userId }),
+      method: 'POST', headers: { ...serviceHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_professional_id: userId }),
     });
     if (rpcRes.ok) {
       const rpcData = await rpcRes.json();
       listingStatusAfterReadiness = rpcData?.listing_status || listingStatus;
       eligibility = rpcData?.eligible_for_listing === true;
-    } else {
-      console.error('claim-listing: readiness sync failed', rpcRes.status);
-    }
-  } catch (err) {
-    console.error('claim-listing: readiness sync failed', err);
-  }
+    } else console.error('claim-listing: readiness sync failed', rpcRes.status);
+  } catch (err) { console.error('claim-listing: readiness sync failed', err); }
 
   return json({
     ok: true,
