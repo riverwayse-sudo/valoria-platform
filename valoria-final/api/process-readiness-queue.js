@@ -6,12 +6,19 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
 function json(data, status=200){ return new Response(JSON.stringify(data), { status, headers:{'Content-Type':'application/json','Cache-Control':'no-store'} }); }
+function getHeader(req, name){
+  const headers = req?.headers;
+  if (!headers) return '';
+  if (typeof headers.get === 'function') return headers.get(name) || '';
+  const value = headers[name] ?? headers[name.toLowerCase()];
+  return Array.isArray(value) ? value[0] || '' : String(value || '');
+}
 
 export default async function handler(req){
   if(req.method!=='GET' && req.method!=='POST') return json({error:'Method not allowed'},405);
   if(!SUPABASE_URL || !SERVICE_ROLE_KEY || !CRON_SECRET) return json({error:'Server misconfigured.'},500);
-  const auth=req.headers.get('authorization') || '';
-  const cron=req.headers.get('x-vercel-cron') || '';
+  const auth=getHeader(req,'authorization');
+  const cron=getHeader(req,'x-vercel-cron');
   if(auth !== `Bearer ${CRON_SECRET}` && cron !== CRON_SECRET) return json({error:'Unauthorized.'},401);
   try {
     const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/refresh_professional_readiness_queue`,{
