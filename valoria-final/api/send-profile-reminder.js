@@ -18,10 +18,16 @@ function send(res, status, data) {
   });
 }
 
-function parseBody(req) {
-  if (req?.body && typeof req.body === 'object') return req.body;
+async function parseBody(req) {
+  if (req?.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return req.body;
+  if (Buffer.isBuffer(req?.body)) {
+    try { return JSON.parse(req.body.toString('utf8')); } catch { return null; }
+  }
   if (typeof req?.body === 'string') {
     try { return JSON.parse(req.body); } catch { return null; }
+  }
+  if (typeof req?.json === 'function') {
+    try { return await req.json(); } catch { return null; }
   }
   return null;
 }
@@ -43,7 +49,7 @@ export default async function handler(req, res) {
     return send(res, 500, { error: 'Server misconfigured.' });
   }
 
-  const payload = parseBody(req);
+  const payload = await parseBody(req);
   if (!payload) return send(res, 400, { error: 'Invalid request body.' });
   const identityHash = String(payload?.identity_hash || '').trim();
   if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) return send(res, 400, { error: 'Invalid identity_hash.' });
