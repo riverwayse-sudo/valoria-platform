@@ -11,8 +11,7 @@ jobs:
     steps:
       - name: Process readiness queue
         run: |
-          curl -sf -X POST "https://valoria-final.vercel.app/api/process-readiness-queue" \
+          curl -sf "https://valoria-final.vercel.app/api/process-readiness-queue" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
             -o response.json -w "\nHTTP %{http_code}\n"
           cat response.json
