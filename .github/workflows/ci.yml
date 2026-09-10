@@ -29,9 +29,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run unit tests
-        run: npm test
+        shell: bash
+        run: |
+          set +e
+          npm test -- --runInBand --verbose 2>&1 | tee test-output.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
         env:
           CI: true
+      - name: Upload unit-test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-diagnostics-${{ github.run_id }}
+          path: valoria-final/test-output.log
+          if-no-files-found: warn
 
   build-check:
     name: Production Build Check
