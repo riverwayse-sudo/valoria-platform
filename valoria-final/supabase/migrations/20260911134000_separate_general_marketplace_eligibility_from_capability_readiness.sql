@@ -68,6 +68,10 @@ declare
   eligible boolean;
   next_status text;
 begin
+  if (select auth.uid()) is distinct from p_professional_id and not public.is_valoria_admin() then
+    raise exception 'You may only refresh your own marketplace listing status';
+  end if;
+
   select * into p from public.professional_profiles where id=p_professional_id for update;
   if not found then return jsonb_build_object('ok',false,'professional_id',p_professional_id); end if;
 
@@ -100,6 +104,5 @@ begin
 end;
 $$;
 
--- The public wrapper is callable only by an authenticated owner/admin path.
 revoke all on function public.sync_professional_listing_status(uuid) from public;
 grant execute on function public.sync_professional_listing_status(uuid) to authenticated;
