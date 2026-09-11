@@ -14,6 +14,8 @@ const MAX_ROLE_LENGTH = 160;
 const MAX_TIMINGS_LENGTH = QUESTIONS.length;
 const MAX_SHUFFLE_KEYS = QUESTIONS.length;
 const EXPERIENCE_BANDS = new Set(['0-3', '4-8', '9-15', '15+']);
+const RATE_LIMIT = 10;
+const RATE_WINDOW_SECONDS = 60 * 60;
 
 function json(res, status, data) {
   res.status(status).setHeader('Cache-Control', 'no-store');
@@ -44,12 +46,35 @@ function validateAnswers(answers) {
     return Number.isInteger(value) && value >= 0 && value < question.options.length;
   });
 }
+async function consumeRateLimit(ip) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_rate_limit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    body: JSON.stringify({ p_rate_key: `assessment-submit:${ip}`, p_limit: RATE_LIMIT, p_window_seconds: RATE_WINDOW_SECONDS }),
+  });
+  if (!response.ok) throw new Error(`rate-limit:${response.status}`);
+  const result = await response.json();
+  return Array.isArray(result) ? result[0] : result;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SERVICE_ROLE_KEY || !SUPABASE_URL) {
     console.error('submit-assessment: missing Supabase server configuration');
     return json(res, 500, { error: 'Server misconfigured.' });
+  }
+
+  const forwarded = req.headers['x-forwarded-for'];
+  const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
+  try {
+    const limit = await consumeRateLimit(ip);
+    if (!limit?.allowed) {
+      if (limit?.retry_after_seconds) res.setHeader('Retry-After', String(limit.retry_after_seconds));
+      return json(res, 429, { error: 'Too many assessment submissions. Please try again later.' });
+    }
+  } catch (err) {
+    console.error('submit-assessment: shared rate limiter failed', err?.message || err);
+    return json(res, 503, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
   }
 
   const { name, role, experience, answers, timings, shuffleMap } = req.body || {};
