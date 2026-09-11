@@ -1,20 +1,20 @@
 import React from 'react';
 
-const T = { dark:'#0F0F1A', parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.28)' };
+const T = { parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.28)' };
 const SITE_URL = 'https://valoriainstitute.com';
 
 export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {
   return (
     <header style={styles.header} aria-label="Assessment navigation">
-      <div style={styles.inner}>
+      <div className="assessment-nav-inner" style={styles.inner}>
         <a href={`${SITE_URL}/`} style={styles.brand} aria-label="Return to Valoria Institute homepage">
-          <span style={styles.mark}>V</span><span style={styles.wordmark}>VALORIA</span>
+          <span style={styles.mark}>V</span><span className="assessment-nav-wordmark" style={styles.wordmark}>VALORIA</span>
         </a>
-        <div style={styles.center} aria-live="polite">
+        <div className="assessment-nav-center" style={styles.center} aria-live="polite">
           <span style={styles.label}>{label}</span>
           {progress != null && <span style={styles.progress}>{progress}%</span>}
         </div>
-        <a href={`${SITE_URL}/valu`} style={styles.exit} aria-label="Exit assessment and return to Valoria">
+        <a className="assessment-nav-exit" href={`${SITE_URL}/valu`} style={styles.exit} aria-label="Exit assessment and return to Valoria">
           <span>RETURN TO VALORIA</span><span aria-hidden="true">↗</span>
         </a>
       </div>
