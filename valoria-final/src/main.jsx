@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import VALUIndexV4App from './VALUIndexV4App.jsx'
-import ProductHomepageConcept from './ProductHomepageConcept.jsx'
+import ProductHomepageConceptV2 from './ProductHomepageConceptV2.jsx'
 
 const brandStyles = document.createElement('style')
 brandStyles.textContent = `
@@ -19,6 +19,6 @@ const conceptRoute = window.location.pathname.replace(/\/$/, '') === '/homepage-
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {conceptRoute ? <ProductHomepageConcept /> : <VALUIndexV4App />}
+    {conceptRoute ? <ProductHomepageConceptV2 /> : <VALUIndexV4App />}
   </StrictMode>,
 )
