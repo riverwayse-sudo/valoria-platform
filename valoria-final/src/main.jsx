@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import VALUIndexV4App from './VALUIndexV4App.jsx'
+import AssessmentNavigation from './AssessmentNavigation.jsx'
 
 // Global brand reset — applied before any component renders
 const brandStyles = document.createElement('style')
@@ -40,11 +41,27 @@ brandStyles.textContent = `
     outline: 2px solid rgba(201,168,76,0.5);
     outline-offset: 2px;
   }
+
+  @media (max-width: 640px) {
+    .assessment-nav-inner { grid-template-columns: 1fr auto !important; min-height: 58px !important; }
+    .assessment-nav-center { display: none !important; }
+    .assessment-nav-wordmark { display: none !important; }
+    .assessment-nav-exit span:first-child { font-size: 8px !important; }
+  }
 `
 document.head.appendChild(brandStyles)
 
+function AssessmentShell() {
+  return (
+    <>
+      <AssessmentNavigation />
+      <VALUIndexV4App />
+    </>
+  )
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <VALUIndexV4App />
+    <AssessmentShell />
   </StrictMode>,
 )
