@@ -2,9 +2,8 @@ import { TASTER_QUESTIONS, computeTasterResult, EXPERIENCE_BANDS } from '../src/
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const WINDOW_MS = 60 * 60 * 1000;
-const MAX_SUBMISSIONS_PER_IP = 20;
-const buckets = new Map();
+const RATE_LIMIT = 30;
+const RATE_WINDOW_SECONDS = 60 * 60;
 
 function json(res, status, data) {
   res.status(status).setHeader('Cache-Control', 'no-store');
@@ -18,15 +17,23 @@ function validAnswers(answers) {
   return TASTER_QUESTIONS.every((q, idx) => Number.isInteger(answers[idx]) && answers[idx] >= 0 && answers[idx] < q.options.length);
 }
 
-function rateLimited(ip) {
-  const now = Date.now();
-  const current = buckets.get(ip);
-  if (!current || now - current.startedAt >= WINDOW_MS) {
-    buckets.set(ip, { startedAt: now, count: 1 });
-    return false;
-  }
-  current.count += 1;
-  return current.count > MAX_SUBMISSIONS_PER_IP;
+async function consumeRateLimit(ip) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_rate_limit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+    },
+    body: JSON.stringify({
+      p_rate_key: `taster-submit:${ip}`,
+      p_limit: RATE_LIMIT,
+      p_window_seconds: RATE_WINDOW_SECONDS,
+    }),
+  });
+  if (!response.ok) throw new Error(`rate-limit:${response.status}`);
+  const result = await response.json();
+  return Array.isArray(result) ? result[0] : result;
 }
 
 export default async function handler(req, res) {
@@ -35,7 +42,16 @@ export default async function handler(req, res) {
 
   const forwarded = req.headers['x-forwarded-for'];
   const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
-  if (rateLimited(ip)) return json(res, 429, { error: 'Too many taster submissions. Please try again later.' });
+  try {
+    const limit = await consumeRateLimit(ip);
+    if (!limit?.allowed) {
+      if (limit?.retry_after_seconds) res.setHeader('Retry-After', String(limit.retry_after_seconds));
+      return json(res, 429, { error: 'Too many taster submissions. Please try again later.' });
+    }
+  } catch (err) {
+    console.error('submit-taster: shared rate limiter failed', err?.message || err);
+    return json(res, 503, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
+  }
 
   const { name, role, experience, answers } = req.body || {};
   if (typeof name !== 'string' || !name.trim() || name.trim().length > 200) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
