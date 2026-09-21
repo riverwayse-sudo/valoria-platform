@@ -113,6 +113,12 @@ after insert or update of full_name,email,whatsapp,role,organisation,session_id,
 on public.professional_standard_event_registrations
 for each row execute function private.capture_event_registration_lead();
 
+do $
+begin
+  delete from cron.job where jobname in ('valoria-sync-leads-to-brevo','valoria-process-meta-leads');
+end;
+$;
+
 select cron.schedule(
   'valoria-sync-leads-to-brevo','* * * * *',
   $$select net.http_post(
