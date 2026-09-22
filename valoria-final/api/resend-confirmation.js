@@ -16,7 +16,7 @@ function escapeHtml(str) {
 }
 
 function confirmationEmailHtml(name, actionLink) {
-  return `<!DOCTYPE html><html><body style="margin:0;padding:48px 32px;background:#0F0F1A;font-family:Georgia,serif;color:#F7F4EE;text-align:center"><img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:40px;margin-bottom:32px"><h1 style="font-size:26px;font-weight:300;color:#F7F4EE">Confirm your email, ${escapeHtml(name)}.</h1><p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,.6)">Click below to confirm your address and unlock your VALU Index report.</p><a href="${actionLink}" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.16em;border-radius:9999px">CONFIRM EMAIL &rarr;</a></body></html>`;
+  return `<!DOCTYPE html><html><body style="margin:0;padding:48px 32px;background:#0F0F1A;font-family:Georgia,serif;color:#F7F4EE;text-align:center"><img src="https://valoriainstitute.com/valoria-original.png?v=20260922-1" alt="Valoria Institute" style="height:40px;margin-bottom:32px"><h1 style="font-size:26px;font-weight:300;color:#F7F4EE">Confirm your email, ${escapeHtml(name)}.</h1><p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,.6)">Click below to confirm your address and unlock your VALU Index report.</p><a href="${actionLink}" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.16em;border-radius:9999px">CONFIRM EMAIL &rarr;</a></body></html>`;
 }
 
 export default async function handler(req) {
