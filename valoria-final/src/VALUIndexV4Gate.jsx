@@ -3,7 +3,7 @@ import { BRAND, SUPABASE_URL, SUPABASE_ANON_KEY } from "./assessmentLock.js";
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from "./valuTaster.js";
 
 const CLUSTERS={P:"Presence",R:"Relationships",I:"Intelligence",M:"Mastery",E:"Enterprise"};
-const COLORS={P:"#1D9E75",R:"#378ADD",I:"#7F77DD",M:"#BA7517",E:"#D85A30"};
+const COLORS={P:"#C9A84C",R:"#D4C9A8",I:"#EDE8DC",M:"#F7F4EE",E:"#C9A84C"};
 const shell={position:"fixed",inset:0,zIndex:1000,overflowY:"auto",background:BRAND.DARK,color:BRAND.PARCHMENT,fontFamily:BRAND.FONT_BODY,padding:"clamp(28px,6vw,72px) 20px 64px"};
 const wrap={width:"100%",maxWidth:720,margin:"0 auto"};
 const eyebrow={fontSize:10,fontWeight:700,letterSpacing:".20em",color:"rgba(201,168,76,.72)"};
