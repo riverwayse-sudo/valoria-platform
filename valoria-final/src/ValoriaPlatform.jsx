@@ -60,7 +60,7 @@ export function ValoriaNav({ minimal = false }) {
         aria-label="Main navigation"
         style={{
           position: 'fixed', top: 3, left: 0, right: 0, height: 64,
-          background: scrolled ? 'rgba(15,15,26,0.97)' : 'rgba(15,15,26,0.95)',
+          background: scrolled ? 'rgba(26,26,46,0.97)' : 'rgba(26,26,46,0.95)',
           borderBottom: `1px solid rgba(201,168,76,${scrolled ? 0.14 : 0.08})`,
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
