@@ -54,7 +54,7 @@ export default async function handler(req) {
 
   const html = `
     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-    <body style="margin:0;padding:0;background:#0F0F1A;font-family:Georgia,serif;color:#F7F4EE;"><div style="max-width:600px;margin:0 auto;padding:48px 32px;">
+    <body style="margin:0;padding:0;background:#1A1A2E;font-family:Georgia,serif;color:#F7F4EE;"><div style="max-width:600px;margin:0 auto;padding:48px 32px;">
       <div style="text-align:center;margin-bottom:40px;"><img src="https://valoriainstitute.com/valoria-original.png?v=20260922-3" alt="Valoria Institute" style="height:40px;"></div>
       <h1 style="font-size:28px;font-weight:300;color:#F7F4EE;margin-bottom:8px;">Welcome, ${escapeHtml(stored.name)}.</h1>
       <p style="font-size:15px;color:rgba(247,244,238,0.5);margin-bottom:32px;">Your VALU Index assessment is complete. Here is your full AI report.</p>
