@@ -1,27 +1,68 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
       ]
     }
   ],
   "functions": {
-    "api/generate-and-send-report.js": { "maxDuration": 60 },
-    "api/system-status.js": { "maxDuration": 20 },
-    "api/get-assessment-data.js": { "maxDuration": 20 },
-    "api/save-report.js": { "maxDuration": 20 },
-    "api/send-email.js": { "maxDuration": 20 },
-    "api/sweep-unsent-reports.js": { "maxDuration": 60 },
-    "api/submit-assessment.js": { "maxDuration": 20 },
-    "api/process-readiness-queue.js": { "maxDuration": 20 }
-  }
+    "api/generate-and-send-report.js": {
+      "maxDuration": 60
+    },
+    "api/system-status.js": {
+      "maxDuration": 20
+    },
+    "api/get-assessment-data.js": {
+      "maxDuration": 20
+    },
+    "api/save-report.js": {
+      "maxDuration": 20
+    },
+    "api/send-email.js": {
+      "maxDuration": 20
+    },
+    "api/sweep-unsent-reports.js": {
+      "maxDuration": 60
+    },
+    "api/submit-assessment.js": {
+      "maxDuration": 20
+    },
+    "api/process-readiness-queue.js": {
+      "maxDuration": 20
+    }
+  },
+  "redirects": [
+    {
+      "source": "/logo.png",
+      "destination": "https://valoriainstitute.com/valoria-original.png?v=20260922-2",
+      "permanent": true
+    }
+  ]
 }
