@@ -60,12 +60,12 @@ if (typeof document !== "undefined") {
 
 // ── DESIGN TOKENS ─────────────────────────────────────────────────────────
 const T = {
-  dark:      "#0F0F1A",
+  dark:      "#1A1A2E",
   midnight:  "#1A1A2E",
   parchment: "#F7F4EE",
   gold:      "#C9A84C",
-  amber:     "#BA7517",
-  coral:     "#D85A30",
+  amber:     "#F7F4EE",
+  coral:     "#C9A84C",
   text: {
     primary:   "rgba(247,244,238,1)",
     secondary: "rgba(247,244,238,0.65)",
@@ -94,11 +94,11 @@ const T = {
     mono:    "'DM Mono', monospace",
   },
   cluster: {
-    P: "#1D9E75",
-    R: "#378ADD",
-    I: "#7F77DD",
-    M: "#BA7517",
-    E: "#D85A30",
+    P: "#C9A84C",
+    R: "#D4C9A8",
+    I: "#EDE8DC",
+    M: "#F7F4EE",
+    E: "#C9A84C",
   },
 };
 
@@ -872,7 +872,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
           )}
           {hasCheckpoint && (
             <div style={{ marginBottom:16, padding:"14px 18px", background:"rgba(55,138,221,0.06)", border:"1px solid rgba(55,138,221,0.25)", borderRadius:T.radius.chip }}>
-              <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#378ADD", letterSpacing:"0.14em", marginBottom:6, fontFamily:T.font.body }}>SESSION IN PROGRESS</div>
+              <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#D4C9A8", letterSpacing:"0.14em", marginBottom:6, fontFamily:T.font.body }}>SESSION IN PROGRESS</div>
               <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.7, margin:"0 0 10px" }}>
                 You have a session in progress at question {checkpoint.currentQ + 1} of {TOTAL}.
               </p>
@@ -1391,7 +1391,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
               {topSkills.map(([s, sc]) => (
                 <div key={s} style={{ display:"flex", justifyContent:"space-between", marginBottom:5, alignItems:"center" }}>
                   <span style={{ fontSize:T.size.small, color:T.text.secondary, fontFamily:T.font.body }}>{s}</span>
-                  <span style={{ fontSize:T.size.caption, color:"#1D9E75", fontFamily:T.font.mono }}>{sc}</span>
+                  <span style={{ fontSize:T.size.caption, color:"#C9A84C", fontFamily:T.font.mono }}>{sc}</span>
                 </div>
               ))}
             </div>
@@ -1408,7 +1408,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
         </div>
         {signupDone ? (
           <div style={{ background:"rgba(29,158,117,0.05)", border:"1px solid rgba(29,158,117,0.25)", borderRadius:T.radius.card, padding:"32px 28px" }}>
-            <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#1D9E75", letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>✦ ACCOUNT CREATED</div>
+            <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#C9A84C", letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>✦ ACCOUNT CREATED</div>
             <p style={{ fontSize:T.size.body, color:T.text.secondary, lineHeight:1.8, margin:"0 0 12px", fontFamily:T.font.body }}>
               A confirmation link has been sent to <strong style={{color:T.parchment}}>{signupEmail}</strong>.
             </p>
@@ -1416,7 +1416,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
               Confirm your email to unlock your full AI report — it generates immediately after confirmation. Your VALU Index of <strong style={{color:T.gold}}>{valuIndex}/100</strong> is saved and linked to your profile.
             </p>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <a href="https://valoriainstitute.com/profile/edit" style={{ display:"block", textAlign:"center", padding:"14px 24px", background:T.gold, color:"#0F0F1A", fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none" }}>
+              <a href="https://valoriainstitute.com/profile/edit" style={{ display:"block", textAlign:"center", padding:"14px 24px", background:T.gold, color:"#1A1A2E", fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none" }}>
                 COMPLETE YOUR PROFILE →
               </a>
               <a href="https://valoriainstitute.com/dashboard" style={{ display:"block", textAlign:"center", padding:"14px 24px", background:"transparent", color:T.gold, fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none", border:"1px solid rgba(201,168,76,0.3)" }}>
@@ -1704,7 +1704,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
               </div>
             )}
             <div style={{ marginTop:32, padding:"20px 24px", background: listed ? "rgba(29,158,117,0.08)" : "rgba(136,136,136,0.08)", border:`1px solid ${listed ? "rgba(29,158,117,0.3)" : "rgba(136,136,136,0.25)"}`, borderRadius:T.radius.chip }}>
-              <div style={{ fontSize:T.size.caption, fontWeight:700, color: listed ? "#1D9E75" : "#888888", letterSpacing:"0.12em", marginBottom:8, fontFamily:T.font.label }}>
+              <div style={{ fontSize:T.size.caption, fontWeight:700, color: listed ? "#C9A84C" : "#888888", letterSpacing:"0.12em", marginBottom:8, fontFamily:T.font.label }}>
                 {listed ? "LISTED — YOUR PROFILE IS SEARCHABLE" : "NOT YET LISTED — SCORE BELOW 35"}
               </div>
               <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.75, margin:0, fontFamily:T.font.body }}>
