@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from './valuTaster.js';
 
 const CLUSTERS={P:'Presence',R:'Relationships',I:'Intelligence',M:'Mastery',E:'Enterprise'};
-const COLORS={P:'#1D9E75',R:'#378ADD',I:'#7F77DD',M:'#BA7517',E:'#D85A30'};
-const DARK='#0F0F1A', PARCH='#F7F4EE', GOLD='#C9A84C', DIM='rgba(247,244,238,.5)';
+const COLORS={P:'#C9A84C',R:'#D4C9A8',I:'#EDE8DC',M:'#F7F4EE',E:'#C9A84C'};
+const DARK='#1A1A2E', PARCH='#F7F4EE', GOLD='#C9A84C', DIM='rgba(247,244,238,.5)';
 
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('intro'),[name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState('');
