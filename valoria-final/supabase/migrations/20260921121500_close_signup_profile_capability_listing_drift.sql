@@ -18,7 +18,7 @@ grant execute on function private.valu_assessment_is_current(uuid) to service_ro
 
 create or replace function public.enforce_valu_profile_lifecycle()
 returns trigger language plpgsql security definer set search_path = public, private
-as $$
+as $
 declare complete boolean;
 begin
   if tg_op = 'INSERT' and coalesce(new.listing_status,'pending') = 'pending' then new.listing_status := 'unlisted'; end if;
@@ -33,13 +33,11 @@ begin
     and nullif(trim(coalesce(new.phone,'')),'') is not null
     and nullif(trim(coalesce(new.current_job_title,'')),'') is not null
     and nullif(trim(coalesce(new.location,'')),'') is not null
-    and coalesce(array_length(new.languages,1),0) > 0
-    and nullif(trim(coalesce(new.cv_url,'')),'') is not null
-    and private.valu_assessment_is_current(new.id);
+    and coalesce(array_length(new.languages,1),0) > 0;
   new.profile_complete := coalesce(complete,false);
   return new;
 end;
-$$;
+$;
 
 drop trigger if exists trg_enforce_valu_profile_lifecycle on public.professional_profiles;
 create trigger trg_enforce_valu_profile_lifecycle
@@ -148,36 +146,63 @@ grant execute on function private.sync_professional_capability(uuid,text) to ser
 
 create or replace function private.evaluate_professional_readiness(p_professional_id uuid)
 returns jsonb language plpgsql security definer set search_path = public, private
-as $$
-declare missing jsonb := '[]'::jsonb; profile_ok boolean := false; valu_ok boolean := false; blocked boolean := false; eligible boolean := false; p record;
+as $
+declare
+  missing jsonb := '[]'::jsonb;
+  profile_ok boolean := false;
+  valu_ok boolean := false;
+  blocked boolean := false;
+  eligible boolean := false;
+  initial_assessment_type text := null;
 begin
- select * into p from public.professional_profiles where id=p_professional_id;
- if not found then return jsonb_build_object('professional_id',p_professional_id,'profile_complete',false,'full_assessment_complete',false,'full_assessment_required_for_general_listing',true,'blocked',false,'eligible',false,'missing',jsonb_build_array('profile')); end if;
- profile_ok := coalesce(p.profile_complete,false)
-   and nullif(trim(coalesce(p.display_name,'')),'') is not null
-   and nullif(trim(coalesce(p.headline,'')),'') is not null
-   and nullif(trim(coalesce(p.bio,'')),'') is not null
-   and nullif(trim(coalesce(p.photo_url,'')),'') is not null
-   and cardinality(coalesce(p.active_tracks,'{}'::text[])) > 0
-   and nullif(trim(coalesce(p.industry,'')),'') is not null
-   and nullif(trim(coalesce(p.username,'')),'') is not null
-   and nullif(trim(coalesce(p.phone,'')),'') is not null
-   and nullif(trim(coalesce(p.current_job_title,'')),'') is not null
-   and nullif(trim(coalesce(p.location,'')),'') is not null
-   and coalesce(array_length(p.languages,1),0) > 0
-   and nullif(trim(coalesce(p.cv_url,'')),'') is not null;
- valu_ok:=private.valu_assessment_is_current(p_professional_id);
- select exists(select 1 from public.professional_listing_events e where e.professional_id=p_professional_id and e.event_type in ('ADMIN_REVOKED','ADMIN_SUSPENDED')
-   and e.created_at=(select max(e2.created_at) from public.professional_listing_events e2 where e2.professional_id=p_professional_id)) into blocked;
- if not profile_ok then missing:=missing||jsonb_build_array('profile'); end if;
- if not valu_ok then missing:=missing||jsonb_build_array('full_valu_assessment_score_35_current'); end if;
- if cardinality(coalesce(p.active_tracks,'{}'::text[]))=0 then missing:=missing||jsonb_build_array('track'); end if;
- if nullif(trim(coalesce(p.photo_url,'')),'') is null then missing:=missing||jsonb_build_array('photo_url'); end if;
- if nullif(trim(coalesce(p.cv_url,'')),'') is null then missing:=missing||jsonb_build_array('cv_url'); end if;
- eligible:=jsonb_array_length(missing)=0 and not blocked;
- return jsonb_build_object('professional_id',p_professional_id,'profile_complete',profile_ok,'full_assessment_complete',valu_ok,'full_assessment_required_for_general_listing',true,'blocked',blocked,'eligible',eligible,'missing',missing);
+  select coalesce(profile_complete,false)
+    and nullif(trim(coalesce(display_name,'')),'') is not null
+    and nullif(trim(coalesce(bio,'')),'') is not null
+    into profile_ok
+  from public.professional_profiles where id=p_professional_id;
+
+  select case
+    when exists(select 1 from public.taster_sessions t where t.user_id=p_professional_id and t.completed_at is not null)
+      then 'initial_15_question'
+    when exists(
+      select 1 from public.valu_assessments v
+      where v.user_id=p_professional_id and v.completed_at is not null
+        and coalesce(v.total_score,0)>=35
+        and (v.expires_at is null or v.expires_at>now())
+    ) then 'full_assessment'
+    else null
+  end into initial_assessment_type;
+
+  valu_ok := initial_assessment_type is not null;
+
+  select exists(
+    select 1 from public.professional_listing_events e
+    where e.professional_id=p_professional_id
+      and e.event_type in ('ADMIN_REVOKED','ADMIN_SUSPENDED')
+      and e.created_at=(select max(e2.created_at) from public.professional_listing_events e2 where e2.professional_id=p_professional_id)
+  ) into blocked;
+
+  if not profile_ok then missing:=missing||jsonb_build_array('profile'); end if;
+  if not valu_ok then missing:=missing||jsonb_build_array('initial_valu_assessment'); end if;
+  if not exists(
+    select 1 from public.professional_profiles
+    where id=p_professional_id and cardinality(coalesce(active_tracks,'{}'::text[]))>0
+  ) then missing:=missing||jsonb_build_array('track'); end if;
+
+  eligible:=jsonb_array_length(missing)=0 and not blocked;
+
+  return jsonb_build_object(
+    'professional_id',p_professional_id,
+    'profile_complete',profile_ok,
+    'initial_assessment_complete',valu_ok,
+    'initial_assessment_type',initial_assessment_type,
+    'full_assessment_required_for_general_listing',false,
+    'blocked',blocked,
+    'eligible',eligible,
+    'missing',missing
+  );
 end;
-$$;
+$;
 revoke all on function private.evaluate_professional_readiness(uuid) from public, anon, authenticated;
 grant execute on function private.evaluate_professional_readiness(uuid) to service_role;
 
