@@ -61,7 +61,7 @@
   "redirects": [
     {
       "source": "/logo.png",
-      "destination": "https://valoriainstitute.com/valoria-original.png?v=20260922-4",
+      "destination": "https://valoriainstitute.com/logo.png",
       "permanent": true
     }
   ]
