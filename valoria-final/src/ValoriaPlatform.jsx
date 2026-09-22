@@ -70,7 +70,7 @@ export function ValoriaNav({ minimal = false }) {
         }}
       >
         <a href="https://valoriainstitute.com" aria-label="Valoria Institute — home" style={{ lineHeight: 0, flexShrink: 0 }}>
-          <img src="https://valoriainstitute.com/valoria-original.png?v=20260922-1" alt="Valoria Institute" style={{ height: 40, width: 'auto', display: 'block' }} />
+          <img src="https://valoriainstitute.com/valoria-original.png?v=20260922-3" alt="Valoria Institute" style={{ height: 40, width: 'auto', display: 'block' }} />
         </a>
 
         {!minimal && (
@@ -156,7 +156,7 @@ export function ValoriaFooter() {
           marginBottom: 'clamp(32px,4vw,52px)',
         }}>
           <div>
-            <img src="https://valoriainstitute.com/valoria-original.png?v=20260922-1" alt="Valoria Institute" style={{ height: 56, width: 'auto', display: 'block', marginBottom: 14 }} />
+            <img src="https://valoriainstitute.com/valoria-original.png?v=20260922-3" alt="Valoria Institute" style={{ height: 56, width: 'auto', display: 'block', marginBottom: 14 }} />
             <p style={{ fontSize: 13, fontWeight: 300, color: 'rgba(247,244,238,0.35)', lineHeight: 1.7, maxWidth: 260, marginBottom: 12, fontFamily: BRAND.FONT_UI }}>
               The marketplace where African professionals rise. One assessed standard. Three ways to engage.
             </p>
