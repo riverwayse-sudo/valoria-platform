@@ -2,13 +2,14 @@ import React from 'react';
 
 const T = { parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.28)', dark:'#1A1A2E' };
 const SITE_URL = 'https://valoriainstitute.com';
+const LOGO_URL = 'https://raw.githubusercontent.com/riverwayse-sudo/valoria-site/main/public/valoria-original.png';
 
 export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {
   return (
     <header style={styles.header} aria-label="Assessment navigation">
       <div className="assessment-nav-inner" style={styles.inner}>
         <a href={`${SITE_URL}/`} style={styles.brand} aria-label="Return to Valoria Institute homepage">
-          <img src="https://valoriainstitute.com/valoria-original.png?v=20260922-5" alt="Valoria Institute" className="assessment-nav-logo" style={styles.logo} />
+          <img src={LOGO_URL} alt="Valoria Institute" className="assessment-nav-logo" style={styles.logo} />
         </a>
         <div className="assessment-nav-center" style={styles.center} aria-live="polite">
           <span style={styles.label}>{label}</span>
@@ -27,7 +28,6 @@ const styles = {
   inner:{width:'100%',maxWidth:1180,minHeight:64,margin:'0 auto',padding:'0 20px',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:18},
   brand:{display:'inline-flex',alignItems:'center',gap:9,width:'fit-content',color:T.parchment,textDecoration:'none'},
   logo:{height:40,width:'auto',display:'block',objectFit:'contain'},
-  
   center:{display:'flex',alignItems:'center',justifyContent:'center',gap:10,whiteSpace:'nowrap'},
   label:{fontSize:10,fontWeight:700,letterSpacing:'.16em',color:T.gold},
   progress:{fontSize:10,color:T.faint,letterSpacing:'.08em'},
