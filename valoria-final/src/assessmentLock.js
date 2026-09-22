@@ -2,19 +2,19 @@
 // These are the only approved values per VI-WDS-2026-001.
 // Do NOT override these anywhere else in the codebase.
 export const BRAND = {
-  DARK:      '#0F0F1A',
+  DARK:      '#1A1A2E',
   MID:       '#1A1A2E',
   GOLD:      '#C9A84C',
   PARCHMENT: '#F7F4EE',
   ACCENT:    '#EDE8DC',
-  AMBER:     '#BA7517',
+  AMBER:     '#C9A84C',
   BODY:      '#F7F4EE',
   CLUSTER: {
-    P: '#1D9E75',
-    R: '#378ADD',
-    I: '#7F77DD',
-    M: '#BA7517',
-    E: '#D85A30',
+    P: '#C9A84C',
+    R: '#D4C9A8',
+    I: '#EDE8DC',
+    M: '#F7F4EE',
+    E: '#C9A84C',
   },
   FONT_DISPLAY: "'Raleway', sans-serif",
   FONT_BODY:    "'Raleway', 'DM Sans', sans-serif",
