@@ -23,7 +23,7 @@ function escapeHtml(str) {
 function confirmationEmailHtml(name, actionLink) {
   return `
     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-    <body style="margin:0;padding:0;background:#0F0F1A;font-family:Georgia,serif;color:#F7F4EE;">
+    <body style="margin:0;padding:0;background:#1A1A2E;font-family:Georgia,serif;color:#F7F4EE;">
       <div style="max-width:600px;margin:0 auto;padding:48px 32px;text-align:center;">
         <img src="https://valoriainstitute.com/valoria-original.png?v=20260922-3" alt="Valoria Institute" style="height:40px;margin-bottom:32px;">
         <h1 style="font-size:26px;font-weight:300;color:#F7F4EE;margin-bottom:12px;">Confirm your email, ${escapeHtml(name)}.</h1>
