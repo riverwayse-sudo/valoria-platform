@@ -57,10 +57,6 @@ begin
       for select to authenticated
       using (exists (select 1 from public.admin_users au where au.id = (select auth.uid())));
   end if;
-  if not exists (select 1 from pg_policies where schemaname='public' and tablename='taster_sessions' and policyname='taster_sessions_public_insert') then
-    create policy taster_sessions_public_insert on public.taster_sessions
-      for insert to anon, authenticated with check (true);
-  end if;
   if not exists (select 1 from pg_policies where schemaname='public' and tablename='rate_limits' and policyname='rate_limits_no_client_access') then
     create policy rate_limits_no_client_access on public.rate_limits
       for select to authenticated using (false);
