@@ -1,4 +1,5 @@
 // Server-side report generation + email send for the sweep workflow.
+// Public browser triggers are rate-limited; cron workers remain authenticated.
 export const config = { runtime: "nodejs", maxDuration: 60 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
