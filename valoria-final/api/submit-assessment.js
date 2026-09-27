@@ -77,7 +77,10 @@ export default async function handler(req, res) {
     return json(res, 503, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
   }
 
-  const { name, role, experience, answers, timings, shuffleMap } = req.body || {};
+  const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId } = req.body || {};
+  if (tasterId !== undefined && (typeof tasterId !== 'string' || !/^[0-9a-f-]{36}$/i.test(tasterId))) {
+    return json(res, 400, { error: 'Invalid taster reference.' });
+  }
   if (typeof name !== 'string' || !name.trim() || name.trim().length > MAX_NAME_LENGTH) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   if (typeof role !== 'string' || !role.trim() || role.trim().length > MAX_ROLE_LENGTH) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   if (!EXPERIENCE_BANDS.has(experience)) return json(res, 400, { error: 'Select a valid experience band.' });
@@ -92,11 +95,42 @@ export default async function handler(req, res) {
   const fingerprint = computeFingerprint(name, role);
   const completedAt = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Resolve the teaser/account server-side. The browser never supplies ownership
+  // or email; this prevents a completed assessment from becoming an orphan.
+  let taster = null;
+  let resolvedUserId = null;
+  let resolvedEmail = null;
+  if (tasterId) {
+    const tasterParams = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role', limit: '1' });
+    const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, {
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    });
+    if (!tasterRes.ok) return json(res, 502, { error: 'Could not verify the VALU journey.' });
+    taster = (await tasterRes.json())?.[0];
+    if (!taster) return json(res, 404, { error: 'VALU teaser result not found.' });
+    if (String(taster.name || '').trim().toLowerCase() !== name.trim().toLowerCase() ||
+        String(taster.role || '').trim().toLowerCase() !== role.trim().toLowerCase()) {
+      return json(res, 403, { error: 'Assessment identity does not match the VALU teaser.' });
+    }
+    resolvedUserId = taster.user_id || null;
+    if (resolvedUserId) {
+      const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${resolvedUserId}`, {
+        headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      });
+      if (!userRes.ok) return json(res, 502, { error: 'Could not verify the Valoria account.' });
+      const user = await userRes.json();
+      resolvedEmail = String(user.email || '').trim().toLowerCase() || null;
+    }
+  }
+
   const row = {
     name: name.trim(), role: role.trim(), experience,
     identity_hash: fingerprint, total_score: results.valuIndex,
     designation: results.desig?.name || '', cluster_scores: results.clusterScores,
     skill_scores: results.skillScores, completed_at: completedAt, expires_at: expiresAt, ai_report: null,
+    taster_id: tasterId || null, user_id: resolvedUserId, email: resolvedEmail,
+    answers, timings, shuffle_map: shuffleMap, assessment_version: 'FULL_VALU_V1',
   };
 
   try {
