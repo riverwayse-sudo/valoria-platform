@@ -49,6 +49,7 @@ export default function FullVALUAssessment() {
           answers: nextAnswers,
           timings: nextTimings,
           shuffleMap: {},
+          taster_id: identity.tasterId,
         }),
       });
       const scoreData = await scoreRes.json().catch(() => ({}));
