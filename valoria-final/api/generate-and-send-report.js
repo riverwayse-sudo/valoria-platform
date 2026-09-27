@@ -6,6 +6,8 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 const REQUEST_TIMEOUT_MS = 15000;
+const PUBLIC_TRIGGER_LIMIT = 3;
+const PUBLIC_TRIGGER_WINDOW_SECONDS = 60 * 60;
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -24,6 +26,21 @@ function getSiteOrigin() {
 
 function isValidIdentityHash(value) {
   return typeof value === "string" && /^fp_[a-z0-9]{8,120}$/i.test(value);
+}
+
+async function consumePublicTriggerRateLimit(identityHash) {
+  const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/consume_rate_limit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    body: JSON.stringify({
+      p_rate_key: `report-trigger:${identityHash}`,
+      p_limit: PUBLIC_TRIGGER_LIMIT,
+      p_window_seconds: PUBLIC_TRIGGER_WINDOW_SECONDS,
+    }),
+  });
+  if (!res.ok) throw new Error("Report trigger rate limiter failed");
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows[0] : rows;
 }
 
 async function fetchAssessment(identityHash) {
@@ -100,8 +117,23 @@ async function sendReportEmail(email, identityHash, reportText) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
-  if (!CRON_SECRET || req.headers.authorization !== `Bearer ${CRON_SECRET}`) return res.status(401).json({ ok: false, error: "Unauthorized" });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANTHROPIC_API_KEY) return res.status(503).json({ ok: false, error: "Service unavailable" });
+
+  const isAuthorizedWorker = Boolean(
+    CRON_SECRET && req.headers.authorization === `Bearer ${CRON_SECRET}`
+  );
+  if (!isAuthorizedWorker) {
+    try {
+      const limit = await consumePublicTriggerRateLimit(String(req.body?.identity_hash || ""));
+      if (!limit?.allowed) {
+        if (limit?.retry_after_seconds) res.setHeader("Retry-After", String(limit.retry_after_seconds));
+        return res.status(429).json({ ok: false, error: "Report request limit reached. Please try again later." });
+      }
+    } catch (err) {
+      console.error("[generate-and-send-report] public trigger limiter failed:", err.message);
+      return res.status(503).json({ ok: false, error: "Report service temporarily unavailable." });
+    }
+  }
 
   const { identity_hash } = req.body || {};
   if (!isValidIdentityHash(identity_hash)) return res.status(400).json({ ok: false, error: "Invalid identity_hash" });
