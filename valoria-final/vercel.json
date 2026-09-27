@@ -64,5 +64,11 @@
       "destination": "https://valoriainstitute.com/logo.png",
       "permanent": true
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/sweep-unsent-reports",
+      "schedule": "*/15 * * * *"
+    }
   ]
 }
