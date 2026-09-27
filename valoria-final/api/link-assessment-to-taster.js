@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   const assessmentParams = new URLSearchParams({ taster_id: `eq.${tasterId}`, select: 'id,user_id,email,name,role,total_score,completed_at,identity_hash', limit: '1' });
   const assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${assessmentParams}`, { headers });
   if (!assessmentRes.ok) return json(res, 502, { error: 'Could not find the completed assessment.' });
-  const assessment = (await assessmentRes.json())?.[0];
+  let assessment = (await assessmentRes.json())?.[0];
   if (!assessment) {
     const fallbackParams = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: 'id,user_id,email,name,role,total_score,completed_at,identity_hash', limit: '1' });
     const fallbackRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${fallbackParams}`, { headers });
