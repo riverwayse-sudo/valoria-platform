@@ -22,11 +22,18 @@ export default async function handler(req, res) {
   const taster = (await tasterRes.json())?.[0];
   if (!taster?.user_id) return json(res, 409, { error: 'The teaser is not linked to a Valoria account yet.' });
 
-  const assessmentParams = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: 'id,user_id,email,name,role,total_score,completed_at', limit: '1' });
+  const assessmentParams = new URLSearchParams({ taster_id: `eq.${tasterId}`, select: 'id,user_id,email,name,role,total_score,completed_at,identity_hash', limit: '1' });
   const assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${assessmentParams}`, { headers });
   if (!assessmentRes.ok) return json(res, 502, { error: 'Could not find the completed assessment.' });
   const assessment = (await assessmentRes.json())?.[0];
-  if (!assessment) return json(res, 404, { error: 'Completed assessment not found.' });
+  if (!assessment) {
+    const fallbackParams = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: 'id,user_id,email,name,role,total_score,completed_at,identity_hash', limit: '1' });
+    const fallbackRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${fallbackParams}`, { headers });
+    if (!fallbackRes.ok) return json(res, 502, { error: 'Could not find the completed assessment.' });
+    const fallback = (await fallbackRes.json())?.[0];
+    if (!fallback) return json(res, 404, { error: 'Completed assessment not found.' });
+    assessment = fallback;
+  }
   if (assessment.user_id && assessment.user_id !== taster.user_id) return json(res, 409, { error: 'Assessment is already linked to another account.' });
   if (String(assessment.name || '').trim().toLowerCase() !== String(taster.name || '').trim().toLowerCase() || String(assessment.role || '').trim().toLowerCase() !== String(taster.role || '').trim().toLowerCase()) return json(res, 403, { error: 'Assessment identity does not match the teaser identity.' });
 
@@ -34,7 +41,7 @@ export default async function handler(req, res) {
   if (!userRes.ok) return json(res, 502, { error: 'Could not verify the Valoria account.' });
   const user = await userRes.json();
   const patchParams = new URLSearchParams({ id: `eq.${assessment.id}` });
-  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${patchParams}`, { method:'PATCH', headers:{...headers,Prefer:'return=minimal'}, body:JSON.stringify({user_id:taster.user_id,email:user.email||null}) });
+  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${patchParams}`, { method:'PATCH', headers:{...headers,Prefer:'return=minimal'}, body:JSON.stringify({user_id:taster.user_id,email:user.email||assessment.email||null,taster_id:tasterId}) });
   if (!patchRes.ok) return json(res, 502, { error: 'Could not attach the official score to the profile.' });
 
   const completedAt = assessment.completed_at || new Date().toISOString();
