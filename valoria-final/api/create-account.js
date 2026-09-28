@@ -66,7 +66,7 @@ export default async function handler(req) {
     if (assessment.user_id) return json({ error: "This assessment is already linked to an account." }, 409);
   }
 
-  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}` : `${VALORIA_SITE_URL}/dashboard`;
+  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}` : `${VALORIA_SITE_URL}/login`;
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
