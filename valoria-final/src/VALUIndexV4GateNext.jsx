@@ -174,3 +174,5 @@ const S={
  nextTitle:{fontSize:22,fontWeight:600,margin:'9px 0 8px'}
 };
 
+
+// Production deployment sync: latest VALU entry layout.
