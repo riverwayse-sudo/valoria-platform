@@ -18,6 +18,7 @@ export default function FullVALUAssessment() {
   const [saving,setSaving] = useState(false);
   const [result,setResult] = useState(null);
   const [error,setError] = useState('');
+  const [reportStatus,setReportStatus] = useState('');
   const question = QUESTIONS[current];
   const progress = Math.round(((current + 1) / QUESTIONS.length) * 100);
   const canUse = identity.tasterId && identity.name && identity.role && identity.experience;
@@ -63,6 +64,24 @@ export default function FullVALUAssessment() {
       const linkData = await linkRes.json().catch(() => ({}));
       if (!linkRes.ok) throw new Error(linkData.error || 'The score was saved but could not be attached to your profile.');
 
+      // Generate the report as part of the same completion transaction from the user's perspective.
+      // If generation is temporarily unavailable, the official score still remains saved and the
+      // dashboard/report recovery flow can retry it without forcing the user to repeat the assessment.
+      try {
+        setReportStatus('Preparing your VALU report…');
+        const reportRes = await fetch('/api/generate-and-send-report', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Idempotency-Key':`full-valu-${scoreData.identity_hash}`},
+          body:JSON.stringify({identity_hash:scoreData.identity_hash}),
+        });
+        const reportData = await reportRes.json().catch(()=>({}));
+        if (reportRes.ok && (reportData.sent || reportData.alreadySent)) setReportStatus('Your VALU report is ready and has been sent to your email.');
+        else setReportStatus('Your VALU Index is complete. Your report is being prepared and will follow automatically.');
+      } catch (reportError) {
+        console.warn('Full VALU report trigger deferred:', reportError?.message || reportError);
+        setReportStatus('Your VALU Index is complete. Your report is being prepared and will follow automatically.');
+      }
+
       setResult(scoreData.results);
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');
@@ -81,6 +100,7 @@ export default function FullVALUAssessment() {
       <h1 style={S.h1}>Your official standard is set.</h1>
       <div style={S.scoreCard}><div style={S.score}>{score}</div><div style={S.outOf}>/ 100</div><div style={S.designation}>{designation}</div></div>
       <p style={S.p}>Your full assessment is now attached to your Valoria professional profile. Your profile can move from <strong style={{color:T.gold}}>Basic · Incomplete</strong> to complete once the required professional profile information is finished.</p>
+      {reportStatus && <p style={{...S.p,color:T.gold}}>{reportStatus}</p>}
       <a href="https://valoriainstitute.com/profile/onboarding" style={S.button}>COMPLETE MY PROFILE →</a>
       <a href="https://valoriainstitute.com/profile/onboarding" style={S.secondary}>OPEN PROFILE SETUP</a>
     </Shell>;
