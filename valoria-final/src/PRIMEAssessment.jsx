@@ -244,18 +244,27 @@ const SKILL_CLUSTER = {
 };
 
 // ── SESSION STORAGE CHECKPOINT ─────────────────────────────────────────────
-const SESSION_KEY = "vi_session_v2";
+const SESSION_KEY = "vi_session_v3";
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 function saveCheckpoint(data) {
-  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(data)); } catch {}
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...data, savedAt: Date.now() }));
+  } catch {}
 }
 function loadCheckpoint() {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.savedAt || Date.now() - parsed.savedAt > SESSION_MAX_AGE) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return parsed;
   } catch { return null; }
 }
 function clearCheckpoint() {
-  try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
 }
 
 // ── PENDING REPORT (localStorage) ─────────────────────────────────────────
