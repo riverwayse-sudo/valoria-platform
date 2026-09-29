@@ -45,12 +45,36 @@ export default function VALUIndexV4GateNext(){
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
  if(phase==='signup')return <Shell>
-  <StepBar active={1}/>
-  <div style={S.brand}>VALORIA INSTITUTE · VALU INDEX v{VALU_VERSION}</div>
-  <h1 style={S.hero}>Start with your <em>professional identity.</em></h1>
-  <p style={S.lead}>Create your Valoria account first. Then your 15-question snapshot is saved directly into your professional journey.</p>
-  <div style={S.card}><div style={S.eyebrow}>ONE ACCOUNT · ONE JOURNEY</div><div style={S.pills}>{['Free to start','15-question snapshot','Saved to your account'].map(x=><span key={x} style={S.pill}>{x}</span>)}</div></div>
+  <div style={S.homeHero}>
+   <div style={S.brand}>VALORIA INSTITUTE · VALU INDEX v${VALU_VERSION}</div>
+   <div style={S.homeKicker}>KNOW YOUR WORTH · UNDERSTAND YOUR CAPABILITY · SEE WHERE YOU CAN GO NEXT</div>
+   <h1 style={S.hero}>Your professional value<br/><em>deserves a standard.</em></h1>
+   <p style={S.lead}>VALU begins with a 15-question directional snapshot across the five PRIME dimensions. It is designed to help you understand how you currently show up, connect, think, deliver and create.</p>
+   <div style={S.pathRail}>
+    {[
+      ['01','DISCOVER','See the signals already shaping your professional value.'],
+      ['02','ASSESS','Take the directional snapshot, then progress to the full VALU assessment.'],
+      ['03','BUILD','Turn your result into a stronger professional profile and capability record.'],
+      ['04','CONNECT','Become discoverable through Valoria when you meet the required standard.'],
+      ['05','UNDERSTAND','Receive a clearer picture of where you stand and where to develop next.'],
+    ].map(([n,title,desc],i)=><div key={title} style={S.pathItem}>
+      <div style={S.pathNumber}>{n}</div><div><div style={S.pathTitle}>{title}</div><div style={S.pathDesc}>{desc}</div></div>
+      {i<4&&<div style={S.pathLine}/>}
+    </div>)}
+   </div>
+   <div style={S.startPanel}>
+    <div>
+      <div style={S.eyebrow}>START HERE</div>
+      <div style={S.startTitle}>15-question VALU snapshot</div>
+      <p style={S.startCopy}>A short, directional first read across Presence, Relationships, Intelligence, Mastery and Enterprise. Your result becomes the beginning of your Valoria journey — not your final VALU Index.</p>
+      <div style={S.pills}>{['15 questions','Directional result','Free to start','Saved to your journey'].map(x=><span key={x} style={S.pill}>{x}</span>)}</div>
+    </div>
+    <div style={S.startMeta}><span>01 / 05</span><span>ABOUT 5 MINUTES</span></div>
+   </div>
+  </div>
   <form onSubmit={createAccount} style={S.form}>
+   <div style={S.formHeader}><div><div style={S.eyebrow}>YOUR PROFESSIONAL IDENTITY</div><h2 style={S.formTitle}>Begin with who you are.</h2></div><div style={S.formRule}/></div>
+   <p style={S.formIntro}>These details give your snapshot context. They do not change your answers or score.</p>
    <div style={S.grid}>
     <Field label="FULL NAME"><input style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
     <Field label="CURRENT ROLE"><input style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Senior Product Manager" autoComplete="organization-title"/></Field>
@@ -63,17 +87,17 @@ export default function VALUIndexV4GateNext(){
    </div>
    {error&&<div style={S.error}>{error}</div>}
    <button type="submit" disabled={!validSignup||saving} style={{...S.primary,opacity:(!validSignup||saving)?.5:1}}>{saving?'CREATING YOUR ACCOUNT…':'CREATE ACCOUNT & START VALU →'}</button>
-   <p style={S.note}>Your account is captured before the assessment. Confirm your email before signing in to continue the professional journey.</p>
+   <p style={S.note}>Your account is captured before the snapshot so your progress can remain connected to one Valoria journey. You can return and continue without starting again.</p>
    <p style={S.login}>Already have an account? <a href="https://valoriainstitute.com/login" style={{color:GOLD}}>Sign in</a></p>
   </form>
- </Shell>;
+ </Shell>
 
  if(phase==='taster')return <Shell>
   <StepBar active={2}/>
   <div style={S.top}><div><div style={S.eyebrow}>VALU SNAPSHOT · PRIME</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>{current+1} / {TASTER_QUESTIONS.length}</div></div>
   <div style={S.progress}><div style={{...S.fill,width:`${progress}%`,background:COLORS[q.cluster]}}/></div>
   <div style={S.insight}>{q.tasterInsight}</div><h1 style={S.question}>{q.q}</h1>
-  <div style={S.options}>{q.options.map((o,i)=><button key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected===i?GOLD:'rgba(247,244,238,.1)',background:selected===i?'rgba(201,168,76,.08)':'rgba(255,255,255,.025)',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
+  <div style={S.options}>{q.options.map((o,i)=><button key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected===i?GOLD:'rgba(247,244,238,.1)',background:selected===i?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
   {error&&<div style={S.error}>{error}</div>}<p style={S.note}>Your answers are saved as a directional snapshot. They do not become the official VALU Index score.</p>
  </Shell>;
 
