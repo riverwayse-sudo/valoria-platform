@@ -101,6 +101,7 @@ export default function FullVALUAssessment() {
       <div style={S.scoreCard}><div style={S.score}>{score}</div><div style={S.outOf}>/ 100</div><div style={S.designation}>{designation}</div></div>
       <p style={S.p}>Your full assessment is now attached to your Valoria professional profile. Your profile can move from <strong style={{color:T.gold}}>Basic · Incomplete</strong> to complete once the required professional profile information is finished.</p>
       {reportStatus && <p style={{...S.p,color:T.gold}}>{reportStatus}</p>}
+      {reportStatus.includes('ready') && <a href="https://valoriainstitute.com/report" style={S.button}>VIEW MY VALU REPORT →</a>}
       <a href="https://valoriainstitute.com/profile/onboarding" style={S.button}>COMPLETE MY PROFILE →</a>
       <a href="https://valoriainstitute.com/profile/onboarding" style={S.secondary}>OPEN PROFILE SETUP</a>
     </Shell>;
