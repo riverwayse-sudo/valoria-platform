@@ -64,7 +64,7 @@ export default function VALUIndexV4GateNext(){
       ['05','ENTERPRISE','How you create value'],
      ].map(([n,t,d])=><div key={t} style={S.dimension}><span>{n}</span><div style={S.dimensionCopy}><b style={S.dimensionTitle}>{t}</b><small style={S.dimensionDescription}>{d}</small></div></div>)}
     </div>
-    <div style={S.pathNote}><span style={S.pathLineGold}></span><div style={S.pathCopy}><b style={S.pathTitle}>One starting point. One Valoria journey.</b><small style={S.pathDescription}>Your snapshot can lead into the full VALU Index, report, profile and marketplace journey.</small></div></div>
+    
    </section>
 
    <form className="valu-entry-form" onSubmit={createAccount} style={S.form}>
@@ -73,7 +73,7 @@ export default function VALUIndexV4GateNext(){
       <div><div style={S.eyebrow}>START HERE · 01 / 05</div><h2 style={S.formTitle}>Tell us about yourself.</h2></div>
       <div style={S.formTime}>FREE<br/>~5 MIN</div>
      </div>
-     <p style={S.formIntro}>These details keep your assessment and future Valoria profile connected.</p>
+     
      <div className="valu-entry-form-grid" style={S.grid}>
       <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
       <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
@@ -118,38 +118,38 @@ function Field({label,children}){return <label style={S.label}>{label}{children}
 function StepBar({active}){return <div style={S.steps}>{['ACCOUNT','SNAPSHOT','NEXT'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
 function Shell({children}){return <main style={S.page}><div style={S.shell}>{children}</div></main>}
 const S={
- page:{minHeight:'100vh',background:DARK,color:PARCH,padding:'42px 36px 80px',fontFamily:"'Raleway',sans-serif"},
- shell:{maxWidth:1160,margin:'0 auto'},
- topBrand:{display:'flex',alignItems:'center',justifyContent:'space-between',paddingBottom:20,borderBottom:'1px solid rgba(212,201,168,.13)',marginBottom:58},
+ page:{height:'100vh',minHeight:'100vh',background:DARK,color:PARCH,padding:'28px 32px 34px',overflow:'hidden',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
+ shell:{width:'100%',maxWidth:1160,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:0},
+ topBrand:{display:'flex',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottom:'1px solid rgba(212,201,168,.13)',marginBottom:24,flex:'0 0 auto},
  brandMark:{fontSize:15,fontWeight:900,letterSpacing:'.08em',color:PARCH},
  brandVersion:{fontSize:8,fontWeight:800,letterSpacing:'.16em',color:'rgba(212,201,168,.55)'},
  brand:{fontSize:8,fontWeight:700,letterSpacing:'.16em',color:GOLD,textAlign:'center'},
- entryGrid:{display:'grid',gridTemplateColumns:'minmax(0,1.08fr) minmax(430px,.92fr)',gap:'clamp(56px,6vw,84px)',alignItems:'start'},
- entryIntro:{paddingTop:8,maxWidth:610},
+ entryGrid:{display:'grid',gridTemplateColumns:'minmax(0,1.05fr) minmax(420px,.95fr)',gap:'clamp(42px,5vw,68px)',alignItems:'center',flex:'1 1 auto',minHeight:0},
+ entryIntro:{paddingTop:0,maxWidth:600,minWidth:0},
  homeKicker:{fontSize:9,fontWeight:800,letterSpacing:'.18em',color:GOLD,marginBottom:18},
- hero:{fontSize:'clamp(52px,5.4vw,68px)',fontWeight:500,lineHeight:1.01,letterSpacing:'-.045em',margin:'0 0 24px'},
- lead:{fontSize:15,lineHeight:1.75,color:'rgba(250,250,247,.66)',maxWidth:570,margin:'0 0 38px'},
+ hero:{fontSize:'clamp(44px,4.6vw,62px)',fontWeight:500,lineHeight:1.0,letterSpacing:'-.045em',margin:'0 0 16px'},
+ lead:{fontSize:14,lineHeight:1.55,color:'rgba(250,250,247,.66)',maxWidth:560,margin:'0 0 22px'},
  dimensionList:{borderTop:'1px solid rgba(212,201,168,.15)'},
- dimension:{display:'grid',gridTemplateColumns:'48px 1fr',gap:18,alignItems:'start',padding:'18px 0',borderBottom:'1px solid rgba(212,201,168,.1)'},
- dimensionCopy:{display:'flex',flexDirection:'column',gap:8,minWidth:0,paddingTop:1},
- dimensionTitle:{display:'block',fontSize:12.5,fontWeight:800,lineHeight:1.25,letterSpacing:'.05em',marginBottom:0},
- dimensionDescription:{display:'block',fontSize:12,lineHeight:1.5,color:'rgba(250,250,247,.52)',marginTop:0},
+ dimension:{display:'grid',gridTemplateColumns:'42px 1fr',gap:16,alignItems:'start',padding:'11px 0',borderBottom:'1px solid rgba(212,201,168,.1)'},
+ dimensionCopy:{display:'flex',flexDirection:'column',gap:4,minWidth:0,paddingTop:1},
+ dimensionTitle:{display:'block',fontSize:11.5,fontWeight:800,lineHeight:1.2,letterSpacing:'.05em',marginBottom:0},
+ dimensionDescription:{display:'block',fontSize:10.5,lineHeight:1.35,color:'rgba(250,250,247,.5)',marginTop:0},
  dimensionSpan:{fontSize:8},
- pathNote:{display:'flex',gap:18,alignItems:'flex-start',marginTop:30,paddingTop:22,borderTop:'1px solid rgba(201,168,76,.2)'},
- pathCopy:{display:'flex',flexDirection:'column',gap:9,minWidth:0,paddingTop:1},
- pathTitle:{display:'block',fontSize:12.5,fontWeight:800,lineHeight:1.35,letterSpacing:'.025em',marginBottom:0},
- pathDescription:{display:'block',fontSize:12,lineHeight:1.6,color:'rgba(250,250,247,.52)',marginTop:0},
- pathLineGold:{width:3,height:46,background:GOLD,flex:'0 0 auto',borderRadius:3},
+ pathNote:{display:'flex',gap:14,alignItems:'flex-start',marginTop:16,paddingTop:14,borderTop:'1px solid rgba(201,168,76,.2)'},
+ pathCopy:{display:'flex',flexDirection:'column',gap:5,minWidth:0,paddingTop:1},
+ pathTitle:{display:'block',fontSize:11.5,fontWeight:800,lineHeight:1.25,letterSpacing:'.025em',marginBottom:0},
+ pathDescription:{display:'block',fontSize:10.5,lineHeight:1.4,color:'rgba(250,250,247,.5)',marginTop:0},
+ pathLineGold:{width:3,height:36,background:GOLD,flex:'0 0 auto',borderRadius:3},
  form:{display:'block',maxWidth:520,margin:'0 auto',width:'100%'},
- formCard:{padding:'34px',background:'rgba(46,46,74,.72)',border:'1px solid rgba(212,201,168,.2)',borderRadius:14,boxShadow:'0 24px 70px rgba(0,0,0,.24)'},
+ formCard:{padding:'24px 28px',background:'rgba(46,46,74,.72)',border:'1px solid rgba(212,201,168,.2)',borderRadius:14,boxShadow:'0 20px 60px rgba(0,0,0,.22)'},
  formTop:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:18,paddingBottom:18,borderBottom:'1px solid rgba(212,201,168,.14)'},
  formTime:{fontSize:8,fontWeight:900,lineHeight:1.7,letterSpacing:'.13em',textAlign:'right',color:BRASS},
- formTitle:{fontSize:27,fontWeight:600,letterSpacing:'-.025em',margin:'7px 0 0',lineHeight:1.15},
- formIntro:{fontSize:12,lineHeight:1.65,color:'rgba(250,250,247,.52)',margin:'18px 0 24px',maxWidth:420},
- grid:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16},
- label:{display:'grid',gap:8,fontSize:8,fontWeight:800,letterSpacing:'.14em',color:'rgba(250,250,247,.62)',marginBottom:16},
- input:{width:'100%',boxSizing:'border-box',padding:'13px 14px',background:'#23233A',border:'1px solid rgba(212,201,168,.2)',borderRadius:7,color:PARCH,fontSize:13,fontFamily:'inherit',outline:'none',minHeight:45},
- primary:{width:'100%',padding:'16px 18px',border:0,borderRadius:7,background:GOLD,color:DARK,fontWeight:900,letterSpacing:'.1em',fontSize:10,cursor:'pointer',fontFamily:'inherit',marginTop:5,minHeight:48},
+ formTitle:{fontSize:23,fontWeight:600,letterSpacing:'-.025em',margin:'5px 0 0',lineHeight:1.15},
+ formIntro:{fontSize:11,lineHeight:1.45,color:'rgba(250,250,247,.52)',margin:'12px 0 16px',maxWidth:420},
+ grid:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12},
+ label:{display:'grid',gap:6,fontSize:7.5,fontWeight:800,letterSpacing:'.14em',color:'rgba(250,250,247,.62)',marginBottom:11},
+ input:{width:'100%',boxSizing:'border-box',padding:'10px 12px',background:'#23233A',border:'1px solid rgba(212,201,168,.2)',borderRadius:7,color:PARCH,fontSize:12.5,fontFamily:'inherit',outline:'none',minHeight:40},
+ primary:{width:'100%',padding:'13px 18px',border:0,borderRadius:7,background:GOLD,color:DARK,fontWeight:900,letterSpacing:'.1em',fontSize:9.5,cursor:'pointer',fontFamily:'inherit',marginTop:3,minHeight:44},
  saveNote:{display:'flex',justifyContent:'center',gap:7,alignItems:'center',fontSize:9.5,color:'rgba(250,250,247,.42)',marginTop:13},
  login:{fontSize:11,color:'rgba(250,250,247,.42)',textAlign:'center',margin:'17px 0 0'},
  eyebrow:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
