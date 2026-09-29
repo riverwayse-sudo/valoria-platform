@@ -147,7 +147,7 @@ export default async function handler(req, res) {
     const assessment = await fetchAssessment(identity_hash);
     if (!assessment) return res.status(404).json({ ok: false, error: "Assessment not found" });
     if (assessment.report_email_sent_at || assessment.report_status === "SENT") return res.status(200).json({ ok: true, alreadySent: true });
-    if (!assessment.email) return res.status(200).json({ ok: true, skipped: "no_email" });
+    // Reports can be generated without an email so legacy/orphan assessments do not remain stuck.\n    // Delivery is deferred until a verified email identity is reconciled.
 
     const claim = await claimReport(identity_hash, idempotencyKey);
     if (!claim?.claimed) {
