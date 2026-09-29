@@ -68,7 +68,7 @@
   "crons": [
     {
       "path": "/api/sweep-unsent-reports",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 2 * * *"
     }
   ]
 }
