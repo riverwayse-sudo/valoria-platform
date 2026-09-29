@@ -45,17 +45,17 @@ export default function VALUIndexV4GateNext(){
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
  if(phase==='signup')return <Shell>
-  <div style={S.topBrand}>
+  <div className="valu-top-brand" style={S.topBrand}>
    <div style={S.brandMark}>VALORIA <span>INSTITUTE</span></div>
    <div style={S.brandVersion}>VALU INDEX · v{VALU_VERSION}</div>
   </div>
 
-  <div style={S.entryGrid}>
-   <section style={S.entryIntro}>
+  <div className="valu-entry-grid" style={S.entryGrid}>
+   <section className="valu-entry-intro" style={S.entryIntro}>
     <div style={S.homeKicker}>A PROFESSIONAL VALUE ASSESSMENT</div>
     <h1 style={S.hero}>See the value<br/><em>you bring.</em></h1>
     <p style={S.lead}>Begin with a 15-question VALU snapshot. In about five minutes, you’ll get a first read across the five dimensions of PRIME.</p>
-    <div style={S.dimensionList}>
+    <div className="valu-dimension-list" style={S.dimensionList}>
      {[
       ['01','PRESENCE','How you show up'],
       ['02','RELATIONSHIPS','How you create trust'],
@@ -67,14 +67,14 @@ export default function VALUIndexV4GateNext(){
     <div style={S.pathNote}><span style={S.pathLineGold}></span><div><b>One starting point. One Valoria journey.</b><small>Your snapshot can lead into the full VALU Index, report, profile and marketplace journey.</small></div></div>
    </section>
 
-   <form onSubmit={createAccount} style={S.form}>
-    <div style={S.formCard}>
+   <form className="valu-entry-form" onSubmit={createAccount} style={S.form}>
+    <div className="valu-entry-form-card" style={S.formCard}>
      <div style={S.formTop}>
       <div><div style={S.eyebrow}>START HERE · 01 / 05</div><h2 style={S.formTitle}>Tell us about yourself.</h2></div>
       <div style={S.formTime}>FREE<br/>~5 MIN</div>
      </div>
      <p style={S.formIntro}>These details keep your assessment and future Valoria profile connected.</p>
-     <div style={S.grid}>
+     <div className="valu-entry-form-grid" style={S.grid}>
       <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
       <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
      </div>
