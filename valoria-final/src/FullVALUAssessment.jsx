@@ -19,11 +19,37 @@ export default function FullVALUAssessment() {
   const [result,setResult] = useState(null);
   const [error,setError] = useState('');
   const [reportStatus,setReportStatus] = useState('');
+  const resumeKey = useMemo(() => `valoria-valu-resume:${identity.tasterId}:${identity.name}:${identity.role}:${identity.experience}`, [identity.tasterId, identity.name, identity.role, identity.experience]);
   const question = QUESTIONS[current];
   const progress = Math.round(((current + 1) / QUESTIONS.length) * 100);
   const canUse = identity.tasterId && identity.name && identity.role && identity.experience;
 
-  useEffect(() => setStartedAt(Date.now()), [current]);
+  useEffect(() => {
+    setStartedAt(Date.now());
+    if (!canUse) return;
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(resumeKey) || 'null');
+      if (!saved || saved.completed) return;
+      if (saved.answers && typeof saved.answers === 'object') setAnswers(saved.answers);
+      if (Array.isArray(saved.timings)) setTimings(saved.timings);
+      if (Number.isInteger(saved.current) && saved.current >= 0 && saved.current < QUESTIONS.length) {
+        setCurrent(saved.current);
+      }
+    } catch {}
+  }, [resumeKey, canUse]);
+
+  useEffect(() => {
+    if (!canUse || result) return;
+    try {
+      window.localStorage.setItem(resumeKey, JSON.stringify({
+        current,
+        answers,
+        timings,
+        updatedAt: new Date().toISOString(),
+        completed: false,
+      }));
+    } catch {}
+  }, [resumeKey, canUse, current, answers, timings, result]);
 
   async function choose(optionIndex) {
     if (saving || result) return;
@@ -82,7 +108,7 @@ export default function FullVALUAssessment() {
         setReportStatus('Your VALU Index is complete. Your report is being prepared and will follow automatically.');
       }
 
-      setResult(scoreData.results);
+      try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}\n      setResult(scoreData.results);
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
@@ -115,7 +141,7 @@ export default function FullVALUAssessment() {
     <div style={S.options}>
       {question.options.map((option,i)=><button key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
     </div>
-    <div style={S.footer}><span>{Object.keys(answers).length} answered</span><span>One answer per question</span></div>
+    <div style={S.footer}><span>{Object.keys(answers).length} answered</span><span>{Object.keys(answers).length ? 'Your progress is saved on this device.' : 'One answer per question'}</span></div>
     {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
     {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
   </Shell>;
