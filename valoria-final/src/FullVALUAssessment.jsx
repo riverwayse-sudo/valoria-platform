@@ -109,7 +109,8 @@ export default function FullVALUAssessment() {
         setReportStatus('Your VALU Index is complete. Your report is being prepared and will follow automatically.');
       }
 
-      try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}\n      setResult(scoreData.results);
+      try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}
+      setResult(scoreData.results);
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
