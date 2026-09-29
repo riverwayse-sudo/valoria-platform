@@ -50,7 +50,7 @@ export default function VALUIndexV4GateNext(){
    <div style={S.homeKicker}>KNOW YOUR WORTH · UNDERSTAND YOUR CAPABILITY · SEE WHERE YOU CAN GO NEXT</div>
    <h1 style={S.hero}>Your professional value<br/><em>deserves a standard.</em></h1>
    <p style={S.lead}>VALU begins with a 15-question directional snapshot across the five PRIME dimensions. It is designed to help you understand how you currently show up, connect, think, deliver and create.</p>
-   <div style={S.pathRail}>
+   <div className="valu-path-rail" style={S.pathRail}>
     {[
       ['01','DISCOVER','See the signals already shaping your professional value.'],
       ['02','ASSESS','Take the directional snapshot, then progress to the full VALU assessment.'],
@@ -62,7 +62,7 @@ export default function VALUIndexV4GateNext(){
       {i<4&&<div style={S.pathLine}/>}
     </div>)}
    </div>
-   <div style={S.startPanel}>
+   <div className="valu-start-panel" style={S.startPanel}>
     <div>
       <div style={S.eyebrow}>START HERE</div>
       <div style={S.startTitle}>15-question VALU snapshot</div>
