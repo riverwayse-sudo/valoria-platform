@@ -141,7 +141,7 @@ export default function FullVALUAssessment() {
     <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
     <h1 style={S.question}>{question.q}</h1>
     <div style={S.options}>
-      {question.options.map((option,i)=><button key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
+      {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
     </div>
     <div style={S.footer}><span>{Object.keys(answers).length} answered</span><span>{Object.keys(answers).length ? 'Your progress is saved on this device.' : 'One answer per question'}</span></div>
     {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
@@ -162,7 +162,7 @@ const S = {
   cluster:{fontSize:11,letterSpacing:'.12em',textTransform:'uppercase',color:T.gold,marginBottom:14},
   question:{fontSize:'clamp(28px,5vw,48px)',fontWeight:300,lineHeight:1.12,letterSpacing:'-.025em',margin:'0 0 32px',maxWidth:780},
   options:{display:'grid',gap:10},
-  option:{display:'grid',gridTemplateColumns:'38px 1fr',gap:14,alignItems:'center',textAlign:'left',padding:'17px 18px',border:'1px solid rgba(247,244,238,.1)',borderRadius:8,background:'#2E2E4A',color:T.parchment,fontSize:14,lineHeight:1.55,cursor:'pointer'},
+  option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'38px 1fr',gap:14,alignItems:'center',textAlign:'left',padding:'17px 18px',border:'1px solid rgba(247,244,238,.1)',borderRadius:8,background:'#2E2E4A',color:T.parchment,fontSize:14,lineHeight:1.55,cursor:'pointer'},
   optionLetter:{width:30,height:30,borderRadius:'50%',border:'1px solid rgba(201,168,76,.3)',display:'flex',alignItems:'center',justifyContent:'center',color:T.gold,fontSize:11},
   footer:{display:'flex',justifyContent:'space-between',gap:16,color:T.faint,fontSize:11,marginTop:18},
   saving:{marginTop:18,color:T.gold,fontSize:12},
