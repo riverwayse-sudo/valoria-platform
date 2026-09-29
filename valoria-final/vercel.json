@@ -88,6 +88,9 @@
       "path": "/api/sweep-unsent-reports",
       "schedule": "0 2 * * *"
     }
-  ]
+  ],
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": true
+  }
 }
-
