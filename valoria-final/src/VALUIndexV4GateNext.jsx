@@ -115,7 +115,7 @@ function Shell({children}){return <main style={S.page}><div style={S.shell}>{chi
 const S={
  page:{height:'calc(100vh - 65px)',minHeight:0,background:DARK,color:PARCH,padding:'28px 32px 34px',overflow:'hidden',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
  shell:{width:'100%',maxWidth:1160,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:0},
- topBrand:{display:'flex',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottom:'1px solid rgba(212,201,168,.13)',marginBottom:24,flex:'0 0 auto},
+ topBrand:{display:'flex',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottom:'1px solid rgba(212,201,168,.13)',marginBottom:24,flex:'0 0 auto'},
  brandMark:{fontSize:15,fontWeight:900,letterSpacing:'.08em',color:PARCH},
  brandVersion:{fontSize:8,fontWeight:800,letterSpacing:'.16em',color:'rgba(212,201,168,.55)'},
  brand:{fontSize:8,fontWeight:700,letterSpacing:'.16em',color:GOLD,textAlign:'center'},
