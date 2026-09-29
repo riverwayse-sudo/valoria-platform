@@ -77,7 +77,7 @@ brandStyles.textContent = `
   }
 
   @media (max-width: 820px) {
-    .valu-entry-grid { grid-template-columns: 1fr !important; gap: 34px !important; }
+    .valu-entry-grid { grid-template-columns: 1fr !important; gap: 28px !important; overflow:auto; padding-right:4px; }
     .valu-entry-intro { max-width: none !important; padding-top: 0 !important; }
     .valu-entry-form { max-width: none !important; }
     .valu-dimension-list { max-width: 620px !important; }
