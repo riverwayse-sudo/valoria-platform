@@ -45,11 +45,6 @@ export default function VALUIndexV4GateNext(){
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
  if(phase==='signup')return <Shell>
-  <div className="valu-top-brand" style={S.topBrand}>
-   <div style={S.brandMark}>VALORIA <span>INSTITUTE</span></div>
-   <div style={S.brandVersion}>VALU INDEX · v{VALU_VERSION}</div>
-  </div>
-
   <div className="valu-entry-grid" style={S.entryGrid}>
    <section className="valu-entry-intro" style={S.entryIntro}>
     <div style={S.homeKicker}>A PROFESSIONAL VALUE ASSESSMENT</div>
