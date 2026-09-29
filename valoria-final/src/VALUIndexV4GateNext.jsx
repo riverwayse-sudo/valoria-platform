@@ -62,9 +62,9 @@ export default function VALUIndexV4GateNext(){
       ['03','INTELLIGENCE','How you think'],
       ['04','MASTERY','How you apply capability'],
       ['05','ENTERPRISE','How you create value'],
-     ].map(([n,t,d])=><div key={t} style={S.dimension}><span>{n}</span><div><b>{t}</b><small>{d}</small></div></div>)}
+     ].map(([n,t,d])=><div key={t} style={S.dimension}><span>{n}</span><div style={S.dimensionCopy}><b style={S.dimensionTitle}>{t}</b><small style={S.dimensionDescription}>{d}</small></div></div>)}
     </div>
-    <div style={S.pathNote}><span style={S.pathLineGold}></span><div><b>One starting point. One Valoria journey.</b><small>Your snapshot can lead into the full VALU Index, report, profile and marketplace journey.</small></div></div>
+    <div style={S.pathNote}><span style={S.pathLineGold}></span><div style={S.pathCopy}><b style={S.pathTitle}>One starting point. One Valoria journey.</b><small style={S.pathDescription}>Your snapshot can lead into the full VALU Index, report, profile and marketplace journey.</small></div></div>
    </section>
 
    <form className="valu-entry-form" onSubmit={createAccount} style={S.form}>
@@ -130,9 +130,15 @@ const S={
  hero:{fontSize:'clamp(46px,6.5vw,78px)',fontWeight:500,lineHeight:.98,letterSpacing:'-.055em',margin:'0 0 22px'},
  lead:{fontSize:16,lineHeight:1.7,color:'rgba(250,250,247,.66)',maxWidth:520,margin:'0 0 32px'},
  dimensionList:{borderTop:'1px solid rgba(212,201,168,.15)'},
- dimension:{display:'grid',gridTemplateColumns:'42px 1fr',gap:12,alignItems:'center',padding:'13px 0',borderBottom:'1px solid rgba(212,201,168,.1)'},
+ dimension:{display:'grid',gridTemplateColumns:'42px 1fr',gap:12,alignItems:'start',padding:'14px 0',borderBottom:'1px solid rgba(212,201,168,.1)'},
+ dimensionCopy:{display:'flex',flexDirection:'column',gap:5,minWidth:0},
+ dimensionTitle:{display:'block',fontSize:13,fontWeight:800,lineHeight:1.15,letterSpacing:'.015em'},
+ dimensionDescription:{display:'block',fontSize:11,lineHeight:1.35,color:'rgba(250,250,247,.5)'},
  dimensionSpan:{fontSize:8},
  pathNote:{display:'flex',gap:14,alignItems:'flex-start',marginTop:26,paddingTop:18,borderTop:'1px solid rgba(201,168,76,.2)'},
+ pathCopy:{display:'flex',flexDirection:'column',gap:7,minWidth:0},
+ pathTitle:{display:'block',fontSize:12,fontWeight:800,lineHeight:1.3,letterSpacing:'.01em'},
+ pathDescription:{display:'block',fontSize:11,lineHeight:1.5,color:'rgba(250,250,247,.5)'},
  pathLineGold:{width:2,height:38,background:GOLD,flex:'0 0 auto'},
  form:{display:'block',maxWidth:500,margin:'0 auto',width:'100%'},
  formCard:{padding:'30px',background:'rgba(46,46,74,.72)',border:'1px solid rgba(212,201,168,.2)',borderRadius:16,boxShadow:'0 24px 70px rgba(0,0,0,.24)'},
