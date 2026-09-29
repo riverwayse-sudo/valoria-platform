@@ -76,6 +76,22 @@ brandStyles.textContent = `
     .valu-start-panel > div:last-child { text-align: left !important; }
   }
 
+  @media (max-width: 820px) {
+    .valu-entry-grid { grid-template-columns: 1fr !important; gap: 34px !important; }
+    .valu-entry-intro { max-width: none !important; padding-top: 0 !important; }
+    .valu-entry-form { max-width: none !important; }
+    .valu-dimension-list { max-width: 620px !important; }
+  }
+
+  @media (max-width: 560px) {
+    .valu-entry-grid { gap: 28px !important; }
+    .valu-top-brand { margin-bottom: 36px !important; padding-bottom: 18px !important; }
+    .valu-brand-version { display: none !important; }
+    .valu-entry-intro h1 { font-size: 48px !important; }
+    .valu-entry-form-card { padding: 22px 18px !important; }
+    .valu-entry-form-grid { grid-template-columns: 1fr !important; gap: 0 !important; }
+  }
+
   @media (max-width: 640px) {
     .assessment-nav-inner { grid-template-columns: 1fr auto !important; min-height: 58px !important; }
     .assessment-nav-center { display: none !important; }
