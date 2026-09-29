@@ -113,7 +113,7 @@ function Field({label,children}){return <label style={S.label}>{label}{children}
 function StepBar({active}){return <div style={S.steps}>{['ACCOUNT','SNAPSHOT','NEXT'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
 function Shell({children}){return <main style={S.page}><div style={S.shell}>{children}</div></main>}
 const S={
- page:{height:'100vh',minHeight:'100vh',background:DARK,color:PARCH,padding:'28px 32px 34px',overflow:'hidden',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
+ page:{height:'calc(100vh - 65px)',minHeight:0,background:DARK,color:PARCH,padding:'28px 32px 34px',overflow:'hidden',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
  shell:{width:'100%',maxWidth:1160,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:0},
  topBrand:{display:'flex',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottom:'1px solid rgba(212,201,168,.13)',marginBottom:24,flex:'0 0 auto},
  brandMark:{fontSize:15,fontWeight:900,letterSpacing:'.08em',color:PARCH},
