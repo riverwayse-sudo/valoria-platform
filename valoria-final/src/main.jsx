@@ -42,6 +42,16 @@ brandStyles.textContent = `
     outline-offset: 2px;
   }
 
+  .valu-path-rail { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .valu-start-panel { min-width: 0; }
+  @media (max-width: 760px) {
+    .valu-path-rail { grid-template-columns: 1fr; }
+    .valu-path-rail > div { min-height: auto !important; }
+    .valu-path-rail > div > div:last-child { display: none; }
+    .valu-start-panel { align-items: flex-start !important; flex-direction: column !important; }
+    .valu-start-panel > div:last-child { text-align: left !important; }
+  }
+
   @media (max-width: 640px) {
     .assessment-nav-inner { grid-template-columns: 1fr auto !important; min-height: 58px !important; }
     .assessment-nav-center { display: none !important; }
