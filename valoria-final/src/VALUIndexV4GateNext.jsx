@@ -48,16 +48,18 @@ export default function VALUIndexV4GateNext(){
   <div style={S.heroBlock}>
    <div style={S.brand}>VALORIA INSTITUTE · VALU INDEX v{VALU_VERSION}</div>
    <div style={S.homeKicker}>KNOW YOUR WORTH · UNDERSTAND YOUR CAPABILITY · SEE WHERE YOU CAN GO NEXT</div>
-   <h1 style={S.hero}>Know your professional value.<br/><em>Begin here.</em></h1>
-   <p style={S.lead}>Start with a free 15-question VALU snapshot. It gives you a directional first read and saves your progress to your Valoria journey.</p>
+   <div style={S.heroBadge}><span style={S.liveDot}/> FREE · 15 QUESTIONS · ABOUT 5 MINUTES</div>
+   <h1 style={S.hero}>Your value is already there.<br/><em>Let’s make it visible.</em></h1>
+   <p style={S.lead}>Start with a short VALU snapshot designed to give you a clear first read of how your professional value shows up across the PRIME framework.</p>
   </div>
 
   <form onSubmit={createAccount} style={S.form}>
-   <div style={S.formHeader}>
-    <div><div style={S.eyebrow}>START HERE · 01 / 05</div><h2 style={S.formTitle}>Begin with who you are.</h2></div>
-    <div style={S.formMeta}>ABOUT 5 MINUTES<br/>FREE TO START</div>
-   </div>
-   <p style={S.formIntro}>We use these details to connect your snapshot, future VALU assessment, report and professional profile to one Valoria journey.</p>
+   <div style={S.formCard}>
+    <div style={S.formHeader}>
+     <div><div style={S.eyebrow}>START HERE · 01 / 05</div><h2 style={S.formTitle}>Begin with who you are.</h2></div>
+     <div style={S.formMeta}>FREE TO START<br/>PROGRESS SAVED</div>
+    </div>
+    <p style={S.formIntro}>Your details create one Valoria identity so your snapshot, future VALU assessment, report and professional profile stay connected.</p>
    <div style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Senior Product Manager" autoComplete="organization-title"/></Field>
@@ -70,17 +72,19 @@ export default function VALUIndexV4GateNext(){
    </div>
    {error&&<div style={S.error}>{error}</div>}
    <button type="submit" disabled={!validSignup||saving} style={{...S.primary,opacity:(!validSignup||saving)?.5:1}}>{saving?'SAVING YOUR JOURNEY…':'START MY VALU SNAPSHOT →'}</button>
+   <div style={S.reassurance}><span>✓</span> No experience level is “wrong” here. This is about understanding your current professional signal.</div>
    <p style={S.note}>Your progress is saved so you can return without starting again. The snapshot is directional and does not determine marketplace listing.</p>
    <p style={S.login}>Already have an account? <a href="https://valoriainstitute.com/login" style={{color:GOLD}}>Sign in</a></p>
+   </div>
   </form>
 
   <section style={S.valueStrip}>
-   <div><div style={S.eyebrow}>WHAT YOU GET</div><strong>15-question VALU snapshot</strong><p>A directional read across Presence, Relationships, Intelligence, Mastery and Enterprise.</p></div>
-   <div style={S.valuePoints}>{['Directional result','Saved to your journey','Path to full VALU'].map(x=><span key={x}>{x}</span>)}</div>
+   <div style={S.valueLead}><div style={S.eyebrow}>WHAT YOU’LL SEE</div><strong>One first read. Five dimensions.</strong><p>Your snapshot gives you a directional view across the five PRIME dimensions — then shows you where the full VALU journey goes next.</p></div>
+   <div style={S.primeMini}>{[['P','Presence'],['R','Relationships'],['I','Intelligence'],['M','Mastery'],['E','Enterprise']].map(([id,title])=><div key={id} style={S.primeItem}><b>{id}</b><span>{title}</span></div>)}</div>
   </section>
 
   <section style={S.journeyContext}>
-   <div style={S.eyebrow}>YOUR VALORIA PATH</div>
+   <div style={S.journeyIntro}><div><div style={S.eyebrow}>YOUR VALORIA PATH</div><strong>Discover → assess → build → connect → understand.</strong></div><span>ONE CONTINUOUS JOURNEY</span></div>
    <div className="valu-path-rail" style={S.pathRail}>
     {[
       ['01','DISCOVER'],['02','ASSESS'],['03','BUILD'],['04','CONNECT'],['05','UNDERSTAND'],
@@ -120,7 +124,9 @@ const S={
  step:{display:'flex',alignItems:'center',gap:8,fontSize:9,fontWeight:700,letterSpacing:'.14em',color:'rgba(250,250,247,.55)'},
  stepDot:{width:24,height:24,borderRadius:'50%',border:'1px solid rgba(201,168,76,.45)',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,color:PARCH},
  brand:{fontSize:8,fontWeight:700,letterSpacing:'.16em',color:GOLD,textAlign:'center'},
- heroBlock:{padding:'4px 0 8px',textAlign:'center'},
+ heroBlock:{padding:'4px 0 22px',textAlign:'center'},
+ heroBadge:{display:'inline-flex',alignItems:'center',gap:7,margin:'13px auto 0',padding:'7px 10px',border:'1px solid rgba(201,168,76,.28)',borderRadius:999,background:'rgba(201,168,76,.06)',fontSize:8,fontWeight:800,letterSpacing:'.12em',color:BRASS},
+ liveDot:{width:6,height:6,borderRadius:'50%',background:GOLD,boxShadow:'0 0 0 4px rgba(201,168,76,.1)'},
  homeHero:{padding:'12px 0 0'},
  homeKicker:{fontSize:8,fontWeight:700,letterSpacing:'.14em',color:BRASS,textAlign:'center',marginTop:7},
  hero:{fontSize:'clamp(27px,3.8vw,38px)',fontWeight:600,lineHeight:1.08,letterSpacing:'-.035em',textAlign:'center',margin:'7px 0 7px'},
@@ -133,14 +139,22 @@ const S={
  pathLine:{display:'none'},
  startPanel:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:28,padding:'24px 26px',background:'rgba(201,168,76,.055)',border:'1px solid rgba(201,168,76,.28)',borderRadius:14,marginBottom:44},
  formMeta:{flex:'0 0 auto',textAlign:'right',fontSize:9,fontWeight:800,lineHeight:1.8,letterSpacing:'.13em',color:BRASS},
- valueStrip:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:18,maxWidth:760,margin:'14px auto 0',padding:'11px 14px',background:SURFACE,border:'1px solid rgba(212,201,168,.16)',borderRadius:10},
+ valueStrip:{display:'grid',gridTemplateColumns:'1.05fr 1.4fr',alignItems:'center',gap:22,maxWidth:780,margin:'18px auto 0',padding:'18px',background:'rgba(46,46,74,.7)',border:'1px solid rgba(212,201,168,.16)',borderRadius:12},
+ valueLead:{minWidth:0},
+ primeMini:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:7},
+ primeItem:{display:'grid',gap:7,minHeight:72,padding:'11px 9px',background:'rgba(26,26,46,.58)',border:'1px solid rgba(212,201,168,.12)',borderRadius:9},
+ reassurance:{display:'flex',alignItems:'flex-start',gap:8,padding:'10px 11px',borderTop:'1px solid rgba(212,201,168,.1)',color:'rgba(250,250,247,.48)',fontSize:10,lineHeight:1.5},
+ journeyIntro:{display:'flex',alignItems:'end',justifyContent:'space-between',gap:18,marginBottom:9},
+ journeyIntroStrong:{fontSize:14},
+
  valueStripStrong:{fontSize:16},
  valuePoints:{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'flex-end'},
  journeyContext:{maxWidth:760,margin:'16px auto 0'},
  startTitle:{fontSize:22,fontWeight:600,color:PARCH,marginTop:7},
  startCopy:{fontSize:12,lineHeight:1.7,color:'rgba(250,250,247,.62)',maxWidth:610,margin:'8px 0 0'},
  startMeta:{flex:'0 0 auto',display:'grid',gap:6,textAlign:'right',fontSize:9,fontWeight:700,letterSpacing:'.13em',color:BRASS},
- form:{display:'grid',gap:12,maxWidth:760,margin:'0 auto'},
+ form:{display:'grid',gap:12,maxWidth:780,margin:'0 auto'},
+ formCard:{padding:'22px 22px 18px',background:'rgba(46,46,74,.68)',border:'1px solid rgba(212,201,168,.2)',borderRadius:14,boxShadow:'0 18px 55px rgba(0,0,0,.16)'},
  formHeader:{display:'flex',alignItems:'end',justifyContent:'space-between',gap:20,borderBottom:'1px solid rgba(212,201,168,.16)',paddingBottom:9},
  formTitle:{fontSize:20,fontWeight:600,letterSpacing:'-.02em',margin:'5px 0 0'},
  formRule:{width:120,height:2,background:GOLD,opacity:.7,marginBottom:5},
