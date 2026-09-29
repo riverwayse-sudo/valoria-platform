@@ -49,8 +49,8 @@ export default async function handler(req) {
 
   const jobs = [
     sweepOne(origin, headers, { email: "not.is.null", confirmation_email_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/resend-confirmation"),
-    sweepOne(origin, headers, { completed_at: "not.is.null", email: "not.is.null", report_email_sent_at: "is.null", ai_report: "not.is.null", select: "identity_hash", limit: "50" }, "/api/finalize-report"),
-    sweepOne(origin, headers, { completed_at: "not.is.null", email: "not.is.null", ai_report: "is.null", report_email_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/generate-and-send-report"),
+    sweepOne(origin, headers, { completed_at: "not.is.null", report_email_sent_at: "is.null", ai_report: "not.is.null", select: "identity_hash", limit: "50" }, "/api/finalize-report"),
+    sweepOne(origin, headers, { completed_at: "not.is.null", ai_report: "is.null", report_email_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/generate-and-send-report"),
     sweepOne(origin, headers, { completed_at: `lt.${oneDayAgo}`, email: "not.is.null", report_email_sent_at: "not.is.null", profile_reminder_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/send-profile-reminder"),
   ];
 
