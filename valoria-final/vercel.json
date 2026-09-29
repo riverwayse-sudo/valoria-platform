@@ -44,7 +44,7 @@
           "value": "camera=(), microphone=(), geolocation=()"
         },
         {
-          "key": "X-Valoria-Deployment-Source",\n          "value": "github-main",\n        },\n        {\n          "key": "Strict-Transport-Security",
+          "key": "Strict-Transport-Security",
           "value": "max-age=31536000; includeSubDomains"
         }
       ]
