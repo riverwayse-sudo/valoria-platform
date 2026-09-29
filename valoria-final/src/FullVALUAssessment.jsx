@@ -101,7 +101,8 @@ export default function FullVALUAssessment() {
           body:JSON.stringify({identity_hash:scoreData.identity_hash}),
         });
         const reportData = await reportRes.json().catch(()=>({}));
-        if (reportRes.ok && (reportData.sent || reportData.alreadySent)) setReportStatus('Your VALU report is ready and has been sent to your email.');
+        if (reportRes.ok && reportData.ready) setReportStatus('Your VALU report is ready. You can view it from your Valoria journey.');
+        else if (reportRes.ok && (reportData.sent || reportData.alreadySent)) setReportStatus('Your VALU report is ready and has been sent to your email.');
         else setReportStatus('Your VALU Index is complete. Your report is being prepared and will follow automatically.');
       } catch (reportError) {
         console.warn('Full VALU report trigger deferred:', reportError?.message || reportError);
