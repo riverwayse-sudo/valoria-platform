@@ -1157,7 +1157,7 @@ function AssessmentScreen({ name, role, initialAnswers, initialTimings, initialQ
               <button key={displayIdx} onClick={() => handleSelect(displayIdx)}
                 style={{
                   padding:"16px 20px",
-                  background: isSelected ? "rgba(201,168,76,0.12)" : "rgba(255,255,255,0.03)",
+                  background: isSelected ? "rgba(201,168,76,0.14)" : "#2E2E4A",
                   border: `1.5px solid ${isSelected ? "rgba(201,168,76,0.5)" : "rgba(255,255,255,0.08)"}`,
                   borderRadius: T.radius.chip,
                   textAlign:"left",
