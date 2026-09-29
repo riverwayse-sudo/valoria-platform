@@ -32,6 +32,30 @@ brandStyles.textContent = `
     font-family: 'Raleway', sans-serif;
   }
 
+  /* VALU answer surfaces are explicitly branded so browser/user-agent button
+     defaults cannot turn them white or produce white-on-white text. */
+  button.valu-option,
+  button.valu-option:disabled,
+  button.valu-option:hover,
+  button.valu-option:active {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background: #2E2E4A !important;
+    color: #FAFAF7 !important;
+    border: 1px solid rgba(247,244,238,.12) !important;
+    box-shadow: none !important;
+  }
+
+  button.valu-option:hover,
+  button.valu-option:focus-visible {
+    background: #363657 !important;
+  }
+
+  button.valu-option:disabled {
+    cursor: default;
+  }
+
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
