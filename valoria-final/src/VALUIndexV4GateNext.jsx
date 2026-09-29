@@ -45,53 +45,49 @@ export default function VALUIndexV4GateNext(){
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
  if(phase==='signup')return <Shell>
-  <div style={S.homeHero}>
-   <div style={S.brand}>VALORIA INSTITUTE · VALU INDEX v${VALU_VERSION}</div>
+  <div style={S.heroBlock}>
+   <div style={S.brand}>VALORIA INSTITUTE · VALU INDEX v{VALU_VERSION}</div>
    <div style={S.homeKicker}>KNOW YOUR WORTH · UNDERSTAND YOUR CAPABILITY · SEE WHERE YOU CAN GO NEXT</div>
-   <h1 style={S.hero}>Your professional value<br/><em>deserves a standard.</em></h1>
-   <p style={S.lead}>VALU begins with a 15-question directional snapshot across the five PRIME dimensions. It is designed to help you understand how you currently show up, connect, think, deliver and create.</p>
-   <div className="valu-path-rail" style={S.pathRail}>
-    {[
-      ['01','DISCOVER','See the signals already shaping your professional value.'],
-      ['02','ASSESS','Take the directional snapshot, then progress to the full VALU assessment.'],
-      ['03','BUILD','Turn your result into a stronger professional profile and capability record.'],
-      ['04','CONNECT','Become discoverable through Valoria when you meet the required standard.'],
-      ['05','UNDERSTAND','Receive a clearer picture of where you stand and where to develop next.'],
-    ].map(([n,title,desc],i)=><div key={title} style={S.pathItem}>
-      <div style={S.pathNumber}>{n}</div><div><div style={S.pathTitle}>{title}</div><div style={S.pathDesc}>{desc}</div></div>
-      {i<4&&<div style={S.pathLine}/>}
-    </div>)}
-   </div>
-   <div className="valu-start-panel" style={S.startPanel}>
-    <div>
-      <div style={S.eyebrow}>START HERE</div>
-      <div style={S.startTitle}>15-question VALU snapshot</div>
-      <p style={S.startCopy}>A short, directional first read across Presence, Relationships, Intelligence, Mastery and Enterprise. Your result becomes the beginning of your Valoria journey — not your final VALU Index.</p>
-      <div style={S.pills}>{['15 questions','Directional result','Free to start','Saved to your journey'].map(x=><span key={x} style={S.pill}>{x}</span>)}</div>
-    </div>
-    <div style={S.startMeta}><span>01 / 05</span><span>ABOUT 5 MINUTES</span></div>
-   </div>
+   <h1 style={S.hero}>Know your professional value.<br/><em>Begin here.</em></h1>
+   <p style={S.lead}>Start with a free 15-question VALU snapshot. It gives you a directional first read and saves your progress to your Valoria journey.</p>
   </div>
+
   <form onSubmit={createAccount} style={S.form}>
-   <div style={S.formHeader}><div><div style={S.eyebrow}>YOUR PROFESSIONAL IDENTITY</div><h2 style={S.formTitle}>Begin with who you are.</h2></div><div style={S.formRule}/></div>
-   <p style={S.formIntro}>These details give your snapshot context. They do not change your answers or score.</p>
-   <div style={S.grid}>
-    <Field label="FULL NAME"><input style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
-    <Field label="CURRENT ROLE"><input style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Senior Product Manager" autoComplete="organization-title"/></Field>
+   <div style={S.formHeader}>
+    <div><div style={S.eyebrow}>START HERE · 01 / 05</div><h2 style={S.formTitle}>Begin with who you are.</h2></div>
+    <div style={S.formMeta}>ABOUT 5 MINUTES<br/>FREE TO START</div>
    </div>
-   <Field label="PROFESSIONAL EXPERIENCE"><select style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   <Field label="EMAIL ADDRESS"><input style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
+   <p style={S.formIntro}>We use these details to connect your snapshot, future VALU assessment, report and professional profile to one Valoria journey.</p>
    <div style={S.grid}>
-    <Field label="PASSWORD"><input style={S.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Minimum 8 characters" autoComplete="new-password"/></Field>
-    <Field label="CONFIRM PASSWORD"><input style={S.input} type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="Repeat password" autoComplete="new-password"/></Field>
+    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
+    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Senior Product Manager" autoComplete="organization-title"/></Field>
+   </div>
+   <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
+   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
+   <div style={S.grid}>
+    <Field label="PASSWORD"><input required style={S.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Minimum 8 characters" autoComplete="new-password"/></Field>
+    <Field label="CONFIRM PASSWORD"><input required style={S.input} type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="Repeat password" autoComplete="new-password"/></Field>
    </div>
    {error&&<div style={S.error}>{error}</div>}
-   <button type="submit" disabled={!validSignup||saving} style={{...S.primary,opacity:(!validSignup||saving)?.5:1}}>{saving?'CREATING YOUR ACCOUNT…':'CREATE ACCOUNT & START VALU →'}</button>
-   <p style={S.note}>Your account is captured before the snapshot so your progress can remain connected to one Valoria journey. You can return and continue without starting again.</p>
+   <button type="submit" disabled={!validSignup||saving} style={{...S.primary,opacity:(!validSignup||saving)?.5:1}}>{saving?'SAVING YOUR JOURNEY…':'START MY VALU SNAPSHOT →'}</button>
+   <p style={S.note}>Your progress is saved so you can return without starting again. The snapshot is directional and does not determine marketplace listing.</p>
    <p style={S.login}>Already have an account? <a href="https://valoriainstitute.com/login" style={{color:GOLD}}>Sign in</a></p>
   </form>
- </Shell>
 
+  <section style={S.valueStrip}>
+   <div><div style={S.eyebrow}>WHAT YOU GET</div><strong>15-question VALU snapshot</strong><p>A directional read across Presence, Relationships, Intelligence, Mastery and Enterprise.</p></div>
+   <div style={S.valuePoints}>{['Directional result','Saved to your journey','Path to full VALU'].map(x=><span key={x}>{x}</span>)}</div>
+  </section>
+
+  <section style={S.journeyContext}>
+   <div style={S.eyebrow}>YOUR VALORIA PATH</div>
+   <div className="valu-path-rail" style={S.pathRail}>
+    {[
+      ['01','DISCOVER'],['02','ASSESS'],['03','BUILD'],['04','CONNECT'],['05','UNDERSTAND'],
+    ].map(([n,title])=><div key={title} style={S.pathItem}><div style={S.pathNumber}>{n}</div><div style={S.pathTitle}>{title}</div></div>)}
+   </div>
+  </section>
+ </Shell>
  if(phase==='taster')return <Shell>
   <StepBar active={2}/>
   <div style={S.top}><div><div style={S.eyebrow}>VALU SNAPSHOT · PRIME</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>{current+1} / {TASTER_QUESTIONS.length}</div></div>
@@ -124,6 +120,7 @@ const S={
  step:{display:'flex',alignItems:'center',gap:8,fontSize:9,fontWeight:700,letterSpacing:'.14em',color:'rgba(250,250,247,.55)'},
  stepDot:{width:24,height:24,borderRadius:'50%',border:'1px solid rgba(201,168,76,.45)',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,color:PARCH},
  brand:{fontSize:9,fontWeight:700,letterSpacing:'.18em',color:GOLD,textAlign:'center'},
+ heroBlock:{padding:'12px 0 22px',textAlign:'center'},
  homeHero:{padding:'12px 0 0'},
  homeKicker:{fontSize:10,fontWeight:700,letterSpacing:'.18em',color:BRASS,textAlign:'center',marginTop:18},
  hero:{fontSize:'clamp(38px,6vw,62px)',fontWeight:600,lineHeight:1.04,letterSpacing:'-.045em',textAlign:'center',margin:'18px 0 18px'},
@@ -135,6 +132,11 @@ const S={
  pathDesc:{fontSize:11,lineHeight:1.55,color:'rgba(250,250,247,.56)'},
  pathLine:{display:'none'},
  startPanel:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:28,padding:'24px 26px',background:'rgba(201,168,76,.055)',border:'1px solid rgba(201,168,76,.28)',borderRadius:14,marginBottom:44},
+ formMeta:{flex:'0 0 auto',textAlign:'right',fontSize:9,fontWeight:800,lineHeight:1.8,letterSpacing:'.13em',color:BRASS},
+ valueStrip:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:24,maxWidth:760,margin:'26px auto 0',padding:'20px 22px',background:SURFACE,border:'1px solid rgba(212,201,168,.16)',borderRadius:10},
+ valueStripStrong:{fontSize:16},
+ valuePoints:{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'flex-end'},
+ journeyContext:{maxWidth:760,margin:'34px auto 0'},
  startTitle:{fontSize:22,fontWeight:600,color:PARCH,marginTop:7},
  startCopy:{fontSize:12,lineHeight:1.7,color:'rgba(250,250,247,.62)',maxWidth:610,margin:'8px 0 0'},
  startMeta:{flex:'0 0 auto',display:'grid',gap:6,textAlign:'right',fontSize:9,fontWeight:700,letterSpacing:'.13em',color:BRASS},
