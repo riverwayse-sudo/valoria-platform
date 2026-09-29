@@ -19,6 +19,7 @@ brandStyles.textContent = `
     margin: 0;
     padding: 0;
     min-height: 100%;
+    height: 100%;
     background: #1A1A2E;
   }
 
@@ -26,6 +27,7 @@ brandStyles.textContent = `
     font-family: 'Raleway', sans-serif;
     color: #F7F4EE;
     overflow-x: hidden;
+    overflow-y: hidden;
   }
 
   button, input, textarea, select {
