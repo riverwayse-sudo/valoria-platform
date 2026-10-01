@@ -89,10 +89,10 @@ export default function VALUIndexV4GateNext(){
  </Shell>
  if(phase==='taster')return <Shell mode="taster">
   <StepBar active={2}/>
-  <div style={S.top}><div><div style={S.eyebrow}>VALU SNAPSHOT · PRIME</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>{current+1} / {TASTER_QUESTIONS.length}</div></div>
-  <div style={S.progress}><div style={{...S.fill,width:`${progress}%`,background:COLORS[q.cluster]}}/></div>
-  <div style={S.insight}>{q.tasterInsight}</div><h1 style={S.question}>{q.q}</h1>
-  <div style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected===i?GOLD:'rgba(247,244,238,.1)',background:selected===i?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
+  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU SNAPSHOT · PRIME</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>{current+1} / {TASTER_QUESTIONS.length}</div></div>
+  <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${progress}%`,background:COLORS[q.cluster]}}/></div>
+  <div className="valu-taster-insight" style={S.insight}>{q.tasterInsight}</div><h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
+  <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected===i?GOLD:'rgba(247,244,238,.1)',background:selected===i?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
   {error&&<div style={S.error}>{error}</div>}<p style={S.note}>Your answers are saved as a directional snapshot. They do not become the official VALU Index score.</p>
  </Shell>;
 
@@ -110,7 +110,7 @@ export default function VALUIndexV4GateNext(){
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
-function StepBar({active}){return <div style={S.steps}>{['ACCOUNT','SNAPSHOT','NEXT'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
+function StepBar({active}){return <div className="valu-assessment-steps" style={S.steps}>{['ACCOUNT','SNAPSHOT','NEXT'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
 function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 if (typeof document !== 'undefined' && !document.getElementById('valu-mobile-assessment-layout')) {
@@ -121,17 +121,16 @@ if (typeof document !== 'undefined' && !document.getElementById('valu-mobile-ass
     .valu-assessment-page.valu-assessment-taster { padding: 14px 16px 20px !important; overflow-y: auto !important; overflow-x: hidden !important; align-items: flex-start !important; }
     .valu-assessment-page.valu-assessment-taster .valu-assessment-shell { width:100%; max-width:none; }
     .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > * { flex: 0 0 auto; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > div:first-child { order:0; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > div:nth-child(2) { order:1; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > div:nth-child(3) { order:3; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > h1 { order:4; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > div:nth-child(5) { order:5; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > .valu-option { order:6; }
+    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-assessment-steps { order:0; margin-bottom:10px !important; }
+    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-top { order:1; }
+    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-progress { order:2; }
+    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-question { order:3; }
+    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-insight { order:4; margin:8px 0 0 !important; }
+    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-options { order:5; }
     .valu-assessment-page.valu-assessment-taster .valu-assessment-shell { display:flex; flex-direction:column; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > div:first-child { margin-bottom:12px !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > div:nth-child(2) { margin-bottom:0 !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > div:nth-child(3) { margin:7px 0 12px !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > h1 { font-size:clamp(25px,7.2vw,34px) !important; line-height:1.12 !important; margin:0 0 16px !important; }
+    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-assessment-steps { margin-bottom:10px !important; }
+    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-progress { margin:7px 0 14px !important; }
+    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-question { font-size:clamp(25px,7.2vw,34px) !important; line-height:1.12 !important; margin:0 0 16px !important; }
     .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-option { min-height:54px; padding:11px 12px !important; font-size:13px !important; }
     .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-option span:first-child { width:26px !important; height:26px !important; }
     .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > p { margin-top:12px !important; }
