@@ -106,7 +106,7 @@ export default function VALUIndexV4GateNext(){
   <div style={S.highlight}><div style={S.eyebrow}>YOUR STRONGEST SIGNAL</div><div style={S.signal}>{result?.strongest?.name}</div><p style={S.p}>The full VALU assessment goes deeper across the PRIME framework and produces the authoritative score.</p></div>
   <div style={S.next}><div style={S.eyebrow}>NEXT STEP</div><h2 style={S.nextTitle}>Confirm your email, then continue.</h2><p style={S.p}>We have saved your snapshot. Confirm the email used for your account, sign in, and Valoria will attach this result to your professional journey.</p>
    <a href={`https://valoriainstitute.com/login?pending_taster_id=${encodeURIComponent(tasterId)}`} style={S.primaryLink}>CONFIRM & SIGN IN →</a>
-   <a href={`https://assessment.valoriainstitute.com/?full=1&taster_id=${encodeURIComponent(tasterId)}`} style={S.secondary}>I'M ALREADY SIGNED IN — CONTINUE</a>
+   <a href={`/valu/assessment?full=1&taster_id=${encodeURIComponent(tasterId)}`} style={S.secondary}>I'M ALREADY SIGNED IN — CONTINUE</a>
   </div>
   <p style={S.note}>Signup or the snapshot does not grant marketplace listing. Listing remains governed by the full assessment, profile, capability and eligibility checks.</p>
  </Shell>;
@@ -115,31 +115,6 @@ function Field({label,children}){return <label style={S.label}>{label}{children}
 function StepBar({active}){return <div className="valu-assessment-steps" style={S.steps}>{['ACCOUNT','SNAPSHOT','NEXT'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
 function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
-if (typeof document !== 'undefined' && !document.getElementById('valu-mobile-assessment-layout')) {
- const style=document.createElement('style');
- style.id='valu-mobile-assessment-layout';
- style.textContent=`
-  @media (max-width: 600px) {
-    .valu-assessment-page.valu-assessment-taster { padding: 14px 16px 20px !important; overflow-y: auto !important; overflow-x: hidden !important; align-items: flex-start !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell { width:100%; max-width:none; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > * { flex: 0 0 auto; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-assessment-steps { order:0; margin-bottom:10px !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-top { order:1; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-progress { order:2; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-question { order:3; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-insight { order:4; margin:8px 0 0 !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-options { order:5; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell { display:flex; flex-direction:column; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-assessment-steps { margin-bottom:10px !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-progress { margin:7px 0 14px !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-taster-question { font-size:clamp(25px,7.2vw,34px) !important; line-height:1.12 !important; margin:0 0 16px !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-option { min-height:54px; padding:11px 12px !important; font-size:13px !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-option span:first-child { width:26px !important; height:26px !important; }
-    .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > p { margin-top:12px !important; }
-  }
- `;
- document.head.appendChild(style);
-}
 const S={
  page:{height:'calc(100vh - 65px)',minHeight:0,background:DARK,color:PARCH,padding:'28px 32px 34px',overflow:'hidden',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
  shell:{width:'100%',maxWidth:1160,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:0},
