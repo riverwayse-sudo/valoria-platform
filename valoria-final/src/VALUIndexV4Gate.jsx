@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 import { BRAND, SUPABASE_URL, SUPABASE_ANON_KEY } from "./assessmentLock.js";
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from "./valuTaster.js";
 
@@ -45,7 +47,7 @@ export default function VALUIndexV4Gate({onComplete}){
  const [phase,setPhase]=useState("intro"),[name,setName]=useState(""),[role,setRole]=useState(""),[experience,setExperience]=useState(""),[current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null),[results,setResults]=useState(null),[saving,setSaving]=useState(false),[failed,setFailed]=useState(false); const timer=useRef(null);
  const q=TASTER_QUESTIONS[current]; const canStart=!!(name.trim()&&role.trim()&&experience); const progress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100); const scores=useMemo(()=>results?Object.entries(results.normalisedScores).sort((a,b)=>b[1]-a[1]):[],[results]);
  useEffect(()=>()=>timer.current&&clearTimeout(timer.current),[]);
- async function save(data){try{const r=await fetch("/api/submit-taster",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});return r.ok}catch{return false}}
+ async function save(data){try{const r=await fetch(API_BASE + "/api/submit-taster",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});return r.ok}catch{return false}}
  function start(){if(!canStart)return;setCurrent(0);setAnswers({});setSelected(null);setFailed(false);setPhase("taster")}
  async function answer(i){const next={...answers,[current]:i};setAnswers(next);if(current<TASTER_QUESTIONS.length-1){setTimeout(()=>{setCurrent(x=>x+1);setSelected(null)},420);return}setSaving(true);const r=computeTasterResult(next);setResults(r);const ok=await save({name:name.trim(),role:role.trim(),experience,answers:next});setSaving(false);setFailed(!ok);setPhase("results")}
  function choose(i){if(selected!==null)return;setSelected(i);timer.current=setTimeout(()=>answer(i),120)}

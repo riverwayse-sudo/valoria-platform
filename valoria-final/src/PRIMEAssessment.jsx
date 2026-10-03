@@ -8,6 +8,8 @@
 //  - computeResults call signature updated: now passes QUESTIONS as 4th arg
 //    to match scoringEngine.js canonical signature.
 
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   computeFingerprint,
@@ -296,7 +298,7 @@ function clearPendingReport() {
  * against the canonical question bank, never from a value the browser sent.
  */
 async function submitAssessment({ name, role, answers, timings, shuffleMap }, attempt = 0) {
-  const res = await fetch("/api/submit-assessment", {
+  const res = await fetch(API_BASE + "/api/submit-assessment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, role, answers, timings, shuffleMap }),
@@ -315,7 +317,7 @@ async function submitAssessment({ name, role, answers, timings, shuffleMap }, at
 }
 
 async function updateAssessmentByFingerprint(fingerprint, fields, attempt = 0) {
-  const res = await fetch("/api/update-assessment", {
+  const res = await fetch(API_BASE + "/api/update-assessment", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ identity_hash: fingerprint, fields }),
@@ -332,7 +334,7 @@ async function updateAssessmentByFingerprint(fingerprint, fields, attempt = 0) {
 
 async function signUpWithSupabase(email, password, name, role) {
   const identity_hash = computeFingerprint(name, role);
-  const res = await fetch("/api/create-account", {
+  const res = await fetch(API_BASE + "/api/create-account", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password, name, role, identity_hash }),
@@ -418,7 +420,7 @@ async function fetchAssessmentByFingerprint(fingerprint) {
 
 async function fetchAssessmentByFingerprintServer(fingerprint) {
   try {
-    const res = await fetch("/api/get-assessment-data", {
+    const res = await fetch(API_BASE + "/api/get-assessment-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ identity_hash: fingerprint }),
@@ -1543,7 +1545,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
     if (!confirmedEmail) return;
     setEmailStatus("sending");
     try {
-      const res = await fetch("/api/send-email", {
+      const res = await fetch(API_BASE + "/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1579,7 +1581,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
     try {
       const scoreProfile = { name, role, ...results };
       const fingerprint = computeFingerprint(name, role);
-      const response = await fetch("/api/report", {
+      const response = await fetch(API_BASE + "/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: buildReportPrompt(scoreProfile), identity_hash: fingerprint }),
@@ -1799,7 +1801,7 @@ export default function PRIMEAssessment({
       // not depend on the profile fetch below succeeding. The profile fetch
       // is only for populating the UI; if it fails or is slow, the report
       // should still generate and send server-side.
-      fetch("/api/generate-and-send-report", {
+      fetch(API_BASE + "/api/generate-and-send-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identity_hash: identityHash }),

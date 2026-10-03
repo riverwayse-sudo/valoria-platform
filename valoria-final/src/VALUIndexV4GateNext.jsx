@@ -1,4 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from './valuTaster.js';
 
 const CLUSTERS={P:'Presence',R:'Relationships',I:'Intelligence',M:'Mastery',E:'Enterprise'};
@@ -18,7 +20,7 @@ export default function VALUIndexV4GateNext(){
  async function createAccount(e){
   e.preventDefault(); if(!validSignup||saving)return; setSaving(true); setError('');
   try{
-   const response=await fetch('/api/create-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),password,name:name.trim(),role:role.trim()})});
+   const response=await fetch(API_BASE + '/api/create-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),password,name:name.trim(),role:role.trim()})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(data.error||'We could not create your account.');
    setPhase('taster');
@@ -33,7 +35,7 @@ export default function VALUIndexV4GateNext(){
   if(current<TASTER_QUESTIONS.length-1){setTimeout(()=>{setCurrent(v=>v+1);setSelected(null)},180);return}
   setSaving(true);setError('');
   try{
-   const response=await fetch('/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),role:role.trim(),experience,answers:next})});
+   const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),role:role.trim(),experience,answers:next})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved.');
    setResult(data.results||computeTasterResult(next)); setTasterId(data.taster_id||'');
