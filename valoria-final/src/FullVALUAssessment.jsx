@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 import { QUESTIONS } from './questions.js';
 
 const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
@@ -66,7 +68,7 @@ export default function FullVALUAssessment() {
     setSaving(true);
     setError('');
     try {
-      const scoreRes = await fetch('/api/submit-assessment', {
+      const scoreRes = await fetch(API_BASE + '/api/submit-assessment', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
@@ -82,7 +84,7 @@ export default function FullVALUAssessment() {
       const scoreData = await scoreRes.json().catch(() => ({}));
       if (!scoreRes.ok) throw new Error(scoreData.error || 'The assessment could not be scored.');
 
-      const linkRes = await fetch('/api/link-assessment-to-taster', {
+      const linkRes = await fetch(API_BASE + '/api/link-assessment-to-taster', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({ taster_id:identity.tasterId, identity_hash:scoreData.identity_hash }),
@@ -95,7 +97,7 @@ export default function FullVALUAssessment() {
       // dashboard/report recovery flow can retry it without forcing the user to repeat the assessment.
       try {
         setReportStatus('Preparing your VALU report…');
-        const reportRes = await fetch('/api/generate-and-send-report', {
+        const reportRes = await fetch(API_BASE + '/api/generate-and-send-report', {
           method:'POST',
           headers:{'Content-Type':'application/json','Idempotency-Key':`full-valu-${scoreData.identity_hash}`},
           body:JSON.stringify({identity_hash:scoreData.identity_hash}),
