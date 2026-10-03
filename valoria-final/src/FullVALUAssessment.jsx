@@ -120,7 +120,7 @@ export default function FullVALUAssessment() {
     }
   }
 
-  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href="https://assessment.valoriainstitute.com/" style={S.button}>RETURN TO VALU →</a></Shell>;
+  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
 
   if (result) {
     const score = result.valuIndex ?? result.total_score ?? result.score;

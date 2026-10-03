@@ -17,7 +17,7 @@ jobs:
           # Ping the production site to keep Supabase active
           # Replace with your actual production URL
           curl -f -s -o /dev/null "https://valoriainstitute.com" || \
-          curl -f -s -o /dev/null "https://assessment.valoriainstitute.com" || \
+          curl -f -s -o /dev/null "https://valoriainstitute.com/valu/assessment" || \
           echo "Health check attempted"
         
       - name: Log timestamp
