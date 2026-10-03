@@ -91,7 +91,7 @@ export default function VALUIndexV4GateNext(){
   <StepBar active={2}/>
   <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU SNAPSHOT · PRIME</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>{current+1} / {TASTER_QUESTIONS.length}</div></div>
   <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${progress}%`,background:COLORS[q.cluster]}}/></div>
-  <div className="valu-taster-insight" style={S.insight}>{q.tasterInsight}</div><h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
+  <h1 className="valu-taster-question" style={S.question}>{q.q}</h1><div className="valu-taster-insight" style={S.insight}>{q.tasterInsight}</div>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected===i?GOLD:'rgba(247,244,238,.1)',background:selected===i?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
   {error&&<div style={S.error}>{error}</div>}<p style={S.note}>Your answers are saved as a directional snapshot. They do not become the official VALU Index score.</p>
  </Shell>;
