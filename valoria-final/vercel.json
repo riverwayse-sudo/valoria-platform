@@ -74,6 +74,9 @@
     },
     "api/process-readiness-queue.js": {
       "maxDuration": 20
+    },
+    "api/assessment-progress.js": {
+      "maxDuration": 60
     }
   },
   "redirects": [
@@ -87,6 +90,10 @@
     {
       "path": "/api/sweep-unsent-reports",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/assessment-progress",
+      "schedule": "0 * * * *"
     }
   ],
   "$schema": "https://openapi.vercel.sh/vercel.json",
