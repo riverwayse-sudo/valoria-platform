@@ -20,6 +20,29 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+
+function journeyEmailHtml(name, score, designation) {
+  return `
+    <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;background:#1A1A2E;font-family:Arial,sans-serif;color:#F7F4EE;">
+      <div style="max-width:600px;margin:0 auto;padding:48px 32px;">
+        <div style="text-align:center;margin-bottom:36px;"><img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:42px;"></div>
+        <p style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700;">VALU INDEX · ASSESSMENT COMPLETE</p>
+        <h1 style="font-size:30px;line-height:1.2;font-weight:600;color:#F7F4EE;">Your Valoria journey has moved forward.</h1>
+        <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU assessment is complete and your professional record has been placed in the Valoria marketplace.</p>
+        <div style="margin:28px 0;padding:24px;border:1px solid rgba(201,168,76,.25);background:rgba(201,168,76,.06);border-radius:10px;text-align:center;">
+          <div style="font-size:48px;font-weight:700;color:#C9A84C;">${escapeHtml(score)}</div>
+          <div style="font-size:11px;letter-spacing:.14em;color:rgba(247,244,238,.55);">VALU INDEX</div>
+          <div style="margin-top:8px;font-size:14px;color:#F7F4EE;">${escapeHtml(designation)}</div>
+        </div>
+        <h2 style="font-size:18px;color:#F7F4EE;">What happens next</h2>
+        <p style="font-size:14px;line-height:1.8;color:rgba(247,244,238,.7);">1. Confirm your email address.<br>2. Complete your professional profile.<br>3. Add the capabilities you want Valoria to surface.<br>4. Your profile becomes fully actionable across the marketplace.</p>
+        <div style="text-align:center;margin:34px 0;"><a href="https://valoriainstitute.com/profile/edit" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">COMPLETE YOUR PROFILE →</a></div>
+        <p style="font-size:11px;line-height:1.6;color:rgba(247,244,238,.35);text-align:center;">Valoria Institute · Worth. Built.<br>Questions? info@valoriainstitute.com</p>
+      </div>
+    </body></html>`;
+}
+
 function confirmationEmailHtml(name, actionLink) {
   return `
     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -132,6 +155,51 @@ export default async function handler(req) {
         return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
       }
       marketplaceProfileCreated = true;
+
+      // Completion is a first-class journey event. The unique key makes this
+      // safe against retries and guarantees notification/email delivery is not duplicated.
+      const journeyEventKey = "assessment.completed.marketplace";
+      const eventRes = await fetch(`${SUPABASE_URL}/rest/v1/journey_events`, {
+        method: "POST",
+        headers: { ...adminHeaders, Prefer: "resolution=ignore-duplicates,return=minimal" },
+        body: JSON.stringify({
+          user_id: userId,
+          event_key: journeyEventKey,
+          assessment_id: assessment.id,
+          metadata: { score: assessment.total_score, designation: assessment.designation, listing_status: "listed" },
+        }),
+      });
+      if (!eventRes.ok) console.error("create-account: journey event failed", eventRes.status);
+
+      const notificationRes = await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        method: "POST",
+        headers: { ...adminHeaders, Prefer: "resolution=ignore-duplicates,return=minimal" },
+        body: JSON.stringify({
+          user_id: userId,
+          type: "assessment_complete",
+          title: "Your VALU assessment is complete",
+          body: "Your professional profile has been placed in the marketplace. Confirm your email and complete your profile to unlock the next stage.",
+          action_label: "Complete your profile",
+          action_url: "/profile/edit",
+        }),
+      });
+      if (!notificationRes.ok) console.error("create-account: notification failed", notificationRes.status);
+
+      // This is separate from the authentication email: it explains the
+      // completed assessment, marketplace placement, and the next action.
+      if (RESEND_API_KEY) {
+        const journeyEmailRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+          body: JSON.stringify({
+            from: "Valoria Institute <hello@valoriainstitute.com>",
+            to: normalizedEmail,
+            subject: "Your VALU Assessment Is Complete — Here's What Happens Next",
+            html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation),
+          }),
+        });
+        if (!journeyEmailRes.ok) console.error("create-account: journey email failed", journeyEmailRes.status);
+      }
     } catch (err) {
       console.error("create-account: marketplace sync failed", err);
       return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
