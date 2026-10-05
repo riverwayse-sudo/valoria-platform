@@ -50,7 +50,7 @@ async function resolveTasterIdentity(tasterId) {
 async function getProgressBySession(sessionId) {
   const params = new URLSearchParams({
     session_id: `eq.${sessionId}`,
-    select: "id,session_id,resume_token,name,role,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
+    select: "id,session_id,resume_token,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
     limit: "1",
   });
   const res = await supabase(`valu_assessment_progress?${params}`);
@@ -61,7 +61,7 @@ async function getProgressBySession(sessionId) {
 async function getProgressByResumeToken(token) {
   const params = new URLSearchParams({
     resume_token: `eq.${token}`,
-    select: "id,session_id,resume_token,name,role,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
+    select: "id,session_id,resume_token,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
     limit: "1",
   });
   const res = await supabase(`valu_assessment_progress?${params}`);
@@ -221,6 +221,7 @@ export default async function handler(req) {
     identity_hash: identityHash,
     name: String(name).trim().slice(0, 200),
     role: String(role).trim().slice(0, 200),
+    ...(body.experience ? { experience: String(body.experience).trim().slice(0, 100) } : {}),
     ...(resolvedEmail ? { email: resolvedEmail } : {}),
     ...(resolvedUserId ? { user_id: resolvedUserId } : {}),
     ...(tasterId ? { taster_id: tasterId } : {}),
