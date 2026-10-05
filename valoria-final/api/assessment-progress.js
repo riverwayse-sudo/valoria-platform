@@ -34,6 +34,19 @@ async function supabase(path, options = {}) {
   });
 }
 
+async function resolveTasterIdentity(tasterId) {
+  if (!tasterId) return {};
+  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: "user_id", limit: "1" });
+  const tasterRes = await supabase(`taster_sessions?${params}`);
+  if (!tasterRes.ok) return {};
+  const taster = (await tasterRes.json())?.[0];
+  if (!taster?.user_id) return {};
+  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${taster.user_id}`, { headers: headers(), cache: "no-store" });
+  if (!userRes.ok) return { user_id: taster.user_id };
+  const user = await userRes.json();
+  return { user_id: taster.user_id, email: user.email || null };
+}
+
 async function getProgressBySession(sessionId) {
   const params = new URLSearchParams({
     session_id: `eq.${sessionId}`,
@@ -200,13 +213,16 @@ export default async function handler(req) {
   if (timings && !Array.isArray(timings)) return json({ error: "Invalid timings." }, 400);
 
   const existing = await getProgressBySession(sessionId).catch(() => null);
+  const resolvedIdentity = (!email || !userId) && tasterId ? await resolveTasterIdentity(tasterId) : {};
+  const resolvedUserId = userId || resolvedIdentity.user_id || null;
+  const resolvedEmail = validEmail(email) ? email.trim().toLowerCase() : (validEmail(resolvedIdentity.email) ? resolvedIdentity.email.trim().toLowerCase() : null);
   const payload = {
     session_id: sessionId,
     identity_hash: identityHash,
     name: String(name).trim().slice(0, 200),
     role: String(role).trim().slice(0, 200),
-    ...(validEmail(email) ? { email: email.trim().toLowerCase() } : {}),
-    ...(userId ? { user_id: userId } : {}),
+    ...(resolvedEmail ? { email: resolvedEmail } : {}),
+    ...(resolvedUserId ? { user_id: resolvedUserId } : {}),
     ...(tasterId ? { taster_id: tasterId } : {}),
     current_question: currentQuestion,
     total_questions: totalQuestions,
