@@ -145,7 +145,7 @@ export default async function handler(req) {
         body: JSON.stringify({
           id: userId, display_name: assessment.name || name, headline: assessment.role || role,
           listing_status: "listed", profile_complete: false, visibility: "public", active_tracks: ["candidate"],
-          eligible_for_listing: true, availability_status: "available", valu_index: assessment.total_score,
+          eligible_for_listing: true, availability_status: "available", listed_at: new Date().toISOString(), valu_index: assessment.total_score,
           cluster_scores: assessment.cluster_scores, skill_scores: assessment.skill_scores, designation: assessment.designation,
           assessment_completed_at: assessment.completed_at, assessment_expires_at: assessment.expires_at,
         }),
@@ -154,6 +154,25 @@ export default async function handler(req) {
         console.error("create-account: marketplace profile upsert failed", profileRes.status);
         return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
       }
+
+      const capabilityRes = await fetch(
+        SUPABASE_URL + "/rest/v1/professional_capabilities?on_conflict=professional_id%2Ccapability",
+        {
+          method: "POST",
+          headers: { ...adminHeaders, Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify({
+            professional_id: userId,
+            capability: "Talent",
+            is_active: true,
+            eligibility_status: "eligible",
+            eligible_for_listing: true,
+            listed_at: new Date().toISOString(),
+            missing_requirements: [],
+          }),
+        }
+      );
+      if (!capabilityRes.ok) console.error("create-account: default marketplace capability failed", capabilityRes.status);
+
       marketplaceProfileCreated = true;
 
       // Completion is a first-class journey event. The unique key makes this
