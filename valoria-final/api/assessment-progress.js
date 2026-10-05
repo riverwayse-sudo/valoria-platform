@@ -172,6 +172,10 @@ export default async function handler(req) {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server configuration error" }, 500);
 
   if (req.method === "GET") {
+    const auth = req?.headers?.get?.("authorization") || "";
+    if (CRON_SECRET && auth === `Bearer ${CRON_SECRET}` && !new URL(req.url).searchParams.get("resume")) {
+      return runReminderSweep(req);
+    }
     const token = new URL(req.url).searchParams.get("resume");
     if (!token || !/^[0-9a-f-]{36}$/i.test(token)) return json({ error: "Invalid resume token." }, 400);
     try {
