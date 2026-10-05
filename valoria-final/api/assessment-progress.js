@@ -131,7 +131,7 @@ async function runReminderSweep(req) {
   if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) return json({ error: "Unauthorized" }, 401);
 
   const now = Date.now();
-  const rowsRes = await supabase("valu_assessment_progress?status=eq.in_progress&email=not.is.null&select=*&limit=100");
+  const rowsRes = await supabase("valu_assessment_progress?status=in.(in_progress,abandoned)&email=not.is.null&select=*&limit=100");
   if (!rowsRes.ok) return json({ error: "Could not load assessment progress." }, 502);
   const rows = await rowsRes.json();
 
