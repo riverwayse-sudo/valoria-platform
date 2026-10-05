@@ -95,7 +95,7 @@ export default function FullVALUAssessment() {
   const mountedRef = useRef(true);
 
   const resumeKey = useMemo(
-    () => `valoria-valu-resume:${queryIdentity.tasterId}:${queryIdentity.name}:${queryIdentity.role}:${queryIdentity.experience}`,
+    () => `valoria-valu-resume:${identity.tasterId}:${identity.name}:${identity.role}:${identity.experience}`,
     [identity.tasterId, identity.name, identity.role, identity.experience]
   );
 
