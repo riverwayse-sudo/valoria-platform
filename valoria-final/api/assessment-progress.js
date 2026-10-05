@@ -50,7 +50,7 @@ async function resolveTasterIdentity(tasterId) {
 async function getProgressBySession(sessionId) {
   const params = new URLSearchParams({
     session_id: `eq.${sessionId}`,
-    select: "id,session_id,resume_token,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
+    select: "id,session_id,resume_token,taster_id,user_id,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
     limit: "1",
   });
   const res = await supabase(`valu_assessment_progress?${params}`);
