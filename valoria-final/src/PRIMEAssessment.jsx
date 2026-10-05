@@ -1291,56 +1291,10 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
     setSignupLoading(true);
     setSignupError("");
     try {
-      const authData = await signUpWithSupabase(signupEmail.trim(), signupPassword, name, role);
-      const userId = authData?.user?.id || null;
+      await signUpWithSupabase(signupEmail.trim(), signupPassword, name, role);
       setPendingReport({ name, role, email: signupEmail.trim(), results });
-      const fp = computeFingerprint(name, role);
-      await updateAssessmentByFingerprint(fp, {
-        email: signupEmail.trim(),
-        ...(userId ? { user_id: userId } : {}),
-      }).catch(() => {});
-      if (userId) {
-        // NOTE: this used to POST to /rest/v1/profiles — an older, abandoned
-        // table from before the schema migration to professional_profiles.
-        // Every real marketplace page (spotlight, atb-connect, dashboard,
-        // profile/[id]) reads from professional_profiles, not profiles, so
-        // writing there meant completed assessments were creating accounts
-        // that could never actually appear anywhere. Fixed to target the
-        // live table, with its real column names, and listed immediately
-        // (listing_status: 'active') per the instant-listing decision.
-        // FIXED (this pass): this used to POST straight to PostgREST with
-        // the anon key. That sends Authorization: Bearer <anon key> instead
-        // of the user's own session token, so auth.uid() is null and the
-        // RLS policy (auth.uid() = id) silently rejects the insert every
-        // time — no real signup has ever actually been listed through this
-        // path. It also hardcoded listing_status: "listed" regardless of
-        // score, and never set active_tracks, so the profile fell back to
-        // showing as "candidate" until /profile/setup was completed.
-        //
-        // Now delegates to /api/claim-listing, which runs server-side with
-        // the service-role key (legitimately bypasses RLS), re-reads the
-        // authoritative score from valu_assessments by identity_hash rather
-        // than trusting the client, and applies the same 35-point listing
-        // threshold used everywhere else in the app.
-        try {
-          const listingRes = await fetch(`/api/claim-listing`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ identity_hash: fp, user_id: userId }),
-          });
-          if (!listingRes.ok) {
-            const errText = await listingRes.text().catch(() => "");
-            console.error("claim-listing failed:", listingRes.status, errText);
-          }
-        } catch (listingErr) {
-          console.error("claim-listing threw:", listingErr);
-        }
-      }
-      // joinWaitlist() call removed (post-launch, focus is back on the
-      // assessment itself — every real signup already gets a full
-      // professional_profiles row via /api/claim-listing above, so writing
-      // it into the old pre-launch `waitlist` table too was redundant noise
-      // left over from the founding-cohort push).
+      // create-account owns the privileged assessment -> profile -> marketplace
+      // handoff server-side. No browser-side claim is attempted here.
       setSignupDone(true);
       if (onSignupDone) onSignupDone(signupEmail.trim());
     } catch (e) {
