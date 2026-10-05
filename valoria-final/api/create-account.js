@@ -54,14 +54,15 @@ export default async function handler(req) {
 
   const adminHeaders = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" };
 
+  let assessment = null;
   if (identity_hash) {
     let assessmentRes;
     try {
-      assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=id,email,user_id&identity_hash=eq.${encodeURIComponent(identity_hash)}&limit=1`, { headers: adminHeaders });
+      assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=id,name,role,email,user_id,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at&identity_hash=eq.${encodeURIComponent(identity_hash)}&limit=1`, { headers: adminHeaders });
     } catch { return json({ error: "Could not verify the assessment reference." }, 502); }
     if (!assessmentRes.ok) return json({ error: "Could not verify the assessment reference." }, 502);
     const assessments = await assessmentRes.json();
-    const assessment = assessments?.[0];
+    assessment = assessments?.[0] || null;
     if (!assessment || String(assessment.email || "").trim().toLowerCase() !== normalizedEmail) return json({ error: "The account details do not match the assessment." }, 403);
     if (assessment.user_id) return json({ error: "This assessment is already linked to an account." }, 409);
   }
@@ -89,15 +90,53 @@ export default async function handler(req) {
     if (!resendRes.ok) return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." });
   } catch { return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." }); }
 
-  if (identity_hash) {
+  let marketplaceProfileCreated = false;
+  if (identity_hash && assessment) {
     try {
-      const stitchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identity_hash)}&user_id=is.null`, {
-        method: "PATCH", headers: { ...adminHeaders, Prefer: "return=minimal" },
-        body: JSON.stringify({ email: normalizedEmail, confirmation_email_sent_at: new Date().toISOString() }),
+      // The server owns the assessment-to-marketplace handoff. The browser
+      // does not receive or need a service-role key or privileged listing token.
+      let userId = genData?.user?.id || null;
+      if (!userId) {
+        const userRes = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(normalizedEmail)}&select=id&limit=1`, { headers: adminHeaders });
+        if (userRes.ok) {
+          const users = await userRes.json();
+          userId = users?.[0]?.id || null;
+        }
+      }
+      if (!userId) {
+        console.error("create-account: application user row not available after Auth signup");
+        return json({ success: true, marketplace_profile_created: false, warning: "Account created. Your VALU profile will appear after confirmation." });
+      }
+      const stitchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}&user_id=is.null`, {
+        method: "PATCH",
+        headers: { ...adminHeaders, Prefer: "return=minimal" },
+        body: JSON.stringify({ email: normalizedEmail, user_id: userId, confirmation_email_sent_at: new Date().toISOString() }),
       });
-      if (!stitchRes.ok) console.error("create-account: assessment stitch failed", stitchRes.status);
-    } catch { console.error("create-account: assessment stitch failed"); }
+      if (!stitchRes.ok) {
+        console.error("create-account: assessment ownership stitch failed", stitchRes.status);
+        return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
+      }
+      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
+        method: "POST",
+        headers: { ...adminHeaders, Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({
+          id: userId, display_name: assessment.name || name, headline: assessment.role || role,
+          listing_status: "listed", profile_complete: false, visibility: "public", active_tracks: ["candidate"],
+          eligible_for_listing: true, availability_status: "available", valu_index: assessment.total_score,
+          cluster_scores: assessment.cluster_scores, skill_scores: assessment.skill_scores, designation: assessment.designation,
+          assessment_completed_at: assessment.completed_at, assessment_expires_at: assessment.expires_at,
+        }),
+      });
+      if (!profileRes.ok) {
+        console.error("create-account: marketplace profile upsert failed", profileRes.status);
+        return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
+      }
+      marketplaceProfileCreated = true;
+    } catch (err) {
+      console.error("create-account: marketplace sync failed", err);
+      return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
+    }
   }
 
-  return json({ success: true });
+  return json({ success: true, marketplace_profile_created: marketplaceProfileCreated });
 }
