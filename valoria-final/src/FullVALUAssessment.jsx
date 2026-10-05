@@ -96,7 +96,7 @@ export default function FullVALUAssessment() {
 
   const resumeKey = useMemo(
     () => `valoria-valu-resume:${queryIdentity.tasterId}:${queryIdentity.name}:${queryIdentity.role}:${queryIdentity.experience}`,
-    [queryIdentity.tasterId, queryIdentity.name, queryIdentity.role, queryIdentity.experience]
+    [identity.tasterId, identity.name, identity.role, identity.experience]
   );
 
   const question = QUESTIONS[current];
