@@ -690,6 +690,38 @@ A single question in italics about ${primaryGapSkill}, specific to their role as
 Start directly with ## YOUR SCORE. No introduction before it.`;
 }
 
+function CompletionJourneyModal({ open, score, onClose }) {
+  if (!open) return null;
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:1200, background:"rgba(15,15,26,.78)", backdropFilter:"blur(10px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ width:"100%", maxWidth:520, background:T.midnight, border:"1px solid rgba(201,168,76,.35)", borderRadius:18, padding:"34px 30px", boxShadow:"0 24px 80px rgba(0,0,0,.4)" }}>
+        <div style={{ width:52, height:52, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(201,168,76,.1)", border:"1px solid rgba(201,168,76,.35)", color:T.gold, fontSize:24, marginBottom:20 }}>✓</div>
+        <div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:".18em", marginBottom:10, fontFamily:T.font.label }}>VALU JOURNEY · NEXT STAGE</div>
+        <h2 style={{ fontSize:28, lineHeight:1.2, fontWeight:500, color:T.parchment, margin:"0 0 12px", fontFamily:T.font.display }}>Your assessment is complete.</h2>
+        <p style={{ fontSize:14, lineHeight:1.8, color:T.text.secondary, margin:"0 0 22px", fontFamily:T.font.body }}>
+          Your VALU Index of <strong style={{color:T.gold}}>{score}/100</strong> has been recorded and your professional marketplace placement has been initiated.
+        </p>
+        <div style={{ display:"grid", gap:10, marginBottom:24 }}>
+          {[
+            ["01","Notification","Your Valoria journey notification is now in your account."],
+            ["02","Marketplace","Your professional record is placed in the marketplace."],
+            ["03","Next","Confirm your email, then complete your professional profile."],
+          ].map(([n,t,b]) => (
+            <div key={n} style={{display:"flex",gap:14,padding:"13px 14px",border:"1px solid rgba(247,244,238,.08)",borderRadius:10,background:"rgba(255,255,255,.025)"}}>
+              <span style={{fontFamily:T.font.mono,color:T.gold,fontSize:11,paddingTop:2}}>{n}</span>
+              <div><div style={{fontSize:12,fontWeight:700,color:T.parchment,fontFamily:T.font.body,marginBottom:3}}>{t}</div><div style={{fontSize:12,color:T.text.muted,lineHeight:1.6,fontFamily:T.font.body}}>{b}</div></div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+          <a href="https://valoriainstitute.com/profile/edit" style={{...pillBtn("primary"),flex:1,minWidth:190,textDecoration:"none"}}>COMPLETE PROFILE →</a>
+          <button onClick={onClose} style={{...pillBtn("ghost"),flex:1,minWidth:140}}>CONTINUE</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── RETAKE MODAL ───────────────────────────────────────────────────────────
 function RetakeModal({ mode, onClose, onConfirm, expiryDateFormatted }) {
   if (!mode) return null;
@@ -1259,6 +1291,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
   const [signupDone, setSignupDone]         = useState(false);
   const [saveError, setSaveError]           = useState(null);
   const [retakeModal, setRetakeModal]       = useState(null);
+  const [completionPopup, setCompletionPopup] = useState(false);
 
   const { valuIndex, clusterScores, skillScores, desig, futureReadyScore, listed } = results;
 
@@ -1296,6 +1329,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
       // create-account owns the privileged assessment -> profile -> marketplace
       // handoff server-side. No browser-side claim is attempted here.
       setSignupDone(true);
+      setCompletionPopup(true);
       if (onSignupDone) onSignupDone(signupEmail.trim());
     } catch (e) {
       setSignupError(e.message || "Something prevented this from completing. Try again shortly.");
@@ -1372,6 +1406,11 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
           </div>
         </div>
         {signupDone ? (
+          <>
+          <div style={{ marginBottom:14, padding:"13px 16px", background:"rgba(201,168,76,.07)", border:"1px solid rgba(201,168,76,.22)", borderRadius:T.radius.chip, display:"flex", gap:10, alignItems:"center" }}>
+            <span style={{color:T.gold,fontSize:14}}>●</span>
+            <div style={{fontSize:T.size.small,color:T.text.secondary,lineHeight:1.6,fontFamily:T.font.body}}><strong style={{color:T.parchment}}>Valoria notification:</strong> your assessment is complete and your marketplace placement is active. Your next step is to complete your profile.</div>
+          </div>
           <div style={{ background:"rgba(29,158,117,0.05)", border:"1px solid rgba(29,158,117,0.25)", borderRadius:T.radius.card, padding:"32px 28px" }}>
             <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#C9A84C", letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>✦ ACCOUNT CREATED</div>
             <p style={{ fontSize:T.size.body, color:T.text.secondary, lineHeight:1.8, margin:"0 0 12px", fontFamily:T.font.body }}>
@@ -1391,6 +1430,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
             <p style={{ fontSize:T.size.micro, color:T.text.ghost, lineHeight:1.6, marginTop:16, fontFamily:T.font.body }}>
               Check your spam folder if you don't see the confirmation email within a minute.
             </p>
+          </div>
           </div>
         ) : (
           <div style={{ background:"rgba(22,22,36,0.7)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:T.radius.card, padding:"32px 28px" }}>
@@ -1457,6 +1497,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
         VALU INDEX v4.0 · PRIME FRAMEWORK · © 2026
       </div>
       <RetakeModal mode={retakeModal} onClose={() => setRetakeModal(null)} onConfirm={onRetake} expiryDateFormatted={null} />
+      <CompletionJourneyModal open={completionPopup} score={valuIndex} onClose={() => setCompletionPopup(false)} />
     </div>
   );
 }
