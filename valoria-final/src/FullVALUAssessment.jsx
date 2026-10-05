@@ -8,11 +8,76 @@ const CLUSTER_NAMES = { P:'Presence', R:'Relationships', I:'Intelligence', M:'Ma
 
 function parseQuery() {
   const p = new URLSearchParams(window.location.search);
-  return { tasterId:p.get('taster_id') || '', name:p.get('name') || '', role:p.get('role') || '', experience:p.get('experience') || '' };
+  return {
+    tasterId:p.get('taster_id') || '',
+    name:p.get('name') || '',
+    role:p.get('role') || '',
+    experience:p.get('experience') || '',
+    resume:p.get('resume') || '',
+  };
+}
+
+function makeSessionId() {
+  try { return crypto.randomUUID(); } catch {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 3 | 8);
+      return v.toString(16);
+    });
+  }
+}
+
+function identityHashFor(identity) {
+  return `valu_progress_${identity.tasterId || `${identity.name}::${identity.role}`.toLowerCase().replace(/[^a-z0-9:_-]/g,'_')}`;
+}
+
+async function saveProgress(payload) {
+  const res = await fetch(API_BASE + '/api/assessment-progress', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload),
+    keepalive:true,
+  });
+  if (!res.ok) throw new Error('Progress could not be saved.');
+  return res.json();
+}
+
+async function loadRemoteProgress(token) {
+  const res = await fetch(API_BASE + '/api/assessment-progress?resume=' + encodeURIComponent(token), { cache:'no-store' });
+  if (!res.ok) throw new Error('This saved assessment is no longer available.');
+  const data = await res.json();
+  return data.progress;
+}
+
+function ResumeModal({ open, progress, onContinue, onClose }) {
+  if (!open || !progress) return null;
+  const answered = Object.keys(progress.answers || {}).length;
+  const remaining = Math.max(0, progress.total_questions - answered);
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:50,background:'rgba(10,10,20,.78)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+      <div style={{width:'100%',maxWidth:520,background:T.dark,border:'1px solid rgba(201,168,76,.25)',borderRadius:12,padding:'30px 28px',boxShadow:'0 24px 80px rgba(0,0,0,.4)'}}>
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:'.18em',color:T.gold}}>VALU JOURNEY · SAVED PROGRESS</div>
+        <h2 style={{fontSize:28,fontWeight:300,lineHeight:1.15,color:T.parchment,margin:'18px 0 12px'}}>You can continue where you stopped.</h2>
+        <p style={{fontSize:13,color:T.dim,lineHeight:1.75,margin:'0 0 22px'}}>
+          Your answers have been saved. You do not need to start the assessment again.
+        </p>
+        <div style={{padding:'16px 18px',border:'1px solid rgba(201,168,76,.16)',background:'rgba(201,168,76,.05)',borderRadius:7,marginBottom:22}}>
+          <div style={{fontSize:10,letterSpacing:'.12em',color:T.gold,fontWeight:700}}>PROGRESS</div>
+          <div style={{fontSize:24,color:T.parchment,marginTop:6}}>{answered} / {progress.total_questions}</div>
+          <div style={{fontSize:11,color:T.faint,marginTop:4}}>{remaining} questions remaining</div>
+        </div>
+        <div style={{display:'flex',gap:10}}>
+          <button onClick={onClose} style={S.secondary}>REVIEW LATER</button>
+          <button onClick={onContinue} style={{...S.button,flex:1}}>CONTINUE MY ASSESSMENT →</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function FullVALUAssessment() {
-  const identity = useMemo(parseQuery, []);
+  const queryIdentity = useMemo(parseQuery, []);
+  const [identity,setIdentity] = useState(queryIdentity);
   const [current,setCurrent] = useState(0);
   const [answers,setAnswers] = useState({});
   const [startedAt,setStartedAt] = useState(Date.now());
@@ -21,37 +86,129 @@ export default function FullVALUAssessment() {
   const [result,setResult] = useState(null);
   const [error,setError] = useState('');
   const [reportStatus,setReportStatus] = useState('');
-  const resumeKey = useMemo(() => `valoria-valu-resume:${identity.tasterId}:${identity.name}:${identity.role}:${identity.experience}`, [identity.tasterId, identity.name, identity.role, identity.experience]);
+  const [sessionId,setSessionId] = useState('');
+  const [resumeToken,setResumeToken] = useState('');
+  const [resumeProgress,setResumeProgress] = useState(null);
+  const [resumeLoading,setResumeLoading] = useState(Boolean(queryIdentity.resume));
+  const [resumeError,setResumeError] = useState('');
+  const [resumePopup,setResumePopup] = useState(false);
+  const mountedRef = useRef(true);
+
+  const resumeKey = useMemo(
+    () => `valoria-valu-resume:${queryIdentity.tasterId}:${queryIdentity.name}:${queryIdentity.role}:${queryIdentity.experience}`,
+    [queryIdentity.tasterId, queryIdentity.name, queryIdentity.role, queryIdentity.experience]
+  );
+
   const question = QUESTIONS[current];
   const progress = Math.round(((current + 1) / QUESTIONS.length) * 100);
-  const canUse = identity.tasterId && identity.name && identity.role && identity.experience;
+  const canUse = Boolean(identity.tasterId && identity.name && identity.role && identity.experience);
+
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   useEffect(() => {
-    setStartedAt(Date.now());
-    if (!canUse) return;
-    try {
-      const saved = JSON.parse(window.localStorage.getItem(resumeKey) || 'null');
-      if (!saved || saved.completed) return;
+    if (!queryIdentity.resume) return;
+    let cancelled = false;
+    loadRemoteProgress(queryIdentity.resume)
+      .then(saved => {
+        if (cancelled) return;
+        const restored = {
+          tasterId: saved.taster_id || queryIdentity.tasterId,
+          name: saved.name,
+          role: saved.role,
+          experience: queryIdentity.experience || '',
+          resume: '',
+        };
+        setIdentity(restored);
+        setSessionId(saved.session_id);
+        setResumeToken(saved.resume_token);
+        setAnswers(saved.answers || {});
+        setTimings(Array.isArray(saved.timings) ? saved.timings : []);
+        setCurrent(Math.min(Math.max(saved.current_question || 0, 0), QUESTIONS.length - 1));
+        setResumeProgress(saved);
+        setResumePopup(true);
+        setResumeLoading(false);
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setResumeError(err.message);
+        setResumeLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [queryIdentity.resume]);
+
+  useEffect(() => {
+    if (queryIdentity.resume || !canUse) return;
+    let saved = null;
+    try { saved = JSON.parse(window.localStorage.getItem(resumeKey) || 'null'); } catch {}
+    const localSessionId = saved?.sessionId || makeSessionId();
+    setSessionId(localSessionId);
+    if (saved?.resumeToken) setResumeToken(saved.resumeToken);
+    if (saved && !saved.completed) {
       if (saved.answers && typeof saved.answers === 'object') setAnswers(saved.answers);
       if (Array.isArray(saved.timings)) setTimings(saved.timings);
-      if (Number.isInteger(saved.current) && saved.current >= 0 && saved.current < QUESTIONS.length) {
-        setCurrent(saved.current);
-      }
-    } catch {}
-  }, [resumeKey, canUse]);
+      if (Number.isInteger(saved.current) && saved.current >= 0 && saved.current < QUESTIONS.length) setCurrent(saved.current);
+    }
+    setStartedAt(Date.now());
+  }, [resumeKey, canUse, queryIdentity.resume]);
 
   useEffect(() => {
-    if (!canUse || result) return;
+    if (!canUse || !sessionId || result) return;
     try {
       window.localStorage.setItem(resumeKey, JSON.stringify({
+        sessionId,
+        resumeToken,
         current,
         answers,
         timings,
-        updatedAt: new Date().toISOString(),
-        completed: false,
+        updatedAt:new Date().toISOString(),
+        completed:false,
       }));
     } catch {}
-  }, [resumeKey, canUse, current, answers, timings, result]);
+  }, [resumeKey, canUse, sessionId, resumeToken, current, answers, timings, result]);
+
+  useEffect(() => {
+    if (!canUse || !sessionId || result || Object.keys(answers).length === 0) return;
+    const timer = window.setTimeout(() => {
+      saveProgress({
+        action:'save',
+        session_id:sessionId,
+        resume_token:resumeToken || undefined,
+        taster_id:identity.tasterId,
+        identity_hash:identityHashFor(identity),
+        name:identity.name,
+        role:identity.role,
+        current_question:current,
+        total_questions:QUESTIONS.length,
+        answers,
+        timings,
+        session_seed:0,
+      }).then(data => {
+        if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
+      }).catch(() => {});
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken]);
+
+  async function persistCheckpoint(nextAnswers, nextTimings, nextCurrent) {
+    if (!sessionId) return;
+    try {
+      const data = await saveProgress({
+        action:'save',
+        session_id:sessionId,
+        resume_token:resumeToken || undefined,
+        taster_id:identity.tasterId,
+        identity_hash:identityHashFor(identity),
+        name:identity.name,
+        role:identity.role,
+        current_question:nextCurrent,
+        total_questions:QUESTIONS.length,
+        answers:nextAnswers,
+        timings:nextTimings,
+        session_seed:0,
+      });
+      if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
+    } catch {}
+  }
 
   async function choose(optionIndex) {
     if (saving || result) return;
@@ -60,29 +217,49 @@ export default function FullVALUAssessment() {
     const nextTimings = [...timings, elapsed];
     setAnswers(nextAnswers);
     setTimings(nextTimings);
+
     if (current < QUESTIONS.length - 1) {
-      window.setTimeout(() => setCurrent(v => v + 1), 180);
+      const nextCurrent = current + 1;
+      setCurrent(nextCurrent);
+      setStartedAt(Date.now());
+      await persistCheckpoint(nextAnswers, nextTimings, nextCurrent);
       return;
     }
 
     setSaving(true);
     setError('');
     try {
+      await persistCheckpoint(nextAnswers, nextTimings, QUESTIONS.length);
       const scoreRes = await fetch(API_BASE + '/api/submit-assessment', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-          name: identity.name,
-          role: identity.role,
-          experience: identity.experience,
-          answers: nextAnswers,
-          timings: nextTimings,
-          shuffleMap: {},
-          taster_id: identity.tasterId,
+          name:identity.name,
+          role:identity.role,
+          experience:identity.experience,
+          answers:nextAnswers,
+          timings:nextTimings,
+          shuffleMap:{},
+          taster_id:identity.tasterId,
         }),
       });
       const scoreData = await scoreRes.json().catch(() => ({}));
       if (!scoreRes.ok) throw new Error(scoreData.error || 'The assessment could not be scored.');
+
+      await saveProgress({
+        action:'complete',
+        session_id:sessionId,
+        resume_token:resumeToken || undefined,
+        taster_id:identity.tasterId,
+        identity_hash:scoreData.identity_hash || identityHashFor(identity),
+        name:identity.name,
+        role:identity.role,
+        current_question:QUESTIONS.length,
+        total_questions:QUESTIONS.length,
+        answers:nextAnswers,
+        timings:nextTimings,
+        session_seed:0,
+      }).catch(() => {});
 
       const linkRes = await fetch(API_BASE + '/api/link-assessment-to-taster', {
         method:'POST',
@@ -92,9 +269,6 @@ export default function FullVALUAssessment() {
       const linkData = await linkRes.json().catch(() => ({}));
       if (!linkRes.ok) throw new Error(linkData.error || 'The score was saved but could not be attached to your profile.');
 
-      // Generate the report as part of the same completion transaction from the user's perspective.
-      // If generation is temporarily unavailable, the official score still remains saved and the
-      // dashboard/report recovery flow can retry it without forcing the user to repeat the assessment.
       try {
         setReportStatus('Preparing your VALU report…');
         const reportRes = await fetch(API_BASE + '/api/generate-and-send-report', {
@@ -106,19 +280,22 @@ export default function FullVALUAssessment() {
         if (reportRes.ok && reportData.ready) setReportStatus('Your VALU report is ready. You can view it from your Valoria journey.');
         else if (reportRes.ok && (reportData.sent || reportData.alreadySent)) setReportStatus('Your VALU report is ready and has been sent to your email.');
         else setReportStatus('Your VALU Index is complete. Your report is being prepared and will follow automatically.');
-      } catch (reportError) {
-        console.warn('Full VALU report trigger deferred:', reportError?.message || reportError);
+      } catch {
         setReportStatus('Your VALU Index is complete. Your report is being prepared and will follow automatically.');
       }
 
       try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}
       setResult(scoreData.results);
     } catch (err) {
-      setError(err?.message || 'Something went wrong. Please try again.');
+      setError(err?.message || 'Something went wrong. Your saved progress is intact.');
     } finally {
       setSaving(false);
     }
   }
+
+  if (resumeLoading) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>Your progress is being retrieved securely.</p></Shell>;
+
+  if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
 
   if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
 
@@ -138,16 +315,19 @@ export default function FullVALUAssessment() {
   }
 
   return <Shell>
-    <div style={S.top}><div style={S.eyebrow}>FULL VALU · {current + 1} / {QUESTIONS.length}</div><div style={S.progressText}>{progress}%</div></div>
-    <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
-    <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
-    <h1 style={S.question}>{question.q}</h1>
-    <div style={S.options}>
-      {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
+    <ResumeModal open={resumePopup} progress={resumeProgress} onContinue={()=>setResumePopup(false)} onClose={()=>setResumePopup(false)} />
+    <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
+      <div style={S.top}><div style={S.eyebrow}>FULL VALU · {current + 1} / {QUESTIONS.length}</div><div style={S.progressText}>{progress}%</div></div>
+      <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
+      <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
+      <h1 style={S.question}>{question.q}</h1>
+      <div style={S.options}>
+        {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
+      </div>
+      <div style={S.footer}><span>{Object.keys(answers).length} answered</span><span>Progress is saved automatically.</span></div>
+      {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
+      {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
     </div>
-    <div style={S.footer}><span>{Object.keys(answers).length} answered</span><span>{Object.keys(answers).length ? 'Your progress is saved on this device.' : 'One answer per question'}</span></div>
-    {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
-    {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
   </Shell>;
 }
 
@@ -158,6 +338,8 @@ const S = {
   shell:{width:'100%',maxWidth:760,margin:'0 auto'},
   top:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:20},
   eyebrow:{fontSize:10,fontWeight:700,letterSpacing:'.18em',color:'rgba(201,168,76,.75)'},
+  h1:{fontSize:'clamp(28px,4vw,40px)',fontWeight:300,lineHeight:1.15,margin:'16px 0',color:T.parchment},
+  p:{fontSize:13,color:T.dim,lineHeight:1.8,margin:'0 0 22px'},
   progressText:{fontSize:11,color:T.faint},
   progress:{height:3,background:'rgba(255,255,255,.06)',margin:'12px 0 28px'},
   progressFill:{height:'100%',background:T.gold,transition:'width .2s ease'},
@@ -169,13 +351,11 @@ const S = {
   footer:{display:'flex',justifyContent:'space-between',gap:16,color:T.faint,fontSize:10,marginTop:14},
   saving:{marginTop:18,color:T.gold,fontSize:12},
   error:{marginTop:18,padding:12,border:'1px solid rgba(216,90,48,.3)',background:'rgba(216,90,48,.08)',color:'#F09595',fontSize:12,borderRadius:6},
-  dismiss:{float:'right',background:'none',border:0,color:T.gold,cursor:'pointer'},
-  h1:{fontSize:'clamp(34px,6vw,58px)',fontWeight:300,lineHeight:1.05,letterSpacing:'-.03em',margin:'0 0 20px'},
-  p:{fontSize:14,lineHeight:1.75,color:T.dim,margin:'0 0 24px'},
-  scoreCard:{display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap',padding:'26px',border:'1px solid rgba(201,168,76,.22)',background:'rgba(201,168,76,.06)',borderRadius:10,margin:'24px 0'},
-  score:{fontSize:70,fontWeight:300,color:T.gold,lineHeight:1},
-  outOf:{fontSize:13,color:T.faint},
-  designation:{width:'100%',fontSize:10,fontWeight:700,letterSpacing:'.14em',color:T.gold,textTransform:'uppercase'},
-  button:{display:'block',padding:'15px 22px',background:T.gold,color:T.dark,borderRadius:999,textDecoration:'none',textAlign:'center',fontSize:11,fontWeight:700,letterSpacing:'.12em'},
-  secondary:{display:'block',marginTop:10,padding:'14px 22px',border:'1px solid rgba(201,168,76,.25)',color:T.gold,borderRadius:999,textDecoration:'none',textAlign:'center',fontSize:11,letterSpacing:'.12em'},
-}
+  dismiss:{float:'right',background:'transparent',border:0,color:T.parchment,cursor:'pointer'},
+  button:{display:'block',textAlign:'center',textDecoration:'none',background:T.gold,color:T.dark,padding:'14px 20px',borderRadius:999,fontSize:11,fontWeight:700,letterSpacing:'.12em',marginTop:10,border:0,cursor:'pointer'},
+  secondary:{display:'block',flex:1,textAlign:'center',textDecoration:'none',background:'transparent',color:T.parchment,border:'1px solid rgba(247,244,238,.14)',padding:'13px 16px',borderRadius:999,fontSize:10,fontWeight:700,letterSpacing:'.1em',cursor:'pointer'},
+  scoreCard:{display:'grid',gridTemplateColumns:'auto auto 1fr',alignItems:'baseline',gap:8,padding:'24px 0',borderTop:'1px solid rgba(201,168,76,.18)',borderBottom:'1px solid rgba(201,168,76,.18)',margin:'26px 0'},
+  score:{fontSize:64,fontWeight:200,color:T.gold,lineHeight:1},
+  outOf:{fontSize:14,color:T.faint},
+  designation:{fontSize:12,color:T.parchment,letterSpacing:'.12em',textTransform:'uppercase',justifySelf:'end'},
+};
