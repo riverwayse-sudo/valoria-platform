@@ -115,7 +115,7 @@ export default function FullVALUAssessment() {
           tasterId: saved.taster_id || queryIdentity.tasterId,
           name: saved.name,
           role: saved.role,
-          experience: queryIdentity.experience || '',
+          experience: saved.experience || queryIdentity.experience || '',
           resume: '',
         };
         setIdentity(restored);
@@ -177,6 +177,7 @@ export default function FullVALUAssessment() {
         identity_hash:identityHashFor(identity),
         name:identity.name,
         role:identity.role,
+        experience:identity.experience,
         current_question:current,
         total_questions:QUESTIONS.length,
         answers,
@@ -254,6 +255,7 @@ export default function FullVALUAssessment() {
         identity_hash:scoreData.identity_hash || identityHashFor(identity),
         name:identity.name,
         role:identity.role,
+        experience:identity.experience,
         current_question:QUESTIONS.length,
         total_questions:QUESTIONS.length,
         answers:nextAnswers,
