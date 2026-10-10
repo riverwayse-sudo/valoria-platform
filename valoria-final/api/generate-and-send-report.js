@@ -181,7 +181,12 @@ export default async function handler(req, res) {
     }
 
     await markEmailPending(identity_hash);
-    await sendReportEmail(assessment.email, identity_hash, reportText);
+    if (typeof assessment.email !== "string" || !assessment.email.trim()) {
+      // Keep the canonical report available for identity reconciliation; do not
+      // turn a valid report into a failed generation just because email is absent.
+      return res.status(200).json({ ok: true, reportReady: true, emailPending: true });
+    }
+    await sendReportEmail(assessment.email.trim(), identity_hash, reportText);
     await markEmailSent(identity_hash);
     return res.status(200).json({ ok: true, sent: true });
   } catch (err) {
