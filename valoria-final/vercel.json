@@ -93,7 +93,7 @@
     },
     {
       "path": "/api/assessment-progress",
-      "schedule": "0 * * * *"
+      "schedule": "0 3 * * *"
     }
   ],
   "$schema": "https://openapi.vercel.sh/vercel.json",
