@@ -76,6 +76,19 @@ async function markFailed(identityHash) {
   catch { console.error("[generate-and-send-report] failed to persist failure state"); }
 }
 
+function reportMatchesCanonicalAssessment(reportText, assessment) {
+  if (typeof reportText !== "string" || !reportText.trim()) return false;
+  const expectedScore = Number(assessment.total_score);
+  const expectedTier = String(assessment.designation || "").trim().replace(/\\s+/g, " ").toUpperCase();
+  const header = reportText.match(/##\\s*YOUR SCORE:\\s*(\\d{1,3})\\s*\\/\\s*100\\s*[—-]\\s*([^\\r\\n]+)/i);
+  if (!header || Number(header[1]) !== expectedScore) return false;
+  if (header[2].trim().replace(/\\*+/g, "").replace(/\\s+/g, " ").toUpperCase() !== expectedTier) return false;
+  const afterHeader = reportText.slice(header.index + header[0].length);
+  const opening = afterHeader.split(/(?:^|\\n)\\s*(?:---+|##\\s)/m)[0];
+  const claims = Array.from(opening.matchAll(/\\b(\\d{1,3})\\s*(?:\\/\\s*100|out of 100)\\b/gi));
+  const indexClaims = Array.from(opening.matchAll(/\\bVALU Index(?:\\s+(?:score\\s+)?(?:sits at|is|of))\\s*(\\d{1,3})\\b/gi));
+  return [...claims, ...indexClaims].every(match => Number(match[1]) === expectedScore);
+}
 async function generateAiReport({ name, role, valuIndex, designation, clusterScores, skillScores }) {
   const sortedSkills = Object.entries(skillScores || {}).filter(([s]) => s !== "Validity").sort(([,a],[,b]) => b - a);
   const topSkills = sortedSkills.slice(0, 3), bottomSkills = sortedSkills.slice(-3).reverse();
@@ -89,6 +102,9 @@ YOUR WRITING RULES:
 6. No padding. Every sentence must earn its place.
 7. Do not praise them for completing the assessment.
 8. Speak directly to them as "you."
+9. The heading score and designation must exactly match the supplied canonical values.
+10. In the opening interpretation, never state a different aggregate VALU Index score.
+11. PRIME dimension scores are not the aggregate VALU Index score. Do not confuse them.
 THEIR SCORE DATA:
 VALU Index: ${valuIndex}/100 — ${designation}
 SKILL SCORES: ${Object.entries(clusterScores || {}).map(([k,v]) => `${k}: ${v}/100`).join(", ")}
@@ -156,9 +172,11 @@ export default async function handler(req, res) {
     }
 
     let reportText = assessment.ai_report;
-    if (!reportText) {
+    if (!reportMatchesCanonicalAssessment(reportText, assessment)) {
       reportText = await generateAiReport({ name: assessment.name, role: assessment.role, valuIndex: assessment.total_score, designation: assessment.designation, clusterScores: assessment.cluster_scores, skillScores: assessment.skill_scores });
-      if (!reportText) throw new Error("AI report generation returned empty");
+      if (!reportMatchesCanonicalAssessment(reportText, assessment)) {
+        throw new Error("Generated report conflicts with canonical VALU score or designation");
+      }
       await saveAiReport(identity_hash, reportText);
     }
 
