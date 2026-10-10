@@ -16,7 +16,6 @@ describe("Privileged API security contracts", () => {
     "save-report.js",
     "finalize-report.js",
     "send-email.js",
-    "generate-and-send-report.js",
     "sweep-unsent-reports.js",
     "system-status.js",
   ];
@@ -25,6 +24,14 @@ describe("Privileged API security contracts", () => {
     const source = readApi(file);
     expect(source).toContain("CRON_SECRET");
     expect(source).toMatch(/!CRON_SECRET|CRON_SECRET.*missing|CRON_SECRET.*required/);
+  });
+
+  test("generate-and-send-report rate-limits public triggers and authenticates cron workers", () => {
+    const source = readApi("generate-and-send-report.js");
+    expect(source).toContain("CRON_SECRET");
+    expect(source).toContain("consumePublicTriggerRateLimit");
+    expect(source).toContain("CRON_SECRET && req.headers.authorization");
+    expect(source).toContain("Report service temporarily unavailable");
   });
 
   test.each(internalApis)("%s does not expose raw provider/database errors", (file) => {
