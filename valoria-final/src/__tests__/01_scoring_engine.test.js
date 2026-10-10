@@ -164,12 +164,12 @@ describe("computeWeightedIndex", () => {
 describe("getDesignation", () => {
   const cases = [
     [100, "Elite"],
-    [80,  "Elite"],
-    [79,  "Distinguished"],
-    [65,  "Distinguished"],
-    [64,  "Proficient"],
-    [50,  "Proficient"],
-    [49,  "Standard"],
+    [90,  "Elite"],
+    [89,  "Distinguished"],
+    [75,  "Distinguished"],
+    [74,  "Proficient"],
+    [55,  "Proficient"],
+    [54,  "Standard"],
     [35,  "Standard"],
     [34,  "Standard"],
     [0,   "Standard"],
@@ -179,9 +179,13 @@ describe("getDesignation", () => {
     expect(getDesignation(score).name).toBe(expectedName);
   });
 
-  test("boundary at exactly 80 is Elite not Distinguished", () => {
-    expect(getDesignation(80).name).toBe("Elite");
-    expect(getDesignation(79).name).toBe("Distinguished");
+  test("designation boundary at 90 is Elite; 89 is Distinguished", () => {
+    expect(getDesignation(90).name).toBe("Elite");
+    expect(getDesignation(89).name).toBe("Distinguished");
+    expect(getDesignation(75).name).toBe("Distinguished");
+    expect(getDesignation(74).name).toBe("Proficient");
+    expect(getDesignation(55).name).toBe("Proficient");
+    expect(getDesignation(54).name).toBe("Standard");
   });
 
   test("boundary at exactly 35 is Standard not Standard", () => {
@@ -200,13 +204,13 @@ describe("getDesignation", () => {
 describe("getPathway", () => {
   const cases = [
     [100, "Advanced Development Pathway"],
-    [80,  "Advanced Development Pathway"],
-    [79,  "Advanced Development Pathway"],
-    [65,  "Advanced Development Pathway"],
-    [64,  "Cluster Development Pathway"],
-    [50,  "Cluster Development Pathway"],
-    [49,  "Assessment Follow-up Pathway"],
-    [35,  "Assessment Follow-up Pathway"],
+    [90,  "Advanced Development Pathway"],
+    [89,  "Advanced Development Pathway"],
+    [75,  "Advanced Development Pathway"],
+    [74,  "Cluster Development Pathway"],
+    [55,  "Cluster Development Pathway"],
+    [34,  "Assessment Follow-up Pathway"],
+    [35,  "Foundation Development Pathway"],
     [0,   "Assessment Follow-up Pathway"],
   ];
 
@@ -214,9 +218,13 @@ describe("getPathway", () => {
     expect(getPathway(score)).toBe(expected);
   });
 
-  test("Assessment Follow-up Pathway boundary is < 50, not ≤ 50", () => {
-    expect(getPathway(50)).toBe("Cluster Development Pathway");
-    expect(getPathway(49)).toBe("Assessment Follow-up Pathway");
+  test("pathway boundaries follow the canonical v4 bands", () => {
+    expect(getPathway(75)).toBe("Advanced Development Pathway");
+    expect(getPathway(74)).toBe("Cluster Development Pathway");
+    expect(getPathway(55)).toBe("Cluster Development Pathway");
+    expect(getPathway(54)).toBe("Foundation Development Pathway");
+    expect(getPathway(35)).toBe("Foundation Development Pathway");
+    expect(getPathway(34)).toBe("Assessment Follow-up Pathway");
   });
 });
 
