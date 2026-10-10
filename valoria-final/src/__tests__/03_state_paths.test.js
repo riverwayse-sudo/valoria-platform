@@ -176,7 +176,7 @@ describe("New user path", () => {
 
   test("result object produced after completion has correct pathway", () => {
     const result = simulateLiveResult({ valuIndex: 72 });
-    expect(result.pathway).toBe("PRIME Programme"); // 65–79
+    expect(result.pathway).toBe("Cluster Development Pathway"); // canonical v4: 55–74
   });
 });
 
@@ -250,7 +250,7 @@ describe("View Previous path (locked user)", () => {
     const profile = simulateDBResult({ valuIndex: 68 });
     // Simulates: onBegin({ previousProfile: profile })
     expect(profile.results.valuIndex).toBe(68);
-    expect(profile.results.desig.name).toBe("Emerging Force");
+    expect(profile.results.desig.name).toBe("Proficient");
   });
 
   test("view previous result has aiReport field (may be null)", () => {
