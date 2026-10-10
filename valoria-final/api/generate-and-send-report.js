@@ -79,14 +79,14 @@ async function markFailed(identityHash) {
 function reportMatchesCanonicalAssessment(reportText, assessment) {
   if (typeof reportText !== "string" || !reportText.trim()) return false;
   const expectedScore = Number(assessment.total_score);
-  const expectedTier = String(assessment.designation || "").trim().replace(/\\s+/g, " ").toUpperCase();
-  const header = reportText.match(/##\\s*YOUR SCORE:\\s*(\\d{1,3})\\s*\\/\\s*100\\s*[—-]\\s*([^\\r\\n]+)/i);
+  const expectedTier = String(assessment.designation || "").trim().replace(/\s+/g, " ").toUpperCase();
+  const header = reportText.match(/##\s*YOUR SCORE:\s*(\d{1,3})\s*\/\s*100\s*[—-]\s*([^\r\n]+)/i);
   if (!header || Number(header[1]) !== expectedScore) return false;
-  if (header[2].trim().replace(/\\*+/g, "").replace(/\\s+/g, " ").toUpperCase() !== expectedTier) return false;
+  if (header[2].trim().replace(/\*+/g, "").replace(/\s+/g, " ").toUpperCase() !== expectedTier) return false;
   const afterHeader = reportText.slice(header.index + header[0].length);
-  const opening = afterHeader.split(/(?:^|\\n)\\s*(?:---+|##\\s)/m)[0];
-  const claims = Array.from(opening.matchAll(/\\b(\\d{1,3})\\s*(?:\\/\\s*100|out of 100)\\b/gi));
-  const indexClaims = Array.from(opening.matchAll(/\\bVALU Index(?:\\s+(?:score\\s+)?(?:sits at|is|of))\\s*(\\d{1,3})\\b/gi));
+  const opening = afterHeader.split(/(?:^|\n)\s*(?:---+|##\s)/m)[0];
+  const claims = Array.from(opening.matchAll(/\b(\d{1,3})\s*(?:\/\s*100|out of 100)\b/gi));
+  const indexClaims = Array.from(opening.matchAll(/\bVALU Index(?:\s+(?:score\s+)?(?:sits at|is|of))\s*(\d{1,3})\b/gi));
   return [...claims, ...indexClaims].every(match => Number(match[1]) === expectedScore);
 }
 async function generateAiReport({ name, role, valuIndex, designation, clusterScores, skillScores }) {
