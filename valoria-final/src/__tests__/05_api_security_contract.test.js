@@ -90,6 +90,8 @@ describe("Identity ownership contracts", () => {
     expect(source).toContain("refresh_professional_journey");
     expect(source).toContain("return=representation");
     expect(source).toContain("assessment ownership changed during linking");
+    expect(source).toContain("assessment.identity_hash !== identityHash");
+    expect(source).not.toContain("fallbackParams");
   });
 });
 
