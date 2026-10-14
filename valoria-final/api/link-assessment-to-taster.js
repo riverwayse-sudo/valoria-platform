@@ -25,15 +25,9 @@ export default async function handler(req, res) {
   const assessmentParams = new URLSearchParams({ taster_id: `eq.${tasterId}`, select: 'id,user_id,taster_id,email,name,role,total_score,completed_at,identity_hash', limit: '1' });
   const assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${assessmentParams}`, { headers });
   if (!assessmentRes.ok) return json(res, 502, { error: 'Could not find the completed assessment.' });
-  let assessment = (await assessmentRes.json())?.[0];
-  if (!assessment) {
-    const fallbackParams = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: 'id,user_id,taster_id,email,name,role,total_score,completed_at,identity_hash', limit: '1' });
-    const fallbackRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${fallbackParams}`, { headers });
-    if (!fallbackRes.ok) return json(res, 502, { error: 'Could not find the completed assessment.' });
-    const fallback = (await fallbackRes.json())?.[0];
-    if (!fallback) return json(res, 404, { error: 'Completed assessment not found.' });
-    assessment = fallback;
-  }
+  const assessment = (await assessmentRes.json())?.[0];
+  if (!assessment) return json(res, 404, { error: 'No completed assessment is linked to this exact teaser. Use the authenticated Valoria recovery flow for legacy records.' });
+  if (assessment.identity_hash !== identityHash) return json(res, 409, { error: 'The assessment reference does not match this teaser handoff.' });
   if (!assessment.completed_at) return json(res, 409, { error: 'The full VALU assessment is not complete yet.' });
   if (assessment.user_id && assessment.user_id !== taster.user_id) return json(res, 409, { error: 'Assessment is already linked to another account.' });
   if (assessment.taster_id && assessment.taster_id !== tasterId) return json(res, 409, { error: 'This assessment is already attached to a different teaser. Valoria support must review the identity link.' });
