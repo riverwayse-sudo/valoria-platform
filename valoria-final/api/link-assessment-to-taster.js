@@ -42,14 +42,56 @@ export default async function handler(req, res) {
   const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${taster.user_id}`, { headers });
   if (!userRes.ok) return json(res, 502, { error: 'Could not verify the Valoria account.' });
   const user = await userRes.json();
-  const patchParams = new URLSearchParams({ id: `eq.${assessment.id}` });
-  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${patchParams}`, { method:'PATCH', headers:{...headers,Prefer:'return=minimal'}, body:JSON.stringify({user_id:taster.user_id,email:user.email||assessment.email||null,taster_id:tasterId}) });
+  // Conditional ownership predicate prevents a concurrent claim from transferring
+  // an assessment after the initial read.
+  const patchParams = new URLSearchParams({
+    id: `eq.${assessment.id}`,
+    or: `(user_id.is.null,user_id.eq.${taster.user_id})`,
+  });
+  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${patchParams}`, {
+    method:'PATCH',
+    headers:{...headers,Prefer:'return=representation'},
+    body:JSON.stringify({user_id:taster.user_id,email:user.email||assessment.email||null,taster_id:tasterId}),
+  });
   if (!patchRes.ok) return json(res, 502, { error: 'Could not attach the official score to the profile.' });
+  const patchedRows = await patchRes.json().catch(() => []);
+  const patched = Array.isArray(patchedRows) ? patchedRows[0] : null;
+  if (!patched || patched.user_id !== taster.user_id || patched.taster_id !== tasterId) {
+    return json(res, 409, { error: 'The assessment ownership changed during linking. No ownership transfer was made; please retry or contact Valoria support.' });
+  }
 
-  const completedAt = assessment.completed_at || new Date().toISOString();
+  // Preserve a canonical audit link without overwriting a pre-existing owner.
+  const identityParams = new URLSearchParams({ assessment_id: `eq.${assessment.id}`, select:'assessment_id,user_id', limit:'1' });
+  const identityRes = await fetch(`${SUPABASE_URL}/rest/v1/assessment_identity_links?${identityParams}`, { headers });
+  if (!identityRes.ok) return json(res, 502, { error: 'Assessment linked, but its identity audit record could not be checked.' });
+  const existingIdentity = (await identityRes.json())?.[0];
+  if (existingIdentity && existingIdentity.user_id !== taster.user_id) {
+    return json(res, 409, { error: 'The assessment identity audit record belongs to another account. Valoria support must review it.' });
+  }
+  if (!existingIdentity) {
+    const identityInsert = await fetch(`${SUPABASE_URL}/rest/v1/assessment_identity_links`, {
+      method:'POST',
+      headers:{...headers,Prefer:'resolution=ignore-duplicates,return=minimal'},
+      body:JSON.stringify({assessment_id:assessment.id,user_id:taster.user_id,link_method:'taster_handoff',linked_by:taster.user_id}),
+    });
+    if (!identityInsert.ok) return json(res, 502, { error: 'Assessment linked, but its identity audit record could not be saved.' });
+  }
+
+  const completedAt = assessment.completed_at;
   const profileParams = new URLSearchParams({ id:`eq.${taster.user_id}` });
-  const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?${profileParams}`, { method:'PATCH', headers:{...headers,Prefer:'return=minimal'}, body:JSON.stringify({ assessment_completed_at:completedAt, valu_index:assessment.total_score }) });
-  if (!profileRes.ok) return json(res, 502, { error: 'The score was saved but profile completion status could not be updated.' });
+  const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles?${profileParams}`, {
+    method:'PATCH',
+    headers:{...headers,Prefer:'return=minimal'},
+    body:JSON.stringify({ assessment_completed_at:completedAt, valu_index:assessment.total_score }),
+  });
+  if (!profileRes.ok) return json(res, 502, { error: 'The score is linked but profile assessment state could not be refreshed.' });
 
-  return json(res, 200, { ok:true, user_id:taster.user_id, total_score:assessment.total_score, assessment_completed_at:completedAt });
+  const journeyRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/refresh_professional_journey`, {
+    method:'POST',
+    headers,
+    body:JSON.stringify({p_user_id:taster.user_id}),
+  });
+  if (!journeyRes.ok) return json(res, 502, { error: 'The score is linked but the professional journey state could not be refreshed.' });
+
+  return json(res, 200, { ok:true, total_score:assessment.total_score, assessment_completed_at:completedAt });
 }
