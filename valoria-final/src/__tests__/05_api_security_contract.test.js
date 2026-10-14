@@ -81,6 +81,16 @@ describe("Identity ownership contracts", () => {
     expect(source).toContain("assessment.user_id");
     expect(source).toContain("identity_hash");
   });
+
+  test("full VALU handoff preserves ownership and rejects conflicting taster links", () => {
+    const source = readApi("link-assessment-to-taster.js");
+    expect(source).toContain("assessment.taster_id && assessment.taster_id !== tasterId");
+    expect(source).toContain("user_id.is.null,user_id.eq.");
+    expect(source).toContain("assessment_identity_links");
+    expect(source).toContain("refresh_professional_journey");
+    expect(source).toContain("return=representation");
+    expect(source).toContain("assessment ownership changed during linking");
+  });
 });
 
 describe("Assessment integrity contracts", () => {
