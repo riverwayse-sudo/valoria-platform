@@ -96,6 +96,13 @@ describe("Identity ownership contracts", () => {
 });
 
 describe("Assessment integrity contracts", () => {
+  test("taster submission records server-stamped version provenance", () => {
+    const source = readApi("submit-taster.js");
+    expect(source).toContain("VALU_VERSION");
+    expect(source).toContain("taster_version:String(VALU_VERSION)");
+    expect(source).toContain("taster_version_source:'server_stamped'");
+  });
+
   test("submission cannot overwrite an existing identity assessment", () => {
     const source = readApi("submit-assessment.js");
     expect(source).toContain("computeFingerprint");
