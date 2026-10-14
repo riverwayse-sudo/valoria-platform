@@ -53,7 +53,8 @@ describe("VALU v4 canonical contract", () => {
     expect(getDesignation(35).name).toBe("Standard");
     expect(getDesignation(65).name).toBe("Proficient");
     expect(getDesignation(80).name).toBe("Distinguished");
-    expect(getPathway(49)).toBe("Assessment Follow-up Pathway");
+    expect(getPathway(34)).toBe("Assessment Follow-up Pathway");
+    expect(getPathway(35)).toBe("Foundation Development Pathway");
     expect(getPathway(50)).toBe("Foundation Development Pathway");
     expect(getPathway(65)).toBe("Cluster Development Pathway");
     expect(getPathway(80)).toBe("Advanced Development Pathway");
