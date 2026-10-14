@@ -1,4 +1,4 @@
-import { TASTER_QUESTIONS, computeTasterResult, EXPERIENCE_BANDS } from '../src/valuTaster.js';
+import { TASTER_QUESTIONS, computeTasterResult, EXPERIENCE_BANDS, VALU_VERSION } from '../src/valuTaster.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -60,7 +60,17 @@ export default async function handler(req, res) {
   if (!validAnswers(answers)) return json(res, 400, { error: 'Taster answers are incomplete or invalid.' });
 
   const results = computeTasterResult(answers);
-  const row = { name:name.trim(), role:role.trim(), experience, taster_answers:answers, cluster_scores:results.normalisedScores, strongest_cluster:results.strongest.id, weakest_cluster:results.weakest.id };
+  const row = {
+    name:name.trim(),
+    role:role.trim(),
+    experience,
+    taster_answers:answers,
+    cluster_scores:results.normalisedScores,
+    strongest_cluster:results.strongest.id,
+    weakest_cluster:results.weakest.id,
+    taster_version:String(VALU_VERSION),
+    taster_version_source:'server_stamped',
+  };
 
   try {
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions`, {
