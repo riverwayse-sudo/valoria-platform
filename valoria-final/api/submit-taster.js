@@ -54,9 +54,8 @@ export default async function handler(req, res) {
     return json(res, 503, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
   }
 
-  const { name, role, experience, answers, email, submission_key } = req.body || {};
-  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''; 
-  if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'A valid email address is required before starting a VALU snapshot.' });
+  const { resume_token, submission_key } = req.body || {};
+  if (typeof resume_token !== 'string' || !/^[A-Za-z0-9_-]{40,64}$/.test(resume_token)) return json(res, 401, { error: 'A valid snapshot resume token is required.' });
   if (typeof submission_key !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submission_key)) return json(res, 400, { error: 'A valid submission reference is required. Please retry the final step.' });
   const tokenHash = createHash('sha256').update(resume_token).digest('hex');
   const progressParams = new URLSearchParams({
@@ -75,7 +74,7 @@ export default async function handler(req, res) {
   if (progress.submission_key !== submission_key) return json(res, 409, { error: 'The submission reference does not match your saved progress.' });
   const { name, role, experience, email, answers } = progress;
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'The saved contact email is invalid. Contact Valoria support.' });
+  if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'The saved contact email is invalid. Contact Valoria support.' });
   if (progress.current_question !== TASTER_QUESTIONS.length || !validAnswers(answers)) return json(res, 400, { error: 'Finish and save all snapshot answers before submitting.' });
 
 
