@@ -53,7 +53,8 @@ export default async function handler(req, res) {
     return json(res, 503, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
   }
 
-  const { name, role, experience, answers } = req.body || {};
+  const { name, role, experience, answers, email } = req.body || {};
+  if (email != null && (typeof email !== 'string' || email.trim().length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim()))) return json(res, 400, { error: 'Provide a valid email address.' });
   if (typeof name !== 'string' || !name.trim() || name.trim().length > 200) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   if (typeof role !== 'string' || !role.trim() || role.trim().length > 160) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   if (!EXPERIENCE_BANDS.some(b => b.id === experience)) return json(res, 400, { error: 'Select a valid experience band.' });
@@ -84,6 +85,27 @@ export default async function handler(req, res) {
     }
     const inserted = await insertRes.json();
     const session = Array.isArray(inserted) ? inserted[0] : inserted;
+    if (session?.id) {
+      const projectionRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_identity_candidates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: 'resolution=ignore-duplicates,return=minimal' },
+        body: JSON.stringify({
+          taster_id: session.id,
+          candidate_name: name.trim(),
+          candidate_role: role.trim(),
+          candidate_email: typeof email === 'string' ? email.trim().toLowerCase() : null,
+          evidence_source_count: 0,
+          evidence_sources: [],
+          evidence_refs: [],
+          same_contact_taster_count: 1,
+          identity_status: 'unresolved',
+          linked_user_id: null,
+          resolution_notes: 'New snapshot. Submitted email is a contact hint only until a confirmed authenticated account claims it.',
+          last_reconciled_at: new Date().toISOString(),
+        }),
+      });
+      if (!projectionRes.ok) console.error('submit-taster: identity projection pending', projectionRes.status);
+    }
     return json(res, 200, { results, taster_id: session?.id || null });
   } catch (err) {
     console.error('submit-taster: network error', err?.message || 'unknown');
