@@ -7,10 +7,12 @@
 - Authenticated accounts: `auth.users`
 - Professional profiles: `public.professional_profiles`
 - Assessment ownership links: `public.assessment_identity_links`
-- Journey state: `public.professional_journey`
+- Current journey state: `public.professional_journey`
+- Canonical journey event history: `public.valoria_journey_events`
+- Legacy, currently empty event table: `public.journey_events`
 - Review ledger: `public.identity_reconciliation_reviews`
 
-Counts across these tables are not expected to be equal. A person may have a taster and a full assessment; a newly created account may have a profile but no completed full assessment yet. Report each population separately.
+Counts across these tables are not expected to be equal. A person may have a taster and a full assessment; a newly created account may have a profile but no completed full assessment yet. Report each population separately. An incomplete profile is not automatically a missing assessment or identity failure; Basic/assessment-driven marketplace presence is a distinct lifecycle state.
 
 ## Rules
 
@@ -20,8 +22,9 @@ Counts across these tables are not expected to be equal. A person may have a tas
 4. Never recalculate historical scores as part of identity repair. Preserve answers, score, completion timestamp, scoring version, rubric version, and taster provenance.
 5. Unknown historical taster versions remain `legacy_unknown` until immutable release/deployment evidence proves the version.
 6. Every automated reconciliation decision must be recorded in `identity_reconciliation_reviews` with `review_actor_type='system'`; human decisions must carry a real authenticated `reviewed_by` account.
-7. A profile row is not proof of full assessment completion. Marketplace listing must be gated by the canonical readiness function and eligibility fields.
+7. Do not use `profile_complete` alone as the definition of assessment completion or Basic marketplace eligibility. Use canonical readiness/eligibility and visibility fields; preserve test fixtures unless their retirement is explicitly authorized.
 8. Keep unlinked taster sessions in the review queue unless a stable, verified identity link is available.
+9. The populated event stream is `valoria_journey_events`; do not treat the empty legacy `journey_events` table as the current journey history.
 
 ## Health check
 
@@ -32,7 +35,7 @@ Call `private.valu_reconciliation_health()` from a privileged server-side proces
 - Zero completed assessments missing their correct identity link.
 - Zero assessment-owner conflicts.
 - Zero completed assessments missing their expected journey/current-assessment state.
-- Zero listed profiles whose readiness/eligibility/profile-complete state is false.
-- All unlinked tasters are either linked by verified stable identity or recorded as unresolved in the review ledger.
+- Zero listed profiles with an eligibility or visibility conflict. Profile-incomplete and test-fixture counts remain separately visible for operational review and are not silently reclassified.
+- Every unlinked taster is either linked by verified stable identity or recorded as unresolved in the review ledger.
 - Unknown historical version provenance remains explicitly unknown rather than inferred.
 - Re-run build, contract tests, database security advisors, and production route checks after code changes.
