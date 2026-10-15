@@ -53,63 +53,43 @@ export default async function handler(req, res) {
     return json(res, 503, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
   }
 
-  const { name, role, experience, answers, email } = req.body || {};
+  const { name, role, experience, answers, email, submission_key } = req.body || {};
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''; 
   if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'A valid email address is required before starting a VALU snapshot.' });
+  if (typeof submission_key !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submission_key)) return json(res, 400, { error: 'A valid submission reference is required. Please retry the final step.' });
   if (typeof name !== 'string' || !name.trim() || name.trim().length > 200) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   if (typeof role !== 'string' || !role.trim() || role.trim().length > 160) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   if (!EXPERIENCE_BANDS.some(b => b.id === experience)) return json(res, 400, { error: 'Select a valid experience band.' });
   if (!validAnswers(answers)) return json(res, 400, { error: 'Taster answers are incomplete or invalid.' });
 
   const results = computeTasterResult(answers);
-  const row = {
-    name:name.trim(),
-    role:role.trim(),
-    experience,
-    taster_answers:answers,
-    cluster_scores:results.normalisedScores,
-    strongest_cluster:results.strongest.id,
-    weakest_cluster:results.weakest.id,
-    taster_version:String(VALU_VERSION),
-    taster_version_source:'server_stamped',
-  };
-
   try {
-    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json',apikey:SERVICE_ROLE_KEY,Authorization:`Bearer ${SERVICE_ROLE_KEY}`,Prefer:'return=representation'},
-      body:JSON.stringify(row),
+    const submitRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_taster_with_identity_candidate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({
+        p_submission_key: submission_key,
+        p_name: name.trim(),
+        p_role: role.trim(),
+        p_experience: experience,
+        p_email: normalizedEmail,
+        p_answers: answers,
+        p_cluster_scores: results.normalisedScores,
+        p_strongest_cluster: results.strongest.id,
+        p_weakest_cluster: results.weakest.id,
+        p_taster_version: String(VALU_VERSION),
+      }),
     });
-    if (!insertRes.ok) {
-      console.error('submit-taster: insert failed', insertRes.status);
-      return json(res, 502, { error:'Could not save your taster result.' });
+    if (!submitRes.ok) {
+      console.error('submit-taster: atomic submission failed', submitRes.status);
+      return json(res, 502, { error: 'We could not securely save your snapshot and recovery record together. Please retry.' });
     }
-    const inserted = await insertRes.json();
-    const session = Array.isArray(inserted) ? inserted[0] : inserted;
-    if (session?.id) {
-      const projectionRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_identity_candidates`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: 'resolution=ignore-duplicates,return=minimal' },
-        body: JSON.stringify({
-          taster_id: session.id,
-          candidate_name: name.trim(),
-          candidate_role: role.trim(),
-          candidate_email: normalizedEmail,
-          evidence_source_count: 0,
-          evidence_sources: [],
-          evidence_refs: [],
-          same_contact_taster_count: 1,
-          identity_status: 'unresolved',
-          linked_user_id: null,
-          resolution_notes: 'New snapshot. Submitted email is a contact hint only until a confirmed authenticated account claims it.',
-          last_reconciled_at: new Date().toISOString(),
-        }),
-      });
-      if (!projectionRes.ok) console.error('submit-taster: identity projection pending', projectionRes.status);
-    }
-    return json(res, 200, { results, taster_id: session?.id || null });
+    const payload = await submitRes.json();
+    const record = Array.isArray(payload) ? payload[0] : payload;
+    if (!record?.taster_id) return json(res, 502, { error: 'The snapshot save could not be confirmed. Please retry.' });
+    return json(res, 200, { results, taster_id: record.taster_id, created: record.created !== false });
   } catch (err) {
-    console.error('submit-taster: network error', err?.message || 'unknown');
-    return json(res, 502, { error:'Could not save your taster result.' });
+    console.error('submit-taster: atomic submission network error', err?.message || 'unknown');
+    return json(res, 502, { error: 'The snapshot save could not be confirmed. Please retry.' });
   }
 }
