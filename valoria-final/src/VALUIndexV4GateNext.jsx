@@ -40,7 +40,7 @@ export default function VALUIndexV4GateNext(){
    }
    const progressResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init',name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()})});
    const progressData=await progressResponse.json().catch(()=>({}));
-   if(!progressResponse.ok||!progressData.resume_token)throw new Error(progressData.error||'Your account exists, but the resumable snapshot could not be initialized. Submit this form again to retry without recreating your account.');
+   if(!progressResponse.ok||!progressData.resume_token)throw new Error(progressData.error||'Your account was created, but the resumable snapshot could not be initialized. Submit this form again to retry without recreating your account.');
    try{localStorage.setItem('valu_taster_resume_token',progressData.resume_token)}catch{}
    setProgressToken(progressData.resume_token);
    setPhase('taster');
