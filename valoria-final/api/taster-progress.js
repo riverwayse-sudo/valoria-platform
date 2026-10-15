@@ -127,6 +127,10 @@ export default async function handler(req, res) {
     if (!progress.submission_key || (body.submission_key && body.submission_key !== progress.submission_key)) {
       return json(res, 409, { error: 'The saved submission reference does not match this progress session.' });
     }
+    const tasterParams = new URLSearchParams({ id: `eq.${tasterId}`, submission_key: `eq.${progress.submission_key}`, select: 'id', limit: '1' });
+    const tasterResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, { headers: headers() });
+    if (!tasterResponse.ok) return json(res, 502, { error: 'Could not verify the completed snapshot reference.' });
+    if (!(await tasterResponse.json())?.[0]?.id) return json(res, 409, { error: 'The snapshot reference does not match this saved submission.' });
     const params = new URLSearchParams({ id: `eq.${progress.id}`, status: 'eq.in_progress', select: 'id' });
     const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, {
       method: 'PATCH', headers: { ...headers(), Prefer: 'return=representation' },
