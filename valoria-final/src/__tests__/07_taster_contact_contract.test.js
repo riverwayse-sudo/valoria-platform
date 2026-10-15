@@ -9,8 +9,8 @@ describe("Snapshot submission contact contract", () => {
   expect(source).toContain("A valid email address is required before starting a VALU snapshot.");
  });
  test("uses the validated normalized email in the identity projection", () => {
-  expect(source).toContain("candidate_email: normalizedEmail");
-  expect(source).not.toContain("candidate_email: typeof email === 'string'");
+  expect(source).toContain("p_email: normalizedEmail");
+  expect(source).toContain("submit_taster_with_identity_candidate");
  });
  test("keeps server-side answer validation and rate limiting", () => {
   expect(source).toContain("consumeRateLimit(ip)");
