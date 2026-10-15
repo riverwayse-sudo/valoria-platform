@@ -35,7 +35,7 @@ export default function VALUIndexV4GateNext(){
   if(current<TASTER_QUESTIONS.length-1){setTimeout(()=>{setCurrent(v=>v+1);setSelected(null)},180);return}
   setSaving(true);setError('');
   try{
-   const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),role:role.trim(),experience,answers:next})});
+   const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),answers:next})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved.');
    setResult(data.results||computeTasterResult(next)); setTasterId(data.taster_id||'');
