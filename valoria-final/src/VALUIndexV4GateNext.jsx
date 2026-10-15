@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from './valuTaster.js';
@@ -12,41 +12,79 @@ export default function VALUIndexV4GateNext(){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null),[result,setResult]=useState(null),[tasterId,setTasterId]=useState('');
  const [saving,setSaving]=useState(false),[error,setError]=useState(''),[submissionKey,setSubmissionKey]=useState('');
+ const [progressToken,setProgressToken]=useState(()=>{try{return localStorage.getItem('valu_taster_resume_token')||''}catch{return ''}});
+ const [accountCreated,setAccountCreated]=useState(false);
  const timer=useRef(null);
  const q=TASTER_QUESTIONS[current]; const progress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
  const scores=useMemo(()=>result?Object.entries(result.normalisedScores).sort((a,b)=>b[1]-a[1]):[],[result]);
+ useEffect(()=>{
+  if(!progressToken)return;
+  let cancelled=false;
+  fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load',resume_token:progressToken})})
+   .then(async response=>{const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Saved progress unavailable');return data})
+   .then(data=>{if(cancelled)return;const progress=data.progress||{};setAnswers(progress.answers||{});setCurrent(Math.min(Number(progress.current_question)||0,TASTER_QUESTIONS.length-1));setSubmissionKey(progress.submission_key||'');setPhase('taster')})
+   .catch(()=>{if(cancelled)return;try{localStorage.removeItem('valu_taster_resume_token')}catch{};setProgressToken('')});
+  return ()=>{cancelled=true};
+ },[]);
+
  const validSignup=!!(name.trim()&&role.trim()&&experience&&email.trim()&&password.length>=8&&password===confirm);
 
  async function createAccount(e){
   e.preventDefault(); if(!validSignup||saving)return; setSaving(true); setError('');
   try{
-   const response=await fetch(API_BASE + '/api/create-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),password,name:name.trim(),role:role.trim()})});
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'We could not create your account.');
+   if(!accountCreated){
+    const response=await fetch(API_BASE + '/api/create-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),password,name:name.trim(),role:role.trim()})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'We could not create your account.');
+    setAccountCreated(true);
+   }
+   const progressResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init',name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()})});
+   const progressData=await progressResponse.json().catch(()=>({}));
+   if(!progressResponse.ok||!progressData.resume_token)throw new Error(progressData.error||'Your account exists, but the resumable snapshot could not be initialized. Submit this form again to retry without recreating your account.');
+   try{localStorage.setItem('valu_taster_resume_token',progressData.resume_token)}catch{}
+   setProgressToken(progressData.resume_token);
    setPhase('taster');
   }catch(err){
    const message=err?.message||'Something went wrong.';
-   setError(/already|registered|exists/i.test(message)?'An account may already exist for this email. Sign in instead, or use a different email address.':message);
+   setError(/already|registered|exists/i.test(message)&&!accountCreated?'An account may already exist for this email. Sign in instead, or use a different email address.':message);
   }finally{setSaving(false)}
  }
 
  async function answer(index){
-  const next={...answers,[current]:index}; setAnswers(next);
-  if(current<TASTER_QUESTIONS.length-1){setTimeout(()=>{setCurrent(v=>v+1);setSelected(null)},180);return}
-  setSaving(true);setError('');
+  const next={...answers,[current]:index}; setAnswers(next); setError('');
+  if(current<TASTER_QUESTIONS.length-1){
+   try{
+    const response=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',resume_token:progressToken,answers:next,current_question:current+1})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Your answer could not be saved.');
+    setCurrent(v=>v+1);
+   }catch(err){setError(err?.message||'Your answer could not be saved. Please retry before continuing.')}
+   finally{setSelected(null)}
+   return;
+  }
+  setSaving(true);
   try{
    const key=submissionKey||(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'');
    if(!key)throw new Error('Your browser could not create a secure submission reference. Refresh the page and try again.');
-   if(!submissionKey)setSubmissionKey(key);
-   const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),answers:next,submission_key:key})});
+   setSubmissionKey(key);
+   const progressResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',resume_token:progressToken,answers:next,current_question:TASTER_QUESTIONS.length,submission_key:key})});
+   const progressData=await progressResponse.json().catch(()=>({}));
+   if(!progressResponse.ok)throw new Error(progressData.error||'Your final answer could not be saved. Please retry.');
+   const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
    const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved.');
+   if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved. Please retry.');
    setResult(data.results||computeTasterResult(next)); setTasterId(data.taster_id||'');
    try{if(data.taster_id)localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
+   const completionResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key})});
+   if(completionResponse.ok){
+    const completion=await completionResponse.json().catch(()=>({}));
+    if(completion.completed){try{localStorage.removeItem('valu_taster_resume_token')}catch{};setProgressToken('')}
+   }
    setPhase('results');
   }catch(err){setError(err?.message||'Something went wrong. Please try again.')}
   finally{setSaving(false);setSelected(null)}
  }
+
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
  if(phase==='signup')return <Shell>
