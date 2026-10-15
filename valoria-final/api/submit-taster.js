@@ -54,7 +54,8 @@ export default async function handler(req, res) {
   }
 
   const { name, role, experience, answers, email } = req.body || {};
-  if (email != null && (typeof email !== 'string' || email.trim().length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim()))) return json(res, 400, { error: 'Provide a valid email address.' });
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''; 
+  if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'A valid email address is required before starting a VALU snapshot.' });
   if (typeof name !== 'string' || !name.trim() || name.trim().length > 200) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   if (typeof role !== 'string' || !role.trim() || role.trim().length > 160) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   if (!EXPERIENCE_BANDS.some(b => b.id === experience)) return json(res, 400, { error: 'Select a valid experience band.' });
@@ -93,7 +94,7 @@ export default async function handler(req, res) {
           taster_id: session.id,
           candidate_name: name.trim(),
           candidate_role: role.trim(),
-          candidate_email: typeof email === 'string' ? email.trim().toLowerCase() : null,
+          candidate_email: normalizedEmail,
           evidence_source_count: 0,
           evidence_sources: [],
           evidence_refs: [],
