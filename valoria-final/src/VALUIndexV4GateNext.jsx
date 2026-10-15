@@ -11,7 +11,7 @@ export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('signup'),[name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState('');
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null),[result,setResult]=useState(null),[tasterId,setTasterId]=useState('');
- const [saving,setSaving]=useState(false),[error,setError]=useState('');
+ const [saving,setSaving]=useState(false),[error,setError]=useState(''),[submissionKey,setSubmissionKey]=useState('');
  const timer=useRef(null);
  const q=TASTER_QUESTIONS[current]; const progress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
  const scores=useMemo(()=>result?Object.entries(result.normalisedScores).sort((a,b)=>b[1]-a[1]):[],[result]);
@@ -35,7 +35,10 @@ export default function VALUIndexV4GateNext(){
   if(current<TASTER_QUESTIONS.length-1){setTimeout(()=>{setCurrent(v=>v+1);setSelected(null)},180);return}
   setSaving(true);setError('');
   try{
-   const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),answers:next})});
+   const key=submissionKey||(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'');
+   if(!key)throw new Error('Your browser could not create a secure submission reference. Refresh the page and try again.');
+   if(!submissionKey)setSubmissionKey(key);
+   const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),answers:next,submission_key:key})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved.');
    setResult(data.results||computeTasterResult(next)); setTasterId(data.taster_id||'');
