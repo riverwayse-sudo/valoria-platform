@@ -22,7 +22,26 @@ export default function VALUIndexV4GateNext(){
   let cancelled=false;
   fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load',resume_token:progressToken})})
    .then(async response=>{const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Saved progress unavailable');return data})
-   .then(data=>{if(cancelled)return;const progress=data.progress||{};setAnswers(progress.answers||{});setCurrent(Math.min(Number(progress.current_question)||0,TASTER_QUESTIONS.length-1));setSubmissionKey(progress.submission_key||'');setPhase('taster')})
+   .then(async data=>{
+    if(cancelled)return;
+    const progress=data.progress||{}, savedAnswers=progress.answers||{}, savedKey=progress.submission_key||'';
+    setAnswers(savedAnswers);setCurrent(Math.min(Number(progress.current_question)||0,TASTER_QUESTIONS.length-1));setSubmissionKey(savedKey);
+    const complete=Number(progress.current_question)===TASTER_QUESTIONS.length&&Object.keys(savedAnswers).length===TASTER_QUESTIONS.length&&!!savedKey;
+    if(!complete){setPhase('taster');return}
+    try{
+     const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:savedKey})});
+     const data=await response.json().catch(()=>({}));
+     if(!response.ok){setError(data.error||'Your saved snapshot is ready to submit. Please retry.');setPhase('taster');return}
+     setResult(data.results||computeTasterResult(savedAnswers));setTasterId(data.taster_id||'');
+     try{if(data.taster_id)localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
+     try{
+      const completionResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:savedKey})});
+      const completion=await completionResponse.json().catch(()=>({}));
+      if(completionResponse.ok&&completion.completed){try{localStorage.removeItem('valu_taster_resume_token')}catch{};setProgressToken('')}
+     }catch{}
+     setPhase('results');
+    }catch{setError('Your saved snapshot could not be submitted yet. Please retry.');setPhase('taster')}
+   })
    .catch(()=>{if(cancelled)return;try{localStorage.removeItem('valu_taster_resume_token')}catch{};setProgressToken('')});
   return ()=>{cancelled=true};
  },[]);
