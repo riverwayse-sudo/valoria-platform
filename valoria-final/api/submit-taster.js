@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { TASTER_QUESTIONS, computeTasterResult, EXPERIENCE_BANDS, VALU_VERSION } from '../src/valuTaster.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -57,10 +58,29 @@ export default async function handler(req, res) {
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''; 
   if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'A valid email address is required before starting a VALU snapshot.' });
   if (typeof submission_key !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submission_key)) return json(res, 400, { error: 'A valid submission reference is required. Please retry the final step.' });
-  if (typeof name !== 'string' || !name.trim() || name.trim().length > 200) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
-  if (typeof role !== 'string' || !role.trim() || role.trim().length > 160) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
-  if (!EXPERIENCE_BANDS.some(b => b.id === experience)) return json(res, 400, { error: 'Select a valid experience band.' });
-  if (!validAnswers(answers)) return json(res, 400, { error: 'Taster answers are incomplete or invalid.' });
+  const tokenHash = createHash('sha256').update(resume_token).digest('hex');
+  const progressParams = new URLSearchParams({
+    resume_token_hash: `eq.${tokenHash}`,
+    status: 'eq.in_progress',
+    expires_at: `gt.${new Date().toISOString()}`,
+    select: 'name,role,experience,email,current_question,answers,submission_key',
+    limit: '1',
+  });
+  const progressRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${progressParams}`, {
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
+  if (!progressRes.ok) return json(res, 502, { error: 'Could not verify your saved snapshot progress.' });
+  const progress = (await progressRes.json())?.[0];
+  if (!progress) return json(res, 404, { error: 'Your snapshot progress has expired or cannot be resumed.' });
+  if (progress.submission_key !== submission_key) return json(res, 409, { error: 'The submission reference does not match your saved progress.' });
+  const { name, role, experience, email, answers } = progress;
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'The saved contact email is invalid. Contact Valoria support.' });
+  if (progress.current_question !== TASTER_QUESTIONS.length || !validAnswers(answers)) return json(res, 400, { error: 'Finish and save all snapshot answers before submitting.' });
+
+
+
+
 
   const results = computeTasterResult(answers);
   try {
