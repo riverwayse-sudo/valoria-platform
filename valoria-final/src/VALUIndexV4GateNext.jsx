@@ -21,9 +21,16 @@ export default function VALUIndexV4GateNext(){
   if(!progressToken)return;
   let cancelled=false;
   fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load',resume_token:progressToken})})
-   .then(async response=>{const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Saved progress unavailable');return data})
+   .then(async response=>{
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok){
+     if(response.status===401||response.status===404){try{localStorage.removeItem('valu_taster_resume_token')}catch{};setProgressToken('');return null}
+     throw new Error(data.error||'Saved progress is temporarily unavailable');
+    }
+    return data;
+   })
    .then(async data=>{
-    if(cancelled)return;
+    if(cancelled||!data)return;
     const progress=data.progress||{}, savedAnswers=progress.answers||{}, savedKey=progress.submission_key||'';
     setAnswers(savedAnswers);setCurrent(Math.min(Number(progress.current_question)||0,TASTER_QUESTIONS.length-1));setSubmissionKey(savedKey);
     const complete=Number(progress.current_question)===TASTER_QUESTIONS.length&&Object.keys(savedAnswers).length===TASTER_QUESTIONS.length&&!!savedKey;
@@ -42,7 +49,7 @@ export default function VALUIndexV4GateNext(){
      setPhase('results');
     }catch{setError('Your saved snapshot could not be submitted yet. Please retry.');setPhase('taster')}
    })
-   .catch(()=>{if(cancelled)return;try{localStorage.removeItem('valu_taster_resume_token')}catch{};setProgressToken('')});
+   .catch(()=>{if(cancelled)return;setError('We could not restore your saved snapshot right now. Refresh this page to retry; your saved progress has been retained.')});
   return ()=>{cancelled=true};
  },[]);
 
