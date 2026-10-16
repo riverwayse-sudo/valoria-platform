@@ -276,7 +276,14 @@ export default function FullVALUAssessment() {
         session_seed:0,
       });
       if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
-    } catch {}
+    } catch (err) {
+      if (String(err?.message || '').toLowerCase().includes('handoff')) {
+        try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
+        setHandoffToken('');
+        setHandoffStatus('account_required');
+        setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
+      }
+    }
   }
 
   async function choose(optionIndex) {
