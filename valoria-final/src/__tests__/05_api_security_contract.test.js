@@ -103,6 +103,17 @@ describe("Assessment integrity contracts", () => {
     expect(source).toContain("submit_taster_with_identity_candidate");
   });
 
+  test("full assessment submission requires a completed, account-owned, email-confirmed snapshot", () => {
+    const source = readApi("submit-assessment.js");
+    expect(source).toContain("valid snapshot reference is required");
+    expect(source).toContain("select: 'id,user_id,name,role,completed_at'");
+    expect(source).toContain("if (!taster.completed_at)");
+    expect(source).toContain("if (!taster.user_id)");
+    expect(source).toContain("if (!user.email_confirmed_at)");
+    expect(source).toContain("taster_id: tasterId, user_id: resolvedUserId");
+    expect(source).not.toContain("taster_id: tasterId || null");
+  });
+
   test("submission cannot overwrite an existing identity assessment", () => {
     const source = readApi("submit-assessment.js");
     expect(source).toContain("computeFingerprint");
