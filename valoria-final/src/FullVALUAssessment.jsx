@@ -237,6 +237,7 @@ export default function FullVALUAssessment() {
     const timer = window.setTimeout(() => {
       saveProgress({
         action:'save',
+        handoff_token:handoffToken,
         session_id:sessionId,
         resume_token:resumeToken || undefined,
         taster_id:identity.tasterId,
@@ -261,6 +262,7 @@ export default function FullVALUAssessment() {
     try {
       const data = await saveProgress({
         action:'save',
+        handoff_token:handoffToken,
         session_id:sessionId,
         resume_token:resumeToken || undefined,
         taster_id:identity.tasterId,
@@ -323,6 +325,7 @@ export default function FullVALUAssessment() {
 
       await saveProgress({
         action:'complete',
+        handoff_token:handoffToken,
         session_id:sessionId,
         resume_token:resumeToken || undefined,
         taster_id:identity.tasterId,
