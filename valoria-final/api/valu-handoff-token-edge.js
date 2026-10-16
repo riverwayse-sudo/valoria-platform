@@ -3,7 +3,7 @@ const AUDIENCE = 'valu-full-assessment';
 function decodeBase64Url(value) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
-  const binary = atob(padded);
+  const binary = globalThis.atob(padded);
   return Uint8Array.from(binary, char => char.charCodeAt(0));
 }
 
@@ -14,14 +14,14 @@ export async function verifyValuHandoffTokenEdge(token, expectedTasterId) {
   if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
 
   try {
-    const key = await crypto.subtle.importKey(
+    const key = await globalThis.crypto.subtle.importKey(
       'raw',
       new TextEncoder().encode(secret),
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['verify']
     );
-    const valid = await crypto.subtle.verify(
+    const valid = await globalThis.crypto.subtle.verify(
       'HMAC',
       key,
       decodeBase64Url(parts[1]),
