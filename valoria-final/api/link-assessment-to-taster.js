@@ -1,6 +1,7 @@
+import { verifyValuHandoffToken } from './valu-handoff-token.js';
+
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-import { verifyValuHandoffToken } from './valu-handoff-token.js';
 
 function json(res, status, data) {
   res.status(status).setHeader('Cache-Control', 'no-store');
@@ -40,6 +41,7 @@ export default async function handler(req, res) {
   const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${taster.user_id}`, { headers });
   if (!userRes.ok) return json(res, 502, { error: 'Could not verify the Valoria account.' });
   const user = await userRes.json();
+  if (!user.email_confirmed_at) return json(res, 403, { error: 'Confirm your Valoria account email before attaching the full VALU assessment.' });
   // Conditional ownership predicate prevents a concurrent claim from transferring
   // an assessment after the initial read.
   const patchParams = new URLSearchParams({
