@@ -78,6 +78,13 @@ Call `private.valu_reconciliation_health()` from a privileged server-side proces
 
 ## Continuous operational monitoring
 
+The private health report is run by the authenticated Vercel cron endpoint `/api/reconciliation-health` daily at 04:00 UTC (05:00 Nigeria time). The endpoint:
+- requires `CRON_SECRET` and uses service-role credentials server-side only;
+- reads aggregate health metrics through a service-role-only RPC wrapper;
+- stores timestamped aggregate snapshots and alert signatures in the private `valu_reconciliation_health_snapshots` table;
+- creates an admin notification when alert conditions appear, change, or clear, rather than duplicating the same notification every day;
+- logs a compact aggregate summary only and never writes participant names, emails, account IDs, or raw evidence into telemetry.
+
 The service-role-only health function now includes operational counters for:
 
 - Durable snapshot progress: in-progress, expired-in-progress, and completed rows.
@@ -102,16 +109,32 @@ Treat these as review triggers, not automatic repair instructions:
 
 Do not automatically merge accounts, delete snapshots, alter assessment scores, publish profiles, or change identity ownership from a monitoring result. Create a review item with record IDs and evidence, then use the identity reconciliation rules above.
 
-### Current baseline (2026-10-15)
+### Current live baseline (2026-10-16 23:14 UTC)
 
-- Completed full assessments: 17.
-- Professional profiles: 18; one has no completed full assessment and remains unlisted.
-- Listed profiles / public roster rows: 17 / 17, with zero membership mismatches.
-- Active capabilities: 20; five are currently eligible/listed across capability records, and zero eligible active capabilities are waiting in a non-listed status.
-- Taster sessions: 35; identity candidates: 2 account-linked, 16 contact candidates, 17 unresolved.
-- Unknown historical taster version provenance: 35; preserve as unknown until supported by immutable deployment evidence.
-- Non-completed/non-closed journey records stale for more than seven days: 5; inspect their next action and event history before changing state.
-- Durable snapshot progress: 0 in progress, 0 expired in progress, 0 completed. This is not itself a failure without evidence of new sessions; verify with a controlled live submission.
-- No current assessment owner conflicts, missing completed-assessment identity links, missing completed-assessment journey links, or listing/roster membership mismatches.
+The 2026-10-15 baseline above has been superseded by a fresh production query. Do not use the earlier statement of zero missing assessment-to-taster links as current.
+
+- Completed full assessments: 17; **17 have no `taster_id`**.
+- Of those 17 missing-link assessments, 5 have review-ledger entries and 12 have no review entry. The five assessment reviews are account-match decisions; they do not resolve the missing taster links.
+- Exact contact-email cross-checks produced one candidate for a missing-link assessment, but its name/role evidence conflicts. There are zero missing-link assessments with an exact candidate name-and-role match. No link was inferred.
+- Completed taster sessions: 36; 34 have no authenticated account owner.
+- Taster identity candidate rows: 36 (2 account-linked, 16 contact candidates, 18 unresolved, 0 conflicting-evidence status at this snapshot).
+- Latest review decisions cover 39 distinct source records: 5 assessment records marked verified-match, 1 taster marked verified-match, and 33 tasters marked unmatched. All 39 remain open; a verified match is not closed until the identity correction is applied and verified. Closed-without-link decisions: 0.
+- Professional profiles: 18; listed profiles/public roster rows: 17/17, with zero roster membership mismatches.
+- Active capabilities: 20; eligible active capabilities waiting in a non-listed status: 0.
+- Assessment identity audit links: no owner conflicts; 0 completed assessments missing the separate `assessment_identity_links` audit row. This metric is distinct from the **17 missing `taster_id` links**.
+- Completed assessment journey/current-assessment mismatches: 0; completed assessments without a profile: 0.
+- Unknown historical taster version provenance: 35; preserve as unknown until immutable deployment evidence proves the version.
+- Non-completed/non-closed journey records stale for more than seven days: 5; inspect next action and event history before changing state.
+- Durable taster progress: 1 in progress, 0 expired in progress, 1 completed. This counter describes progress records, not the 36 completed taster-session rows.
+- The health report now counts missing taster links and unreviewed missing-link assessments separately, and counts the latest review decision per source. Only latest `resolved_no_link` decisions are closed.
+
+### Prevention protocol for new full assessments
+
+- The API rejects a full-assessment submission without a syntactically valid snapshot ID.
+- Before saving a full assessment, the API requires the exact snapshot to exist, be completed, match the submitted name and role, have an authenticated account owner, and have a confirmed account email.
+- The database insert trigger independently requires a completed, account-owned snapshot, matching name/role, and owner alignment. A request that bypasses the API cannot create a new full assessment with a null or conflicting snapshot/owner.
+- Foreign keys now use `ON DELETE RESTRICT` for `valu_assessments.taster_id` and `valu_assessments.user_id`. Deleting a linked snapshot or account cannot silently null the taster link or cascade-delete the assessment. Use an approved account deactivation/retention process instead of deleting assessment owners.
+- The database guard applies to new inserts so historical records remain repairable. It does not infer or backfill old links.
+- After a new full assessment is saved, the handoff must still confirm the canonical assessment-to-taster link, identity audit link, profile metadata, and `professional_journey` refresh. A failed post-save handoff is a monitored partial-completion incident, not a successful end state.
 
 The live POST flow (init → save → reload/load → complete/submit → idempotent retry) remains a release verification item until exercised through an authorized production test path. A GET returning 405 is expected for the POST-only progress API and does not prove the write flow works.
