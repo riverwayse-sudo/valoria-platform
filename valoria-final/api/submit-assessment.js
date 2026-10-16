@@ -78,8 +78,8 @@ export default async function handler(req, res) {
   }
 
   const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId } = req.body || {};
-  if (tasterId !== undefined && (typeof tasterId !== 'string' || !/^[0-9a-f-]{36}$/i.test(tasterId))) {
-    return json(res, 400, { error: 'Invalid taster reference.' });
+  if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
+    return json(res, 400, { error: 'Open the full VALU assessment from your completed VALU snapshot. A valid snapshot reference is required.' });
   }
   if (typeof name !== 'string' || !name.trim() || name.trim().length > MAX_NAME_LENGTH) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   if (typeof role !== 'string' || !role.trim() || role.trim().length > MAX_ROLE_LENGTH) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
@@ -101,28 +101,27 @@ export default async function handler(req, res) {
   let taster = null;
   let resolvedUserId = null;
   let resolvedEmail = null;
-  if (tasterId) {
-    const tasterParams = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role', limit: '1' });
-    const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, {
-      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
-    });
-    if (!tasterRes.ok) return json(res, 502, { error: 'Could not verify the VALU journey.' });
-    taster = (await tasterRes.json())?.[0];
-    if (!taster) return json(res, 404, { error: 'VALU teaser result not found.' });
-    if (String(taster.name || '').trim().toLowerCase() !== name.trim().toLowerCase() ||
-        String(taster.role || '').trim().toLowerCase() !== role.trim().toLowerCase()) {
-      return json(res, 403, { error: 'Assessment identity does not match the VALU teaser.' });
-    }
-    resolvedUserId = taster.user_id || null;
-    if (resolvedUserId) {
-      const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${resolvedUserId}`, {
-        headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
-      });
-      if (!userRes.ok) return json(res, 502, { error: 'Could not verify the Valoria account.' });
-      const user = await userRes.json();
-      resolvedEmail = String(user.email || '').trim().toLowerCase() || null;
-    }
+  const tasterParams = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role,completed_at', limit: '1' });
+  const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, {
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
+  if (!tasterRes.ok) return json(res, 502, { error: 'Could not verify the VALU journey.' });
+  taster = (await tasterRes.json())?.[0];
+  if (!taster) return json(res, 404, { error: 'VALU snapshot not found. Return to the VALU journey and complete your snapshot first.' });
+  if (!taster.completed_at) return json(res, 409, { error: 'Complete your VALU snapshot before starting the full assessment.' });
+  if (!taster.user_id) return json(res, 409, { error: 'Sign in to your Valoria account and link your VALU snapshot before starting the full assessment.' });
+  if (String(taster.name || '').trim().toLowerCase() !== name.trim().toLowerCase() ||
+      String(taster.role || '').trim().toLowerCase() !== role.trim().toLowerCase()) {
+    return json(res, 403, { error: 'Assessment identity does not match the VALU snapshot.' });
   }
+  resolvedUserId = taster.user_id;
+  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${resolvedUserId}`, {
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
+  if (!userRes.ok) return json(res, 502, { error: 'Could not verify the Valoria account.' });
+  const user = await userRes.json();
+  if (!user.email_confirmed_at) return json(res, 403, { error: 'Confirm your Valoria account email before submitting the full VALU assessment.' });
+  resolvedEmail = String(user.email || '').trim().toLowerCase() || null;
 
   const row = {
     name: name.trim(), role: role.trim(), experience,
