@@ -88,8 +88,15 @@ export default function VALUIndexV4GateNext(){
    finally{setSelected(null)}
    return;
   }
+  setSelected(index);
+ }
+
+ async function submitSnapshot(){
+  if(saving||(!Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1)&&selected===null))return;
   setSaving(true);
+  setError('');
   try{
+   const next=answers;
    const key=submissionKey||(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'');
    if(!key)throw new Error('Your browser could not create a secure submission reference. Refresh the page and try again.');
    setSubmissionKey(key);
@@ -161,7 +168,8 @@ export default function VALUIndexV4GateNext(){
   <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU SNAPSHOT · PRIME</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>{current+1} / {TASTER_QUESTIONS.length}</div></div>
   <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${progress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1><div className="valu-taster-insight" style={S.insight}>{q.tasterInsight}</div>
-  <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected===i?GOLD:'rgba(247,244,238,.1)',background:selected===i?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
+  <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
+  {current===TASTER_QUESTIONS.length-1&&(selected!==null||Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1))&&<button type="button" disabled={saving} onClick={submitSnapshot} style={{...S.primary,marginTop:18,opacity:saving?.6:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR SNAPSHOT…':'SUBMIT MY VALU SNAPSHOT →'}</button>}
   {error&&<div style={S.error}>{error}</div>}<p style={S.note}>Your answers are saved as a directional snapshot. They do not become the official VALU Index score.</p>
  </Shell>;
 
@@ -183,8 +191,8 @@ function StepBar({active}){return <div className="valu-assessment-steps" style={
 function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 const S={
- page:{height:'calc(100vh - 65px)',minHeight:0,background:DARK,color:PARCH,padding:'28px 32px 34px',overflow:'hidden',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
- shell:{width:'100%',maxWidth:1160,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:0},
+ page:{minHeight:'calc(100dvh - 65px)',height:'auto',background:DARK,color:PARCH,padding:'28px 32px 34px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
+ shell:{width:'100%',maxWidth:1160,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:'auto'},
  topBrand:{display:'flex',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottom:'1px solid rgba(212,201,168,.13)',marginBottom:24,flex:'0 0 auto'},
  brandMark:{fontSize:15,fontWeight:900,letterSpacing:'.08em',color:PARCH},
  brandVersion:{fontSize:8,fontWeight:800,letterSpacing:'.16em',color:'rgba(212,201,168,.55)'},
