@@ -1,6 +1,6 @@
-export const config = { runtime: "edge" };
-
 import { verifyValuHandoffTokenEdge } from "./valu-handoff-token-edge.js";
+
+export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -217,7 +217,6 @@ export default async function handler(req) {
     identity_hash: identityHash,
     name,
     role,
-    email: ignoredEmail,
     handoff_token: handoffToken,
     resume_token: resumeToken,
     current_question: currentQuestion,
@@ -225,7 +224,6 @@ export default async function handler(req) {
     answers,
     timings,
     session_seed: sessionSeed,
-    user_id: ignoredUserId,
   } = body;
 
   if (!sessionId || !/^[0-9a-f-]{36}$/i.test(sessionId) || !name || !role || !Number.isInteger(currentQuestion) || !Number.isInteger(totalQuestions)) {
