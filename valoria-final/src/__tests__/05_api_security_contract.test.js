@@ -137,6 +137,7 @@ describe("Assessment integrity contracts", () => {
     expect(source).toContain("handoff_token: handoffToken");
     expect(link).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
     expect(link).toContain("taster.user_id !== handoff.sub");
+    expect(link).toContain("!user.email_confirmed_at");
     expect(verifier).toContain("timingSafeEqual");
     expect(verifier).toContain("valu-full-assessment");
     expect(preflight).toContain("verifyValuHandoffToken");
@@ -167,6 +168,8 @@ describe("Assessment integrity contracts", () => {
     expect(source).toContain("resolvedIdentity.user_id !== handoff.sub");
     expect(source).toContain("verified account-owned snapshot required");
     expect(source).toContain("snapshot/account identity did not verify");
+    expect(source).toContain("Could not verify the saved progress session");
+    expect(source).not.toContain("getProgressBySession(sessionId).catch(() => null)");
     expect(source).not.toContain("const resolvedUserId = userId ||");
     expect(edgeVerifier).toContain("crypto.subtle.verify");
   });
