@@ -92,7 +92,7 @@ export default function VALUIndexV4GateNext(){
  }
 
  async function submitSnapshot(){
-  if(saving||(!Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1)&&selected===null))return;
+  if(saving||!Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1))return;
   setSaving(true);
   setError('');
   try{
@@ -169,7 +169,7 @@ export default function VALUIndexV4GateNext(){
   <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${progress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1><div className="valu-taster-insight" style={S.insight}>{q.tasterInsight}</div>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
-  {current===TASTER_QUESTIONS.length-1&&(selected!==null||Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1))&&<button type="button" disabled={saving} onClick={submitSnapshot} style={{...S.primary,marginTop:18,opacity:saving?.6:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR SNAPSHOT…':'SUBMIT MY VALU SNAPSHOT →'}</button>}
+  {current===TASTER_QUESTIONS.length-1&&(selected!==null||Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1))&&<button type="button" disabled={saving||!Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1)} onClick={submitSnapshot} style={{...S.primary,marginTop:18,opacity:(saving||!Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1))?.6:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR SNAPSHOT…':'SUBMIT MY VALU SNAPSHOT →'}</button>}
   {error&&<div style={S.error}>{error}</div>}<p style={S.note}>Your answers are saved as a directional snapshot. They do not become the official VALU Index score.</p>
  </Shell>;
 
