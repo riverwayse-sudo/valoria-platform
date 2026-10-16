@@ -82,7 +82,7 @@ The private health report is run by the authenticated Vercel cron endpoint `/api
 - requires `CRON_SECRET` and uses service-role credentials server-side only;
 - reads aggregate health metrics through a service-role-only RPC wrapper;
 - stores timestamped aggregate snapshots and alert signatures in the private `valu_reconciliation_health_snapshots` table;
-- creates an admin notification when alert conditions appear, change, or clear, rather than duplicating the same notification every day;
+- creates an admin notification when alert conditions appear, change, or clear, rather than duplicating the same notification every day; retries on the next scheduled run if delivery or acknowledgement fails;
 - logs a compact aggregate summary only and never writes participant names, emails, account IDs, or raw evidence into telemetry.
 
 The service-role-only health function now includes operational counters for:
