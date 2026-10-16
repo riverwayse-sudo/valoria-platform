@@ -147,10 +147,11 @@ export default function FullVALUAssessment() {
     setHandoffStatus('checking');
     setHandoffError('');
     let cancelled = false;
-    fetch(API_BASE + '/api/verify-assessment-handoff', {
+    fetch(API_BASE + '/api/submit-assessment', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
+        action:'verify-handoff',
         handoff_token:token,
         taster_id:identity.tasterId,
         name:identity.name,
