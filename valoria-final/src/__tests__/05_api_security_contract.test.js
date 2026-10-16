@@ -177,7 +177,7 @@ describe("Assessment integrity contracts", () => {
     const source = readApi("assessment-progress.js");
     expect(source).toContain("https://valoriainstitute.com/journey/continue?stage=assess");
     expect(source).not.toContain("https://valoriainstitute.com/valu/assessment/?full=1");
-    expect(source).toContain("handoff_token:handoffToken");
+    expect(source).toContain("handoff_token: handoffToken");
   });
 
   test("submission cannot overwrite an existing identity assessment", () => {
