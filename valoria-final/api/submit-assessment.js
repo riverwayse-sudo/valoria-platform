@@ -128,7 +128,7 @@ export default async function handler(req, res) {
     identity_hash: fingerprint, total_score: results.valuIndex,
     designation: results.desig?.name || '', cluster_scores: results.clusterScores,
     skill_scores: results.skillScores, completed_at: completedAt, expires_at: expiresAt, ai_report: null,
-    taster_id: tasterId || null, user_id: resolvedUserId, email: resolvedEmail,
+    taster_id: tasterId, user_id: resolvedUserId, email: resolvedEmail,
     answers, timings, shuffle_map: shuffleMap, assessment_version: 'FULL_VALU_V1',
   };
 
