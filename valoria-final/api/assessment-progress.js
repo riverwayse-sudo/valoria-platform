@@ -231,13 +231,14 @@ export default async function handler(req) {
   if (!sessionId || !/^[0-9a-f-]{36}$/i.test(sessionId) || !name || !role || !Number.isInteger(currentQuestion) || !Number.isInteger(totalQuestions)) {
     return json({ error: "Invalid assessment progress payload." }, 400);
   }
-  if (identityHash !== `valu_progress_${tasterId}`) return json({ error: "Assessment identity does not match the verified snapshot." }, 403);
+  if (!identityHash || typeof identityHash !== "string") return json({ error: "Assessment identity is required." }, 400);
   if (currentQuestion < 0 || currentQuestion > totalQuestions || totalQuestions < 1 || totalQuestions > 100) return json({ error: "Invalid assessment position." }, 400);
   if (answers && typeof answers !== "object") return json({ error: "Invalid answers." }, 400);
   if (timings && !Array.isArray(timings)) return json({ error: "Invalid timings." }, 400);
   if (typeof tasterId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
     return json({ error: "A valid completed VALU snapshot is required." }, 400);
   }
+  if (identityHash !== `valu_progress_${tasterId}`) return json({ error: "Assessment identity does not match the verified snapshot." }, 403);
   const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId);
   if (!handoff) return json({ error: "The secure VALU handoff is missing or expired. Reopen the assessment from your Valoria account." }, 401);
 
