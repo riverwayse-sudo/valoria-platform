@@ -24,6 +24,8 @@ function headers() {
   };
 }
 
+function norm(value) { return String(value || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
 function validEmail(email) {
   return typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
@@ -229,7 +231,7 @@ export default async function handler(req) {
   if (!sessionId || !/^[0-9a-f-]{36}$/i.test(sessionId) || !name || !role || !Number.isInteger(currentQuestion) || !Number.isInteger(totalQuestions)) {
     return json({ error: "Invalid assessment progress payload." }, 400);
   }
-  if (!identityHash || typeof identityHash !== "string") return json({ error: "Assessment identity is required." }, 400);
+  if (identityHash !== `valu_progress_${tasterId}`) return json({ error: "Assessment identity does not match the verified snapshot." }, 403);
   if (currentQuestion < 0 || currentQuestion > totalQuestions || totalQuestions < 1 || totalQuestions > 100) return json({ error: "Invalid assessment position." }, 400);
   if (answers && typeof answers !== "object") return json({ error: "Invalid answers." }, 400);
   if (timings && !Array.isArray(timings)) return json({ error: "Invalid timings." }, 400);
@@ -248,12 +250,20 @@ export default async function handler(req) {
   }
   const resolvedUserId = resolvedIdentity.user_id;
   const resolvedEmail = validEmail(resolvedIdentity.email) ? resolvedIdentity.email.trim().toLowerCase() : null;
-  const existing = await getProgressBySession(sessionId).catch(() => null);
+  let existing;
+  try {
+    existing = await getProgressBySession(sessionId);
+  } catch {
+    return json({ error: "Could not verify the saved progress session. Retry without changing your answers." }, 502);
+  }
   if (existing) {
-    if (existing.resume_token !== resumeToken
+    if (!resumeToken
+      || existing.resume_token !== resumeToken
       || (existing.taster_id && existing.taster_id !== tasterId)
       || (existing.user_id && existing.user_id !== resolvedUserId)
-      || existing.identity_hash !== identityHash) {
+      || existing.identity_hash !== identityHash
+      || norm(existing.name) !== norm(resolvedIdentity.taster.name)
+      || norm(existing.role) !== norm(resolvedIdentity.taster.role)) {
       return json({ error: "This saved progress session does not match the verified VALU handoff." }, 403);
     }
   }
