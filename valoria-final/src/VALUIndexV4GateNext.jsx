@@ -88,7 +88,7 @@ export default function VALUIndexV4GateNext(){
    finally{setSelected(null)}
    return;
   }
-  setSelected(index);
+  setSelected(null);
  }
 
  async function submitSnapshot(){
