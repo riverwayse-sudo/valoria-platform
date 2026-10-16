@@ -127,6 +127,29 @@ describe("Assessment integrity contracts", () => {
     expect(source).not.toContain("taster_id: tasterId || null");
   });
 
+  test("full assessment submission and attachment require a signed account-bound handoff", () => {
+    const source = readApi("submit-assessment.js");
+    const link = readApi("link-assessment-to-taster.js");
+    const verifier = readApi("valu-handoff-token.js");
+    const preflight = readApi("verify-assessment-handoff.js");
+    expect(source).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
+    expect(source).toContain("taster.user_id !== handoff.sub");
+    expect(source).toContain("handoff_token: handoffToken");
+    expect(link).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
+    expect(link).toContain("taster.user_id !== handoff.sub");
+    expect(verifier).toContain("timingSafeEqual");
+    expect(verifier).toContain("valu-full-assessment");
+    expect(preflight).toContain("verifyValuHandoffToken");
+    expect(preflight).toContain("email_confirmed_at");
+  });
+
+  test("completed full assessment submission is idempotent for the same verified owner and snapshot", () => {
+    const source = readApi("submit-assessment.js");
+    expect(source).toContain("findExistingAssessment(tasterId, fingerprint)");
+    expect(source).toContain("alreadyCompleted: true");
+    expect(source).toContain("existing.user_id !== resolvedUserId");
+  });
+
   test("submission cannot overwrite an existing identity assessment", () => {
     const source = readApi("submit-assessment.js");
     expect(source).toContain("computeFingerprint");
