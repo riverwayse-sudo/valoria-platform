@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     const alerts = ALERT_METRICS
       .map(([key, description]) => ({ key, description, count: count(health, key) }))
       .filter(item => item.count > 0);
-    const alertKeys = alerts.map(item => item.key);
+    const alertKeys = alerts.map(item => `${item.key}=${item.count}`);
 
     const snapshotRes = await supabase("rpc/record_valu_reconciliation_health_snapshot", {
       method: "POST",
@@ -78,33 +78,35 @@ export default async function handler(req, res) {
     if (!snapshotRes.ok) throw new Error("Reconciliation health snapshot could not be recorded");
     const snapshot = await snapshotRes.json();
 
-    let adminNotifications = "not_needed";
-    if (alerts.length) {
+    let adminNotifications = "unchanged";
+    if (snapshot?.alert_changed) {
       const adminsRes = await supabase("admin_users?select=id");
       if (!adminsRes.ok) throw new Error("Could not load reconciliation alert recipients");
       const admins = await adminsRes.json();
-      const message = "The daily VALU reconciliation check found open conditions: " +
-        alerts.map(item => `${item.count} ${item.description}`).join("; ") +
-        ". Review the admin reconciliation queue. These are review triggers, not permission to auto-link or delete records.";
+      const recovered = alerts.length === 0 && Number(snapshot?.previous_alert_count || 0) > 0;
+      const message = recovered
+        ? "The daily VALU reconciliation health check reports that all tracked alert conditions have cleared. Review the latest health snapshot and keep the normal monitoring schedule active."
+        : "The daily VALU reconciliation check found open conditions: " +
+          alerts.map(item => \`\${item.count} \${item.description}\`).join("; ") +
+          ". Review the admin reconciliation queue. These are review triggers, not permission to auto-link or delete records.";
       const notifications = (admins || []).map(admin => ({
         user_id: admin.id,
-        type: "reconciliation_health_alert",
-        title: "VALU reconciliation requires review",
+        type: recovered ? "reconciliation_health_recovery" : "reconciliation_health_alert",
+        title: recovered ? "VALU reconciliation health restored" : "VALU reconciliation requires review",
         body: message,
-        action_label: "Review reconciliation",
         action_url: "/admin/reconciliation",
       }));
       if (notifications.length) {
-        const notifyRes = await supabase("platform_notifications?on_conflict=user_id,type,title", {
+        const notifyRes = await supabase("platform_notifications", {
           method: "POST",
-          headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+          headers: { Prefer: "return=minimal" },
           body: JSON.stringify(notifications),
         });
         if (!notifyRes.ok) {
-          console.error("[reconciliation-health] notification upsert failed", notifyRes.status);
+          console.error("[reconciliation-health] notification insert failed", notifyRes.status);
           adminNotifications = "failed";
         } else {
-          adminNotifications = "upserted";
+          adminNotifications = recovered ? "recovery_sent" : "alert_sent";
         }
       } else {
         adminNotifications = "no_admin_recipients";
