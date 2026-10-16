@@ -55,7 +55,7 @@ async function resolveTasterIdentity(tasterId) {
 async function getProgressBySession(sessionId) {
   const params = new URLSearchParams({
     session_id: `eq.${sessionId}`,
-    select: "id,session_id,resume_token,taster_id,user_id,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
+    select: "id,session_id,resume_token,taster_id,user_id,identity_hash,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
     limit: "1",
   });
   const res = await supabase(`valu_assessment_progress?${params}`);
@@ -148,7 +148,20 @@ async function runReminderSweep(req) {
     else if (ageHours >= 24 && (row.reminder_count || 0) < 1) reminderNumber = 1;
 
     if (reminderNumber) {
-      const send = await sendReminder(row, reminderNumber);
+      if (!row.taster_id || !row.user_id) {
+        results.push({ id: row.id, reminderNumber, sent: false, skipped: "verified account-owned snapshot required" });
+        continue;
+      }
+      const identity = await resolveTasterIdentity(row.taster_id);
+      if (identity.error || identity.user_id !== row.user_id
+        || !validEmail(identity.email)
+        || identity.email.trim().toLowerCase() !== String(row.email || "").trim().toLowerCase()
+        || String(identity.taster?.name || "").trim().toLowerCase() !== String(row.name || "").trim().toLowerCase()
+        || String(identity.taster?.role || "").trim().toLowerCase() !== String(row.role || "").trim().toLowerCase()) {
+        results.push({ id: row.id, reminderNumber, sent: false, skipped: "snapshot/account identity did not verify" });
+        continue;
+      }
+      const send = await sendReminder({ ...row, email: identity.email }, reminderNumber);
       if (send.sent) {
         const patch = await supabase(`valu_assessment_progress?id=eq.${row.id}`, {
           method: "PATCH",
