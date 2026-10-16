@@ -1,5 +1,7 @@
 export const config = { runtime: "edge" };
 
+import { verifyValuHandoffTokenEdge } from "./valu-handoff-token-edge.js";
+
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -35,16 +37,19 @@ async function supabase(path, options = {}) {
 }
 
 async function resolveTasterIdentity(tasterId) {
-  if (!tasterId) return {};
-  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: "user_id", limit: "1" });
+  if (!tasterId) return { error: "A completed snapshot reference is required." };
+  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: "id,user_id,name,role,completed_at", limit: "1" });
   const tasterRes = await supabase(`taster_sessions?${params}`);
-  if (!tasterRes.ok) return {};
+  if (!tasterRes.ok) return { error: "Could not verify the VALU snapshot." };
   const taster = (await tasterRes.json())?.[0];
-  if (!taster?.user_id) return {};
+  if (!taster) return { error: "VALU snapshot not found." };
+  if (!taster.completed_at) return { error: "Complete the VALU snapshot before saving full-assessment progress." };
+  if (!taster.user_id) return { error: "Link the VALU snapshot to a confirmed Valoria account before saving full-assessment progress." };
   const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${taster.user_id}`, { headers: headers(), cache: "no-store" });
-  if (!userRes.ok) return { user_id: taster.user_id };
+  if (!userRes.ok) return { error: "Could not verify the Valoria account." };
   const user = await userRes.json();
-  return { user_id: taster.user_id, email: user.email || null };
+  if (!user.email_confirmed_at) return { error: "Confirm your Valoria account email before saving full-assessment progress." };
+  return { user_id: taster.user_id, email: user.email || null, taster };
 }
 
 async function getProgressBySession(sessionId) {
@@ -199,13 +204,15 @@ export default async function handler(req) {
     identity_hash: identityHash,
     name,
     role,
-    email,
+    email: ignoredEmail,
+    handoff_token: handoffToken,
+    resume_token: resumeToken,
     current_question: currentQuestion,
     total_questions: totalQuestions,
     answers,
     timings,
     session_seed: sessionSeed,
-    user_id: userId,
+    user_id: ignoredUserId,
   } = body;
 
   if (!sessionId || !/^[0-9a-f-]{36}$/i.test(sessionId) || !name || !role || !Number.isInteger(currentQuestion) || !Number.isInteger(totalQuestions)) {
@@ -215,11 +222,30 @@ export default async function handler(req) {
   if (currentQuestion < 0 || currentQuestion > totalQuestions || totalQuestions < 1 || totalQuestions > 100) return json({ error: "Invalid assessment position." }, 400);
   if (answers && typeof answers !== "object") return json({ error: "Invalid answers." }, 400);
   if (timings && !Array.isArray(timings)) return json({ error: "Invalid timings." }, 400);
+  if (typeof tasterId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
+    return json({ error: "A valid completed VALU snapshot is required." }, 400);
+  }
+  const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId);
+  if (!handoff) return json({ error: "The secure VALU handoff is missing or expired. Reopen the assessment from your Valoria account." }, 401);
 
+  const resolvedIdentity = await resolveTasterIdentity(tasterId);
+  if (resolvedIdentity.error) return json({ error: resolvedIdentity.error }, 409);
+  if (resolvedIdentity.user_id !== handoff.sub) return json({ error: "This secure handoff does not match the snapshot owner." }, 403);
+  if (String(resolvedIdentity.taster.name || "").trim().toLowerCase() !== String(name || "").trim().toLowerCase()
+    || String(resolvedIdentity.taster.role || "").trim().toLowerCase() !== String(role || "").trim().toLowerCase()) {
+    return json({ error: "Assessment identity does not match the saved snapshot." }, 403);
+  }
+  const resolvedUserId = resolvedIdentity.user_id;
+  const resolvedEmail = validEmail(resolvedIdentity.email) ? resolvedIdentity.email.trim().toLowerCase() : null;
   const existing = await getProgressBySession(sessionId).catch(() => null);
-  const resolvedIdentity = (!email || !userId) && tasterId ? await resolveTasterIdentity(tasterId) : {};
-  const resolvedUserId = userId || resolvedIdentity.user_id || null;
-  const resolvedEmail = validEmail(email) ? email.trim().toLowerCase() : (validEmail(resolvedIdentity.email) ? resolvedIdentity.email.trim().toLowerCase() : null);
+  if (existing) {
+    if (existing.resume_token !== resumeToken
+      || (existing.taster_id && existing.taster_id !== tasterId)
+      || (existing.user_id && existing.user_id !== resolvedUserId)
+      || existing.identity_hash !== identityHash) {
+      return json({ error: "This saved progress session does not match the verified VALU handoff." }, 403);
+    }
+  }
   const payload = {
     session_id: sessionId,
     identity_hash: identityHash,
