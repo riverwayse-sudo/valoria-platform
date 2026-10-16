@@ -130,8 +130,7 @@ describe("Assessment integrity contracts", () => {
   test("full assessment submission and attachment require a signed account-bound handoff", () => {
     const source = readApi("submit-assessment.js");
     const link = readApi("link-assessment-to-taster.js");
-    const verifier = readApi("valu-handoff-token.js");
-    const preflight = readApi("verify-assessment-handoff.js");
+    const verifier = fs.readFileSync(path.join(__dirname, "../../lib/valu-handoff-token.js"), "utf8");
     expect(source).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
     expect(source).toContain("taster.user_id !== handoff.sub");
     expect(source).toContain("handoff_token: handoffToken");
@@ -140,8 +139,8 @@ describe("Assessment integrity contracts", () => {
     expect(link).toContain("!user.email_confirmed_at");
     expect(verifier).toContain("timingSafeEqual");
     expect(verifier).toContain("valu-full-assessment");
-    expect(preflight).toContain("verifyValuHandoffToken");
-    expect(preflight).toContain("email_confirmed_at");
+    expect(source).toContain("action === 'verify-handoff'");
+    expect(source).toContain("Confirm your Valoria account email before continuing.");
   });
 
   test("completed full assessment submission is idempotent for the same verified owner and snapshot", () => {
@@ -154,7 +153,7 @@ describe("Assessment integrity contracts", () => {
   test("full assessment UI verifies the signed handoff before showing questions or submitting", () => {
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     expect(component).toContain("readHandoffToken");
-    expect(component).toContain("verify-assessment-handoff");
+    expect(component).toContain("action:'verify-handoff'");
     expect(component).toContain("handoffStatus !== 'ready'");
     expect(component).toContain("handoff_token:handoffToken");
     expect(component).toContain("professional-signup");
@@ -163,7 +162,7 @@ describe("Assessment integrity contracts", () => {
 
   test("full assessment progress writes and reminders require verified account-owned snapshots", () => {
     const source = readApi("assessment-progress.js");
-    const edgeVerifier = readApi("valu-handoff-token-edge.js");
+    const edgeVerifier = fs.readFileSync(path.join(__dirname, "../../lib/valu-handoff-token-edge.js"), "utf8");
     expect(source).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId)");
     expect(source).toContain("resolvedIdentity.user_id !== handoff.sub");
     expect(source).toContain("verified account-owned snapshot required");
