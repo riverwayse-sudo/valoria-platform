@@ -1,4 +1,4 @@
-import { verifyValuHandoffToken } from './valu-handoff-token.js';
+import { verifyValuHandoffToken } from '../lib/valu-handoff-token.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
