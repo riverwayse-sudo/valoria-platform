@@ -78,6 +78,13 @@ Call `private.valu_reconciliation_health()` from a privileged server-side proces
 
 ## Continuous operational monitoring
 
+The private health report is run by the authenticated Vercel cron endpoint `/api/reconciliation-health` daily at 04:00 UTC (05:00 Nigeria time). The endpoint:
+- requires `CRON_SECRET` and uses service-role credentials server-side only;
+- reads aggregate health metrics through a service-role-only RPC wrapper;
+- stores timestamped aggregate snapshots and alert signatures in the private `valu_reconciliation_health_snapshots` table;
+- creates an admin notification when alert conditions appear, change, or clear, rather than duplicating the same notification every day;
+- logs a compact aggregate summary only and never writes participant names, emails, account IDs, or raw evidence into telemetry.
+
 The service-role-only health function now includes operational counters for:
 
 - Durable snapshot progress: in-progress, expired-in-progress, and completed rows.
