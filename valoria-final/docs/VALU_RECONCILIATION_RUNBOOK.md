@@ -138,3 +138,10 @@ The 2026-10-15 baseline above has been superseded by a fresh production query. D
 - After a new full assessment is saved, the handoff must still confirm the canonical assessment-to-taster link, identity audit link, profile metadata, and `professional_journey` refresh. A failed post-save handoff is a monitored partial-completion incident, not a successful end state.
 
 The live POST flow (init → save → reload/load → complete/submit → idempotent retry) remains a release verification item until exercised through an authorized production test path. A GET returning 405 is expected for the POST-only progress API and does not prove the write flow works.
+
+
+## Full-assessment access contract
+
+The full VALU assessment must be opened through an authenticated Valoria account that owns the exact completed taster session and has a confirmed email. The site issues a signed four-hour HMAC handoff bound to the account ID and taster UUID; the token travels in the URL fragment and is sent to assessment APIs only in request bodies. The assessment UI removes the fragment immediately, validates the token before showing questions, and sends it with every canonical submission, attachment, and progress write.
+
+The assessment API verifies the token signature, audience, expiry, taster UUID, saved name/role, account ownership, and confirmed email. Direct legacy URLs without a token stop at an account-linking screen. Assessment progress cannot trust a client-supplied user ID or email; the API resolves both from the verified taster owner and refuses mismatched session/resume tokens. Reminder links return through the authenticated continuation route. Duplicate submissions for the same verified account and taster return the existing canonical score, allowing a fresh signed handoff to retry profile/journey attachment without creating a second score.
