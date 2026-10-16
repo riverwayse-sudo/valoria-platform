@@ -106,7 +106,17 @@ export default async function handler(req, res) {
           console.error("[reconciliation-health] notification insert failed", notifyRes.status);
           adminNotifications = "failed";
         } else {
-          adminNotifications = recovered ? "recovery_sent" : "alert_sent";
+          const ackRes = await supabase("rpc/mark_valu_reconciliation_health_notification_sent", {
+            method: "POST",
+            body: JSON.stringify({ p_snapshot_id: snapshot?.id }),
+          });
+          const ack = ackRes.ok ? await ackRes.json().catch(() => false) : false;
+          if (!ackRes.ok || ack !== true) {
+            console.error("[reconciliation-health] notification acknowledgement failed", ackRes.status);
+            adminNotifications = "inserted_but_ack_pending";
+          } else {
+            adminNotifications = recovered ? "recovery_sent" : "alert_sent";
+          }
         }
       } else {
         adminNotifications = "no_admin_recipients";
@@ -118,7 +128,7 @@ export default async function handler(req, res) {
     else console.log("[reconciliation-health] OK", JSON.stringify({ snapshotId: snapshot?.id, checkedAt: health.generated_at }));
 
     return json(res, 200, {
-      ok: alerts.length === 0,
+      ok: alerts.length === 0 && !["failed", "inserted_but_ack_pending", "no_admin_recipients"].includes(adminNotifications),
       checkedAt: health.generated_at,
       snapshotId: snapshot?.id ?? null,
       alertCount: alerts.length,
