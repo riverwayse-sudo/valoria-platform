@@ -18,6 +18,7 @@ describe("Privileged API security contracts", () => {
     "send-email.js",
     "sweep-unsent-reports.js",
     "system-status.js",
+    "reconciliation-health.js",
   ];
 
   test.each(internalApis)("%s requires CRON_SECRET", (file) => {
@@ -34,6 +35,17 @@ describe("Privileged API security contracts", () => {
     expect(source).toContain("Report service temporarily unavailable");
   });
 
+  test("reconciliation health is cron-authenticated, records aggregate snapshots, and alerts on missing taster links", () => {
+    const source = readApi("reconciliation-health.js");
+    expect(source).toContain("CRON_SECRET");
+    expect(source).toContain("run_valu_reconciliation_health");
+    expect(source).toContain("record_valu_reconciliation_health_snapshot");
+    expect(source).toContain("completed_assessments_missing_taster_id");
+    expect(source).toContain("missing_taster_link_assessments_without_review");
+    expect(source).toContain("platform_notifications");
+    expect(source).toContain("no-store");
+  });
+
   test.each(internalApis)("%s does not expose raw provider/database errors", (file) => {
     const source = readApi(file);
     expect(source).not.toMatch(/return\s+json\(\{\s*error:\s*[^}]*\.message/);
@@ -47,6 +59,7 @@ describe("Privileged API security contracts", () => {
       "save-report.js",
       "finalize-report.js",
       "system-status.js",
+      "reconciliation-health.js",
     ];
     sensitive.forEach((file) => {
       const source = readApi(file);
