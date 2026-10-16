@@ -1,5 +1,6 @@
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { verifyValuHandoffToken } from './valu-handoff-token.js';
 
 function json(res, status, data) {
   res.status(status).setHeader('Cache-Control', 'no-store');
@@ -10,10 +11,12 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json(res, 500, { error: 'Server misconfigured.' });
 
-  const { taster_id: tasterId, identity_hash: identityHash } = req.body || {};
+  const { taster_id: tasterId, identity_hash: identityHash, handoff_token: handoffToken } = req.body || {};
   if (typeof tasterId !== 'string' || !tasterId || typeof identityHash !== 'string' || !/^fp_[a-z0-9]{1,128}$/i.test(identityHash)) {
     return json(res, 400, { error: 'Valid taster_id and identity_hash are required.' });
   }
+  const handoff = verifyValuHandoffToken(handoffToken, tasterId);
+  if (!handoff) return json(res, 401, { error: 'Your secure VALU handoff is missing or expired. Reopen the assessment from your Valoria account.' });
 
   const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
   const tasterParams = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role', limit: '1' });
@@ -21,6 +24,7 @@ export default async function handler(req, res) {
   if (!tasterRes.ok) return json(res, 502, { error: 'Could not verify teaser result.' });
   const taster = (await tasterRes.json())?.[0];
   if (!taster?.user_id) return json(res, 409, { error: 'The teaser is not linked to a Valoria account yet.' });
+  if (taster.user_id !== handoff.sub) return json(res, 403, { error: 'This secure assessment handoff does not belong to the linked account.' });
 
   const assessmentParams = new URLSearchParams({ taster_id: `eq.${tasterId}`, select: 'id,user_id,taster_id,email,name,role,total_score,completed_at,identity_hash', limit: '1' });
   const assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${assessmentParams}`, { headers });
