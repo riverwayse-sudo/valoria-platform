@@ -214,8 +214,9 @@ export default function FullVALUAssessment() {
   async function choose(optionIndex) {
     if (saving || result) return;
     const elapsed = Math.max(250, Date.now() - startedAt);
+    const alreadyAnswered = Object.prototype.hasOwnProperty.call(answers, current);
     const nextAnswers = { ...answers, [current]: optionIndex };
-    const nextTimings = [...timings, elapsed];
+    const nextTimings = alreadyAnswered ? timings : [...timings, elapsed];
     setAnswers(nextAnswers);
     setTimings(nextTimings);
 
@@ -227,10 +228,16 @@ export default function FullVALUAssessment() {
       return;
     }
 
+    setError('');
+    await persistCheckpoint(nextAnswers, nextTimings, QUESTIONS.length - 1);
+  }
+
+  async function submitAssessment() {
+    if (saving || result || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1)) return;
     setSaving(true);
     setError('');
     try {
-      await persistCheckpoint(nextAnswers, nextTimings, QUESTIONS.length);
+      await persistCheckpoint(answers, timings, QUESTIONS.length);
       const scoreRes = await fetch(API_BASE + '/api/submit-assessment', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -238,8 +245,8 @@ export default function FullVALUAssessment() {
           name:identity.name,
           role:identity.role,
           experience:identity.experience,
-          answers:nextAnswers,
-          timings:nextTimings,
+          answers,
+          timings,
           shuffleMap:{},
           taster_id:identity.tasterId,
         }),
@@ -258,8 +265,8 @@ export default function FullVALUAssessment() {
         experience:identity.experience,
         current_question:QUESTIONS.length,
         total_questions:QUESTIONS.length,
-        answers:nextAnswers,
-        timings:nextTimings,
+        answers,
+        timings,
         session_seed:0,
       }).catch(() => {});
 
@@ -327,6 +334,7 @@ export default function FullVALUAssessment() {
         {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
       </div>
       <div style={S.footer}><span>{Object.keys(answers).length} answered</span><span>Progress is saved automatically.</span></div>
+      {current === QUESTIONS.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1)} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':'SUBMIT VALU ASSESSMENT →'}</button>}
       {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
       {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
     </div>
@@ -336,7 +344,7 @@ export default function FullVALUAssessment() {
 function Shell({children}) { return <main style={S.page}><div style={S.shell}>{children}</div></main> }
 
 const S = {
-  page:{minHeight:'100vh',height:'100vh',background:T.dark,color:T.parchment,fontFamily:"'Raleway',sans-serif",padding:'22px 20px',overflow:'hidden',display:'flex',alignItems:'center'},
+  page:{minHeight:'100dvh',height:'auto',background:T.dark,color:T.parchment,fontFamily:"'Raleway',sans-serif",padding:'22px 20px 32px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'flex-start'},
   shell:{width:'100%',maxWidth:760,margin:'0 auto'},
   top:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:20},
   eyebrow:{fontSize:10,fontWeight:700,letterSpacing:'.18em',color:'rgba(201,168,76,.75)'},
