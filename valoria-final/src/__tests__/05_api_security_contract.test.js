@@ -160,6 +160,24 @@ describe("Assessment integrity contracts", () => {
     expect(component).toContain("sessionStorage.removeItem");
   });
 
+  test("full assessment progress writes and reminders require verified account-owned snapshots", () => {
+    const source = readApi("assessment-progress.js");
+    const edgeVerifier = readApi("valu-handoff-token-edge.js");
+    expect(source).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId)");
+    expect(source).toContain("resolvedIdentity.user_id !== handoff.sub");
+    expect(source).toContain("verified account-owned snapshot required");
+    expect(source).toContain("snapshot/account identity did not verify");
+    expect(source).not.toContain("const resolvedUserId = userId ||");
+    expect(edgeVerifier).toContain("crypto.subtle.verify");
+  });
+
+  test("progress resume links return through the signed assessment continuation", () => {
+    const source = readApi("assessment-progress.js");
+    expect(source).toContain("https://valoriainstitute.com/journey/continue?stage=assess");
+    expect(source).not.toContain("https://valoriainstitute.com/valu/assessment/?full=1");
+    expect(source).toContain("handoff_token:handoffToken");
+  });
+
   test("submission cannot overwrite an existing identity assessment", () => {
     const source = readApi("submit-assessment.js");
     expect(source).toContain("computeFingerprint");
