@@ -5,7 +5,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
-const APP_URL = "https://valoriainstitute.com/valu/assessment/?full=1";
+const APP_URL = "https://valoriainstitute.com/journey/continue?stage=assess";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -72,7 +72,7 @@ async function getProgressByResumeToken(token) {
 async function sendReminder(row, reminderNumber) {
   if (!RESEND_API_KEY || !validEmail(row.email)) return { sent: false, reason: "email unavailable" };
 
-  const resumeUrl = `${APP_URL}&resume=${encodeURIComponent(row.resume_token)}`;
+  const resumeUrl = APP_URL + '&taster_id=' + encodeURIComponent(row.taster_id || '') + '&resume=' + encodeURIComponent(row.resume_token);
   const remaining = Math.max(0, row.total_questions - row.current_question);
   const subject = reminderNumber === 1
     ? "Your VALU assessment is waiting for you"
@@ -117,7 +117,7 @@ async function createNotification(row) {
     title: "Your VALU assessment is waiting",
     body,
     action_label: "Continue assessment",
-    action_url: `/valu/assessment/?full=1&resume=${row.resume_token}`,
+    action_url: '/journey/continue?stage=assess&taster_id=' + encodeURIComponent(row.taster_id || '') + '&resume=' + encodeURIComponent(row.resume_token),
   };
   await supabase("notifications?on_conflict=user_id,type,title", {
     method: "POST",
