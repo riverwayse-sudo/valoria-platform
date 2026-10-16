@@ -1,4 +1,4 @@
-import { verifyValuHandoffTokenEdge } from "./valu-handoff-token-edge.js";
+import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
 
 export const config = { runtime: "edge" };
 
