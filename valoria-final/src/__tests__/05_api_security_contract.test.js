@@ -150,6 +150,16 @@ describe("Assessment integrity contracts", () => {
     expect(source).toContain("existing.user_id !== resolvedUserId");
   });
 
+  test("full assessment UI verifies the signed handoff before showing questions or submitting", () => {
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    expect(component).toContain("readHandoffToken");
+    expect(component).toContain("verify-assessment-handoff");
+    expect(component).toContain("handoffStatus !== 'ready'");
+    expect(component).toContain("handoff_token:handoffToken");
+    expect(component).toContain("professional-signup");
+    expect(component).toContain("sessionStorage.removeItem");
+  });
+
   test("submission cannot overwrite an existing identity assessment", () => {
     const source = readApi("submit-assessment.js");
     expect(source).toContain("computeFingerprint");
