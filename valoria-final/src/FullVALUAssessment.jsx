@@ -6,6 +6,15 @@ import { QUESTIONS } from './questions.js';
 const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
 const CLUSTER_NAMES = { P:'Presence', R:'Relationships', I:'Intelligence', M:'Mastery', E:'Enterprise' };
 
+function readHandoffToken() {
+  try {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    return params.get('handoff_token') || '';
+  } catch {
+    return '';
+  }
+}
+
 function parseQuery() {
   const p = new URLSearchParams(window.location.search);
   return {
@@ -92,6 +101,9 @@ export default function FullVALUAssessment() {
   const [resumeLoading,setResumeLoading] = useState(Boolean(queryIdentity.resume));
   const [resumeError,setResumeError] = useState('');
   const [resumePopup,setResumePopup] = useState(false);
+  const [handoffToken,setHandoffToken] = useState('');
+  const [handoffStatus,setHandoffStatus] = useState('checking');
+  const [handoffError,setHandoffError] = useState('');
   const mountedRef = useRef(true);
 
   const resumeKey = useMemo(
@@ -104,6 +116,61 @@ export default function FullVALUAssessment() {
   const canUse = Boolean(identity.tasterId && identity.name && identity.role && identity.experience);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
+
+  useEffect(() => {
+    if (!identity.tasterId || !identity.name || !identity.role) {
+      setHandoffStatus('account_required');
+      return;
+    }
+
+    const storageKey = `valu-handoff-token:${identity.tasterId}`;
+    let fromHash = '';
+    try {
+      fromHash = readHandoffToken();
+      if (fromHash) {
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        window.sessionStorage.setItem(storageKey, fromHash);
+      }
+    } catch {}
+    let token = fromHash;
+    if (!token) {
+      try { token = window.sessionStorage.getItem(storageKey) || ''; } catch {}
+    }
+    if (!token) {
+      setHandoffToken('');
+      setHandoffError('');
+      setHandoffStatus('account_required');
+      return;
+    }
+
+    setHandoffToken(token);
+    setHandoffStatus('checking');
+    setHandoffError('');
+    let cancelled = false;
+    fetch(API_BASE + '/api/submit-assessment', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        action:'verify-handoff',
+        handoff_token:token,
+        taster_id:identity.tasterId,
+        name:identity.name,
+        role:identity.role,
+      }),
+      cache:'no-store',
+    }).then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || 'The secure assessment link could not be verified.');
+      if (!cancelled) setHandoffStatus('ready');
+    }).catch(error => {
+      if (cancelled) return;
+      try { window.sessionStorage.removeItem(storageKey); } catch {}
+      setHandoffToken('');
+      setHandoffError(error?.message || 'This secure link has expired. Reopen the assessment from your Valoria account.');
+      setHandoffStatus('account_required');
+    });
+    return () => { cancelled = true; };
+  }, [identity.tasterId, identity.name, identity.role]);
 
   useEffect(() => {
     if (!queryIdentity.resume) return;
@@ -152,7 +219,7 @@ export default function FullVALUAssessment() {
   }, [resumeKey, canUse, queryIdentity.resume]);
 
   useEffect(() => {
-    if (!canUse || !sessionId || result) return;
+    if (!canUse || !sessionId || result || handoffStatus !== 'ready') return;
     try {
       window.localStorage.setItem(resumeKey, JSON.stringify({
         sessionId,
@@ -164,13 +231,14 @@ export default function FullVALUAssessment() {
         completed:false,
       }));
     } catch {}
-  }, [resumeKey, canUse, sessionId, resumeToken, current, answers, timings, result]);
+  }, [resumeKey, canUse, sessionId, resumeToken, current, answers, timings, result, handoffStatus]);
 
   useEffect(() => {
-    if (!canUse || !sessionId || result || Object.keys(answers).length === 0) return;
+    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || Object.keys(answers).length === 0) return;
     const timer = window.setTimeout(() => {
       saveProgress({
         action:'save',
+        handoff_token:handoffToken,
         session_id:sessionId,
         resume_token:resumeToken || undefined,
         taster_id:identity.tasterId,
@@ -188,13 +256,14 @@ export default function FullVALUAssessment() {
       }).catch(() => {});
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken]);
+  }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
 
   async function persistCheckpoint(nextAnswers, nextTimings, nextCurrent) {
-    if (!sessionId) return;
+    if (!sessionId || handoffStatus !== 'ready') return;
     try {
       const data = await saveProgress({
         action:'save',
+        handoff_token:handoffToken,
         session_id:sessionId,
         resume_token:resumeToken || undefined,
         taster_id:identity.tasterId,
@@ -208,11 +277,18 @@ export default function FullVALUAssessment() {
         session_seed:0,
       });
       if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
-    } catch {}
+    } catch (err) {
+      if (String(err?.message || '').toLowerCase().includes('handoff')) {
+        try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
+        setHandoffToken('');
+        setHandoffStatus('account_required');
+        setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
+      }
+    }
   }
 
   async function choose(optionIndex) {
-    if (saving || result) return;
+    if (saving || result || handoffStatus !== 'ready') return;
     const elapsed = Math.max(250, Date.now() - startedAt);
     const alreadyAnswered = Object.prototype.hasOwnProperty.call(answers, current);
     const nextAnswers = { ...answers, [current]: optionIndex };
@@ -233,7 +309,7 @@ export default function FullVALUAssessment() {
   }
 
   async function submitAssessment() {
-    if (saving || result || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1)) return;
+    if (saving || result || handoffStatus !== 'ready' || !handoffToken || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1)) return;
     setSaving(true);
     setError('');
     try {
@@ -249,6 +325,7 @@ export default function FullVALUAssessment() {
           timings,
           shuffleMap:{},
           taster_id:identity.tasterId,
+          handoff_token:handoffToken,
         }),
       });
       const scoreData = await scoreRes.json().catch(() => ({}));
@@ -256,6 +333,7 @@ export default function FullVALUAssessment() {
 
       await saveProgress({
         action:'complete',
+        handoff_token:handoffToken,
         session_id:sessionId,
         resume_token:resumeToken || undefined,
         taster_id:identity.tasterId,
@@ -273,7 +351,7 @@ export default function FullVALUAssessment() {
       const linkRes = await fetch(API_BASE + '/api/link-assessment-to-taster', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ taster_id:identity.tasterId, identity_hash:scoreData.identity_hash }),
+        body:JSON.stringify({ taster_id:identity.tasterId, identity_hash:scoreData.identity_hash, handoff_token:handoffToken }),
       });
       const linkData = await linkRes.json().catch(() => ({}));
       if (!linkRes.ok) throw new Error(linkData.error || 'The score was saved but could not be attached to your profile.');
@@ -294,8 +372,15 @@ export default function FullVALUAssessment() {
       }
 
       try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}
+      try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
       setResult(scoreData.results);
     } catch (err) {
+      if (String(err?.message || '').toLowerCase().includes('handoff')) {
+        try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
+        setHandoffToken('');
+        setHandoffStatus('account_required');
+        setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
+      }
       setError(err?.message || 'Something went wrong. Your saved progress is intact.');
     } finally {
       setSaving(false);
@@ -307,6 +392,23 @@ export default function FullVALUAssessment() {
   if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
 
   if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
+
+  if (handoffStatus === 'checking') return <Shell><div style={S.eyebrow}>SECURE VALU JOURNEY</div><h1 style={S.h1}>Verifying your account…</h1><p style={S.p}>We are confirming that this assessment belongs to your Valoria account before you continue.</p></Shell>;
+
+  if (handoffStatus !== 'ready') {
+    const signupParams = new URLSearchParams({ taster_id:identity.tasterId, name:identity.name, role:identity.role, experience:identity.experience });
+    const signupUrl = `https://valoriainstitute.com/professional-signup/?${signupParams.toString()}`;
+    const loginParams = new URLSearchParams({ pending_taster_id:identity.tasterId, returnTo:'/dashboard' });
+    return <Shell>
+      <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
+      <h1 style={S.h1}>Link your snapshot before continuing.</h1>
+      <p style={S.p}>To protect your official VALU Index, sign in to a confirmed Valoria account and link this completed snapshot before taking the full assessment. Your snapshot and saved progress are preserved.</p>
+      {handoffError && <div style={S.error}>{handoffError}</div>}
+      <a href={signupUrl} style={S.button}>CREATE MY VALORIA ACCOUNT →</a>
+      <a href={`https://valoriainstitute.com/login?${loginParams.toString()}`} style={S.secondary}>I ALREADY HAVE AN ACCOUNT · SIGN IN</a>
+      <a href="https://valoriainstitute.com/valu/assessment/" style={S.secondary}>RETURN TO MY VALU JOURNEY</a>
+    </Shell>;
+  }
 
   if (result) {
     const score = result.valuIndex ?? result.total_score ?? result.score;

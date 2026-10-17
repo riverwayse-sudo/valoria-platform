@@ -181,7 +181,7 @@ export default function VALUIndexV4GateNext(){
   <div style={S.highlight}><div style={S.eyebrow}>YOUR STRONGEST SIGNAL</div><div style={S.signal}>{result?.strongest?.name}</div><p style={S.p}>The full VALU assessment goes deeper across the PRIME framework and produces the authoritative score.</p></div>
   <div style={S.next}><div style={S.eyebrow}>NEXT STEP</div><h2 style={S.nextTitle}>Confirm your email, then continue.</h2><p style={S.p}>We have saved your snapshot. Confirm the email used for your account, sign in, and Valoria will attach this result to your professional journey.</p>
    <a href={`https://valoriainstitute.com/login?pending_taster_id=${encodeURIComponent(tasterId)}`} style={S.primaryLink}>CONFIRM & SIGN IN →</a>
-   <a href={`/valu/assessment?full=1&taster_id=${encodeURIComponent(tasterId)}`} style={S.secondary}>I'M ALREADY SIGNED IN — CONTINUE</a>
+   <a href={`https://valoriainstitute.com/journey/continue?stage=assess&taster_id=${encodeURIComponent(tasterId)}`} style={S.secondary}>I'M ALREADY SIGNED IN — CONTINUE</a>
   </div>
   <p style={S.note}>Signup or the snapshot does not grant marketplace listing. Listing remains governed by the full assessment, profile, capability and eligibility checks.</p>
  </Shell>;

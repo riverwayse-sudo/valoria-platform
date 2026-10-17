@@ -127,6 +127,59 @@ describe("Assessment integrity contracts", () => {
     expect(source).not.toContain("taster_id: tasterId || null");
   });
 
+  test("full assessment submission and attachment require a signed account-bound handoff", () => {
+    const source = readApi("submit-assessment.js");
+    const link = readApi("link-assessment-to-taster.js");
+    const verifier = fs.readFileSync(path.join(__dirname, "../../lib/valu-handoff-token.js"), "utf8");
+    expect(source).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
+    expect(source).toContain("taster.user_id !== handoff.sub");
+    expect(source).toContain("handoff_token: handoffToken");
+    expect(link).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
+    expect(link).toContain("taster.user_id !== handoff.sub");
+    expect(link).toContain("!user.email_confirmed_at");
+    expect(verifier).toContain("timingSafeEqual");
+    expect(verifier).toContain("valu-full-assessment");
+    expect(source).toContain("action === 'verify-handoff'");
+    expect(source).toContain("Confirm your Valoria account email before continuing.");
+  });
+
+  test("completed full assessment submission is idempotent for the same verified owner and snapshot", () => {
+    const source = readApi("submit-assessment.js");
+    expect(source).toContain("findExistingAssessment(tasterId, fingerprint)");
+    expect(source).toContain("alreadyCompleted: true");
+    expect(source).toContain("existing.user_id !== resolvedUserId");
+  });
+
+  test("full assessment UI verifies the signed handoff before showing questions or submitting", () => {
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    expect(component).toContain("readHandoffToken");
+    expect(component).toContain("action:'verify-handoff'");
+    expect(component).toContain("handoffStatus !== 'ready'");
+    expect(component).toContain("handoff_token:handoffToken");
+    expect(component).toContain("professional-signup");
+    expect(component).toContain("sessionStorage.removeItem");
+  });
+
+  test("full assessment progress writes and reminders require verified account-owned snapshots", () => {
+    const source = readApi("assessment-progress.js");
+    const edgeVerifier = fs.readFileSync(path.join(__dirname, "../../lib/valu-handoff-token-edge.js"), "utf8");
+    expect(source).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId)");
+    expect(source).toContain("resolvedIdentity.user_id !== handoff.sub");
+    expect(source).toContain("verified account-owned snapshot required");
+    expect(source).toContain("snapshot/account identity did not verify");
+    expect(source).toContain("Could not verify the saved progress session");
+    expect(source).not.toContain("getProgressBySession(sessionId).catch(() => null)");
+    expect(source).not.toContain("const resolvedUserId = userId ||");
+    expect(edgeVerifier).toContain("crypto.subtle.verify");
+  });
+
+  test("progress resume links return through the signed assessment continuation", () => {
+    const source = readApi("assessment-progress.js");
+    expect(source).toContain("https://valoriainstitute.com/journey/continue?stage=assess");
+    expect(source).not.toContain("https://valoriainstitute.com/valu/assessment/?full=1");
+    expect(source).toContain("handoff_token: handoffToken");
+  });
+
   test("submission cannot overwrite an existing identity assessment", () => {
     const source = readApi("submit-assessment.js");
     expect(source).toContain("computeFingerprint");

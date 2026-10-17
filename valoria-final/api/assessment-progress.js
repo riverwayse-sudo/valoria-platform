@@ -1,3 +1,5 @@
+import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
+
 export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -5,7 +7,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
-const APP_URL = "https://valoriainstitute.com/valu/assessment/?full=1";
+const APP_URL = "https://valoriainstitute.com/journey/continue?stage=assess";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -22,6 +24,8 @@ function headers() {
   };
 }
 
+function norm(value) { return String(value || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
 function validEmail(email) {
   return typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
@@ -35,22 +39,25 @@ async function supabase(path, options = {}) {
 }
 
 async function resolveTasterIdentity(tasterId) {
-  if (!tasterId) return {};
-  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: "user_id", limit: "1" });
+  if (!tasterId) return { error: "A completed snapshot reference is required." };
+  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: "id,user_id,name,role,completed_at", limit: "1" });
   const tasterRes = await supabase(`taster_sessions?${params}`);
-  if (!tasterRes.ok) return {};
+  if (!tasterRes.ok) return { error: "Could not verify the VALU snapshot." };
   const taster = (await tasterRes.json())?.[0];
-  if (!taster?.user_id) return {};
+  if (!taster) return { error: "VALU snapshot not found." };
+  if (!taster.completed_at) return { error: "Complete the VALU snapshot before saving full-assessment progress." };
+  if (!taster.user_id) return { error: "Link the VALU snapshot to a confirmed Valoria account before saving full-assessment progress." };
   const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${taster.user_id}`, { headers: headers(), cache: "no-store" });
-  if (!userRes.ok) return { user_id: taster.user_id };
+  if (!userRes.ok) return { error: "Could not verify the Valoria account." };
   const user = await userRes.json();
-  return { user_id: taster.user_id, email: user.email || null };
+  if (!user.email_confirmed_at) return { error: "Confirm your Valoria account email before saving full-assessment progress." };
+  return { user_id: taster.user_id, email: user.email || null, taster };
 }
 
 async function getProgressBySession(sessionId) {
   const params = new URLSearchParams({
     session_id: `eq.${sessionId}`,
-    select: "id,session_id,resume_token,taster_id,user_id,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
+    select: "id,session_id,resume_token,taster_id,user_id,identity_hash,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
     limit: "1",
   });
   const res = await supabase(`valu_assessment_progress?${params}`);
@@ -72,7 +79,7 @@ async function getProgressByResumeToken(token) {
 async function sendReminder(row, reminderNumber) {
   if (!RESEND_API_KEY || !validEmail(row.email)) return { sent: false, reason: "email unavailable" };
 
-  const resumeUrl = `${APP_URL}&resume=${encodeURIComponent(row.resume_token)}`;
+  const resumeUrl = APP_URL + '&taster_id=' + encodeURIComponent(row.taster_id || '') + '&resume=' + encodeURIComponent(row.resume_token);
   const remaining = Math.max(0, row.total_questions - row.current_question);
   const subject = reminderNumber === 1
     ? "Your VALU assessment is waiting for you"
@@ -117,7 +124,7 @@ async function createNotification(row) {
     title: "Your VALU assessment is waiting",
     body,
     action_label: "Continue assessment",
-    action_url: `/valu/assessment/?full=1&resume=${row.resume_token}`,
+    action_url: '/journey/continue?stage=assess&taster_id=' + encodeURIComponent(row.taster_id || '') + '&resume=' + encodeURIComponent(row.resume_token),
   };
   await supabase("notifications?on_conflict=user_id,type,title", {
     method: "POST",
@@ -143,7 +150,20 @@ async function runReminderSweep(req) {
     else if (ageHours >= 24 && (row.reminder_count || 0) < 1) reminderNumber = 1;
 
     if (reminderNumber) {
-      const send = await sendReminder(row, reminderNumber);
+      if (!row.taster_id || !row.user_id) {
+        results.push({ id: row.id, reminderNumber, sent: false, skipped: "verified account-owned snapshot required" });
+        continue;
+      }
+      const identity = await resolveTasterIdentity(row.taster_id);
+      if (identity.error || identity.user_id !== row.user_id
+        || !validEmail(identity.email)
+        || identity.email.trim().toLowerCase() !== String(row.email || "").trim().toLowerCase()
+        || String(identity.taster?.name || "").trim().toLowerCase() !== String(row.name || "").trim().toLowerCase()
+        || String(identity.taster?.role || "").trim().toLowerCase() !== String(row.role || "").trim().toLowerCase()) {
+        results.push({ id: row.id, reminderNumber, sent: false, skipped: "snapshot/account identity did not verify" });
+        continue;
+      }
+      const send = await sendReminder({ ...row, email: identity.email }, reminderNumber);
       if (send.sent) {
         const patch = await supabase(`valu_assessment_progress?id=eq.${row.id}`, {
           method: "PATCH",
@@ -199,13 +219,13 @@ export default async function handler(req) {
     identity_hash: identityHash,
     name,
     role,
-    email,
+    handoff_token: handoffToken,
+    resume_token: resumeToken,
     current_question: currentQuestion,
     total_questions: totalQuestions,
     answers,
     timings,
     session_seed: sessionSeed,
-    user_id: userId,
   } = body;
 
   if (!sessionId || !/^[0-9a-f-]{36}$/i.test(sessionId) || !name || !role || !Number.isInteger(currentQuestion) || !Number.isInteger(totalQuestions)) {
@@ -215,11 +235,39 @@ export default async function handler(req) {
   if (currentQuestion < 0 || currentQuestion > totalQuestions || totalQuestions < 1 || totalQuestions > 100) return json({ error: "Invalid assessment position." }, 400);
   if (answers && typeof answers !== "object") return json({ error: "Invalid answers." }, 400);
   if (timings && !Array.isArray(timings)) return json({ error: "Invalid timings." }, 400);
+  if (typeof tasterId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
+    return json({ error: "A valid completed VALU snapshot is required." }, 400);
+  }
+  if (identityHash !== `valu_progress_${tasterId}`) return json({ error: "Assessment identity does not match the verified snapshot." }, 403);
+  const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId);
+  if (!handoff) return json({ error: "The secure VALU handoff is missing or expired. Reopen the assessment from your Valoria account." }, 401);
 
-  const existing = await getProgressBySession(sessionId).catch(() => null);
-  const resolvedIdentity = (!email || !userId) && tasterId ? await resolveTasterIdentity(tasterId) : {};
-  const resolvedUserId = userId || resolvedIdentity.user_id || null;
-  const resolvedEmail = validEmail(email) ? email.trim().toLowerCase() : (validEmail(resolvedIdentity.email) ? resolvedIdentity.email.trim().toLowerCase() : null);
+  const resolvedIdentity = await resolveTasterIdentity(tasterId);
+  if (resolvedIdentity.error) return json({ error: resolvedIdentity.error }, 409);
+  if (resolvedIdentity.user_id !== handoff.sub) return json({ error: "This secure handoff does not match the snapshot owner." }, 403);
+  if (String(resolvedIdentity.taster.name || "").trim().toLowerCase() !== String(name || "").trim().toLowerCase()
+    || String(resolvedIdentity.taster.role || "").trim().toLowerCase() !== String(role || "").trim().toLowerCase()) {
+    return json({ error: "Assessment identity does not match the saved snapshot." }, 403);
+  }
+  const resolvedUserId = resolvedIdentity.user_id;
+  const resolvedEmail = validEmail(resolvedIdentity.email) ? resolvedIdentity.email.trim().toLowerCase() : null;
+  let existing;
+  try {
+    existing = await getProgressBySession(sessionId);
+  } catch {
+    return json({ error: "Could not verify the saved progress session. Retry without changing your answers." }, 502);
+  }
+  if (existing) {
+    if (!resumeToken
+      || existing.resume_token !== resumeToken
+      || (existing.taster_id && existing.taster_id !== tasterId)
+      || (existing.user_id && existing.user_id !== resolvedUserId)
+      || existing.identity_hash !== identityHash
+      || norm(existing.name) !== norm(resolvedIdentity.taster.name)
+      || norm(existing.role) !== norm(resolvedIdentity.taster.role)) {
+      return json({ error: "This saved progress session does not match the verified VALU handoff." }, 403);
+    }
+  }
   const payload = {
     session_id: sessionId,
     identity_hash: identityHash,

@@ -6,6 +6,7 @@
 import { computeResults } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
 import { computeFingerprint } from '../src/lockEngine.js';
+import { verifyValuHandoffToken } from '../lib/valu-handoff-token.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -57,6 +58,55 @@ async function consumeRateLimit(ip) {
   return Array.isArray(result) ? result[0] : result;
 }
 
+async function findExistingAssessment(tasterId, fingerprint) {
+  const params = new URLSearchParams({
+    taster_id: `eq.${tasterId}`,
+    identity_hash: `eq.${fingerprint}`,
+    select: 'id,user_id,taster_id,total_score,designation,cluster_scores,skill_scores,completed_at',
+    limit: '1',
+  });
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  });
+  if (!response.ok) throw new Error('Could not verify an existing assessment.');
+  return (await response.json())?.[0] || null;
+}
+function existingResults(assessment) {
+  return {
+    valuIndex: assessment.total_score,
+    desig: { name: assessment.designation || '' },
+    clusterScores: assessment.cluster_scores || {},
+    skillScores: assessment.skill_scores || {},
+  };
+}
+async function verifyHandoffRequest(body, res) {
+  const tasterId = body?.taster_id;
+  if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
+    return json(res, 400, { ok: false, error: 'A valid snapshot reference is required.' });
+  }
+  const handoff = verifyValuHandoffToken(body?.handoff_token, tasterId);
+  if (!handoff) return json(res, 401, { ok: false, error: 'The secure assessment handoff is missing or expired.' });
+
+  const headers = { apikey: SERVICE_ROLE_KEY, Authorization: \`Bearer \${SERVICE_ROLE_KEY}\` };
+  const params = new URLSearchParams({ id: \`eq.\${tasterId}\`, select: 'id,user_id,name,role,completed_at', limit: '1' });
+  const tasterRes = await fetch(\`\${SUPABASE_URL}/rest/v1/taster_sessions?\${params}\`, { headers });
+  if (!tasterRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the VALU snapshot.' });
+  const taster = (await tasterRes.json())?.[0];
+  if (!taster) return json(res, 404, { ok: false, error: 'VALU snapshot not found.' });
+  if (!taster.completed_at) return json(res, 409, { ok: false, error: 'Complete your VALU snapshot first.' });
+  if (taster.user_id !== handoff.sub) return json(res, 403, { ok: false, error: 'This handoff does not match the snapshot owner.' });
+  const normalise = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (normalise(taster.name) !== normalise(body?.name) || normalise(taster.role) !== normalise(body?.role)) {
+    return json(res, 403, { ok: false, error: 'The assessment identity does not match the saved snapshot.' });
+  }
+
+  const userRes = await fetch(\`\${SUPABASE_URL}/auth/v1/admin/users/\${handoff.sub}\`, { headers });
+  if (!userRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the Valoria account.' });
+  const user = await userRes.json();
+  if (!user.email_confirmed_at) return json(res, 403, { ok: false, error: 'Confirm your Valoria account email before continuing.' });
+  return json(res, 200, { ok: true, expires_at: handoff.exp });
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SERVICE_ROLE_KEY || !SUPABASE_URL) {
@@ -77,10 +127,14 @@ export default async function handler(req, res) {
     return json(res, 503, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
   }
 
-  const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId } = req.body || {};
+  const body = req.body || {};
+  if (body.action === 'verify-handoff') return verifyHandoffRequest(body, res);
+  const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId, handoff_token: handoffToken } = body;
   if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
     return json(res, 400, { error: 'Open the full VALU assessment from your completed VALU snapshot. A valid snapshot reference is required.' });
   }
+  const handoff = verifyValuHandoffToken(handoffToken, tasterId);
+  if (!handoff) return json(res, 401, { error: 'Your secure VALU handoff is missing or expired. Return to your Valoria account and reopen the assessment.' });
   if (typeof name !== 'string' || !name.trim() || name.trim().length > MAX_NAME_LENGTH) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   if (typeof role !== 'string' || !role.trim() || role.trim().length > MAX_ROLE_LENGTH) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   if (!EXPERIENCE_BANDS.has(experience)) return json(res, 400, { error: 'Select a valid experience band.' });
@@ -110,6 +164,7 @@ export default async function handler(req, res) {
   if (!taster) return json(res, 404, { error: 'VALU snapshot not found. Return to the VALU journey and complete your snapshot first.' });
   if (!taster.completed_at) return json(res, 409, { error: 'Complete your VALU snapshot before starting the full assessment.' });
   if (!taster.user_id) return json(res, 409, { error: 'Sign in to your Valoria account and link your VALU snapshot before starting the full assessment.' });
+  if (taster.user_id !== handoff.sub) return json(res, 403, { error: 'This secure assessment handoff does not belong to the linked account.' });
   if (String(taster.name || '').trim().toLowerCase() !== name.trim().toLowerCase() ||
       String(taster.role || '').trim().toLowerCase() !== role.trim().toLowerCase()) {
     return json(res, 403, { error: 'Assessment identity does not match the VALU snapshot.' });
@@ -133,6 +188,19 @@ export default async function handler(req, res) {
   };
 
   try {
+    const existing = await findExistingAssessment(tasterId, fingerprint);
+    if (existing) {
+      if (existing.user_id !== resolvedUserId || existing.taster_id !== tasterId || !existing.completed_at) {
+        return json(res, 409, { error: 'An assessment record exists for this identity but its ownership/link state needs manual review.' });
+      }
+      return json(res, 200, { identity_hash: fingerprint, results: existingResults(existing), alreadyCompleted: true });
+    }
+  } catch (err) {
+    console.error('submit-assessment: existing assessment check failed', err?.message || err);
+    return json(res, 502, { error: 'Could not verify whether this assessment was already submitted.' });
+  }
+
+  try {
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: 'return=minimal' },
@@ -141,7 +209,17 @@ export default async function handler(req, res) {
     if (!insertRes.ok) {
       const err = await insertRes.text();
       console.error('submit-assessment: insert failed', insertRes.status, err);
-      if (insertRes.status === 409) return json(res, 409, { error: 'An assessment already exists for this identity.' });
+      if (insertRes.status === 409) {
+        try {
+          const existing = await findExistingAssessment(tasterId, fingerprint);
+          if (existing && existing.user_id === resolvedUserId && existing.taster_id === tasterId && existing.completed_at) {
+            return json(res, 200, { identity_hash: fingerprint, results: existingResults(existing), alreadyCompleted: true });
+          }
+        } catch (lookupError) {
+          console.error('submit-assessment: duplicate recovery lookup failed', lookupError?.message || lookupError);
+        }
+        return json(res, 409, { error: 'An assessment already exists for this identity but could not be safely resumed. Contact Valoria support.' });
+      }
       return json(res, 502, { error: 'Could not save your result. Please try again.' });
     }
   } catch (err) {
