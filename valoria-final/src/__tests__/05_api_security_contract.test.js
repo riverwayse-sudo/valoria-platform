@@ -195,4 +195,15 @@ describe("Assessment integrity contracts", () => {
     expect(source).toContain("MAX_SHUFFLE_KEYS");
     expect(source).toContain("Number.isFinite");
   });
+
+  test("reconciliation health closes only persisted verified links and separately flags unreviewed taster links", () => {
+    const migration = fs.readFileSync(path.join(__dirname, "../../supabase/migrations/20261017184500_reconciliation_health_applied_review_state.sql"), "utf8");
+    expect(migration).toContain("identity_review_queue_applied");
+    expect(migration).toContain("missing_taster_link_assessments_without_verified_taster_review");
+    expect(migration).toContain("candidate_record_type = 'taster'");
+    expect(migration).toContain("a.taster_id = t.id");
+    expect(migration).toContain("a.user_id = t.user_id");
+    expect(migration).toContain("decision = 'resolved_no_link'");
+  });
+
 });
