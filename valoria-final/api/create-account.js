@@ -73,7 +73,7 @@ export default async function handler(req) {
   const emailLimit = await checkRateLimit(req, { namespace: "account-create-email", limit: 3, windowSeconds: 3600, subject: normalizedEmail });
   if (!emailLimit.allowed) return emailLimit.response;
   if (!password || typeof password !== "string" || password.length < 8 || password.length > 128) return json({ error: "Password must be 8–128 characters." }, 400);
-  if (identity_hash !== undefined && identity_hash !== null && (typeof identity_hash !== "string" || !/^fp_[a-f0-9]{16,128}$/i.test(identity_hash))) return json({ error: "Invalid identity reference." }, 400);
+  if (identity_hash !== undefined && identity_hash !== null && (typeof identity_hash !== "string" || !/^fp_[a-z0-9]{1,128}$/i.test(identity_hash))) return json({ error: "Invalid identity reference." }, 400);
 
   const adminHeaders = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" };
 
