@@ -29,7 +29,7 @@ export default async function handler(req) {
   let payload;
   try { payload = await req.json(); } catch { return json({ error: "Invalid request body" }, 400); }
   const identityHash = String(payload?.identity_hash || "").trim();
-  if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) return json({ error: "Invalid identity reference." }, 400);
+  if (!/^fp_[a-z0-9]{1,128}$/i.test(identityHash)) return json({ error: "Invalid identity reference." }, 400);
 
   const identityLimit = await checkRateLimit(req, { namespace: "confirmation-resend-identity", limit: 3, windowSeconds: 900, subject: identityHash });
   if (!identityLimit.allowed) return identityLimit.response;
