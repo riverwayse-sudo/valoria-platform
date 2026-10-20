@@ -9,7 +9,7 @@ This is the protocol contract for the server API. Every new endpoint must be add
 | `/api/get-assessment-data` | GET | Authenticated | Assessment/report | Auth + ownership | Supabase |
 | `/api/create-account` | POST | Public | Identity/account | Auth verification, email ownership, rate limit | Supabase/Auth |
 | `/api/claim-listing` | POST | Authenticated | Professional identity | Auth + assessment ownership | Supabase |
-| `/api/generate-and-send-report` | POST | Internal | Assessment/report | CRON secret, idempotency, state machine | Supabase, Anthropic, Resend |
+| `/api/generate-and-send-report` | POST | Public trigger + internal worker | Assessment/report | Opaque report token for public triggers, CRON secret for worker, IP/token rate limits, idempotency, state machine | Supabase, Anthropic, Resend |
 | `/api/save-report` | POST | Internal | AI report | Internal auth, ownership | Supabase |
 | `/api/finalize-report` | POST | Internal | Report status | Internal auth, ownership | Supabase |
 | `/api/send-email` | POST | Internal | Email/report | Internal auth, destination validation | Resend |
