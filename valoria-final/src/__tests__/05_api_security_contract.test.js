@@ -31,6 +31,8 @@ describe("Privileged API security contracts", () => {
     const source = readApi("generate-and-send-report.js");
     expect(source).toContain("CRON_SECRET");
     expect(source).toContain("consumePublicTriggerRateLimit");
+    expect(source).toContain("isValidReportToken");
+    expect(source).toContain("report_token: `eq.${reportToken}`");
     expect(source).toContain("CRON_SECRET && req.headers.authorization");
     expect(source).toContain("Report service temporarily unavailable");
   });
@@ -147,6 +149,8 @@ describe("Assessment integrity contracts", () => {
     const source = readApi("submit-assessment.js");
     expect(source).toContain("findExistingAssessment(tasterId, fingerprint)");
     expect(source).toContain("alreadyCompleted: true");
+    expect(source).toContain("report_token: existing.report_token");
+    expect(source).toContain("report_token: inserted.report_token");
     expect(source).toContain("existing.user_id !== resolvedUserId");
   });
 
