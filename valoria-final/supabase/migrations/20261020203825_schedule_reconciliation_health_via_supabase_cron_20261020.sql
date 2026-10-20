@@ -14,7 +14,7 @@ BEGIN
       'valoria-reconciliation-health',
       '0 4 * * *',
       $job$
-        SELECT net.http_post(
+        SELECT net.http_get(
           url := 'https://assessment.valoriainstitute.com/api/reconciliation-health',
           headers := jsonb_build_object(
             'Content-Type', 'application/json',
@@ -24,7 +24,6 @@ BEGIN
               WHERE name = 'valoria_privileged_function_invoke_key'
             )
           ),
-          body := '{}'::jsonb,
           timeout_milliseconds := 20000
         ) AS request_id;
       $job$
@@ -34,7 +33,7 @@ BEGIN
       existing_job_id,
       schedule := '0 4 * * *',
       command := $job$
-        SELECT net.http_post(
+        SELECT net.http_get(
           url := 'https://assessment.valoriainstitute.com/api/reconciliation-health',
           headers := jsonb_build_object(
             'Content-Type', 'application/json',
@@ -44,7 +43,6 @@ BEGIN
               WHERE name = 'valoria_privileged_function_invoke_key'
             )
           ),
-          body := '{}'::jsonb,
           timeout_milliseconds := 20000
         ) AS request_id;
       $job$
