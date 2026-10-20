@@ -19,6 +19,26 @@ describe("Production Edge Function authorization contract", () => {
     expect(source).not.toContain('startsWith("bearer ")');
   });
 
+  test.each([
+    "process-meta-leads",
+    "sync-leads-to-brevo",
+    "send-lead-meeting-link",
+    "send-assessment-completion-reminders",
+  ])("%s accepts only the private Vault-backed cron invocation credential for scheduled callers", (slug) => {
+    const source = readFunction(slug);
+    expect(source).toContain('req.headers.get("x-valoria-function-key")');
+    expect(source).toContain('db.rpc("is_valid_valoria_function_invoke_key"');
+  });
+
+  test("scheduled jobs send the private invocation header without exposing its value in source", () => {
+    const migration = fs.readFileSync(
+      path.join(REPO_ROOT, "valoria-final", "supabase", "migrations", "20261020202611_update_cron_privileged_function_headers_20261020.sql"),
+      "utf8"
+    );
+    expect(migration).toContain("x-valoria-function-key");
+    expect(migration).toContain("valoria_privileged_function_invoke_key");
+    expect(migration).not.toContain("Bearer eyJ");
+  });
   test.each(["smart-action", "rapid-service"])(
     "%s rejects requests that do not present the exact server service-role bearer before processing input",
     (slug) => {
