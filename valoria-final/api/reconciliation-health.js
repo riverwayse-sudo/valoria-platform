@@ -50,13 +50,31 @@ async function supabase(path, options = {}) {
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return json(res, 405, { ok: false, error: "Method not allowed" });
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !CRON_SECRET) {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     return json(res, 503, { ok: false, error: "Service unavailable" });
   }
 
   const authorization = req.headers.authorization || "";
-  const expected = `Bearer ${CRON_SECRET}`;
-  if (authorization.length !== expected.length || authorization !== expected) {
+  const expected = CRON_SECRET ? `Bearer ${CRON_SECRET}` : "";
+  const cronAuthorized = Boolean(CRON_SECRET) &&
+    authorization.length === expected.length &&
+    authorization === expected;
+
+  let privateAuthorized = false;
+  const privateKey = req.headers["x-valoria-function-key"];
+  if (typeof privateKey === "string" && privateKey.length > 0) {
+    try {
+      const validationRes = await supabase("rpc/is_valid_valoria_function_invoke_key", {
+        method: "POST",
+        body: JSON.stringify({ p_key: privateKey }),
+      });
+      privateAuthorized = validationRes.ok && (await validationRes.json().catch(() => false)) === true;
+    } catch {
+      privateAuthorized = false;
+    }
+  }
+
+  if (!cronAuthorized && !privateAuthorized) {
     return json(res, 401, { ok: false, error: "Unauthorized" });
   }
 
