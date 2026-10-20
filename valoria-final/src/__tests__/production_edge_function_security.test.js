@@ -31,6 +31,15 @@ describe("Production Edge Function authorization contract", () => {
     }
   );
 
+  test("public report generation is rate-limited by IP as well as assessment reference", () => {
+    const source = fs.readFileSync(
+      path.join(REPO_ROOT, "valoria-final", "api", "generate-and-send-report.js"),
+      "utf8"
+    );
+    expect(source).toContain('namespace: "report-trigger-ip"');
+    expect(source).toContain("p_rate_key: `report-trigger:${identityHash}`");
+  });
+
   test("CV-assessment failure handling only updates the authenticated owner's previously verified assessment", () => {
     const source = readFunction("process-cv-assessment");
     expect(source).toContain("let ownerId:string|null=null;let ownedAssessmentId:string|null=null;");
