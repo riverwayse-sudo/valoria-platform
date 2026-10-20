@@ -6,7 +6,7 @@ const token=Deno.env.get("META_PAGE_ACCESS_TOKEN")??""
 const version=Deno.env.get("META_GRAPH_API_VERSION")??""
 const db=createClient(url,key,{auth:{autoRefreshToken:false,persistSession:false}})
 async function isPrivileged(req:Request):Promise<boolean>{
-  const match=(req.headers.get("authorization")??"").match(/^Bearer\\s+(.+)$/i)
+  const match=(req.headers.get("authorization")??"").match(/^Bearer\s+(.+)$/i)
   if(!match)return false
   const bearer=match[1]
   if(key && bearer===key)return true
