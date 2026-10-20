@@ -361,7 +361,7 @@ export default function FullVALUAssessment() {
         const reportRes = await fetch(API_BASE + '/api/generate-and-send-report', {
           method:'POST',
           headers:{'Content-Type':'application/json','Idempotency-Key':`full-valu-${scoreData.identity_hash}`},
-          body:JSON.stringify({identity_hash:scoreData.identity_hash}),
+          body:JSON.stringify({identity_hash:scoreData.identity_hash,report_token:scoreData.report_token}),
         });
         const reportData = await reportRes.json().catch(()=>({}));
         if (reportRes.ok && reportData.ready) setReportStatus('Your VALU report is ready. You can view it from your Valoria journey.');
