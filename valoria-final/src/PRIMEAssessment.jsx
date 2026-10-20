@@ -1790,17 +1790,20 @@ export default function PRIMEAssessment({
   useEffect(() => {
     const qp = new URLSearchParams(window.location.search);
     const identityHash = qp.get("identity_hash");
+    const reportToken = qp.get("report_token");
     if (identityHash) {
       window.history.replaceState(null, "", window.location.pathname);
       // Fire report generation immediately and unconditionally — this must
       // not depend on the profile fetch below succeeding. The profile fetch
       // is only for populating the UI; if it fails or is slow, the report
       // should still generate and send server-side.
-      fetch(API_BASE + "/api/generate-and-send-report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identity_hash: identityHash }),
-      }).catch(() => {});
+      if (reportToken) {
+        fetch(API_BASE + "/api/generate-and-send-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identity_hash: identityHash, report_token: reportToken }),
+        }).catch(() => {});
+      }
       fetchAssessmentByFingerprintServer(identityHash).then(profile => {
         if (profile) {
           setSessionData({ name: profile.name, role: profile.role, results: profile.results });
