@@ -37,7 +37,7 @@ describe("Production Edge Function authorization contract", () => {
       "utf8"
     );
     expect(source).toContain('namespace: "report-trigger-ip"');
-    expect(source).toContain("p_rate_key: `report-trigger:${identityHash}`");
+    expect(source).toContain("p_rate_key: `report-trigger:${reportToken}`");
   });
 
   test("CV-assessment failure handling only updates the authenticated owner's previously verified assessment", () => {

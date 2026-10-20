@@ -35,7 +35,7 @@ export default async function handler(req) {
   if (!identityLimit.allowed) return identityLimit.response;
 
   const adminHeaders = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" };
-  const params = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: "name,email,confirmation_email_sent_at", limit: "1" });
+  const params = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: "name,email,confirmation_email_sent_at,report_token", limit: "1" });
 
   let lookupRes;
   try { lookupRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: adminHeaders }); }
@@ -47,7 +47,7 @@ export default async function handler(req) {
   const row = rows?.[0];
   if (!row || row.confirmation_email_sent_at || !row.email) return json({ ok: true });
 
-  const redirectUrl = `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identityHash)}`;
+  const redirectUrl = `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identityHash)}&report_token=${encodeURIComponent(row.report_token)}`;
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, { method: "POST", headers: adminHeaders, body: JSON.stringify({ type: "magiclink", email: String(row.email).trim().toLowerCase(), options: { redirectTo: redirectUrl } }) });

@@ -62,7 +62,7 @@ async function findExistingAssessment(tasterId, fingerprint) {
   const params = new URLSearchParams({
     taster_id: `eq.${tasterId}`,
     identity_hash: `eq.${fingerprint}`,
-    select: 'id,user_id,taster_id,total_score,designation,cluster_scores,skill_scores,completed_at',
+    select: 'id,user_id,taster_id,total_score,designation,cluster_scores,skill_scores,completed_at,report_token',
     limit: '1',
   });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
@@ -193,7 +193,7 @@ export default async function handler(req, res) {
       if (existing.user_id !== resolvedUserId || existing.taster_id !== tasterId || !existing.completed_at) {
         return json(res, 409, { error: 'An assessment record exists for this identity but its ownership/link state needs manual review.' });
       }
-      return json(res, 200, { identity_hash: fingerprint, results: existingResults(existing), alreadyCompleted: true });
+      return json(res, 200, { identity_hash: fingerprint, report_token: existing.report_token, results: existingResults(existing), alreadyCompleted: true });
     }
   } catch (err) {
     console.error('submit-assessment: existing assessment check failed', err?.message || err);
@@ -201,9 +201,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments`, {
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=identity_hash,report_token`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: 'return=minimal' },
+      headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: 'return=representation' },
       body: JSON.stringify(row),
     });
     if (!insertRes.ok) {
@@ -213,7 +213,7 @@ export default async function handler(req, res) {
         try {
           const existing = await findExistingAssessment(tasterId, fingerprint);
           if (existing && existing.user_id === resolvedUserId && existing.taster_id === tasterId && existing.completed_at) {
-            return json(res, 200, { identity_hash: fingerprint, results: existingResults(existing), alreadyCompleted: true });
+            return json(res, 200, { identity_hash: fingerprint, report_token: existing.report_token, results: existingResults(existing), alreadyCompleted: true });
           }
         } catch (lookupError) {
           console.error('submit-assessment: duplicate recovery lookup failed', lookupError?.message || lookupError);
@@ -227,5 +227,11 @@ export default async function handler(req, res) {
     return json(res, 502, { error: 'Could not save your result. Please try again.' });
   }
 
-  return json(res, 200, { identity_hash: fingerprint, results });
+  const insertedRows = await insertRes.json().catch(() => []);
+  const inserted = Array.isArray(insertedRows) ? insertedRows[0] : null;
+  if (!inserted?.report_token) {
+    console.error('submit-assessment: saved assessment did not return a report token');
+    return json(res, 502, { error: 'Your result was saved, but report access could not be confirmed. Please retry or contact support.' });
+  }
+  return json(res, 200, { identity_hash: fingerprint, report_token: inserted.report_token, results });
 }

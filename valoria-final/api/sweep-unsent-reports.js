@@ -20,7 +20,7 @@ async function sweepOne(origin, headers, query, endpoint) {
         const r = await fetch(`${origin}${endpoint}`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` },
-          body: JSON.stringify({ identity_hash: row.identity_hash }),
+          body: JSON.stringify({ identity_hash: row.identity_hash, report_token: row.report_token }),
         });
         return { identity_hash: row.identity_hash, status: r.status };
       } catch (err) {
@@ -50,7 +50,7 @@ export default async function handler(req) {
   const jobs = [
     sweepOne(origin, headers, { email: "not.is.null", confirmation_email_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/resend-confirmation"),
     sweepOne(origin, headers, { completed_at: "not.is.null", report_email_sent_at: "is.null", ai_report: "not.is.null", select: "identity_hash", limit: "50" }, "/api/finalize-report"),
-    sweepOne(origin, headers, { completed_at: "not.is.null", ai_report: "is.null", report_email_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/generate-and-send-report"),
+    sweepOne(origin, headers, { completed_at: "not.is.null", ai_report: "is.null", report_email_sent_at: "is.null", select: "identity_hash,report_token", limit: "50" }, "/api/generate-and-send-report"),
     sweepOne(origin, headers, { completed_at: `lt.${oneDayAgo}`, email: "not.is.null", report_email_sent_at: "not.is.null", profile_reminder_sent_at: "is.null", select: "identity_hash", limit: "50" }, "/api/send-profile-reminder"),
   ];
 
