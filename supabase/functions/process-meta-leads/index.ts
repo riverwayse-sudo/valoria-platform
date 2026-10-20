@@ -10,7 +10,12 @@ async function isPrivileged(req:Request):Promise<boolean>{
   if(!match)return false
   const bearer=match[1]
   if(key && bearer===key)return true
-  const {data:{user},error}=await db.auth.getUser(bearer)
+const invokeKey=req.headers.get("x-valoria-function-key")
+  if(invokeKey){
+    const {data:validInvokeKey,error:invokeKeyError}=await db.rpc("is_valid_valoria_function_invoke_key",{p_key:invokeKey})
+    if(!invokeKeyError && validInvokeKey===true)return true
+  }
+    const {data:{user},error}=await db.auth.getUser(bearer)
   if(error||!user)return false
   const {data:admin,error:adminError}=await db.from("admin_users").select("id").eq("id",user.id).maybeSingle()
   return !adminError && Boolean(admin)
