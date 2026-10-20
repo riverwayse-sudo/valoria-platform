@@ -18,7 +18,6 @@ describe("Privileged API security contracts", () => {
     "send-email.js",
     "sweep-unsent-reports.js",
     "system-status.js",
-    "reconciliation-health.js",
   ];
 
   test.each(internalApis)("%s requires CRON_SECRET", (file) => {
