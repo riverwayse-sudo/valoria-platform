@@ -1,0 +1,35 @@
+name: Valoria platform tests
+
+on:
+  pull_request:
+    paths:
+      - "valoria-final/**"
+      - "supabase/**"
+      - ".github/workflows/valoria-platform-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "valoria-final/**"
+      - "supabase/**"
+      - ".github/workflows/valoria-platform-tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: valoria-final
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: valoria-final/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Jest tests
+        run: npm test -- --runInBand
