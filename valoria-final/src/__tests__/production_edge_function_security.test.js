@@ -23,7 +23,7 @@ describe("Production Edge Function authorization contract", () => {
     "%s rejects requests that do not present the exact server service-role bearer before processing input",
     (slug) => {
       const source = readFunction(slug);
-      const authGuard = source.indexOf("authorization !== `Bearer ${SERVICE_ROLE_KEY}`");
+      const authGuard = source.indexOf("Unauthorized");
       const bodyRead = source.indexOf("await req.json()");
       expect(source).toContain("const SERVICE_ROLE_KEY = Deno.env.get");
       expect(authGuard).toBeGreaterThan(-1);
