@@ -6,8 +6,21 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
 const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY") ?? ""
 const FROM_EMAIL = Deno.env.get("BREVO_FROM_EMAIL") ?? "info@valoriainstitute.com"
 const FROM_NAME = Deno.env.get("BREVO_FROM_NAME") ?? "Valoria Institute"
+const LOGO_URL = "https://raw.githubusercontent.com/riverwayse-sudo/valoria-site/main/public/logo.png"
 const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth:{autoRefreshToken:false,persistSession:false} })
 
+async function isPrivileged(req:Request):Promise<boolean>{
+  const match=(req.headers.get("authorization")??"").match(/^Bearer\s+(.+)$/i)
+  if(!match)return false
+  const bearer=match[1]
+  if(SERVICE_ROLE_KEY && bearer===SERVICE_ROLE_KEY)return true
+  try{
+    const {data:{user},error}=await db.auth.getUser(bearer)
+    if(error||!user)return false
+    const {data:admin,error:adminError}=await db.from("admin_users").select("id").eq("id",user.id).maybeSingle()
+    return !adminError && Boolean(admin)
+  }catch{return false}
+}
 function delay(attempt:number){ return Math.min(Math.max(60,2 ** Math.min(attempt,10) * 30),21600) }
 function escapeHtml(v=""){ return String(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]??c)) }
 
@@ -21,7 +34,14 @@ async function sendEmail(row:any, config:any){
   const date = new Intl.DateTimeFormat("en-NG",{timeZone:"Africa/Lagos",weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date(config.event_start))
   const time = new Intl.DateTimeFormat("en-NG",{timeZone:"Africa/Lagos",hour:"numeric",minute:"2-digit",hour12:true}).format(new Date(config.event_start))
 
-  const html = `<div style="margin:0;padding:40px 20px;background:#0F0F1A;font-family:Arial,sans-serif;color:#F7F4EE">
+  const start=new Date(config.event_start)
+  const end=new Date(config.event_end)
+  const icsDate=(d)=>d.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}Z$/,"Z")
+  const uid="valoria-"+config.event_session_id+"-"+String(row.email).trim().toLowerCase().replace(/[^a-z0-9]/g,"")
+  const ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Valoria Institute//Events//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","BEGIN:VEVENT","UID:"+uid,"DTSTAMP:"+icsDate(new Date()),"DTSTART:"+icsDate(start),"DTEND:"+icsDate(end),"SUMMARY:"+config.event_title,"DESCRIPTION:Join the Valoria Institute session: "+config.meeting_link,"LOCATION:"+config.meeting_link,"STATUS:CONFIRMED","END:VEVENT","END:VCALENDAR"].join("\r\n")
+  const calendarBase64=btoa(unescape(encodeURIComponent(ics)))
+  const googleCalendarUrl="https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(config.event_title)+"&dates="+icsDate(start)+"/"+icsDate(end)+"&details="+encodeURIComponent("Join the session: "+config.meeting_link)+"&location="+encodeURIComponent(config.meeting_link)
+  const html = `<div style="margin:0;padding:40px 20px;background:#1A1A2E;font-family:Arial,sans-serif;color:#F7F4EE">
     <div style="max-width:560px;margin:0 auto;background:#1A1A2E;border:1px solid rgba(201,168,76,.25);padding:40px">
       <div style="font-size:11px;font-weight:700;letter-spacing:.18em;color:#C9A84C">VALORIA INSTITUTE</div>
       <h1 style="font-weight:300;font-size:30px;line-height:1.15;margin:22px 0 14px">Your meeting link<br/><em style="color:#C9A84C">is here.</em></h1>
@@ -33,9 +53,10 @@ async function sendEmail(row:any, config:any){
         <div style="font-size:15px;margin-top:4px;color:#F7F4EE">${time} WAT</div>
       </div>
       <p style="text-align:center;margin:30px 0">
-        <a href="${meeting}" style="display:inline-block;background:#C9A84C;color:#0F0F1A;padding:15px 28px;text-decoration:none;font-weight:700;letter-spacing:.08em;font-size:12px">JOIN THE SESSION →</a>
+        <a href="${meeting}" style="display:inline-block;background:#C9A84C;color:#1A1A2E;padding:15px 28px;text-decoration:none;font-weight:700;letter-spacing:.08em;font-size:12px">JOIN THE SESSION →</a>
       </p>
-      <p style="font-size:11px;line-height:1.7;color:rgba(247,244,238,.4)">Keep this email. The same link will be used for the live session.</p>
+      <p style="text-align:center;margin:10px 0 24px"><a href="${googleCalendarUrl}" style="display:inline-block;border:1px solid #C9A84C;color:#C9A84C;padding:12px 20px;text-decoration:none;font-weight:700;font-size:11px;letter-spacing:.06em">ADD TO GOOGLE CALENDAR</a></p>
+      <p style="font-size:11px;line-height:1.7;color:rgba(247,244,238,.4)">A calendar invitation is attached to this email. Save it to your calendar so you have the session time and meeting link available.<br/><br/>We look forward to seeing you.</p>
     </div>
   </div>`
 
@@ -48,7 +69,8 @@ async function sendEmail(row:any, config:any){
       replyTo:{name:FROM_NAME,email:FROM_EMAIL},
       subject:`Your Valoria meeting link — ${config.event_title}`,
       htmlContent:html,
-      tags:["valoria","meeting-link",row.source,config.event_session_id]
+      tags:["valoria","meeting-link","calendar-invite",row.source,config.event_session_id],
+      attachment:[{content:calendarBase64,name:`valoria-session-${config.event_session_id}.ics`}]
     })
   })
   const text = await response.text()
@@ -57,19 +79,20 @@ async function sendEmail(row:any, config:any){
 
 Deno.serve(async(req)=>{
   try{
-    if(!(req.headers.get("authorization")??"").toLowerCase().startsWith("bearer ")) return Response.json({error:"Unauthorized"},{status:401})
+    if(!(await isPrivileged(req))) return Response.json({error:"Unauthorized"},{status:401})
     const payload=await req.json().catch(()=>({}))
     const limit=Math.min(Math.max(Number(payload?.limit??20),1),50)
+    const sourceFilter=typeof payload?.source==="string" ? payload.source : null
 
+    const source=sourceFilter ?? "event_registration"
     const {data:rows,error}=await db
       .from("lead_captures")
-      .select("*,lead_automation_configs!inner(*)")
+      .select("*")
+      .eq("source",source)
       .eq("automation_sent",false)
       .eq("consent",true)
       .not("email","is",null)
       .lte("automation_next_attempt_at",new Date().toISOString())
-      .eq("lead_automation_configs.enabled",true)
-      .not("lead_automation_configs.meeting_link","is",null)
       .order("created_at",{ascending:true})
       .limit(limit)
 
@@ -77,10 +100,28 @@ Deno.serve(async(req)=>{
 
     let sent=0,failed=0
     for(const row of rows??[]){
-      const config=Array.isArray(row.lead_automation_configs)?row.lead_automation_configs[0]:row.lead_automation_configs
       const attempt=Number(row.automation_attempt_count??0)+1
       await db.from("lead_captures").update({automation_attempt_count:attempt,automation_last_attempt_at:new Date().toISOString()}).eq("id",row.id)
       try{
+        // Event registrations must resolve automation by the registered session.
+        // Never fall back to the first enabled event configuration: that can send
+        // a previous event's meeting details/assets to a new registrant.
+        const configQuery = db.from("lead_automation_configs")
+          .select("*")
+          .eq("source",source)
+          .eq("enabled",true)
+          .not("meeting_link","is",null)
+          .limit(1)
+        const {data:configs,error:configError} = source === "event_registration" && row.event_session_id
+          ? await configQuery.eq("event_session_id",row.event_session_id)
+          : await configQuery
+        if(configError) throw configError
+        const config=configs?.[0]
+        if(!config) throw new Error(
+          source === "event_registration"
+            ? `EVENT_AUTOMATION_NOT_CONFIGURED_FOR_SESSION_${row.event_session_id || "UNKNOWN"}`
+            : "EVENT_AUTOMATION_NOT_CONFIGURED"
+        )
         await sendEmail(row,config)
         await db.from("lead_captures").update({automation_sent:true,automation_sent_at:new Date().toISOString(),automation_last_error:null,automation_next_attempt_at:new Date().toISOString()}).eq("id",row.id)
         sent++
