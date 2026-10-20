@@ -6,6 +6,13 @@ const readFunction = (slug) =>
   fs.readFileSync(path.join(REPO_ROOT, "supabase", "functions", slug, "index.ts"), "utf8");
 
 describe("Production Edge Function authorization contract", () => {
+  test("reconciliation health accepts only cron secret or the private Vault-backed invocation key", () => {
+    const source = fs.readFileSync(path.join(REPO_ROOT, "valoria-final", "api", "reconciliation-health.js"), "utf8");
+    const config = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "valoria-final", "vercel.json"), "utf8"));
+    expect(source).toContain("is_valid_valoria_function_invoke_key");
+    expect(source).toContain("privateAuthorized");
+    expect(config.crons.some((job) => job.path === "/api/reconciliation-health")).toBe(false);
+  });
   test.each([
     "process-meta-leads",
     "sync-leads-to-brevo",
