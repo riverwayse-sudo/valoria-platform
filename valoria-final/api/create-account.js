@@ -81,7 +81,7 @@ export default async function handler(req) {
   if (identity_hash) {
     let assessmentRes;
     try {
-      assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=id,name,role,email,user_id,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at&identity_hash=eq.${encodeURIComponent(identity_hash)}&limit=1`, { headers: adminHeaders });
+      assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=id,name,role,email,user_id,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at,report_token&identity_hash=eq.${encodeURIComponent(identity_hash)}&limit=1`, { headers: adminHeaders });
     } catch { return json({ error: "Could not verify the assessment reference." }, 502); }
     if (!assessmentRes.ok) return json({ error: "Could not verify the assessment reference." }, 502);
     const assessments = await assessmentRes.json();
@@ -90,7 +90,7 @@ export default async function handler(req) {
     if (assessment.user_id) return json({ error: "This assessment is already linked to an account." }, 409);
   }
 
-  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}` : `${VALORIA_SITE_URL}/login`;
+  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/login`;
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
