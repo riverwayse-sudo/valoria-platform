@@ -17,6 +17,7 @@ This is the protocol contract for the server API. Every new endpoint must be add
 | `/api/send-profile-reminder` | POST | Internal | Reminder email | Internal auth, rate limit | Supabase, Resend |
 | `/api/sweep-unsent-reports` | POST | Internal | Report queue | CRON secret, bounded batch | Supabase |
 | `/api/system-status` | GET | Internal | Operational metadata | CRON secret, no-store | Supabase |
+| `/api/reconciliation-health` | GET | Internal | Aggregate reconciliation health | CRON secret or Vault-backed private invocation key, service-role database access, no participant-level output | Supabase |
 
 ## Data classification
 
