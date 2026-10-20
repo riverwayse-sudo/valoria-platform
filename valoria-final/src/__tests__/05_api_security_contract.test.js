@@ -95,8 +95,15 @@ describe("Identity ownership contracts", () => {
     expect(source).toContain("assessment.email");
     expect(source).toContain("assessment.user_id");
     expect(source).toContain("identity_hash");
+    expect(source).toContain("assessment.report_token");
   });
 
+  test("confirmation resend preserves the report token through the verified email redirect", () => {
+    const source = readApi("resend-confirmation.js");
+    expect(source).toContain("confirmation_email_sent_at");
+    expect(source).toContain("report_token");
+    expect(source).toContain("redirectTo: redirectUrl");
+  });
   test("full VALU handoff preserves ownership and rejects conflicting taster links", () => {
     const source = readApi("link-assessment-to-taster.js");
     expect(source).toContain("assessment.taster_id && assessment.taster_id !== tasterId");
