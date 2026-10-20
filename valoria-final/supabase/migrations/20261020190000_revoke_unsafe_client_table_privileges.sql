@@ -1,3 +1,8 @@
+-- Prevent future public tables created by the migration role from inheriting
+-- these non-RLS-protected privileges.
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM anon, authenticated;
+
 -- Least-privilege hardening: client roles must not be able to TRUNCATE tables,
 -- create foreign-key references, or create triggers. RLS does not protect
 -- TRUNCATE, so row policies alone are not sufficient for these privileges.
