@@ -1,3 +1,5 @@
+import { checkRateLimit } from "./_rateLimit.js";
+
 // Server-side report generation + email send for the sweep workflow.
 // Public browser triggers are rate-limited; cron workers remain authenticated.
 export const config = { runtime: "nodejs", maxDuration: 60 };
@@ -26,7 +28,7 @@ function getSiteOrigin() {
 }
 
 function isValidIdentityHash(value) {
-  return typeof value === "string" && /^fp_[a-z0-9]{8,120}$/i.test(value);
+  return typeof value === "string" && /^fp_[a-z0-9]{1,128}$/i.test(value);
 }
 
 async function consumePublicTriggerRateLimit(identityHash) {
@@ -140,6 +142,8 @@ export default async function handler(req, res) {
     CRON_SECRET && req.headers.authorization === `Bearer ${CRON_SECRET}`
   );
   if (!isAuthorizedWorker) {
+    const ipLimit = await checkRateLimit(req, { namespace: "report-trigger-ip", limit: 10, windowSeconds: 60 * 60 });
+    if (!ipLimit.allowed) return ipLimit.response;
     try {
       const limit = await consumePublicTriggerRateLimit(String(req.body?.identity_hash || ""));
       if (!limit?.allowed) {

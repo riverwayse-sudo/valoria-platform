@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   if (!CRON_SECRET || !SUPABASE_URL || !SERVICE_ROLE_KEY) return send(res, 500, { error: 'Server misconfigured.' });
   const payload = await parseBody(req); if (!payload) return send(res, 400, { error: 'Invalid request body.' });
   const identityHash = String(payload?.identity_hash || '').trim();
-  if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) return send(res, 400, { error: 'Invalid identity_hash.' });
+  if (!/^fp_[a-z0-9]{1,128}$/i.test(identityHash)) return send(res, 400, { error: 'Invalid identity_hash.' });
   const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
   const encodedHash = encodeURIComponent(identityHash);
   try {

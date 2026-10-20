@@ -57,7 +57,7 @@ export default async function handler(req) {
   try { payload = await req.json(); } catch { return json({ error: 'Invalid request body.' }, 400); }
 
   const identityHash = String(payload?.identity_hash || '').trim();
-  if (!/^fp_[a-f0-9]{16,128}$/i.test(identityHash)) return json({ error: 'A valid identity_hash is required.' }, 400);
+  if (!/^fp_[a-z0-9]{1,128}$/i.test(identityHash)) return json({ error: 'A valid identity_hash is required.' }, 400);
 
   const serviceHeaders = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
 
