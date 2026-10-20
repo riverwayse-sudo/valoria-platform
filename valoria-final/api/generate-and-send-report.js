@@ -31,12 +31,16 @@ function isValidIdentityHash(value) {
   return typeof value === "string" && /^fp_[a-z0-9]{1,128}$/i.test(value);
 }
 
-async function consumePublicTriggerRateLimit(identityHash) {
+function isValidReportToken(value) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function consumePublicTriggerRateLimit(reportToken) {
   const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/consume_rate_limit`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
     body: JSON.stringify({
-      p_rate_key: `report-trigger:${identityHash}`,
+      p_rate_key: `report-trigger:${reportToken}`,
       p_limit: PUBLIC_TRIGGER_LIMIT,
       p_window_seconds: PUBLIC_TRIGGER_WINDOW_SECONDS,
     }),
@@ -46,8 +50,8 @@ async function consumePublicTriggerRateLimit(identityHash) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
-async function fetchAssessment(identityHash) {
-  const params = new URLSearchParams({ identity_hash: `eq.${identityHash}`, select: "name,role,email,total_score,designation,cluster_scores,skill_scores,ai_report,report_email_sent_at,report_status,report_attempts", limit: "1" });
+async function fetchAssessment(reportToken) {
+  const params = new URLSearchParams({ report_token: `eq.${reportToken}`, select: "identity_hash,report_token,name,role,email,total_score,designation,cluster_scores,skill_scores,ai_report,report_email_sent_at,report_status,report_attempts", limit: "1" });
   const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` }, cache: "no-store" });
   if (!res.ok) throw new Error("Assessment lookup failed");
   const rows = await res.json();
@@ -141,11 +145,14 @@ export default async function handler(req, res) {
   const isAuthorizedWorker = Boolean(
     CRON_SECRET && req.headers.authorization === `Bearer ${CRON_SECRET}`
   );
+  const { report_token } = req.body || {};
+  if (!isValidReportToken(report_token)) return res.status(400).json({ ok: false, error: "Valid report token is required" });
+
   if (!isAuthorizedWorker) {
     const ipLimit = await checkRateLimit(req, { namespace: "report-trigger-ip", limit: 10, windowSeconds: 60 * 60 });
     if (!ipLimit.allowed) return ipLimit.response;
     try {
-      const limit = await consumePublicTriggerRateLimit(String(req.body?.identity_hash || ""));
+      const limit = await consumePublicTriggerRateLimit(report_token);
       if (!limit?.allowed) {
         if (limit?.retry_after_seconds) res.setHeader("Retry-After", String(limit.retry_after_seconds));
         return res.status(429).json({ ok: false, error: "Report request limit reached. Please try again later." });
@@ -156,16 +163,17 @@ export default async function handler(req, res) {
     }
   }
 
-  const { identity_hash } = req.body || {};
-  if (!isValidIdentityHash(identity_hash)) return res.status(400).json({ ok: false, error: "Invalid identity_hash" });
-
-  const idempotencyKey = typeof req.headers["idempotency-key"] === "string" && /^[A-Za-z0-9._:-]{16,128}$/.test(req.headers["idempotency-key"])
-    ? req.headers["idempotency-key"]
-    : `report-${identity_hash}`;
+  let identity_hash = null;
+  const requestedIdempotencyKey = req.headers["idempotency-key"];
 
   try {
-    const assessment = await fetchAssessment(identity_hash);
+    const assessment = await fetchAssessment(report_token);
     if (!assessment) return res.status(404).json({ ok: false, error: "Assessment not found" });
+    identity_hash = assessment.identity_hash;
+    if (!isValidIdentityHash(identity_hash)) throw new Error("Stored assessment identity reference is invalid");
+    const idempotencyKey = typeof requestedIdempotencyKey === "string" && /^[A-Za-z0-9._:-]{16,128}$/.test(requestedIdempotencyKey)
+      ? requestedIdempotencyKey
+      : `report-${identity_hash}`;
     if (assessment.report_email_sent_at || assessment.report_status === "SENT") return res.status(200).json({ ok: true, alreadySent: true });
     // Reports can be generated without an email so legacy/orphan assessments do not remain stuck.\n    // Delivery is deferred until a verified email identity is reconciled.
 
@@ -195,7 +203,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, sent: true });
   } catch (err) {
     console.error("[generate-and-send-report] failed:", err.message);
-    await markFailed(identity_hash);
+    if (identity_hash) await markFailed(identity_hash);
     return res.status(500).json({ ok: false, error: "Report generation failed" });
   }
 }
