@@ -213,7 +213,7 @@ export default async function handler(req, res) {
         try {
           const existing = await findExistingAssessment(tasterId, fingerprint);
           if (existing && existing.user_id === resolvedUserId && existing.taster_id === tasterId && existing.completed_at) {
-            return json(res, 200, { identity_hash: fingerprint, results: existingResults(existing), alreadyCompleted: true });
+            return json(res, 200, { identity_hash: fingerprint, report_token: existing.report_token, results: existingResults(existing), alreadyCompleted: true });
           }
         } catch (lookupError) {
           console.error('submit-assessment: duplicate recovery lookup failed', lookupError?.message || lookupError);
