@@ -27,7 +27,21 @@ describe("Privileged API security contracts", () => {
     expect(source).toMatch(/!CRON_SECRET|CRON_SECRET.*missing|CRON_SECRET.*required/);
   });
 
-  test("public report generation requires the opaque report token instead of the short identity fingerprint", () => {\n    const source = readApi("generate-and-send-report.js");\n    const submit = readApi("submit-assessment.js");\n    const sweep = readApi("sweep-unsent-reports.js");\n    const fullAssessment = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");\n    expect(source).toContain("isValidReportToken");\n    expect(source).toContain("report_token: `eq.${reportToken}`");\n    expect(source).toContain("Valid report token is required");\n    expect(source).not.toContain("const { identity_hash } = req.body || {}");\n    expect(submit).toContain("report_token: inserted.report_token");\n    expect(submit).toContain("report_token: existing.report_token");\n    expect(sweep).toContain("select: \"identity_hash,report_token\"");\n    expect(fullAssessment).toContain("report_token:scoreData.report_token");\n  });\n  test("generate-and-send-report rate-limits public triggers and authenticates cron workers", () => {
+  test("public report generation requires the opaque report token instead of the short identity fingerprint", () => {
+    const source = readApi("generate-and-send-report.js");
+    const submit = readApi("submit-assessment.js");
+    const sweep = readApi("sweep-unsent-reports.js");
+    const fullAssessment = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    expect(source).toContain("isValidReportToken");
+    expect(source).toContain("report_token: `eq.${reportToken}`");
+    expect(source).toContain("Valid report token is required");
+    expect(source).not.toContain("const { identity_hash } = req.body || {}");
+    expect(submit).toContain("report_token: inserted.report_token");
+    expect(submit).toContain("report_token: existing.report_token");
+    expect(sweep).toContain('select: "identity_hash,report_token"');
+    expect(fullAssessment).toContain("report_token:scoreData.report_token");
+  });
+  test("generate-and-send-report rate-limits public triggers and authenticates cron workers", () => {
     const source = readApi("generate-and-send-report.js");
     expect(source).toContain("CRON_SECRET");
     expect(source).toContain("consumePublicTriggerRateLimit");
