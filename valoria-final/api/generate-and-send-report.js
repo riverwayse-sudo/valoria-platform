@@ -26,7 +26,7 @@ function getSiteOrigin() {
 }
 
 function isValidIdentityHash(value) {
-  return typeof value === "string" && /^fp_[a-z0-9]{8,120}$/i.test(value);
+  return typeof value === "string" && /^fp_[a-z0-9]{1,128}$/i.test(value);
 }
 
 async function consumePublicTriggerRateLimit(identityHash) {
