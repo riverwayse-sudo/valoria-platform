@@ -27,6 +27,14 @@ describe("Privileged API security contracts", () => {
     expect(source).toMatch(/!CRON_SECRET|CRON_SECRET.*missing|CRON_SECRET.*required/);
   });
 
+  test("reconciliation health alerts on completed assessments whose reports are still pending", () => {
+    const source = readApi("reconciliation-health.js");
+    const migration = fs.readFileSync(path.join(__dirname, "../../supabase/migrations/20261021124217_track_pending_assessment_reports_in_health.sql"), "utf8");
+    expect(source).toContain('["pending_assessment_reports", "completed assessments awaiting report generation"]');
+    expect(source).toContain('["failed_assessment_reports", "completed assessments whose report generation failed"]');
+    expect(migration).toContain("'pending_assessment_reports'");
+    expect(migration).toContain("a.report_status = 'PENDING'");
+  });
   test("reconciliation health API parses as valid Node.js source", () => {
     execFileSync(process.execPath, ["--check", path.join(API_ROOT, "reconciliation-health.js")]);
   });
