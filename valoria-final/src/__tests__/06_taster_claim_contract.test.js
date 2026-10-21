@@ -22,7 +22,7 @@ describe("Legacy taster claim security contract", () => {
 
   test("only claims corroborated candidates for the exact confirmed email", () => {
     expect(source).toContain("candidate_email: `eq.${email}`");
-    expect(source).toContain("identity_status: 'eq.contact_candidate'");
+    expect(source).toContain("identity_status: 'in.(contact_candidate,unresolved)'");
     expect(source).toContain("linked_user_id: 'is.null'");
     expect(source).toContain("candidate_name");
     expect(source).toContain("candidate_role");

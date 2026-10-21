@@ -42,9 +42,10 @@ export default async function handler(req, res) {
   if (!userId || !email) return json(res, 403, { error: 'Your account must have a verified email address.' });
   if (!user.email_confirmed_at) return json(res, 403, { error: 'Verify your email address before claiming a previous snapshot.' });
 
+  // New submissions may remain unresolved until a confirmed-email claim. Both statuses are eligible for lookup; ownership safeguards below remain mandatory.
   const params = new URLSearchParams({
     candidate_email: `eq.${email}`,
-    identity_status: 'eq.contact_candidate',
+    identity_status: 'in.(contact_candidate,unresolved)',
     linked_user_id: 'is.null',
     select: 'taster_id,candidate_name,candidate_role,candidate_email,identity_status,linked_user_id',
     limit: '50',
