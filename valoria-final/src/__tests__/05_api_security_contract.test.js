@@ -35,14 +35,29 @@ describe("Privileged API security contracts", () => {
     expect(migration).toContain("'pending_assessment_reports'");
     expect(migration).toContain("a.report_status = 'PENDING'");
   });
-  test("reconciliation health API parses as valid Node.js source", () => {
-    execFileSync(process.execPath, ["--check", path.join(API_ROOT, "reconciliation-health.js")]);
+  test("all serverless API modules parse as valid Node.js source", () => {
+    const apiFiles = fs.readdirSync(API_ROOT).filter((file) => file.endsWith(".js"));
+    expect(apiFiles.length).toBeGreaterThan(0);
+    for (const file of apiFiles) {
+      execFileSync(process.execPath, ["--check", path.join(API_ROOT, file)]);
+    }
   });
   test("reconciliation health requires CRON_SECRET or the private Vault-backed invocation key", () => {
     const source = readApi("reconciliation-health.js");
     expect(source).toContain("CRON_SECRET");
     expect(source).toContain("is_valid_valoria_function_invoke_key");
     expect(source).toContain("privateAuthorized");
+  });
+  test("report generation records machine-readable failures and allows bounded AI response time", () => {
+    const source = readApi("generate-and-send-report.js");
+    const sweep = readApi("sweep-unsent-reports.js");
+    expect(source).toContain("}, 35000);");
+    expect(source).toContain("report_failure_code: failureCode");
+    expect(source).toContain("REQUEST_TIMEOUT");
+    expect(source).toContain("AI_PROVIDER_REJECTED");
+    expect(source).toContain("REPORT_VALIDATION_FAILED");
+    expect(sweep).toContain('report_attempts: "lt.5"');
+    expect(sweep).toContain('select: "identity_hash,report_token,report_attempts"');
   });
   test("public report generation requires the opaque report token instead of the short identity fingerprint", () => {
     const source = readApi("generate-and-send-report.js");
@@ -55,7 +70,7 @@ describe("Privileged API security contracts", () => {
     expect(source).not.toContain("const { identity_hash } = req.body || {}");
     expect(submit).toContain("report_token: inserted.report_token");
     expect(submit).toContain("report_token: existing.report_token");
-    expect(sweep).toContain('select: "identity_hash,report_token"');
+    expect(sweep).toContain('select: "identity_hash,report_token,report_attempts"');
     expect(fullAssessment).toContain("report_token:scoreData.report_token");
   });
   test("generate-and-send-report rate-limits public triggers and authenticates cron workers", () => {

@@ -74,11 +74,11 @@ async function patchAssessment(identityHash, body) {
   if (!res.ok) throw new Error("Failed to update report state");
 }
 
-async function saveAiReport(identityHash, report) { await patchAssessment(identityHash, { ai_report: report, report_status: "READY", report_locked_at: null }); }
-async function markEmailPending(identityHash) { await patchAssessment(identityHash, { report_status: "EMAIL_PENDING", report_locked_at: null }); }
-async function markEmailSent(identityHash) { await patchAssessment(identityHash, { report_email_sent_at: new Date().toISOString(), report_status: "SENT", report_locked_at: null }); }
-async function markFailed(identityHash) {
-  try { await patchAssessment(identityHash, { report_status: "FAILED", report_locked_at: null }); }
+async function saveAiReport(identityHash, report) { await patchAssessment(identityHash, { ai_report: report, report_status: "READY", report_locked_at: null, report_failure_code: null }); }
+async function markEmailPending(identityHash) { await patchAssessment(identityHash, { report_status: "EMAIL_PENDING", report_locked_at: null, report_failure_code: null }); }
+async function markEmailSent(identityHash) { await patchAssessment(identityHash, { report_email_sent_at: new Date().toISOString(), report_status: "SENT", report_locked_at: null, report_failure_code: null }); }
+async function markFailed(identityHash, failureCode) {
+  try { await patchAssessment(identityHash, { report_status: "FAILED", report_locked_at: null, report_failure_code: failureCode }); }
   catch { console.error("[generate-and-send-report] failed to persist failure state"); }
 }
 
@@ -127,8 +127,11 @@ WRITE THE REPORT IN THESE EXACT SECTIONS:
 ## THE QUESTION TO SIT WITH
 ---
 Start directly with ## YOUR SCORE. No introduction before it.`;
-  const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2500, messages: [{ role: "user", content: prompt }] }) });
-  if (!response.ok) throw new Error("AI report generation failed");
+  const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 2500, messages: [{ role: "user", content: prompt }] }) }, 35000);
+  if (!response.ok) {
+    console.error("[generate-and-send-report] AI provider returned HTTP", response.status);
+    throw new Error("AI_PROVIDER_REJECTED");
+  }
   const data = await response.json();
   return data.content?.[0]?.text || null;
 }
@@ -202,8 +205,16 @@ export default async function handler(req, res) {
     await markEmailSent(identity_hash);
     return res.status(200).json({ ok: true, sent: true });
   } catch (err) {
-    console.error("[generate-and-send-report] failed:", err.message);
-    if (identity_hash) await markFailed(identity_hash);
-    return res.status(500).json({ ok: false, error: "Report generation failed" });
+    const message = String(err?.message || "");
+    const failureCode = err?.name === "AbortError" ? "REQUEST_TIMEOUT"
+      : message === "AI_PROVIDER_REJECTED" ? "AI_PROVIDER_REJECTED"
+      : message.includes("Generated report conflicts") ? "REPORT_VALIDATION_FAILED"
+      : message.includes("send-email failed") ? "EMAIL_DELIVERY_FAILED"
+      : message.includes("Report claim failed") ? "REPORT_CLAIM_FAILED"
+      : message.includes("Assessment lookup failed") ? "ASSESSMENT_LOOKUP_FAILED"
+      : "REPORT_GENERATION_FAILED";
+    console.error("[generate-and-send-report] failed:", failureCode, message);
+    if (identity_hash) await markFailed(identity_hash, failureCode);
+    return res.status(500).json({ ok: false, error: "Report generation failed", code: failureCode });
   }
 }
