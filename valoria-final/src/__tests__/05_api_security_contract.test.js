@@ -70,7 +70,7 @@ describe("Privileged API security contracts", () => {
     expect(source).not.toContain("const { identity_hash } = req.body || {}");
     expect(submit).toContain("report_token: inserted.report_token");
     expect(submit).toContain("report_token: existing.report_token");
-    expect(sweep).toContain('select: "identity_hash,report_token"');
+    expect(sweep).toContain('select: "identity_hash,report_token,report_attempts"');
     expect(fullAssessment).toContain("report_token:scoreData.report_token");
   });
   test("generate-and-send-report rate-limits public triggers and authenticates cron workers", () => {
