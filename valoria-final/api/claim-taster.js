@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANON_KEY) return json(res, 500, { error: 'Server misconfigured.' });
 
   const authorization = String(req.headers?.authorization || '');
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  const match = authorization.match(/^Bearer\\s+(.+)$/i);
   if (!match) return json(res, 401, { error: 'Sign in to claim your previous VALU snapshot.' });
 
   let user;
@@ -42,9 +42,12 @@ export default async function handler(req, res) {
   if (!userId || !email) return json(res, 403, { error: 'Your account must have a verified email address.' });
   if (!user.email_confirmed_at) return json(res, 403, { error: 'Verify your email address before claiming a previous snapshot.' });
 
+  // New submissions may remain "unresolved" until a confirmed-email claim.
+  // Both statuses are eligible for self-service lookup; identity is still verified
+  // below against the authenticated email, existing taster name/role, and ownership.
   const params = new URLSearchParams({
     candidate_email: `eq.${email}`,
-    identity_status: 'eq.contact_candidate',
+    identity_status: 'in.(contact_candidate,unresolved)',
     linked_user_id: 'is.null',
     select: 'taster_id,candidate_name,candidate_role,candidate_email,identity_status,linked_user_id',
     limit: '50',
