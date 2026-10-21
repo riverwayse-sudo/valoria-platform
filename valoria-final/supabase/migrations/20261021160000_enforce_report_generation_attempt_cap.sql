@@ -1,11 +1,11 @@
 -- Enforce the report-generation retry ceiling inside the database claim function.
--- Preserve the existing three-column return contract used by prior callers.
+-- The live RPC contract returns exactly (claimed, status); preserve that signature.
 -- The sweep query also filters report_attempts < 5, but the database guard is authoritative.
 CREATE OR REPLACE FUNCTION public.claim_report_generation(
   p_identity_hash text,
   p_idempotency_key text
 )
-RETURNS TABLE(claimed boolean, status text, attempts integer)
+RETURNS TABLE(claimed boolean, status text)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
@@ -27,25 +27,25 @@ BEGIN
    FOR UPDATE;
 
   IF NOT FOUND THEN
-    RETURN QUERY SELECT false, 'NOT_FOUND'::text, 0;
+    RETURN QUERY SELECT false, 'NOT_FOUND'::text;
     RETURN;
   END IF;
 
   IF v_row.report_email_sent_at IS NOT NULL OR v_row.report_status = 'SENT' THEN
-    RETURN QUERY SELECT false, 'SENT'::text, COALESCE(v_row.report_attempts, 0);
+    RETURN QUERY SELECT false, 'SENT'::text;
     RETURN;
   END IF;
 
   -- Existing canonical reports may still need email finalization. Only stop
   -- further generation when there is no saved report and the attempt cap hit.
   IF v_row.ai_report IS NULL AND COALESCE(v_row.report_attempts, 0) >= 5 THEN
-    RETURN QUERY SELECT false, 'RETRY_LIMIT'::text, COALESCE(v_row.report_attempts, 0);
+    RETURN QUERY SELECT false, 'RETRY_LIMIT'::text;
     RETURN;
   END IF;
 
   IF v_row.report_locked_at IS NOT NULL
      AND v_row.report_locked_at > now() - interval '10 minutes' THEN
-    RETURN QUERY SELECT false, COALESCE(v_row.report_status, 'IN_PROGRESS')::text, COALESCE(v_row.report_attempts, 0);
+    RETURN QUERY SELECT false, COALESCE(v_row.report_status, 'IN_PROGRESS')::text;
     RETURN;
   END IF;
 
@@ -56,7 +56,7 @@ BEGIN
          report_idempotency_key = p_idempotency_key
    WHERE id = v_row.id;
 
-  RETURN QUERY SELECT true, 'PROCESSING'::text, COALESCE(v_row.report_attempts, 0) + 1;
+  RETURN QUERY SELECT true, 'PROCESSING'::text;
 END;
 $function$;
 
