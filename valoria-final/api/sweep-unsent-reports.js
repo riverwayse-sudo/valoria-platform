@@ -1,4 +1,4 @@
-export const config = { runtime: "edge" };
+export const config = { runtime: "nodejs", maxDuration: 60 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -15,18 +15,22 @@ async function sweepOne(origin, headers, query, endpoint) {
   const rows = await res.json();
   return {
     endpoint,
-    rows: await Promise.all(rows.map(async (row) => {
-      try {
-        const r = await fetch(`${origin}${endpoint}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` },
-          body: JSON.stringify({ identity_hash: row.identity_hash, report_token: row.report_token }),
-        });
-        return { identity_hash: row.identity_hash, status: r.status };
-      } catch (err) {
-        return { identity_hash: row.identity_hash, error: String(err) };
+    rows: await (async () => {
+      const results = [];
+      for (const row of rows) {
+        try {
+          const r = await fetch(`${origin}${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` },
+            body: JSON.stringify({ identity_hash: row.identity_hash, report_token: row.report_token }),
+          });
+          results.push({ identity_hash: row.identity_hash, status: r.status });
+        } catch (err) {
+          results.push({ identity_hash: row.identity_hash, error: String(err) });
+        }
       }
-    })),
+      return results;
+    })(),
     lookupFailed: false,
   };
 }
@@ -50,7 +54,7 @@ export default async function handler(req) {
   const jobs = [
     sweepOne(origin, headers, { email: "not.is.null", confirmation_email_sent_at: "is.null", select: "identity_hash", limit: "5" }, "/api/resend-confirmation"),
     sweepOne(origin, headers, { completed_at: "not.is.null", report_email_sent_at: "is.null", ai_report: "not.is.null", select: "identity_hash", limit: "5" }, "/api/finalize-report"),
-    sweepOne(origin, headers, { completed_at: "not.is.null", ai_report: "is.null", report_email_sent_at: "is.null", report_attempts: "lt.5", select: "identity_hash,report_token,report_attempts", limit: "5" }, "/api/generate-and-send-report"),
+    sweepOne(origin, headers, { completed_at: "not.is.null", ai_report: "is.null", report_email_sent_at: "is.null", report_attempts: "lt.5", select: "identity_hash,report_token,report_attempts", limit: "1" }, "/api/generate-and-send-report"),
     sweepOne(origin, headers, { completed_at: `lt.${oneDayAgo}`, email: "not.is.null", report_email_sent_at: "not.is.null", profile_reminder_sent_at: "is.null", select: "identity_hash", limit: "5" }, "/api/send-profile-reminder"),
   ];
 
