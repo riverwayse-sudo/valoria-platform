@@ -35,8 +35,12 @@ describe("Privileged API security contracts", () => {
     expect(migration).toContain("'pending_assessment_reports'");
     expect(migration).toContain("a.report_status = 'PENDING'");
   });
-  test("reconciliation health API parses as valid Node.js source", () => {
-    execFileSync(process.execPath, ["--check", path.join(API_ROOT, "reconciliation-health.js")]);
+  test("all serverless API modules parse as valid Node.js source", () => {
+    const apiFiles = fs.readdirSync(API_ROOT).filter((file) => file.endsWith(".js"));
+    expect(apiFiles.length).toBeGreaterThan(0);
+    for (const file of apiFiles) {
+      execFileSync(process.execPath, ["--check", path.join(API_ROOT, file)]);
+    }
   });
   test("reconciliation health requires CRON_SECRET or the private Vault-backed invocation key", () => {
     const source = readApi("reconciliation-health.js");
