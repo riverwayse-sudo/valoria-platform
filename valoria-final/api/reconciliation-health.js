@@ -105,7 +105,7 @@ export default async function handler(req, res) {
       const message = recovered
         ? "The daily VALU reconciliation health check reports that all tracked alert conditions have cleared. Review the latest health snapshot and keep the normal monitoring schedule active."
         : "The daily VALU reconciliation check found open conditions: " +
-          alerts.map(item => \`\${item.count} \${item.description}\`).join("; ") +
+          alerts.map(item => `${item.count} ${item.description}`).join("; ") +
           ". Review the admin reconciliation queue. These are review triggers, not permission to auto-link or delete records.";
       const notifications = (admins || []).map(admin => ({
         user_id: admin.id,

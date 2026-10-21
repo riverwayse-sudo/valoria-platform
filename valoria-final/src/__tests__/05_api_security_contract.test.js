@@ -2,6 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { execFileSync } = require("child_process");
 
 const API_ROOT = path.join(__dirname, "../../api");
 
@@ -26,6 +27,9 @@ describe("Privileged API security contracts", () => {
     expect(source).toMatch(/!CRON_SECRET|CRON_SECRET.*missing|CRON_SECRET.*required/);
   });
 
+  test("reconciliation health API parses as valid Node.js source", () => {
+    execFileSync(process.execPath, ["--check", path.join(API_ROOT, "reconciliation-health.js")]);
+  });
   test("reconciliation health requires CRON_SECRET or the private Vault-backed invocation key", () => {
     const source = readApi("reconciliation-health.js");
     expect(source).toContain("CRON_SECRET");
