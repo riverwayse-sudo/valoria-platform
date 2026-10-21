@@ -26,6 +26,12 @@ describe("Privileged API security contracts", () => {
     expect(source).toMatch(/!CRON_SECRET|CRON_SECRET.*missing|CRON_SECRET.*required/);
   });
 
+  test("reconciliation health requires CRON_SECRET or the private Vault-backed invocation key", () => {
+    const source = readApi("reconciliation-health.js");
+    expect(source).toContain("CRON_SECRET");
+    expect(source).toContain("is_valid_valoria_function_invoke_key");
+    expect(source).toContain("privateAuthorized");
+  });
   test("public report generation requires the opaque report token instead of the short identity fingerprint", () => {
     const source = readApi("generate-and-send-report.js");
     const submit = readApi("submit-assessment.js");
