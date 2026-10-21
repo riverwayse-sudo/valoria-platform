@@ -50,8 +50,13 @@ async function consumePublicTriggerRateLimit(reportToken) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
-async function fetchAssessment(reportToken) {
-  const params = new URLSearchParams({ report_token: `eq.${reportToken}`, select: "identity_hash,report_token,name,role,email,total_score,designation,cluster_scores,skill_scores,ai_report,report_email_sent_at,report_status,report_attempts", limit: "1" });
+async function fetchAssessment(reportToken, workerIdentityHash = null) {
+  // Public requests must resolve by the opaque report token. Only a CRON-authenticated
+  // worker may recover legacy records that predate report-token issuance.
+  const lookup = workerIdentityHash
+    ? { identity_hash: `eq.${workerIdentityHash}` }
+    : { report_token: `eq.${reportToken}` };
+  const params = new URLSearchParams({ ...lookup, select: "identity_hash,report_token,name,role,email,total_score,designation,cluster_scores,skill_scores,ai_report,report_email_sent_at,report_status,report_attempts", limit: "1" });
   const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` }, cache: "no-store" });
   if (!res.ok) throw new Error("Assessment lookup failed");
   const rows = await res.json();
@@ -148,8 +153,13 @@ export default async function handler(req, res) {
   const isAuthorizedWorker = Boolean(
     CRON_SECRET && req.headers.authorization === `Bearer ${CRON_SECRET}`
   );
-  const { report_token } = req.body || {};
-  if (!isValidReportToken(report_token)) return res.status(400).json({ ok: false, error: "Valid report token is required" });
+  const { report_token, identity_hash: requestedIdentityHash } = req.body || {};
+  const workerIdentityOnly = isAuthorizedWorker
+    && !isValidReportToken(report_token)
+    && isValidIdentityHash(requestedIdentityHash);
+  if (!isValidReportToken(report_token) && !workerIdentityOnly) {
+    return res.status(400).json({ ok: false, error: "Valid report token is required" });
+  }
 
   if (!isAuthorizedWorker) {
     const ipLimit = await checkRateLimit(req, { namespace: "report-trigger-ip", limit: 10, windowSeconds: 60 * 60 });
@@ -170,7 +180,7 @@ export default async function handler(req, res) {
   const requestedIdempotencyKey = req.headers["idempotency-key"];
 
   try {
-    const assessment = await fetchAssessment(report_token);
+    const assessment = await fetchAssessment(report_token, workerIdentityOnly ? requestedIdentityHash : null);
     if (!assessment) return res.status(404).json({ ok: false, error: "Assessment not found" });
     identity_hash = assessment.identity_hash;
     if (!isValidIdentityHash(identity_hash)) throw new Error("Stored assessment identity reference is invalid");
