@@ -18,6 +18,7 @@ function count(report, key) {
 
 const ALERT_METRICS = [
   ["completed_assessments_missing_taster_id", "completed assessments missing a snapshot link"],
+  ["pending_assessment_reports", "completed assessments awaiting report generation"],
   ["missing_taster_link_assessments_without_review", "missing-link assessments without a review entry"],
   ["completed_assessment_taster_owner_conflicts", "assessment/snapshot owner or identity conflicts"],
   ["assessment_identity_owner_conflicts", "assessment identity-audit owner conflicts"],
