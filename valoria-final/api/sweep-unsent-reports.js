@@ -13,26 +13,20 @@ async function sweepOne(origin, headers, query, endpoint) {
     return { endpoint, rows: [], lookupFailed: true, status: res.status };
   }
   const rows = await res.json();
-  return {
-    endpoint,
-    rows: await (async () => {
-      const results = [];
-      for (const row of rows) {
-        try {
-          const r = await fetch(`${origin}${endpoint}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` },
-            body: JSON.stringify({ identity_hash: row.identity_hash, report_token: row.report_token }),
-          });
-          results.push({ identity_hash: row.identity_hash, status: r.status });
-        } catch (err) {
-          results.push({ identity_hash: row.identity_hash, error: String(err) });
-        }
-      }
-      return results;
-    })(),
-    lookupFailed: false,
-  };
+  const results = [];
+  for (const row of rows) {
+    try {
+      const r = await fetch(`${origin}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` },
+        body: JSON.stringify({ identity_hash: row.identity_hash, report_token: row.report_token }),
+      });
+      results.push({ identity_hash: row.identity_hash, status: r.status });
+    } catch (err) {
+      results.push({ identity_hash: row.identity_hash, error: String(err) });
+    }
+  }
+  return { endpoint, rows: results, lookupFailed: false };
 }
 
 function json(data, status = 200) {
@@ -52,13 +46,18 @@ export default async function handler(req) {
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   const jobs = [
-    sweepOne(origin, headers, { email: "not.is.null", confirmation_email_sent_at: "is.null", select: "identity_hash", limit: "5" }, "/api/resend-confirmation"),
-    sweepOne(origin, headers, { completed_at: "not.is.null", report_email_sent_at: "is.null", ai_report: "not.is.null", select: "identity_hash", limit: "5" }, "/api/finalize-report"),
-    sweepOne(origin, headers, { completed_at: "not.is.null", ai_report: "is.null", report_email_sent_at: "is.null", report_attempts: "lt.5", select: "identity_hash,report_token,report_attempts", limit: "1" }, "/api/generate-and-send-report"),
-    sweepOne(origin, headers, { completed_at: `lt.${oneDayAgo}`, email: "not.is.null", report_email_sent_at: "not.is.null", profile_reminder_sent_at: "is.null", select: "identity_hash", limit: "5" }, "/api/send-profile-reminder"),
+    ["/api/resend-confirmation", { email: "not.is.null", confirmation_email_sent_at: "is.null", select: "identity_hash", limit: "1" }],
+    ["/api/finalize-report", { completed_at: "not.is.null", report_email_sent_at: "is.null", ai_report: "not.is.null", select: "identity_hash", limit: "1" }],
+    ["/api/generate-and-send-report", { completed_at: "not.is.null", ai_report: "is.null", report_email_sent_at: "is.null", report_attempts: "lt.5", select: "identity_hash,report_token,report_attempts", limit: "1" }],
+    ["/api/send-profile-reminder", { completed_at: `lt.${oneDayAgo}`, email: "not.is.null", report_email_sent_at: "not.is.null", profile_reminder_sent_at: "is.null", select: "identity_hash", limit: "1" }],
   ];
 
-  const [unsentConfirmations, unsentReports, unreportedCompletions, profileReminders] = await Promise.all(jobs);
+  const results = [];
+  // Sequential processing avoids four concurrent jobs and keeps every queue batch bounded.
+  for (const [endpoint, query] of jobs) {
+    results.push(await sweepOne(origin, headers, query, endpoint));
+  }
+  const [unsentConfirmations, unsentReports, unreportedCompletions, profileReminders] = results;
 
   return json({
     ok: true,
@@ -66,8 +65,6 @@ export default async function handler(req) {
     unsentReports,
     unreportedCompletions,
     profileReminders,
-    lookupFailures: [unsentConfirmations, unsentReports, unreportedCompletions, profileReminders]
-      .filter(x => x.lookupFailed)
-      .map(x => ({ endpoint: x.endpoint, status: x.status })),
+    lookupFailures: results.filter(x => x.lookupFailed).map(x => ({ endpoint: x.endpoint, status: x.status })),
   });
 }
