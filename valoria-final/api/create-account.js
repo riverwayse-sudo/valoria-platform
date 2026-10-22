@@ -145,6 +145,16 @@ export default async function handler(req) {
         }),
       });
       const signupData = await signupRes.json().catch(() => ({}));
+      if (signupData?.session) {
+        // A session here means email confirmation is not being enforced by
+        // project Auth settings. Fail closed rather than proceed as verified.
+        logDiagnostic("auth_signup_fallback_rejected", {
+          trigger,
+          status: signupRes.status,
+          reason: "email_confirmation_not_enforced",
+        });
+        return null;
+      }
       if (!signupRes.ok || !signupData?.user?.id) {
         logDiagnostic("auth_signup_fallback_rejected", {
           trigger,
