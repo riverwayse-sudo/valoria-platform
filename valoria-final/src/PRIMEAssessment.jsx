@@ -1289,6 +1289,8 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
   const [signupError, setSignupError]       = useState("");
   const [signupLoading, setSignupLoading]   = useState(false);
   const [signupDone, setSignupDone]         = useState(false);
+  const [resendLoading, setResendLoading]   = useState(false);
+  const [resendMessage, setResendMessage]   = useState("");
   const [saveError, setSaveError]           = useState(null);
   const [retakeModal, setRetakeModal]       = useState(null);
   const [completionPopup, setCompletionPopup] = useState(false);
@@ -1307,6 +1309,28 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
     submitAssessment({ name, role, answers, timings, shuffleMap })
       .catch(err => setSaveError(err.message));
   }, []);
+
+  async function handleResendConfirmation() {
+    setResendLoading(true);
+    setResendMessage("");
+    try {
+      const identity_hash = computeFingerprint(name, role);
+      const res = await fetch(API_BASE + "/api/resend-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identity_hash }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.sent) {
+        throw new Error(data.error || "We could not issue a new confirmation email yet. Please wait a moment and try again.");
+      }
+      setResendMessage("A new confirmation email has been sent. Use the newest email and check your spam folder if it does not appear.");
+    } catch (err) {
+      setResendMessage(err?.message || "We could not resend the email. Please try again shortly.");
+    } finally {
+      setResendLoading(false);
+    }
+  }
 
   async function handleSignup() {
     if (!signupEmail.trim() || !signupPassword) {
@@ -1409,7 +1433,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
           <>
           <div style={{ marginBottom:14, padding:"13px 16px", background:"rgba(201,168,76,.07)", border:"1px solid rgba(201,168,76,.22)", borderRadius:T.radius.chip, display:"flex", gap:10, alignItems:"center" }}>
             <span style={{color:T.gold,fontSize:14}}>●</span>
-            <div style={{fontSize:T.size.small,color:T.text.secondary,lineHeight:1.6,fontFamily:T.font.body}}><strong style={{color:T.parchment}}>Valoria notification:</strong> your assessment is complete and your marketplace placement is active. Your next step is to complete your profile.</div>
+            <div style={{fontSize:T.size.small,color:T.text.secondary,lineHeight:1.6,fontFamily:T.font.body}}><strong style={{color:T.parchment}}>Your VALU result is saved.</strong> Your account remains private while you confirm your email and complete the required profile and eligibility checks.</div>
           </div>
           <div style={{ background:"rgba(29,158,117,0.05)", border:"1px solid rgba(29,158,117,0.25)", borderRadius:T.radius.card, padding:"32px 28px" }}>
             <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#C9A84C", letterSpacing:"0.16em", marginBottom:12, fontFamily:T.font.label }}>✦ ACCOUNT CREATED</div>
@@ -1417,14 +1441,15 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
               A confirmation link has been sent to <strong style={{color:T.parchment}}>{signupEmail}</strong>.
             </p>
             <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:"0 0 24px", fontFamily:T.font.body }}>
-              Confirm your email to unlock your full AI report — it generates immediately after confirmation. Your VALU Index of <strong style={{color:T.gold}}>{valuIndex}/100</strong> is saved and linked to your profile.
+              Your VALU Index of <strong style={{color:T.gold}}>{valuIndex}/100</strong> has been saved. Confirm your email first; your account will then return to Valoria so you can continue your journey without signing in again. Marketplace visibility remains off until the required checks are complete.
             </p>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <a href="https://valoriainstitute.com/profile/edit" style={{ display:"block", textAlign:"center", padding:"14px 24px", background:T.gold, color:"#1A1A2E", fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none" }}>
-                COMPLETE YOUR PROFILE →
-              </a>
-              <a href="https://valoriainstitute.com/dashboard" style={{ display:"block", textAlign:"center", padding:"14px 24px", background:"transparent", color:T.gold, fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none", border:"1px solid rgba(201,168,76,0.3)" }}>
-                GO TO DASHBOARD
+              <button type="button" onClick={handleResendConfirmation} disabled={resendLoading} style={{ ...pillBtn(resendLoading ? "disabled" : "primary"), width:"100%" }}>
+                {resendLoading ? "REQUESTING A NEW EMAIL…" : "RESEND CONFIRMATION EMAIL"}
+              </button>
+              {resendMessage && <p role="status" style={{ fontSize:T.size.small, color:T.text.secondary, lineHeight:1.7, margin:0 }}>{resendMessage}</p>}
+              <a href="https://valoriainstitute.com/login" style={{ display:"block", textAlign:"center", padding:"14px 24px", background:"transparent", color:T.gold, fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none", border:"1px solid rgba(201,168,76,0.3)" }}>
+                RETURN TO VALORIA LOGIN
               </a>
             </div>
             <p style={{ fontSize:T.size.micro, color:T.text.ghost, lineHeight:1.6, marginTop:16, fontFamily:T.font.body }}>
