@@ -24,6 +24,7 @@ describe("signup resilience contract", () => {
     expect(source).toContain("apikey: SUPABASE_ANON_KEY");
     expect(source).toContain("Authorization: `Bearer ${SUPABASE_ANON_KEY}`");
     expect(source).toContain("confirmation_required: !signupData?.session");
+    expect(source).toContain('reason: "email_confirmation_not_enforced"');
     expect(source).not.toContain("email_confirm: true");
   });
 
