@@ -10,7 +10,7 @@ describe("signup resilience contract", () => {
   test("retains the existing branded confirmation flow as primary", () => {
     expect(source).toContain("/auth/v1/admin/generate_link");
     expect(source).toContain("confirmationMode = \"resend\"");
-    expect(source).toContain("CONFIRMATION_EMAIL_SEND_FAILED");
+    expect(source).toContain("confirmation email could not be sent");
   });
 
   test("falls back to the supported public signup endpoint on an Auth link failure", () => {
@@ -36,7 +36,7 @@ describe("signup resilience contract", () => {
 
   test("does not retry signup when the admin call may already have created an account", () => {
     expect(source).toContain('generateLinkFailure === "missing_action_link"');
-    expect(source).toContain("Do not retry signup");
+    expect(source).toContain("risk a duplicate/ambiguous account-creation result");
   });
   test("confirmation email failures do not stop the assessment/profile handoff", () => {
     const confirmationStart = source.indexOf('if (confirmationMode === "resend")');
