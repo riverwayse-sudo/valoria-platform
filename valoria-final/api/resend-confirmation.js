@@ -79,7 +79,7 @@ export default async function handler(req) {
   let actionLink = null;
   let genRes;
   try {
-    genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, { method: "POST", headers: adminHeaders, body: JSON.stringify({ type: "signup", email: String(row.email).trim().toLowerCase(), options: { redirectTo: redirectUrl } }) });
+    genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, { method: "POST", headers: adminHeaders, body: JSON.stringify({ type: "signup", email: String(row.email).trim().toLowerCase(), redirect_to: redirectUrl }) });
     const genData = await genRes.json().catch(() => ({}));
     actionLink = genData.action_link || genData.properties?.action_link || null;
   } catch { /* Fall through to Supabase's own resend endpoint below. */ }
@@ -101,7 +101,7 @@ export default async function handler(req) {
       const fallbackRes = await fetch(`${SUPABASE_URL}/auth/v1/resend`, {
         method: "POST",
         headers: { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "signup", email: String(row.email).trim().toLowerCase(), options: { emailRedirectTo: redirectUrl } }),
+        body: JSON.stringify({ type: "signup", email: String(row.email).trim().toLowerCase(), options: { emailRedirectTo: redirectUrl }, redirect_to: redirectUrl }),
       });
       sent = fallbackRes.ok;
     } catch { sent = false; }
