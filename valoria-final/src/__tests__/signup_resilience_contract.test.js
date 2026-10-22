@@ -49,4 +49,11 @@ describe("signup resilience contract", () => {
     expect(source).toContain("marketplace_profile_created: marketplaceProfileCreated");
   });
 
+  test("bounds external dependency latency and keeps journey email best-effort", () => {
+    expect(source).toContain("EXTERNAL_REQUEST_TIMEOUT_MS = 8000");
+    expect(source).toContain("AbortSignal.timeout(EXTERNAL_REQUEST_TIMEOUT_MS)");
+    expect(source).toContain("journey_email_network_error");
+    expect(source).toContain("confirmationEmailSent ? { confirmation_email_sent_at:");
+  });
+
 });
