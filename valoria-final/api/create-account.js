@@ -122,7 +122,7 @@ export default async function handler(req) {
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
       method: "POST", headers: adminHeaders,
-      body: JSON.stringify({ type: "signup", email: normalizedEmail, password, data: { full_name: name, role }, options: { redirectTo: redirectUrl } }),
+      body: JSON.stringify({ type: "signup", email: normalizedEmail, password, data: { full_name: name, role }, redirect_to: redirectUrl }),
     });
     genData = await genRes.json();
   } catch { return json({ error: "Could not reach auth service." }, 502); }
