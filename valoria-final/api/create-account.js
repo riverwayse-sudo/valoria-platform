@@ -4,6 +4,7 @@ import { checkRateLimit } from "./_rateLimit.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const VALORIA_SITE_URL = "https://valoriainstitute.com";
 
@@ -105,53 +106,164 @@ export default async function handler(req) {
   }
 
   const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/login`;
-  let genRes, genData;
+  let genRes = null, genData = null;
+  let actionLink = null;
+  let confirmationMode = "resend";
+
+  // Prefer the existing branded confirmation flow. If the Auth admin
+  // generate_link operation fails, fall back to Supabase's supported public
+  // signup endpoint so a transient admin-link failure does not block signup.
+  // This fallback still requires Supabase email confirmation to be configured;
+  // it does not bypass verification or expose privileged credentials.
+  const tryNativeSignup = async (trigger) => {
+    if (!SUPABASE_ANON_KEY) {
+      logDiagnostic("auth_signup_fallback_unavailable", {
+        trigger,
+        reason: "supabase_anon_key_missing",
+      });
+      return null;
+    }
+    try {
+      const signupUrl = `${SUPABASE_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectUrl)}`;
+      const signupRes = await fetch(signupUrl, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password,
+          data: { full_name: name, role },
+        }),
+      });
+      const signupData = await signupRes.json().catch(() => ({}));
+      if (!signupRes.ok || !signupData?.user?.id) {
+        logDiagnostic("auth_signup_fallback_rejected", {
+          trigger,
+          status: signupRes.status,
+          provider_code: typeof signupData?.code === "string" ? signupData.code.slice(0, 80) : undefined,
+          provider_error: typeof signupData?.error === "string" ? signupData.error.slice(0, 80) : undefined,
+        });
+        return null;
+      }
+      logDiagnostic("auth_signup_fallback_succeeded", {
+        trigger,
+        status: signupRes.status,
+        confirmation_required: !signupData?.session,
+      });
+      return signupData;
+    } catch (error) {
+      logDiagnostic("auth_signup_fallback_network_error", {
+        trigger,
+        error_name: error?.name || "Error",
+      });
+      return null;
+    }
+  };
+
+  let generateLinkFailure = null;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
-      method: "POST", headers: adminHeaders,
-      body: JSON.stringify({ type: "signup", email: normalizedEmail, password, data: { full_name: name, role }, options: { redirectTo: redirectUrl } }),
+      method: "POST",
+      headers: adminHeaders,
+      body: JSON.stringify({
+        type: "signup",
+        email: normalizedEmail,
+        password,
+        data: { full_name: name, role },
+        options: { redirectTo: redirectUrl },
+      }),
     });
-    genData = await genRes.json();
-  } catch (error) {
-    logDiagnostic("auth_generate_link_network_error", { error_name: error?.name || "Error" });
-    return json({ error: "Could not reach auth service.", code: "AUTH_SERVICE_UNREACHABLE", request_id: requestId }, 502);
-  }
-  if (!genRes.ok) {
-    const providerCode = typeof genData?.code === "string" ? genData.code.slice(0, 80) : undefined;
-    const providerError = typeof genData?.error === "string" ? genData.error.slice(0, 80) : undefined;
-    const rawProviderMessage = typeof genData?.msg === "string" ? genData.msg : (typeof genData?.message === "string" ? genData.message : undefined);
-    const providerMessage = rawProviderMessage ? rawProviderMessage.replaceAll(normalizedEmail, "[redacted-email]").slice(0, 180) : undefined;
-    logDiagnostic("auth_generate_link_rejected", {
-      status: genRes.status,
-      provider_code: providerCode,
-      provider_error: providerError,
-      provider_message: providerMessage,
-    });
-    return json({ error: "Could not create account.", code: "AUTH_ACCOUNT_CREATE_FAILED", request_id: requestId }, genRes.status >= 400 && genRes.status < 500 ? genRes.status : 502);
-  }
-
-  const actionLink = genData.action_link || genData.properties?.action_link;
-  if (!actionLink) {
-    logDiagnostic("auth_generate_link_missing_action_link", { status: genRes.status });
-    return json({ warning: "Account may have been created, but confirmation email could not be prepared. Contact support to resend.", code: "CONFIRMATION_LINK_MISSING", request_id: requestId });
-  }
-  if (!RESEND_API_KEY) {
-    logDiagnostic("resend_configuration_missing");
-    return json({ warning: "Account created, but email service is not configured. Contact support to resend confirmation.", code: "CONFIRMATION_EMAIL_NOT_CONFIGURED", request_id: requestId });
-  }
-
-  try {
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-      body: JSON.stringify({ from: "Valoria Institute <hello@valoriainstitute.com>", to: normalizedEmail, subject: "Confirm Your Signup — Valoria Institute", html: confirmationEmailHtml(name || "there", actionLink) }),
-    });
-    if (!resendRes.ok) {
-      logDiagnostic("resend_provider_rejected", { status: resendRes.status });
-      return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend.", code: "CONFIRMATION_EMAIL_SEND_FAILED", request_id: requestId });
+    genData = await genRes.json().catch(() => ({}));
+    if (!genRes.ok) {
+      const providerCode = typeof genData?.code === "string" ? genData.code.slice(0, 80) : undefined;
+      const providerError = typeof genData?.error === "string" ? genData.error.slice(0, 80) : undefined;
+      const rawProviderMessage = typeof genData?.msg === "string" ? genData.msg : (typeof genData?.message === "string" ? genData.message : undefined);
+      const providerMessage = rawProviderMessage ? rawProviderMessage.replaceAll(normalizedEmail, "[redacted-email]").slice(0, 180) : undefined;
+      logDiagnostic("auth_generate_link_rejected", {
+        status: genRes.status,
+        provider_code: providerCode,
+        provider_error: providerError,
+        provider_message: providerMessage,
+      });
+      generateLinkFailure = `http_${genRes.status}`;
+    } else {
+      actionLink = genData.action_link || genData.properties?.action_link || null;
+      if (!actionLink) {
+        logDiagnostic("auth_generate_link_missing_action_link", { status: genRes.status });
+        generateLinkFailure = "missing_action_link";
+      }
     }
   } catch (error) {
-    logDiagnostic("resend_network_error", { error_name: error?.name || "Error" });
-    return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend.", code: "CONFIRMATION_EMAIL_SEND_FAILED", request_id: requestId });
+    logDiagnostic("auth_generate_link_network_error", { error_name: error?.name || "Error" });
+    generateLinkFailure = "network_error";
+  }
+
+  if (generateLinkFailure) {
+    const nativeSignupData = await tryNativeSignup(generateLinkFailure);
+    if (nativeSignupData) {
+      genData = nativeSignupData;
+      actionLink = null;
+      confirmationMode = "supabase";
+    } else {
+      return json({
+        error: "Could not create account. Please try again shortly.",
+        code: "AUTH_ACCOUNT_CREATE_FAILED",
+        request_id: requestId,
+      }, 502);
+    }
+  }
+
+  if (confirmationMode === "resend") {
+    if (!actionLink) {
+      logDiagnostic("confirmation_link_unavailable", { mode: confirmationMode });
+      return json({
+        warning: "Account may have been created, but confirmation could not be prepared. Contact support to resend.",
+        code: "CONFIRMATION_LINK_MISSING",
+        request_id: requestId,
+      });
+    }
+    if (!RESEND_API_KEY) {
+      logDiagnostic("resend_configuration_missing");
+      return json({
+        warning: "Account created, but email service is not configured. Contact support to resend confirmation.",
+        code: "CONFIRMATION_EMAIL_NOT_CONFIGURED",
+        request_id: requestId,
+      });
+    }
+    try {
+      const resendRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+        body: JSON.stringify({
+          from: "Valoria Institute <hello@valoriainstitute.com>",
+          to: normalizedEmail,
+          subject: "Confirm Your Signup — Valoria Institute",
+          html: confirmationEmailHtml(name || "there", actionLink),
+        }),
+      });
+      if (!resendRes.ok) {
+        logDiagnostic("resend_provider_rejected", { status: resendRes.status });
+        return json({
+          warning: "Account created, but confirmation email failed to send. Contact support to resend.",
+          code: "CONFIRMATION_EMAIL_SEND_FAILED",
+          request_id: requestId,
+        });
+      }
+    } catch (error) {
+      logDiagnostic("resend_network_error", { error_name: error?.name || "Error" });
+      return json({
+        warning: "Account created, but confirmation email failed to send. Contact support to resend.",
+        code: "CONFIRMATION_EMAIL_SEND_FAILED",
+        request_id: requestId,
+      });
+    }
+  } else {
+    // Supabase's configured confirmation email is the fallback delivery path.
+    // Keep the app's post-signup assessment/profile synchronization running.
+    logDiagnostic("confirmation_delegated_to_supabase");
   }
 
   let marketplaceProfileCreated = false;
