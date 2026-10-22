@@ -38,4 +38,15 @@ describe("signup resilience contract", () => {
     expect(source).toContain('generateLinkFailure === "missing_action_link"');
     expect(source).toContain("Do not retry signup");
   });
+  test("confirmation email failures do not stop the assessment/profile handoff", () => {
+    const confirmationStart = source.indexOf('if (confirmationMode === "resend")');
+    const handoffStart = source.indexOf("let marketplaceProfileCreated = false;");
+    expect(confirmationStart).toBeGreaterThan(-1);
+    expect(handoffStart).toBeGreaterThan(confirmationStart);
+    const confirmationBlock = source.slice(confirmationStart, handoffStart);
+    expect(confirmationBlock).toContain("confirmationWarning =");
+    expect(confirmationBlock).not.toContain("return json(");
+    expect(source).toContain("marketplace_profile_created: marketplaceProfileCreated");
+  });
+
 });
