@@ -1,0 +1,20 @@
+/* VALU snapshot results: responsive polish */
+.valu-assessment-results .valu-assessment-shell { gap: 0; }
+.valu-assessment-results .valu-assessment-steps { max-width: 900px; width: 100%; margin: 0 auto 30px; }
+.valu-assessment-results .valu-results-header { margin-bottom: 8px; }
+.valu-assessment-results .valu-result-grid { align-items: stretch; }
+.valu-assessment-results .valu-results-next a:focus-visible { outline: 2px solid #FAFAF7; outline-offset: 4px; }
+.valu-assessment-results .valu-results-next a:hover { filter: brightness(1.06); }
+@media (max-width: 760px) {
+ .valu-assessment-results .valu-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+ .valu-assessment-results .valu-result-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+ .valu-assessment-results .valu-assessment-steps { gap: 14px !important; margin-bottom: 24px !important; }
+ .valu-assessment-results .valu-results-insight,
+ .valu-assessment-results .valu-results-next { padding: 18px !important; }
+ .valu-assessment-results .valu-results-actions { align-items: stretch !important; flex-direction: column; }
+ .valu-assessment-results .valu-results-actions a { width: 100%; box-sizing: border-box; }
+}
+@media (max-width: 380px) {
+ .valu-assessment-results .valu-result-grid { grid-template-columns: 1fr !important; }
+ .valu-assessment-results .valu-result-grid > :last-child:nth-child(odd) { grid-column: auto; }
+}
