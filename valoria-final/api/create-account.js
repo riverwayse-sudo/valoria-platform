@@ -29,14 +29,14 @@ function journeyEmailHtml(name, score, designation) {
         <div style="text-align:center;margin-bottom:36px;"><img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:42px;"></div>
         <p style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700;">VALU INDEX · ASSESSMENT COMPLETE</p>
         <h1 style="font-size:30px;line-height:1.2;font-weight:600;color:#F7F4EE;">Your Valoria journey has moved forward.</h1>
-        <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU assessment is complete and your professional record has been placed in the Valoria marketplace.</p>
+        <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU assessment is complete and your assessment is saved. Your professional record remains private while you confirm your email and complete the required profile and eligibility checks.</p>
         <div style="margin:28px 0;padding:24px;border:1px solid rgba(201,168,76,.25);background:rgba(201,168,76,.06);border-radius:10px;text-align:center;">
           <div style="font-size:48px;font-weight:700;color:#C9A84C;">${escapeHtml(score)}</div>
           <div style="font-size:11px;letter-spacing:.14em;color:rgba(247,244,238,.55);">VALU INDEX</div>
           <div style="margin-top:8px;font-size:14px;color:#F7F4EE;">${escapeHtml(designation)}</div>
         </div>
         <h2 style="font-size:18px;color:#F7F4EE;">What happens next</h2>
-        <p style="font-size:14px;line-height:1.8;color:rgba(247,244,238,.7);">1. Confirm your email address.<br>2. Complete your professional profile.<br>3. Add the capabilities you want Valoria to surface.<br>4. Your profile becomes fully actionable across the marketplace.</p>
+        <p style="font-size:14px;line-height:1.8;color:rgba(247,244,238,.7);">1. Confirm your email address.<br>2. Return to Valoria securely.<br>3. Complete your professional profile.<br>4. Any marketplace listing is considered only after eligibility checks.</p>
         <div style="text-align:center;margin:34px 0;"><a href="https://valoriainstitute.com/profile/edit" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">COMPLETE YOUR PROFILE →</a></div>
         <p style="font-size:11px;line-height:1.6;color:rgba(247,244,238,.35);text-align:center;">Valoria Institute · Worth. Built.<br>Questions? info@valoriainstitute.com</p>
       </div>
@@ -171,8 +171,8 @@ export default async function handler(req) {
         headers: { ...adminHeaders, Prefer: "resolution=merge-duplicates,return=minimal" },
         body: JSON.stringify({
           id: userId, display_name: assessment.name || name, headline: assessment.role || role,
-          listing_status: "listed", profile_complete: false, visibility: "public", active_tracks: ["candidate"],
-          eligible_for_listing: true, availability_status: "available", listed_at: new Date().toISOString(), valu_index: assessment.total_score,
+          listing_status: "pending_verification", profile_complete: false, visibility: "private", active_tracks: ["candidate"],
+          eligible_for_listing: false, availability_status: "unavailable", listed_at: null, valu_index: assessment.total_score,
           cluster_scores: assessment.cluster_scores, skill_scores: assessment.skill_scores, designation: assessment.designation,
           assessment_completed_at: assessment.completed_at, assessment_expires_at: assessment.expires_at,
         }),
@@ -190,10 +190,10 @@ export default async function handler(req) {
           body: JSON.stringify({
             professional_id: userId,
             capability: "Talent",
-            is_active: true,
-            eligibility_status: "eligible",
-            eligible_for_listing: true,
-            listed_at: new Date().toISOString(),
+            is_active: false,
+            eligibility_status: "pending_verification",
+            eligible_for_listing: false,
+            listed_at: null,
             missing_requirements: [],
           }),
         }
@@ -212,7 +212,7 @@ export default async function handler(req) {
           user_id: userId,
           event_key: journeyEventKey,
           assessment_id: assessment.id,
-          metadata: { score: assessment.total_score, designation: assessment.designation, listing_status: "listed" },
+          metadata: { score: assessment.total_score, designation: assessment.designation, listing_status: "pending_verification", visibility: "private" },
         }),
       });
       if (!eventRes.ok) console.error("create-account: journey event failed", eventRes.status);
@@ -224,7 +224,7 @@ export default async function handler(req) {
           user_id: userId,
           type: "assessment_complete",
           title: "Your VALU assessment is complete",
-          body: "Your professional profile has been placed in the marketplace. Confirm your email and complete your profile to unlock the next stage.",
+          body: "Your VALU assessment is saved. Confirm your email and complete your professional profile; your record remains private until eligibility checks are complete.",
           action_label: "Complete your profile",
           action_url: "/profile/edit",
         }),
@@ -240,7 +240,7 @@ export default async function handler(req) {
           body: JSON.stringify({
             from: "Valoria Institute <hello@valoriainstitute.com>",
             to: normalizedEmail,
-            subject: "Your VALU Assessment Is Complete — Here's What Happens Next",
+            subject: "Your VALU Assessment Is Saved — Here's What Happens Next",
             html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation),
           }),
         });
