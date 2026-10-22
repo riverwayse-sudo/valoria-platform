@@ -48,11 +48,11 @@ function confirmationEmailHtml(name, actionLink) {
     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
     <body style="margin:0;padding:0;background:#1A1A2E;font-family:Georgia,serif;color:#F7F4EE;">
       <div style="max-width:600px;margin:0 auto;padding:48px 32px;text-align:center;">
-        <img src="https://valoriainstitute.com/valoria-original.png?v=20260922-4" alt="Valoria Institute" style="height:40px;margin-bottom:32px;">
+        <img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:40px;margin-bottom:32px;">
         <h1 style="font-size:26px;font-weight:300;color:#F7F4EE;margin-bottom:12px;">Confirm your email, ${escapeHtml(name)}.</h1>
-        <p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,0.6);margin-bottom:32px;">Click below to confirm your address and unlock your VALU Index report.</p>
+        <p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,0.6);margin-bottom:32px;">Confirm your email address to secure your Valoria Institute account and continue your VALU Index journey.</p>
         <a href="${actionLink}" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">CONFIRM EMAIL &rarr;</a>
-        <p style="font-size:11px;color:rgba(247,244,238,0.25);margin-top:40px;">If you didn't request this, you can ignore this email.</p>
+        <p style="font-size:12px;line-height:1.7;color:#D4C9A8;margin:28px 0 8px;">If the button does not work, copy this secure link into your browser:</p><p style="font-size:11px;line-height:1.7;word-break:break-all;margin:0;"><a href="${actionLink}" style="color:#C9A84C;">${actionLink}</a></p><p style="font-size:11px;color:#B8B4C8;margin-top:28px;">If you did not request this email, you can safely ignore it.</p><p style="font-size:11px;color:#B8B4C8;margin-top:12px;">Valoria Institute · Worth. Built.</p>
       </div>
     </body></html>`;
 }
@@ -90,7 +90,7 @@ export default async function handler(req) {
     if (assessment.user_id) return json({ error: "This assessment is already linked to an account." }, 409);
   }
 
-  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/login`;
+  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/auth/callback?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/auth/callback`;
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
