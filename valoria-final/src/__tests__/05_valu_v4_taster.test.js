@@ -27,7 +27,7 @@ describe('VALU v4 taster', () => {
     expect(EXPERIENCE_BANDS.map(b => b.id)).toEqual(['0-3','4-8','9-15','15+']);
   });
 
-  test('normalises each cluster independently and preserves the strongest cluster', () => {
+  test('reports earned points against each cluster maximum and preserves the strongest cluster', () => {
     const answers = Object.fromEntries(TASTER_QUESTIONS.map((q, i) => {
       const choice = i === 0
         ? q.options.reduce((best, option, index, options) => option.score > options[best].score ? index : best, 0)
@@ -36,11 +36,13 @@ describe('VALU v4 taster', () => {
     }));
     const result = computeTasterResult(answers);
     expect(result.completedQuestions).toBe(15);
-    expect(result.normalisedScores.P).toBe(50);
+    expect(result.points.P).toBe(6);
+    expect(result.maxPoints.P).toBe(12);
     expect(result.strongest.id).toBe('P');
     for (const cluster of ['P','R','I','M','E']) {
-      expect(result.normalisedScores[cluster]).toBeGreaterThanOrEqual(0);
-      expect(result.normalisedScores[cluster]).toBeLessThanOrEqual(100);
+      expect(result.points[cluster]).toBeGreaterThanOrEqual(0);
+      expect(result.points[cluster]).toBeLessThanOrEqual(result.maxPoints[cluster]);
+      expect(result.maxPoints[cluster]).toBe(12);
     }
   });
 
@@ -49,6 +51,7 @@ describe('VALU v4 taster', () => {
     expect(result.completedQuestions).toBe(0);
     expect(result.strongest.id).toBe('P');
     expect(result.weakest.id).toBe('P');
+    expect(result.maxPoints).toEqual({ P:12, R:12, I:12, M:12, E:12 });
   });
 
   test('does not mutate the answers object', () => {
