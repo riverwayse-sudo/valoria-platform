@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/valu/assessment/api/:path*",
+      "destination": "/api/:path*"
+    },
+    {
       "source": "/valu/assessment/assets/:path*",
       "destination": "/assets/:path*"
     },

@@ -4,8 +4,15 @@ import { checkRateLimit } from "./_rateLimit.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const VALORIA_SITE_URL = "https://valoriainstitute.com";
+
+const EXTERNAL_REQUEST_TIMEOUT_MS = 8000;
+const fetchWithTimeout = (url, options = {}) => fetch(url, {
+  ...options,
+  signal: AbortSignal.timeout(EXTERNAL_REQUEST_TIMEOUT_MS),
+});
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -48,30 +55,44 @@ function confirmationEmailHtml(name, actionLink) {
     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
     <body style="margin:0;padding:0;background:#1A1A2E;font-family:Georgia,serif;color:#F7F4EE;">
       <div style="max-width:600px;margin:0 auto;padding:48px 32px;text-align:center;">
-        <img src="https://valoriainstitute.com/valoria-original.png?v=20260922-4" alt="Valoria Institute" style="height:40px;margin-bottom:32px;">
+        <img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:40px;margin-bottom:32px;">
         <h1 style="font-size:26px;font-weight:300;color:#F7F4EE;margin-bottom:12px;">Confirm your email, ${escapeHtml(name)}.</h1>
-        <p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,0.6);margin-bottom:32px;">Click below to confirm your address and unlock your VALU Index report.</p>
+        <p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,0.6);margin-bottom:32px;">Confirm your email address to secure your Valoria Institute account and continue your VALU Index journey.</p>
         <a href="${actionLink}" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">CONFIRM EMAIL &rarr;</a>
-        <p style="font-size:11px;color:rgba(247,244,238,0.25);margin-top:40px;">If you didn't request this, you can ignore this email.</p>
+        <p style="font-size:12px;line-height:1.7;color:#D4C9A8;margin:28px 0 8px;">If the button does not work, copy this secure link into your browser:</p><p style="font-size:11px;line-height:1.7;word-break:break-all;margin:0;"><a href="${actionLink}" style="color:#C9A84C;">${actionLink}</a></p><p style="font-size:11px;color:#B8B4C8;margin-top:28px;">If you did not request this email, you can safely ignore it.</p><p style="font-size:11px;color:#B8B4C8;margin-top:12px;">Valoria Institute · Worth. Built.</p>
       </div>
     </body></html>`;
 }
 
 export default async function handler(req) {
+  const requestId = globalThis.crypto?.randomUUID?.() || `signup-${Date.now().toString(36)}`;
+  const logDiagnostic = (stage, details = {}) => {
+    // Never include email addresses, passwords, tokens, request bodies, or provider payloads.
+    console.error(JSON.stringify({ event: "signup_diagnostic", request_id: requestId, stage, ...details }));
+  };
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   const ipLimit = await checkRateLimit(req, { namespace: "account-create-ip", limit: 5, windowSeconds: 3600 });
-  if (!ipLimit.allowed) return ipLimit.response;
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server misconfigured." }, 500);
+  if (!ipLimit.allowed) {
+    logDiagnostic("rate_limit_ip_rejected", { status: 429 });
+    return ipLimit.response;
+  }
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    logDiagnostic("configuration_missing", { has_supabase_url: !!SUPABASE_URL, has_service_role_key: !!SERVICE_ROLE_KEY });
+    return json({ error: "Server misconfigured.", code: "SIGNUP_CONFIGURATION_MISSING", request_id: requestId }, 500);
+  }
 
   let payload;
   try { payload = await req.json(); } catch { return json({ error: "Invalid request body" }, 400); }
 
   const { email, password, name, role, identity_hash } = payload;
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!email || !emailRe.test(email)) return json({ error: "A valid email is required." }, 400);
+  if (!email || typeof email !== "string" || !emailRe.test(email)) return json({ error: "A valid email is required." }, 400);
   const normalizedEmail = email.trim().toLowerCase();
   const emailLimit = await checkRateLimit(req, { namespace: "account-create-email", limit: 3, windowSeconds: 3600, subject: normalizedEmail });
-  if (!emailLimit.allowed) return emailLimit.response;
+  if (!emailLimit.allowed) {
+    logDiagnostic("rate_limit_email_rejected", { status: 429 });
+    return emailLimit.response;
+  }
   if (!password || typeof password !== "string" || password.length < 8 || password.length > 128) return json({ error: "Password must be 8–128 characters." }, 400);
   if (identity_hash !== undefined && identity_hash !== null && (typeof identity_hash !== "string" || !/^fp_[a-z0-9]{1,128}$/i.test(identity_hash))) return json({ error: "Invalid identity reference." }, 400);
 
@@ -81,7 +102,7 @@ export default async function handler(req) {
   if (identity_hash) {
     let assessmentRes;
     try {
-      assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=id,name,role,email,user_id,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at,report_token&identity_hash=eq.${encodeURIComponent(identity_hash)}&limit=1`, { headers: adminHeaders });
+      assessmentRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?select=id,name,role,email,user_id,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at,report_token&identity_hash=eq.${encodeURIComponent(identity_hash)}&limit=1`, { headers: adminHeaders });
     } catch { return json({ error: "Could not verify the assessment reference." }, 502); }
     if (!assessmentRes.ok) return json({ error: "Could not verify the assessment reference." }, 502);
     const assessments = await assessmentRes.json();
@@ -90,28 +111,170 @@ export default async function handler(req) {
     if (assessment.user_id) return json({ error: "This assessment is already linked to an account." }, 409);
   }
 
-  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/login`;
-  let genRes, genData;
-  try {
-    genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
-      method: "POST", headers: adminHeaders,
-      body: JSON.stringify({ type: "signup", email: normalizedEmail, password, data: { full_name: name, role }, options: { redirectTo: redirectUrl } }),
-    });
-    genData = await genRes.json();
-  } catch { return json({ error: "Could not reach auth service." }, 502); }
-  if (!genRes.ok) return json({ error: "Could not create account." }, genRes.status >= 400 && genRes.status < 500 ? genRes.status : 502);
+  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/auth/callback?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/auth/callback`;
+  let genRes = null, genData = null;
+  let actionLink = null;
+  let confirmationMode = "resend";
 
-  const actionLink = genData.action_link || genData.properties?.action_link;
-  if (!actionLink) return json({ warning: "Account created, but confirmation email could not be prepared. Contact support to resend." });
-  if (!RESEND_API_KEY) return json({ warning: "Account created, but email service is not configured. Contact support to resend confirmation." });
+  // Prefer the existing branded confirmation flow. If the Auth admin
+  // generate_link operation fails, fall back to Supabase's supported public
+  // signup endpoint so a transient admin-link failure does not block signup.
+  // This fallback still requires Supabase email confirmation to be configured;
+  // it does not bypass verification or expose privileged credentials.
+  const tryNativeSignup = async (trigger) => {
+    if (!SUPABASE_ANON_KEY) {
+      logDiagnostic("auth_signup_fallback_unavailable", {
+        trigger,
+        reason: "supabase_anon_key_missing",
+      });
+      return null;
+    }
+    try {
+      const signupUrl = `${SUPABASE_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectUrl)}`;
+      const signupRes = await fetchWithTimeout(signupUrl, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password,
+          data: { full_name: name, role },
+        }),
+      });
+      const signupData = await signupRes.json().catch(() => ({}));
+      if (signupData?.session) {
+        // A session here means email confirmation is not being enforced by
+        // project Auth settings. Fail closed rather than proceed as verified.
+        logDiagnostic("auth_signup_fallback_rejected", {
+          trigger,
+          status: signupRes.status,
+          reason: "email_confirmation_not_enforced",
+        });
+        return null;
+      }
+      if (!signupRes.ok || !signupData?.user?.id) {
+        logDiagnostic("auth_signup_fallback_rejected", {
+          trigger,
+          status: signupRes.status,
+          provider_code: typeof signupData?.code === "string" ? signupData.code.slice(0, 80) : undefined,
+          provider_error: typeof signupData?.error === "string" ? signupData.error.slice(0, 80) : undefined,
+        });
+        return null;
+      }
+      logDiagnostic("auth_signup_fallback_succeeded", {
+        trigger,
+        status: signupRes.status,
+        confirmation_required: !signupData?.session,
+      });
+      return signupData;
+    } catch (error) {
+      logDiagnostic("auth_signup_fallback_network_error", {
+        trigger,
+        error_name: error?.name || "Error",
+      });
+      return null;
+    }
+  };
 
+  let generateLinkFailure = null;
   try {
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-      body: JSON.stringify({ from: "Valoria Institute <hello@valoriainstitute.com>", to: normalizedEmail, subject: "Confirm Your Signup — Valoria Institute", html: confirmationEmailHtml(name || "there", actionLink) }),
+    genRes = await fetchWithTimeout(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+      method: "POST",
+      headers: adminHeaders,
+      body: JSON.stringify({
+        type: "signup",
+        email: normalizedEmail,
+        password,
+        data: { full_name: name, role },
+        options: { redirectTo: redirectUrl },
+      }),
     });
-    if (!resendRes.ok) return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." });
-  } catch { return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." }); }
+    genData = await genRes.json().catch(() => ({}));
+    if (!genRes.ok) {
+      const providerCode = typeof genData?.code === "string" ? genData.code.slice(0, 80) : undefined;
+      const providerError = typeof genData?.error === "string" ? genData.error.slice(0, 80) : undefined;
+      const rawProviderMessage = typeof genData?.msg === "string" ? genData.msg : (typeof genData?.message === "string" ? genData.message : undefined);
+      const providerMessage = rawProviderMessage ? rawProviderMessage.replaceAll(normalizedEmail, "[redacted-email]").slice(0, 180) : undefined;
+      logDiagnostic("auth_generate_link_rejected", {
+        status: genRes.status,
+        provider_code: providerCode,
+        provider_error: providerError,
+        provider_message: providerMessage,
+      });
+      generateLinkFailure = `http_${genRes.status}`;
+    } else {
+      actionLink = genData.action_link || genData.properties?.action_link || null;
+      if (!actionLink) {
+        logDiagnostic("auth_generate_link_missing_action_link", { status: genRes.status });
+        generateLinkFailure = "missing_action_link";
+      }
+    }
+  } catch (error) {
+    logDiagnostic("auth_generate_link_network_error", { error_name: error?.name || "Error" });
+    generateLinkFailure = "network_error";
+  }
+
+  let confirmationWarning = null;
+  let confirmationEmailSent = false;
+  if (generateLinkFailure === "missing_action_link") {
+    // The admin operation may already have created the identity. Do not retry
+    // signup and risk a duplicate/ambiguous account-creation result. Continue
+    // the data handoff even though confirmation delivery needs support follow-up.
+    confirmationWarning = "Your account request may have been processed, but the confirmation link could not be prepared. Please contact support before trying again.";
+  } else if (generateLinkFailure) {
+    const nativeSignupData = await tryNativeSignup(generateLinkFailure);
+    if (nativeSignupData) {
+      genData = nativeSignupData;
+      actionLink = null;
+      confirmationMode = "supabase";
+    } else {
+      return json({
+        error: "Could not create account. Please try again shortly.",
+        code: "AUTH_ACCOUNT_CREATE_FAILED",
+        request_id: requestId,
+      }, 502);
+    }
+  }
+
+  if (confirmationMode === "resend") {
+    if (!actionLink) {
+      logDiagnostic("confirmation_link_unavailable", { mode: confirmationMode });
+      confirmationWarning = confirmationWarning || "Your account request may have been processed, but confirmation could not be prepared. Please contact support.";
+    } else if (!RESEND_API_KEY) {
+      logDiagnostic("resend_configuration_missing");
+      confirmationWarning = "Your account was processed, but the confirmation email service is temporarily unavailable. Please contact support if the email does not arrive.";
+    } else {
+      try {
+        const resendRes = await fetchWithTimeout("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+          body: JSON.stringify({
+            from: "Valoria Institute <hello@valoriainstitute.com>",
+            to: normalizedEmail,
+            subject: "Confirm Your Signup — Valoria Institute",
+            html: confirmationEmailHtml(name || "there", actionLink),
+          }),
+        });
+        if (!resendRes.ok) {
+          logDiagnostic("resend_provider_rejected", { status: resendRes.status });
+          confirmationWarning = "Your account was processed, but the confirmation email could not be sent. Please contact support if the email does not arrive.";
+        } else {
+          confirmationEmailSent = true;
+        }
+      } catch (error) {
+        logDiagnostic("resend_network_error", { error_name: error?.name || "Error" });
+        confirmationWarning = "Your account was processed, but the confirmation email could not be sent. Please contact support if the email does not arrive.";
+      }
+    }
+  } else {
+    // Supabase's configured confirmation email is the fallback delivery path.
+    // Keep the app's post-signup assessment/profile synchronization running.
+    logDiagnostic("confirmation_delegated_to_supabase");
+    confirmationEmailSent = true;
+  }
 
   let marketplaceProfileCreated = false;
   if (identity_hash && assessment) {
@@ -120,7 +283,7 @@ export default async function handler(req) {
       // does not receive or need a service-role key or privileged listing token.
       let userId = genData?.user?.id || null;
       if (!userId) {
-        const userRes = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(normalizedEmail)}&select=id&limit=1`, { headers: adminHeaders });
+        const userRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(normalizedEmail)}&select=id&limit=1`, { headers: adminHeaders });
         if (userRes.ok) {
           const users = await userRes.json();
           userId = users?.[0]?.id || null;
@@ -130,16 +293,16 @@ export default async function handler(req) {
         console.error("create-account: application user row not available after Auth signup");
         return json({ success: true, marketplace_profile_created: false, warning: "Account created. Your VALU profile will appear after confirmation." });
       }
-      const stitchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}&user_id=is.null`, {
+      const stitchRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}&user_id=is.null`, {
         method: "PATCH",
         headers: { ...adminHeaders, Prefer: "return=minimal" },
-        body: JSON.stringify({ email: normalizedEmail, user_id: userId, confirmation_email_sent_at: new Date().toISOString() }),
+        body: JSON.stringify({ email: normalizedEmail, user_id: userId, ...(confirmationEmailSent ? { confirmation_email_sent_at: new Date().toISOString() } : {}) }),
       });
       if (!stitchRes.ok) {
         console.error("create-account: assessment ownership stitch failed", stitchRes.status);
         return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
       }
-      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
+      const profileRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
         method: "POST",
         headers: { ...adminHeaders, Prefer: "resolution=merge-duplicates,return=minimal" },
         body: JSON.stringify({
@@ -155,7 +318,7 @@ export default async function handler(req) {
         return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
       }
 
-      const capabilityRes = await fetch(
+      const capabilityRes = await fetchWithTimeout(
         SUPABASE_URL + "/rest/v1/professional_capabilities?on_conflict=professional_id%2Ccapability",
         {
           method: "POST",
@@ -178,7 +341,7 @@ export default async function handler(req) {
       // Completion is a first-class journey event. The unique key makes this
       // safe against retries and guarantees notification/email delivery is not duplicated.
       const journeyEventKey = "assessment.completed.marketplace";
-      const eventRes = await fetch(`${SUPABASE_URL}/rest/v1/journey_events`, {
+      const eventRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/journey_events`, {
         method: "POST",
         headers: { ...adminHeaders, Prefer: "resolution=ignore-duplicates,return=minimal" },
         body: JSON.stringify({
@@ -190,7 +353,7 @@ export default async function handler(req) {
       });
       if (!eventRes.ok) console.error("create-account: journey event failed", eventRes.status);
 
-      const notificationRes = await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+      const notificationRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/notifications`, {
         method: "POST",
         headers: { ...adminHeaders, Prefer: "resolution=ignore-duplicates,return=minimal" },
         body: JSON.stringify({
@@ -207,17 +370,21 @@ export default async function handler(req) {
       // This is separate from the authentication email: it explains the
       // completed assessment, marketplace placement, and the next action.
       if (RESEND_API_KEY) {
-        const journeyEmailRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-          body: JSON.stringify({
-            from: "Valoria Institute <hello@valoriainstitute.com>",
-            to: normalizedEmail,
-            subject: "Your VALU Assessment Is Complete — Here's What Happens Next",
-            html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation),
-          }),
-        });
-        if (!journeyEmailRes.ok) console.error("create-account: journey email failed", journeyEmailRes.status);
+        try {
+          const journeyEmailRes = await fetchWithTimeout("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+            body: JSON.stringify({
+              from: "Valoria Institute <hello@valoriainstitute.com>",
+              to: normalizedEmail,
+              subject: "Your VALU Assessment Is Complete — Here's What Happens Next",
+              html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation),
+            }),
+          });
+          if (!journeyEmailRes.ok) logDiagnostic("journey_email_provider_rejected", { status: journeyEmailRes.status });
+        } catch (error) {
+          logDiagnostic("journey_email_network_error", { error_name: error?.name || "Error" });
+        }
       }
     } catch (err) {
       console.error("create-account: marketplace sync failed", err);
@@ -225,5 +392,5 @@ export default async function handler(req) {
     }
   }
 
-  return json({ success: true, marketplace_profile_created: marketplaceProfileCreated });
+  return json({ success: true, marketplace_profile_created: marketplaceProfileCreated, ...(confirmationWarning ? { warning: confirmationWarning } : {}) });
 }
