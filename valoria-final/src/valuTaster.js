@@ -32,29 +32,38 @@ export const EXPERIENCE_BANDS = [
 export function computeTasterResult(answers = {}) {
   const clusterScores = { P:0, R:0, I:0, M:0, E:0 };
   const clusterCounts = { P:0, R:0, I:0, M:0, E:0 };
+  const clusterMaxPoints = { P:0, R:0, I:0, M:0, E:0 };
 
   TASTER_QUESTIONS.forEach((q, idx) => {
     const chosen = answers[idx];
     if (chosen === undefined || !q.options[chosen]) return;
     clusterScores[q.cluster] += q.options[chosen].score;
     clusterCounts[q.cluster]++;
+    clusterMaxPoints[q.cluster] += Math.max(...q.options.map(option => Number(option.score) || 0));
   });
 
-  const normalisedScores = {};
+  const points = { ...clusterScores };
+  const maxPoints = { ...clusterMaxPoints };
+  // Points are the display/scoring unit. Do not convert snapshot results to percentages.
+  // Derive each dimension's maximum from the canonical question options.
   Object.keys(clusterScores).forEach(id => {
-    const count = clusterCounts[id] || 1;
-    normalisedScores[id] = Math.round((clusterScores[id] / (count * 4)) * 100);
+    if (!clusterCounts[id]) {
+      points[id] = 0;
+      maxPoints[id] = TASTER_QUESTIONS.filter(q => q.cluster === id)
+        .reduce((sum, q) => sum + Math.max(...q.options.map(option => Number(option.score) || 0)), 0);
+    }
   });
 
   const clusters = [
     {id:"P",name:"Presence"},{id:"R",name:"Relationships"},{id:"I",name:"Intelligence"},{id:"M",name:"Mastery"},{id:"E",name:"Enterprise"}
   ];
   const order = Object.fromEntries(clusters.map((cluster, index) => [cluster.id, index]));
-  const strongest = [...clusters].sort((a,b) => (normalisedScores[b.id] - normalisedScores[a.id]) || (order[a.id] - order[b.id]))[0];
-  const weakest = [...clusters].sort((a,b) => (normalisedScores[a.id] - normalisedScores[b.id]) || (order[a.id] - order[b.id]))[0];
+  const strongest = [...clusters].sort((a,b) => (points[b.id] - points[a.id]) || (order[a.id] - order[b.id]))[0];
+  const weakest = [...clusters].sort((a,b) => (points[a.id] - points[b.id]) || (order[a.id] - order[b.id]))[0];
 
   return {
-    normalisedScores,
+    points,
+    maxPoints,
     strongest,
     weakest,
     completedQuestions: Object.keys(answers).length,
