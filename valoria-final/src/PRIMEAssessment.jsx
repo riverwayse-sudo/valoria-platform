@@ -1321,10 +1321,14 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
         body: JSON.stringify({ identity_hash }),
       });
       const data = await res.json().catch(() => ({}));
+      if (data.already_confirmed) {
+        setResendMessage("This email is already confirmed. Return to Valoria and sign in to continue your journey.");
+        return;
+      }
       if (!res.ok || !data.sent) {
         throw new Error(data.error || "We could not issue a new confirmation email yet. Please wait a moment and try again.");
       }
-      setResendMessage("A new confirmation email has been sent. Use the newest email and check your spam folder if it does not appear.");
+      setResendMessage("A new confirmation email has been requested. Use the newest message and check your spam folder if it does not appear.");
     } catch (err) {
       setResendMessage(err?.message || "We could not resend the email. Please try again shortly.");
     } finally {
