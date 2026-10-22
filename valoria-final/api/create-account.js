@@ -171,7 +171,7 @@ export default async function handler(req) {
         headers: { ...adminHeaders, Prefer: "resolution=merge-duplicates,return=minimal" },
         body: JSON.stringify({
           id: userId, display_name: assessment.name || name, headline: assessment.role || role,
-          listing_status: "pending_verification", profile_complete: false, visibility: "private", active_tracks: ["candidate"],
+          listing_status: "pending", profile_complete: false, visibility: "registered_only", active_tracks: ["candidate"],
           eligible_for_listing: false, availability_status: "unavailable", listed_at: null, valu_index: assessment.total_score,
           cluster_scores: assessment.cluster_scores, skill_scores: assessment.skill_scores, designation: assessment.designation,
           assessment_completed_at: assessment.completed_at, assessment_expires_at: assessment.expires_at,
@@ -191,7 +191,7 @@ export default async function handler(req) {
             professional_id: userId,
             capability: "Talent",
             is_active: false,
-            eligibility_status: "pending_verification",
+            eligibility_status: "unlisted",
             eligible_for_listing: false,
             listed_at: null,
             missing_requirements: [],
@@ -212,7 +212,7 @@ export default async function handler(req) {
           user_id: userId,
           event_key: journeyEventKey,
           assessment_id: assessment.id,
-          metadata: { score: assessment.total_score, designation: assessment.designation, listing_status: "pending_verification", visibility: "private" },
+          metadata: { score: assessment.total_score, designation: assessment.designation, listing_status: "pending", visibility: "registered_only" },
         }),
       });
       if (!eventRes.ok) console.error("create-account: journey event failed", eventRes.status);
