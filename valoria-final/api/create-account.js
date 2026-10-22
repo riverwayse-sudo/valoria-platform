@@ -201,6 +201,16 @@ export default async function handler(req) {
     generateLinkFailure = "network_error";
   }
 
+  if (generateLinkFailure === "missing_action_link") {
+    // The admin operation may already have created the identity. Do not retry
+    // signup and risk a duplicate/ambiguous account-creation result.
+    return json({
+      warning: "Your account request may have been processed, but the confirmation link could not be prepared. Please contact support before trying again.",
+      code: "CONFIRMATION_LINK_MISSING",
+      request_id: requestId,
+    }, 202);
+  }
+
   if (generateLinkFailure) {
     const nativeSignupData = await tryNativeSignup(generateLinkFailure);
     if (nativeSignupData) {
