@@ -58,20 +58,34 @@ function confirmationEmailHtml(name, actionLink) {
 }
 
 export default async function handler(req) {
+  const requestId = globalThis.crypto?.randomUUID?.() || `signup-${Date.now().toString(36)}`;
+  const logDiagnostic = (stage, details = {}) => {
+    // Never include email addresses, passwords, tokens, request bodies, or provider payloads.
+    console.error(JSON.stringify({ event: "signup_diagnostic", request_id: requestId, stage, ...details }));
+  };
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   const ipLimit = await checkRateLimit(req, { namespace: "account-create-ip", limit: 5, windowSeconds: 3600 });
-  if (!ipLimit.allowed) return ipLimit.response;
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server misconfigured." }, 500);
+  if (!ipLimit.allowed) {
+    logDiagnostic("rate_limit_ip_rejected", { status: 429 });
+    return ipLimit.response;
+  }
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    logDiagnostic("configuration_missing", { has_supabase_url: !!SUPABASE_URL, has_service_role_key: !!SERVICE_ROLE_KEY });
+    return json({ error: "Server misconfigured.", code: "SIGNUP_CONFIGURATION_MISSING", request_id: requestId }, 500);
+  }
 
   let payload;
   try { payload = await req.json(); } catch { return json({ error: "Invalid request body" }, 400); }
 
   const { email, password, name, role, identity_hash } = payload;
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!email || !emailRe.test(email)) return json({ error: "A valid email is required." }, 400);
+  if (!email || typeof email !== "string" || !emailRe.test(email)) return json({ error: "A valid email is required." }, 400);
   const normalizedEmail = email.trim().toLowerCase();
   const emailLimit = await checkRateLimit(req, { namespace: "account-create-email", limit: 3, windowSeconds: 3600, subject: normalizedEmail });
-  if (!emailLimit.allowed) return emailLimit.response;
+  if (!emailLimit.allowed) {
+    logDiagnostic("rate_limit_email_rejected", { status: 429 });
+    return emailLimit.response;
+  }
   if (!password || typeof password !== "string" || password.length < 8 || password.length > 128) return json({ error: "Password must be 8–128 characters." }, 400);
   if (identity_hash !== undefined && identity_hash !== null && (typeof identity_hash !== "string" || !/^fp_[a-z0-9]{1,128}$/i.test(identity_hash))) return json({ error: "Invalid identity reference." }, 400);
 
@@ -98,20 +112,46 @@ export default async function handler(req) {
       body: JSON.stringify({ type: "signup", email: normalizedEmail, password, data: { full_name: name, role }, options: { redirectTo: redirectUrl } }),
     });
     genData = await genRes.json();
-  } catch { return json({ error: "Could not reach auth service." }, 502); }
-  if (!genRes.ok) return json({ error: "Could not create account." }, genRes.status >= 400 && genRes.status < 500 ? genRes.status : 502);
+  } catch (error) {
+    logDiagnostic("auth_generate_link_network_error", { error_name: error?.name || "Error" });
+    return json({ error: "Could not reach auth service.", code: "AUTH_SERVICE_UNREACHABLE", request_id: requestId }, 502);
+  }
+  if (!genRes.ok) {
+    const providerCode = typeof genData?.code === "string" ? genData.code.slice(0, 80) : undefined;
+    const providerError = typeof genData?.error === "string" ? genData.error.slice(0, 80) : undefined;
+    const providerMessage = typeof genData?.msg === "string" ? genData.msg.slice(0, 180) : (typeof genData?.message === "string" ? genData.message.slice(0, 180) : undefined);
+    logDiagnostic("auth_generate_link_rejected", {
+      status: genRes.status,
+      provider_code: providerCode,
+      provider_error: providerError,
+      provider_message: providerMessage,
+    });
+    return json({ error: "Could not create account.", code: "AUTH_ACCOUNT_CREATE_FAILED", request_id: requestId }, genRes.status >= 400 && genRes.status < 500 ? genRes.status : 502);
+  }
 
   const actionLink = genData.action_link || genData.properties?.action_link;
-  if (!actionLink) return json({ warning: "Account created, but confirmation email could not be prepared. Contact support to resend." });
-  if (!RESEND_API_KEY) return json({ warning: "Account created, but email service is not configured. Contact support to resend confirmation." });
+  if (!actionLink) {
+    logDiagnostic("auth_generate_link_missing_action_link", { status: genRes.status });
+    return json({ warning: "Account may have been created, but confirmation email could not be prepared. Contact support to resend.", code: "CONFIRMATION_LINK_MISSING", request_id: requestId });
+  }
+  if (!RESEND_API_KEY) {
+    logDiagnostic("resend_configuration_missing");
+    return json({ warning: "Account created, but email service is not configured. Contact support to resend confirmation.", code: "CONFIRMATION_EMAIL_NOT_CONFIGURED", request_id: requestId });
+  }
 
   try {
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify({ from: "Valoria Institute <hello@valoriainstitute.com>", to: normalizedEmail, subject: "Confirm Your Signup — Valoria Institute", html: confirmationEmailHtml(name || "there", actionLink) }),
     });
-    if (!resendRes.ok) return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." });
-  } catch { return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." }); }
+    if (!resendRes.ok) {
+      logDiagnostic("resend_provider_rejected", { status: resendRes.status });
+      return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend.", code: "CONFIRMATION_EMAIL_SEND_FAILED", request_id: requestId });
+    }
+  } catch (error) {
+    logDiagnostic("resend_network_error", { error_name: error?.name || "Error" });
+    return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend.", code: "CONFIRMATION_EMAIL_SEND_FAILED", request_id: requestId });
+  }
 
   let marketplaceProfileCreated = false;
   if (identity_hash && assessment) {
