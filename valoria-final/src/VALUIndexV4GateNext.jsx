@@ -284,7 +284,7 @@ const S={
  insightText:{fontSize:12,lineHeight:1.65,color:DIM,margin:'8px 0 0',maxWidth:690},
  next:{maxWidth:900,boxSizing:'border-box',width:'100%',margin:'0 auto',padding:'22px 24px',border:'1px solid rgba(201,168,76,.3)',borderRadius:12,background:'rgba(201,168,76,.045)'},
  nextStepTag:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
- nextTitle:{fontSize:clamp(22px,3vw,28px),fontWeight:600,letterSpacing:'-.025em',margin:'8px 0'},
+ nextTitle:{fontSize:'clamp(22px,3vw,28px)',fontWeight:600,letterSpacing:'-.025em',margin:'8px 0'},
  nextText:{fontSize:12,lineHeight:1.7,color:DIM,maxWidth:700,margin:'0 0 16px'},
  resultActions:{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'},
  primaryLink:{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:10,minHeight:46,boxSizing:'border-box',padding:'13px 18px',borderRadius:7,background:GOLD,color:DARK,fontWeight:900,letterSpacing:'.06em',fontSize:10,textDecoration:'none',textAlign:'center'},
