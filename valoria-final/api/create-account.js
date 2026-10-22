@@ -251,6 +251,8 @@ export default async function handler(req) {
         if (!resendRes.ok) {
           logDiagnostic("resend_provider_rejected", { status: resendRes.status });
           confirmationWarning = "Your account was processed, but the confirmation email could not be sent. Please contact support if the email does not arrive.";
+        } else {
+          confirmationEmailSent = true;
         }
       } catch (error) {
         logDiagnostic("resend_network_error", { error_name: error?.name || "Error" });
