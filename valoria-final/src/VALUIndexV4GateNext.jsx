@@ -6,6 +6,7 @@ const API_BASE = '';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from './valuTaster.js';
 
 const CLUSTERS={P:'Presence',R:'Relationships',I:'Intelligence',M:'Mastery',E:'Enterprise'};
+const DIMENSION_MEANINGS={P:'How you lead with impact.',R:'How you build trusted connections.',I:'How you think and solve problems.',M:'How you develop and deliver.',E:'How you create opportunity and value.'};
 const COLORS={P:'#C9A84C',R:'#C9A84C',I:'#C9A84C',M:'#C9A84C',E:'#C9A84C'};
 const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS='#D4C9A8', DIM='rgba(250,250,247,.68)';
 
@@ -184,7 +185,7 @@ export default function VALUIndexV4GateNext(){
   </section>
   <section aria-label="PRIME snapshot scores" style={S.scoreSection}>
    <div style={S.sectionHeading}><div style={S.eyebrow}>YOUR PRIME SNAPSHOT</div><span style={S.sectionHint}>Normalised scores · out of 100</span></div>
-   <div className="valu-result-grid" style={S.resultGrid}>{scores.map(([id,value])=><div key={id} style={{...S.resultRow,...(id===result?.strongest?.id?S.resultRowStrong:{})}}><div style={S.scoreLabel}><span style={{...S.scoreInitial,color:GOLD}}>{id}</span><span style={S.scoreName}>{CLUSTERS[id]}</span></div><strong style={S.scoreValue}>{value}<small style={S.scoreOutOf}>/100</small></strong><div style={S.scoreTrack}><span style={{...S.scoreBar,width:`${Math.max(0,Math.min(100,Number(value)||0))}%`}}/></div>{id===result?.strongest?.id&&<span style={S.scoreBadge}>STRONGEST SIGNAL</span>}</div>)}</div>
+   <div className="valu-result-grid" style={S.resultGrid}>{scores.map(([id,value])=><div key={id} style={{...S.resultRow,...(id===result?.strongest?.id?S.resultRowStrong:{})}}><div style={S.dimensionCode}>{id} <span style={S.dimensionCodeDivider}>·</span> PRIME DIMENSION</div><h2 style={S.scoreName}>{CLUSTERS[id]}</h2><p style={S.dimensionMeaning}>{DIMENSION_MEANINGS[id]}</p><strong style={S.scoreValue}>{value}<small style={S.scoreOutOf}>/100</small></strong><div style={S.scoreTrack}><span style={{...S.scoreBar,width:`${Math.max(0,Math.min(100,Number(value)||0))}%`}}/></div>{id===result?.strongest?.id&&<span style={S.scoreBadge}>STRONGEST SIGNAL</span>}</div>)}</div>
   </section>
   <section className="valu-results-insight" style={S.highlight}>
    <div style={S.insightLabel}>YOUR STRONGEST SIGNAL</div><div style={S.signal}>{result?.strongest?.name||CLUSTERS[result?.strongest?.id]||'Your strongest dimension'}</div>
@@ -268,12 +269,13 @@ const S={
  sectionHeading:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:12},
  sectionHint:{fontSize:10,color:'rgba(250,250,247,.5)'},
  resultGrid:{display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:10,margin:'0 0 18px'},
- resultRow:{position:'relative',minWidth:0,padding:'17px 14px 14px',border:'1px solid rgba(212,201,168,.16)',background:SURFACE,borderRadius:10,textAlign:'left',fontSize:11,display:'flex',flexDirection:'column',gap:12,overflow:'hidden'},
+ resultRow:{position:'relative',minWidth:0,minHeight:225,padding:'18px 15px 15px',border:'1px solid rgba(212,201,168,.16)',background:SURFACE,borderRadius:10,textAlign:'left',fontSize:11,display:'flex',flexDirection:'column',gap:10,overflow:'hidden'},
  resultRowStrong:{borderColor:'rgba(201,168,76,.7)',background:'linear-gradient(160deg,rgba(201,168,76,.12),#2E2E4A 65%)'},
- scoreLabel:{display:'flex',alignItems:'center',gap:8,minWidth:0},
- scoreInitial:{fontSize:12,fontWeight:900,flex:'0 0 auto'},
- scoreName:{fontSize:11,fontWeight:700,lineHeight:1.3,color:PARCH,overflowWrap:'anywhere'},
- scoreValue:{fontSize:27,fontWeight:700,lineHeight:1.1,letterSpacing:'-.04em',color:PARCH},
+ dimensionCode:{fontSize:8,fontWeight:900,letterSpacing:'.14em',lineHeight:1.4,color:GOLD,marginBottom:1},
+ dimensionCodeDivider:{color:BRASS,padding:'0 3px'},
+ scoreName:{fontSize:16,fontWeight:800,lineHeight:1.3,letterSpacing:'-.02em',color:PARCH,overflowWrap:'anywhere',margin:0},
+ dimensionMeaning:{fontSize:10.5,fontWeight:500,lineHeight:1.6,color:DIM,margin:'-5px 0 8px',minHeight:50},
+ scoreValue:{fontSize:27,fontWeight:700,lineHeight:1.1,letterSpacing:'-.04em',color:PARCH,marginTop:'auto'},
  scoreOutOf:{fontSize:10,fontWeight:500,letterSpacing:0,color:'rgba(250,250,247,.42)',marginLeft:3},
  scoreTrack:{height:3,background:'rgba(250,250,247,.1)',borderRadius:9,overflow:'hidden',width:'100%'},
  scoreBar:{display:'block',height:'100%',background:GOLD,borderRadius:9},
