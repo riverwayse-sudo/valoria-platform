@@ -16,7 +16,21 @@ function escapeHtml(str) {
 }
 
 function confirmationEmailHtml(name, actionLink) {
-  return `<!DOCTYPE html><html><body style="margin:0;padding:48px 32px;background:#1A1A2E;font-family:Georgia,serif;color:#F7F4EE;text-align:center"><img src="https://valoriainstitute.com/valoria-original.png?v=20260922-4" alt="Valoria Institute" style="height:40px;margin-bottom:32px"><h1 style="font-size:26px;font-weight:300;color:#F7F4EE">Confirm your email, ${escapeHtml(name)}.</h1><p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,.6)">Click below to confirm your address and unlock your VALU Index report.</p><a href="${actionLink}" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.16em;border-radius:9999px">CONFIRM EMAIL &rarr;</a></body></html>`;
+  const safeName = escapeHtml(name || "there");
+  const safeLink = escapeHtml(actionLink);
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#F3F0E8;font-family:Arial,Helvetica,sans-serif;color:#1A1A2E">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F0E8"><tr><td align="center" style="padding:30px 14px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#FFFFFF;border:1px solid #E7E0D2">
+        <tr><td style="background:#1A1A2E;padding:30px 32px"><p style="margin:0;color:#C9A84C;font-size:11px;letter-spacing:3px;font-weight:700">VALORIA INSTITUTE</p><p style="margin:8px 0 0;color:#F7F4EE;font-family:Georgia,serif;font-size:15px">Worth. Built.</p></td></tr>
+        <tr><td style="padding:36px 32px 24px"><p style="margin:0 0 12px;color:#92752D;font-size:11px;letter-spacing:2px;font-weight:700">WELCOME TO VALORIA</p>
+          <h1 style="margin:0 0 18px;font-family:Georgia,serif;font-size:30px;line-height:1.25;font-weight:400;color:#1A1A2E">Your next step starts here.</h1>
+          <p style="font-size:15px;line-height:1.8;color:#555566">Hello ${safeName},</p><p style="font-size:15px;line-height:1.8;color:#555566">We’ve saved your VALU Index result. Confirm your email to secure your account and return to Valoria, where you can continue your journey without starting again.</p>
+          <p style="margin:26px 0"><a href="${safeLink}" style="display:inline-block;padding:16px 26px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:1px">CONFIRM MY EMAIL &rarr;</a></p>
+          <p style="font-size:12px;line-height:1.7;color:#777789">If the button does not work, copy this link into your browser:<br><a href="${safeLink}" style="color:#72591C;word-break:break-all">${safeLink}</a></p>
+          <p style="border-top:1px solid #EAE5DA;padding-top:18px;font-size:12px;line-height:1.7;color:#777789">If you didn’t create this account, you can ignore this message.</p></td></tr>
+        <tr><td style="background:#FAF8F3;padding:22px 32px"><p style="margin:0;font-size:11px;line-height:1.8;color:#777789">Valoria Institute · Worth. Built.<br><a href="https://valoriainstitute.com" style="color:#72591C">valoriainstitute.com</a> · <a href="mailto:info@valoriainstitute.com" style="color:#72591C">Contact support</a></p></td></tr>
+      </table></td></tr></table></body></html>`;
 }
 
 export default async function handler(req) {
@@ -45,12 +59,14 @@ export default async function handler(req) {
   let rows;
   try { rows = await lookupRes.json(); } catch { return json({ error: "Could not process confirmation request." }, 502); }
   const row = rows?.[0];
-  if (!row || row.confirmation_email_sent_at || !row.email) return json({ ok: true });
+  if (!row || !row.email || !row.report_token) return json({ ok: true });
 
-  const redirectUrl = `${VALORIA_SITE_URL}/login?identity_hash=${encodeURIComponent(identityHash)}&report_token=${encodeURIComponent(row.report_token)}`;
+  // Re-issue a signup confirmation, not a magic-link sign-in. The canonical callback
+  // establishes the session and links the assessment only after email verification.
+  const redirectUrl = `${VALORIA_SITE_URL}/auth/callback?identity_hash=${encodeURIComponent(identityHash)}&report_token=${encodeURIComponent(row.report_token)}`;
   let genRes, genData;
   try {
-    genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, { method: "POST", headers: adminHeaders, body: JSON.stringify({ type: "magiclink", email: String(row.email).trim().toLowerCase(), options: { redirectTo: redirectUrl } }) });
+    genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, { method: "POST", headers: adminHeaders, body: JSON.stringify({ type: "signup", email: String(row.email).trim().toLowerCase(), options: { redirectTo: redirectUrl } }) });
     genData = await genRes.json();
   } catch { return json({ error: "Could not process confirmation request." }, 502); }
   if (!genRes.ok) return json({ error: "Could not process confirmation request." }, 502);
