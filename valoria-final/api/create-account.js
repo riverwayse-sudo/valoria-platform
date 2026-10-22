@@ -44,17 +44,44 @@ function journeyEmailHtml(name, score, designation) {
 }
 
 function confirmationEmailHtml(name, actionLink) {
+  const safeName = escapeHtml(name || "there");
+  const safeLink = escapeHtml(actionLink);
   return `
-    <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-    <body style="margin:0;padding:0;background:#1A1A2E;font-family:Georgia,serif;color:#F7F4EE;">
-      <div style="max-width:600px;margin:0 auto;padding:48px 32px;text-align:center;">
-        <img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:40px;margin-bottom:32px;">
-        <h1 style="font-size:26px;font-weight:300;color:#F7F4EE;margin-bottom:12px;">Confirm your email, ${escapeHtml(name)}.</h1>
-        <p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,0.6);margin-bottom:32px;">Confirm your email address to secure your Valoria Institute account and continue your VALU Index journey.</p>
-        <a href="${actionLink}" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">CONFIRM EMAIL &rarr;</a>
-        <p style="font-size:12px;line-height:1.7;color:#D4C9A8;margin:28px 0 8px;">If the button does not work, copy this secure link into your browser:</p><p style="font-size:11px;line-height:1.7;word-break:break-all;margin:0;"><a href="${actionLink}" style="color:#C9A84C;">${actionLink}</a></p><p style="font-size:11px;color:#B8B4C8;margin-top:28px;">If you did not request this email, you can safely ignore it.</p><p style="font-size:11px;color:#B8B4C8;margin-top:12px;">Valoria Institute · Worth. Built.</p>
-      </div>
-    </body></html>`;
+    <!DOCTYPE html>
+    <html lang="en">
+      <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+      <body style="margin:0;padding:0;background-color:#F3F0E8;font-family:Arial,Helvetica,sans-serif;color:#1A1A2E;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F3F0E8;">
+          <tr><td align="center" style="padding:32px 14px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:#FFFFFF;border:1px solid #E7E0D2;">
+              <tr><td style="background-color:#1A1A2E;padding:30px 32px 28px;text-align:left;">
+                <p style="margin:0;font-size:11px;line-height:1.4;letter-spacing:3px;font-weight:700;color:#C9A84C;">VALORIA INSTITUTE</p>
+                <p style="margin:8px 0 0;font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.5;color:#F7F4EE;">Worth. Built.</p>
+              </td></tr>
+              <tr><td style="padding:38px 32px 16px;">
+                <p style="margin:0 0 12px;font-size:11px;line-height:1.5;letter-spacing:2px;font-weight:700;color:#92752D;">WELCOME TO VALORIA</p>
+                <h1 style="margin:0 0 18px;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.25;font-weight:400;color:#1A1A2E;">One small step, then you’re in.</h1>
+                <p style="margin:0 0 16px;font-size:16px;line-height:1.75;color:#39394A;">Hello ${safeName},</p>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.8;color:#555566;">We’re glad you’re here. Confirm your email address to secure your Valoria Institute account and continue your VALU Index journey.</p>
+                <p style="margin:0 0 26px;font-size:15px;line-height:1.8;color:#555566;">Once you confirm, we’ll take you back to Valoria and help you pick up where you left off. You won’t need to start your journey again.</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px;"><tr><td align="center" bgcolor="#C9A84C" style="border-radius:4px;">
+                  <a href="${safeLink}" style="display:inline-block;padding:16px 28px;font-size:13px;line-height:1.2;font-weight:700;letter-spacing:1px;color:#1A1A2E;text-decoration:none;">CONFIRM MY EMAIL&nbsp; &#8594;</a>
+                </td></tr></table>
+                <p style="margin:0 0 8px;font-size:12px;line-height:1.7;color:#777789;">Button not opening? Copy and paste this link into your browser:</p>
+                <p style="margin:0 0 26px;font-size:12px;line-height:1.7;word-break:break-all;"><a href="${safeLink}" style="color:#72591C;text-decoration:underline;">${safeLink}</a></p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px solid #EAE5DA;padding-top:18px;">
+                  <p style="margin:0;font-size:12px;line-height:1.7;color:#777789;">If you didn’t create a Valoria account, you can safely ignore this email. Your account won’t be confirmed unless this link is used.</p>
+                </td></tr></table>
+              </td></tr>
+              <tr><td style="padding:22px 32px 28px;background-color:#FAF8F3;">
+                <p style="margin:0;font-size:11px;line-height:1.8;color:#777789;">Valoria Institute · Worth. Built.<br><a href="https://valoriainstitute.com" style="color:#72591C;text-decoration:underline;">valoriainstitute.com</a> &nbsp;|&nbsp; <a href="mailto:info@valoriainstitute.com" style="color:#72591C;text-decoration:underline;">Contact support</a></p>
+              </td></tr>
+            </table>
+            <p style="margin:16px 0 0;font-size:10px;line-height:1.6;color:#8B887F;">A more considered way to recognise and build professional worth.</p>
+          </td></tr>
+        </table>
+      </body>
+    </html>`;
 }
 
 export default async function handler(req) {
@@ -108,7 +135,7 @@ export default async function handler(req) {
   try {
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-      body: JSON.stringify({ from: "Valoria Institute <hello@valoriainstitute.com>", to: normalizedEmail, subject: "Confirm Your Signup — Valoria Institute", html: confirmationEmailHtml(name || "there", actionLink) }),
+      body: JSON.stringify({ from: "Valoria Institute <hello@valoriainstitute.com>", to: normalizedEmail, subject: "Welcome to Valoria Institute — confirm your email", text: `Welcome to Valoria Institute.\n\nHello ${name || "there"},\n\nWe’re glad you’re here. Confirm your email address to secure your account and continue your VALU Index journey. Once confirmed, we’ll take you back to Valoria so you can pick up where you left off.\n\nConfirm your email: ${actionLink}\n\nIf you didn’t create a Valoria account, you can safely ignore this email.\n\nValoria Institute · Worth. Built.\nhttps://valoriainstitute.com`, html: confirmationEmailHtml(name || "there", actionLink) }),
     });
     if (!resendRes.ok) return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." });
   } catch { return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." }); }
