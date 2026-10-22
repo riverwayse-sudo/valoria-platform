@@ -201,17 +201,13 @@ export default async function handler(req) {
     generateLinkFailure = "network_error";
   }
 
+  let confirmationWarning = null;
   if (generateLinkFailure === "missing_action_link") {
     // The admin operation may already have created the identity. Do not retry
-    // signup and risk a duplicate/ambiguous account-creation result.
-    return json({
-      warning: "Your account request may have been processed, but the confirmation link could not be prepared. Please contact support before trying again.",
-      code: "CONFIRMATION_LINK_MISSING",
-      request_id: requestId,
-    }, 202);
-  }
-
-  if (generateLinkFailure) {
+    // signup and risk a duplicate/ambiguous account-creation result. Continue
+    // the data handoff even though confirmation delivery needs support follow-up.
+    confirmationWarning = "Your account request may have been processed, but the confirmation link could not be prepared. Please contact support before trying again.";
+  } else if (generateLinkFailure) {
     const nativeSignupData = await tryNativeSignup(generateLinkFailure);
     if (nativeSignupData) {
       genData = nativeSignupData;
@@ -229,46 +225,30 @@ export default async function handler(req) {
   if (confirmationMode === "resend") {
     if (!actionLink) {
       logDiagnostic("confirmation_link_unavailable", { mode: confirmationMode });
-      return json({
-        warning: "Account may have been created, but confirmation could not be prepared. Contact support to resend.",
-        code: "CONFIRMATION_LINK_MISSING",
-        request_id: requestId,
-      });
-    }
-    if (!RESEND_API_KEY) {
+      confirmationWarning = confirmationWarning || "Your account request may have been processed, but confirmation could not be prepared. Please contact support.";
+    } else if (!RESEND_API_KEY) {
       logDiagnostic("resend_configuration_missing");
-      return json({
-        warning: "Account created, but email service is not configured. Contact support to resend confirmation.",
-        code: "CONFIRMATION_EMAIL_NOT_CONFIGURED",
-        request_id: requestId,
-      });
-    }
-    try {
-      const resendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-        body: JSON.stringify({
-          from: "Valoria Institute <hello@valoriainstitute.com>",
-          to: normalizedEmail,
-          subject: "Confirm Your Signup — Valoria Institute",
-          html: confirmationEmailHtml(name || "there", actionLink),
-        }),
-      });
-      if (!resendRes.ok) {
-        logDiagnostic("resend_provider_rejected", { status: resendRes.status });
-        return json({
-          warning: "Account created, but confirmation email failed to send. Contact support to resend.",
-          code: "CONFIRMATION_EMAIL_SEND_FAILED",
-          request_id: requestId,
+      confirmationWarning = "Your account was processed, but the confirmation email service is temporarily unavailable. Please contact support if the email does not arrive.";
+    } else {
+      try {
+        const resendRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+          body: JSON.stringify({
+            from: "Valoria Institute <hello@valoriainstitute.com>",
+            to: normalizedEmail,
+            subject: "Confirm Your Signup — Valoria Institute",
+            html: confirmationEmailHtml(name || "there", actionLink),
+          }),
         });
+        if (!resendRes.ok) {
+          logDiagnostic("resend_provider_rejected", { status: resendRes.status });
+          confirmationWarning = "Your account was processed, but the confirmation email could not be sent. Please contact support if the email does not arrive.";
+        }
+      } catch (error) {
+        logDiagnostic("resend_network_error", { error_name: error?.name || "Error" });
+        confirmationWarning = "Your account was processed, but the confirmation email could not be sent. Please contact support if the email does not arrive.";
       }
-    } catch (error) {
-      logDiagnostic("resend_network_error", { error_name: error?.name || "Error" });
-      return json({
-        warning: "Account created, but confirmation email failed to send. Contact support to resend.",
-        code: "CONFIRMATION_EMAIL_SEND_FAILED",
-        request_id: requestId,
-      });
     }
   } else {
     // Supabase's configured confirmation email is the fallback delivery path.
@@ -388,5 +368,5 @@ export default async function handler(req) {
     }
   }
 
-  return json({ success: true, marketplace_profile_created: marketplaceProfileCreated });
+  return json({ success: true, marketplace_profile_created: marketplaceProfileCreated, ...(confirmationWarning ? { warning: confirmationWarning } : {}) });
 }
