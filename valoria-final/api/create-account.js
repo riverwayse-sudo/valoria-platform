@@ -119,7 +119,8 @@ export default async function handler(req) {
   if (!genRes.ok) {
     const providerCode = typeof genData?.code === "string" ? genData.code.slice(0, 80) : undefined;
     const providerError = typeof genData?.error === "string" ? genData.error.slice(0, 80) : undefined;
-    const providerMessage = typeof genData?.msg === "string" ? genData.msg.slice(0, 180) : (typeof genData?.message === "string" ? genData.message.slice(0, 180) : undefined);
+    const rawProviderMessage = typeof genData?.msg === "string" ? genData.msg : (typeof genData?.message === "string" ? genData.message : undefined);
+    const providerMessage = rawProviderMessage ? rawProviderMessage.replaceAll(normalizedEmail, "[redacted-email]").slice(0, 180) : undefined;
     logDiagnostic("auth_generate_link_rejected", {
       status: genRes.status,
       provider_code: providerCode,
