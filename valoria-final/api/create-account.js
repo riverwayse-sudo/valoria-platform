@@ -59,7 +59,7 @@ function confirmationEmailHtml(name, actionLink) {
         <h1 style="font-size:26px;font-weight:300;color:#F7F4EE;margin-bottom:12px;">Confirm your email, ${escapeHtml(name)}.</h1>
         <p style="font-size:14px;line-height:1.7;color:rgba(247,244,238,0.6);margin-bottom:32px;">Confirm your email address to secure your Valoria Institute account and continue your VALU Index journey.</p>
         <a href="${actionLink}" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">CONFIRM EMAIL &rarr;</a>
-        <p style="font-size:11px;color:rgba(247,244,238,0.25);margin-top:40px;">Button not working? Use the direct confirmation link below. If you did not request this email, you can safely ignore it.</p>
+        <p style="font-size:12px;line-height:1.7;color:#D4C9A8;margin:28px 0 8px;">If the button does not work, copy this secure link into your browser:</p><p style="font-size:11px;line-height:1.7;word-break:break-all;margin:0;"><a href="${actionLink}" style="color:#C9A84C;">${actionLink}</a></p><p style="font-size:11px;color:#B8B4C8;margin-top:28px;">If you did not request this email, you can safely ignore it.</p><p style="font-size:11px;color:#B8B4C8;margin-top:12px;">Valoria Institute · Worth. Built.</p>
       </div>
     </body></html>`;
 }
