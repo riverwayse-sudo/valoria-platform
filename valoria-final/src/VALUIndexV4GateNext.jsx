@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+// API routes are deployed at the domain root, not under Vite's nested assessment base path.
+const API_BASE = '';
 
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from './valuTaster.js';
 
