@@ -148,7 +148,7 @@ describe("Identity ownership contracts", () => {
     const source = readApi("resend-confirmation.js");
     expect(source).toContain("confirmation_email_sent_at");
     expect(source).toContain("report_token");
-    expect(source).toContain("redirectTo: redirectUrl");
+    expect(source).toContain("redirect_to: redirectUrl");
   });
   test("full VALU handoff preserves ownership and rejects conflicting taster links", () => {
     const source = readApi("link-assessment-to-taster.js");
