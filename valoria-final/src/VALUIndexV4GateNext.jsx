@@ -19,7 +19,7 @@ export default function VALUIndexV4GateNext(){
  const [accountCreated,setAccountCreated]=useState(false);
  const timer=useRef(null);
  const q=TASTER_QUESTIONS[current]; const progress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
- const scores=useMemo(()=>result?Object.entries(result.normalisedScores).sort((a,b)=>b[1]-a[1]):[],[result]);
+ const scores=useMemo(()=>result?Object.entries(result.points||{}).sort((a,b)=>b[1]-a[1]):[],[result]);
  useEffect(()=>{
   if(!progressToken)return;
   let cancelled=false;
@@ -42,7 +42,7 @@ export default function VALUIndexV4GateNext(){
      const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:savedKey})});
      const data=await response.json().catch(()=>({}));
      if(!response.ok){setError(data.error||'Your saved snapshot is ready to submit. Please retry.');setPhase('taster');return}
-     setResult(data.results||computeTasterResult(savedAnswers));setTasterId(data.taster_id||'');
+     setResult(computeTasterResult(savedAnswers));setTasterId(data.taster_id||'');
      try{if(data.taster_id)localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
      try{
       const completionResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:savedKey})});
@@ -109,7 +109,7 @@ export default function VALUIndexV4GateNext(){
    const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved. Please retry.');
-   setResult(data.results||computeTasterResult(next)); setTasterId(data.taster_id||'');
+   setResult(computeTasterResult(next)); setTasterId(data.taster_id||'');
    try{if(data.taster_id)localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    const completionResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key})});
    if(completionResponse.ok){
@@ -184,8 +184,8 @@ export default function VALUIndexV4GateNext(){
    <p className="valu-results-intro" style={S.resultsIntro}>Your 15-question snapshot is complete. This is an initial, directional view—not your official VALU Index. Your full assessment establishes your authoritative result.</p>
   </section>
   <section aria-label="PRIME snapshot scores" style={S.scoreSection}>
-   <div style={S.sectionHeading}><div style={S.eyebrow}>YOUR PRIME SNAPSHOT</div><span style={S.sectionHint}>Normalised scores · out of 100</span></div>
-   <div className="valu-result-grid" style={S.resultGrid}>{scores.map(([id,value])=><div key={id} style={{...S.resultRow,...(id===result?.strongest?.id?S.resultRowStrong:{})}}><div style={S.dimensionCode}>{id} <span style={S.dimensionCodeDivider}>·</span> PRIME DIMENSION</div><h2 style={S.scoreName}>{CLUSTERS[id]}</h2><p style={S.dimensionMeaning}>{DIMENSION_MEANINGS[id]}</p><strong style={S.scoreValue}>{value}<small style={S.scoreOutOf}>/100</small></strong><div style={S.scoreTrack}><span style={{...S.scoreBar,width:`${Math.max(0,Math.min(100,Number(value)||0))}%`}}/></div>{id===result?.strongest?.id&&<span style={S.scoreBadge}>STRONGEST SIGNAL</span>}</div>)}</div>
+   <div style={S.sectionHeading}><div style={S.eyebrow}>YOUR PRIME SNAPSHOT</div><span style={S.sectionHint}>Earned points against each dimension’s maximum</span></div>
+   <div className="valu-result-grid" style={S.resultGrid}>{scores.map(([id,value])=><div key={id} style={{...S.resultRow,...(id===result?.strongest?.id?S.resultRowStrong:{})}}><div style={S.dimensionCode}>{id} <span style={S.dimensionCodeDivider}>·</span> PRIME DIMENSION</div><h2 style={S.scoreName}>{CLUSTERS[id]}</h2><p style={S.dimensionMeaning}>{DIMENSION_MEANINGS[id]}</p><strong style={S.scoreValue}>{value}<small style={S.scoreOutOf}>/{result?.maxPoints?.[id] ?? 0} points</small></strong><div style={S.scoreTrack}><span style={{...S.scoreBar,width:`${(result?.maxPoints?.[id]||0)>0?Math.max(0,Math.min(100,(Number(value)||0)/(result.maxPoints[id])*100)):0}%`}}/></div>{id===result?.strongest?.id&&<span style={S.scoreBadge}>STRONGEST SIGNAL</span>}</div>)}</div>
   </section>
   <section className="valu-results-insight" style={S.highlight}>
    <div style={S.insightLabel}>YOUR STRONGEST SIGNAL</div><div style={S.signal}>{result?.strongest?.name||CLUSTERS[result?.strongest?.id]||'Your strongest dimension'}</div>
