@@ -8,6 +8,12 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPA
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const VALORIA_SITE_URL = "https://valoriainstitute.com";
 
+const EXTERNAL_REQUEST_TIMEOUT_MS = 8000;
+const fetchWithTimeout = (url, options = {}) => fetch(url, {
+  ...options,
+  signal: AbortSignal.timeout(EXTERNAL_REQUEST_TIMEOUT_MS),
+});
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -96,7 +102,7 @@ export default async function handler(req) {
   if (identity_hash) {
     let assessmentRes;
     try {
-      assessmentRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=id,name,role,email,user_id,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at,report_token&identity_hash=eq.${encodeURIComponent(identity_hash)}&limit=1`, { headers: adminHeaders });
+      assessmentRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?select=id,name,role,email,user_id,total_score,cluster_scores,skill_scores,designation,completed_at,expires_at,report_token&identity_hash=eq.${encodeURIComponent(identity_hash)}&limit=1`, { headers: adminHeaders });
     } catch { return json({ error: "Could not verify the assessment reference." }, 502); }
     if (!assessmentRes.ok) return json({ error: "Could not verify the assessment reference." }, 502);
     const assessments = await assessmentRes.json();
@@ -125,7 +131,7 @@ export default async function handler(req) {
     }
     try {
       const signupUrl = `${SUPABASE_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectUrl)}`;
-      const signupRes = await fetch(signupUrl, {
+      const signupRes = await fetchWithTimeout(signupUrl, {
         method: "POST",
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -165,7 +171,7 @@ export default async function handler(req) {
 
   let generateLinkFailure = null;
   try {
-    genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+    genRes = await fetchWithTimeout(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
       method: "POST",
       headers: adminHeaders,
       body: JSON.stringify({
@@ -202,6 +208,7 @@ export default async function handler(req) {
   }
 
   let confirmationWarning = null;
+  let confirmationEmailSent = false;
   if (generateLinkFailure === "missing_action_link") {
     // The admin operation may already have created the identity. Do not retry
     // signup and risk a duplicate/ambiguous account-creation result. Continue
@@ -231,7 +238,7 @@ export default async function handler(req) {
       confirmationWarning = "Your account was processed, but the confirmation email service is temporarily unavailable. Please contact support if the email does not arrive.";
     } else {
       try {
-        const resendRes = await fetch("https://api.resend.com/emails", {
+        const resendRes = await fetchWithTimeout("https://api.resend.com/emails", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
           body: JSON.stringify({
@@ -254,6 +261,7 @@ export default async function handler(req) {
     // Supabase's configured confirmation email is the fallback delivery path.
     // Keep the app's post-signup assessment/profile synchronization running.
     logDiagnostic("confirmation_delegated_to_supabase");
+    confirmationEmailSent = true;
   }
 
   let marketplaceProfileCreated = false;
@@ -263,7 +271,7 @@ export default async function handler(req) {
       // does not receive or need a service-role key or privileged listing token.
       let userId = genData?.user?.id || null;
       if (!userId) {
-        const userRes = await fetch(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(normalizedEmail)}&select=id&limit=1`, { headers: adminHeaders });
+        const userRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(normalizedEmail)}&select=id&limit=1`, { headers: adminHeaders });
         if (userRes.ok) {
           const users = await userRes.json();
           userId = users?.[0]?.id || null;
@@ -273,16 +281,16 @@ export default async function handler(req) {
         console.error("create-account: application user row not available after Auth signup");
         return json({ success: true, marketplace_profile_created: false, warning: "Account created. Your VALU profile will appear after confirmation." });
       }
-      const stitchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}&user_id=is.null`, {
+      const stitchRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?id=eq.${encodeURIComponent(assessment.id)}&user_id=is.null`, {
         method: "PATCH",
         headers: { ...adminHeaders, Prefer: "return=minimal" },
-        body: JSON.stringify({ email: normalizedEmail, user_id: userId, confirmation_email_sent_at: new Date().toISOString() }),
+        body: JSON.stringify({ email: normalizedEmail, user_id: userId, ...(confirmationEmailSent ? { confirmation_email_sent_at: new Date().toISOString() } : {}) }),
       });
       if (!stitchRes.ok) {
         console.error("create-account: assessment ownership stitch failed", stitchRes.status);
         return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
       }
-      const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
+      const profileRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/professional_profiles`, {
         method: "POST",
         headers: { ...adminHeaders, Prefer: "resolution=merge-duplicates,return=minimal" },
         body: JSON.stringify({
@@ -298,7 +306,7 @@ export default async function handler(req) {
         return json({ success: true, marketplace_profile_created: false, warning: "Account created, but your VALU profile needs a final sync." });
       }
 
-      const capabilityRes = await fetch(
+      const capabilityRes = await fetchWithTimeout(
         SUPABASE_URL + "/rest/v1/professional_capabilities?on_conflict=professional_id%2Ccapability",
         {
           method: "POST",
@@ -321,7 +329,7 @@ export default async function handler(req) {
       // Completion is a first-class journey event. The unique key makes this
       // safe against retries and guarantees notification/email delivery is not duplicated.
       const journeyEventKey = "assessment.completed.marketplace";
-      const eventRes = await fetch(`${SUPABASE_URL}/rest/v1/journey_events`, {
+      const eventRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/journey_events`, {
         method: "POST",
         headers: { ...adminHeaders, Prefer: "resolution=ignore-duplicates,return=minimal" },
         body: JSON.stringify({
@@ -333,7 +341,7 @@ export default async function handler(req) {
       });
       if (!eventRes.ok) console.error("create-account: journey event failed", eventRes.status);
 
-      const notificationRes = await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+      const notificationRes = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/notifications`, {
         method: "POST",
         headers: { ...adminHeaders, Prefer: "resolution=ignore-duplicates,return=minimal" },
         body: JSON.stringify({
@@ -350,17 +358,21 @@ export default async function handler(req) {
       // This is separate from the authentication email: it explains the
       // completed assessment, marketplace placement, and the next action.
       if (RESEND_API_KEY) {
-        const journeyEmailRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-          body: JSON.stringify({
-            from: "Valoria Institute <hello@valoriainstitute.com>",
-            to: normalizedEmail,
-            subject: "Your VALU Assessment Is Complete — Here's What Happens Next",
-            html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation),
-          }),
-        });
-        if (!journeyEmailRes.ok) console.error("create-account: journey email failed", journeyEmailRes.status);
+        try {
+          const journeyEmailRes = await fetchWithTimeout("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+            body: JSON.stringify({
+              from: "Valoria Institute <hello@valoriainstitute.com>",
+              to: normalizedEmail,
+              subject: "Your VALU Assessment Is Complete — Here's What Happens Next",
+              html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation),
+            }),
+          });
+          if (!journeyEmailRes.ok) logDiagnostic("journey_email_provider_rejected", { status: journeyEmailRes.status });
+        } catch (error) {
+          logDiagnostic("journey_email_network_error", { error_name: error?.name || "Error" });
+        }
       }
     } catch (err) {
       console.error("create-account: marketplace sync failed", err);
