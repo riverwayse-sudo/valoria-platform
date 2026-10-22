@@ -111,7 +111,7 @@ export default async function handler(req) {
     if (assessment.user_id) return json({ error: "This assessment is already linked to an account." }, 409);
   }
 
-  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/login?email_confirmed=1&identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/login?email_confirmed=1`;
+  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/auth/callback?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/auth/callback`;
   let genRes = null, genData = null;
   let actionLink = null;
   let confirmationMode = "resend";
