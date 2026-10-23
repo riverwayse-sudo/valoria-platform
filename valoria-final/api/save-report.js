@@ -36,13 +36,21 @@ export default async function handler(req) {
       apikey: SERVICE_ROLE_KEY,
       Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
       "Content-Type": "application/json",
-      Prefer: "return=minimal",
+      // return=representation so a PATCH that matched no row is distinguishable
+      // from one that wrote. With return=minimal an unknown identity_hash was
+      // reported as ok:true while nothing was stored.
+      Prefer: "return=representation",
     },
     body: JSON.stringify(patchBody),
   });
 
   if (!res.ok) {
     return new Response(JSON.stringify({ error: "Supabase save failed" }), { status: 502 });
+  }
+
+  const updated = await res.json().catch(() => []);
+  if (!Array.isArray(updated) || updated.length === 0) {
+    return new Response(JSON.stringify({ error: "No assessment matched that identity." }), { status: 404 });
   }
 
   return new Response(JSON.stringify({ ok: true, saved: Object.keys(patchBody) }), {
