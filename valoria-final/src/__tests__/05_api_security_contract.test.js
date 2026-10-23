@@ -34,6 +34,9 @@ describe("Privileged API security contracts", () => {
     expect(source).toContain('["failed_assessment_reports", "completed assessments whose report generation failed"]');
     expect(migration).toContain("'pending_assessment_reports'");
     expect(migration).toContain("a.report_status = 'PENDING'");
+    expect(source).toContain('["pending_report_emails", "completed assessments with saved reports awaiting email delivery"]');
+    expect(source).toContain('report_status: "eq.EMAIL_PENDING"');
+    expect(source).toContain('Prefer: "count=exact"');
   });
   test("all serverless API modules parse as valid Node.js source", () => {
     const apiFiles = fs.readdirSync(API_ROOT).filter((file) => file.endsWith(".js"));
