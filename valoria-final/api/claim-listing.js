@@ -1,3 +1,5 @@
+export const config = { runtime: 'edge' };
+
 // api/claim-listing.js
 // Claims a completed assessment for the authenticated user and creates/updates
 // the professional profile. A 35+ VALU score is score eligibility only; actual
