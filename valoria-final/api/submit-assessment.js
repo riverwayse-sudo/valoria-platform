@@ -200,8 +200,17 @@ export default async function handler(req, res) {
     return json(res, 502, { error: 'Could not verify whether this assessment was already submitted.' });
   }
 
+  // The insert response must be readable after the try/catch below, so it is
+  // declared here. Declaring it with `const` inside the try made every
+  // successful first-time submission throw ReferenceError *after* the row had
+  // been written: the participant was charged a completed assessment, saw
+  // "Could not save your result", and on retry got alreadyCompleted with no
+  // report token. The text-assertion contract tests could not catch that
+  // because they never execute this handler; submit-assessment-runtime.test.js
+  // now does.
+  let insertRes
   try {
-    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=identity_hash,report_token`, {
+    insertRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=identity_hash,report_token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: 'return=representation' },
       body: JSON.stringify(row),
