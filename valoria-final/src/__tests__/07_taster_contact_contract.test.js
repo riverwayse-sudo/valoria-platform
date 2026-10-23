@@ -17,4 +17,9 @@ describe("Snapshot submission contact contract", () => {
   expect(source).toContain("validAnswers(answers)");
   expect(source).toContain("computeTasterResult(answers)");
  });
+ test("persists the current points-based snapshot score shape to the atomic RPC", () => {
+  expect(source).toContain("p_cluster_scores: results.points");
+  expect(source).not.toContain("p_cluster_scores: results.normalisedScores");
+ });
+
 });
