@@ -13,7 +13,7 @@
 //
 // Resolution order:
 //   1. VALORIA_SITE_URL     — explicit, environment-specific; set this on staging.
-//   2. SITE_ORIGIN          — already used by generate-and-send-report.js.
+//   2. SITE_ORIGIN          — legacy name, still honoured for existing deployments.
 //   3. NEXT_PUBLIC_SITE_URL — the name valoria-site uses, for parity.
 //   4. Production origin    — last resort.
 //
