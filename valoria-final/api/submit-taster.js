@@ -93,7 +93,7 @@ export default async function handler(req, res) {
         p_experience: experience,
         p_email: normalizedEmail,
         p_answers: answers,
-        p_cluster_scores: results.normalisedScores,
+        p_cluster_scores: results.points,
         p_strongest_cluster: results.strongest.id,
         p_weakest_cluster: results.weakest.id,
         p_taster_version: String(VALU_VERSION),
