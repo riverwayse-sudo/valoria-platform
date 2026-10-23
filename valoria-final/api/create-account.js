@@ -1,11 +1,14 @@
 export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
+import { resolveSiteUrl } from "../lib/site-url.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const VALORIA_SITE_URL = "https://valoriainstitute.com";
+// Environment-specific. Hardcoding production here sent staging registrations
+// to the production site.
+const VALORIA_SITE_URL = resolveSiteUrl();
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -118,6 +121,9 @@ export default async function handler(req) {
   }
 
   const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/auth/callback?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/auth/callback`;
+  // Supabase will only honour this redirect if it is in the project's Auth
+  // redirect allowlist. On staging the staging origin must be allowlisted, or
+  // Supabase silently falls back to the Site URL and the callback never fires.
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
