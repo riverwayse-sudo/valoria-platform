@@ -31,16 +31,41 @@ describe("resolveSiteUrl", () => {
     expect(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://public-site.test" })).toBe("https://public-site.test");
   });
 
-  test("uses the deployment's own VERCEL_URL when nothing else is set", () => {
-    expect(resolveSiteUrl({ VERCEL_URL: "valoria-site-abc123.vercel.app" })).toBe("https://valoria-site-abc123.vercel.app");
+  test("never uses the platform's own deployment host as the site origin", () => {
+    // The platform (valoria-final-*) and the site (valoria-site-*) are separate
+    // Vercel projects, so VERCEL_URL names the platform, not the site. An
+    // earlier revision of this resolver included it; that produced auth
+    // callbacks on a host where /auth/callback does not exist, is ephemeral, and
+    // is Deployment-Protection gated. The wrong behaviour is asserted here so it
+    // cannot be reintroduced.
+    const resolved = resolveSiteUrl({ VERCEL_URL: "valoria-final-abc123.vercel.app" });
+    expect(resolved).not.toContain("valoria-final");
+    expect(resolved).toBe(PRODUCTION_SITE_URL);
   });
 
   test("falls back to production only when nothing is configured", () => {
     expect(resolveSiteUrl({})).toBe(PRODUCTION_SITE_URL);
   });
 
-  test("precedence is explicit env over deployment host", () => {
-    expect(resolveSiteUrl({ VALORIA_SITE_URL: "https://staging.valoria.test", VERCEL_URL: "x.vercel.app" })).toBe("https://staging.valoria.test");
+  test("warns when a non-production deployment has no site origin", () => {
+    const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      resolveSiteUrl({ VERCEL_ENV: "preview" });
+      expect(spy).toHaveBeenCalled();
+      expect(spy.mock.calls[0][0]).toContain("VALORIA_SITE_URL");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test("does not warn for production, which legitimately needs no override", () => {
+    const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(resolveSiteUrl({ VERCEL_ENV: "production" })).toBe(PRODUCTION_SITE_URL);
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("normalises a scheme-less value and strips paths", () => {

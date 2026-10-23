@@ -12,14 +12,22 @@
 // recorded on another.
 //
 // Resolution order:
-//   1. VALORIA_SITE_URL   — explicit, environment-specific; set this on staging.
-//   2. SITE_ORIGIN        — already used by generate-and-send-report.js.
+//   1. VALORIA_SITE_URL     — explicit, environment-specific; set this on staging.
+//   2. SITE_ORIGIN          — already used by generate-and-send-report.js.
 //   3. NEXT_PUBLIC_SITE_URL — the name valoria-site uses, for parity.
-//   4. VERCEL_URL         — the deployment's own host, correct-by-construction.
-//   5. Production origin  — last-resort default for local runs.
+//   4. Production origin    — last resort.
 //
-// Never point this at a preview deployment host as a permanent value; preview
-// hosts are per-deploy and change on every push.
+// VERCEL_URL is deliberately NOT in this chain. This platform and valoria-site
+// are separate Vercel projects (valoria-final-* vs valoria-site-*), so Vercel's
+// automatic VERCEL_URL names *this* deployment, not the site. Using it would
+// build auth callbacks like https://valoria-final-<hash>.vercel.app/auth/callback,
+// which is wrong three ways: /auth/callback is a site route that does not exist
+// here, the host is ephemeral and changes every deploy, and preview hosts are
+// Deployment-Protection gated so the link would dead-end at a Vercel login.
+//
+// If none of the above is set we fall back to production, because production
+// legitimately needs no override. That fallback is only correct for production,
+// so warn loudly elsewhere rather than silently mailing a production link.
 
 export const PRODUCTION_SITE_URL = 'https://valoriainstitute.com';
 
@@ -38,9 +46,19 @@ function originOf(value) {
 }
 
 export function resolveSiteUrl(env = process.env) {
-  return originOf(env.VALORIA_SITE_URL)
+  const explicit = originOf(env.VALORIA_SITE_URL)
     || originOf(env.SITE_ORIGIN)
-    || originOf(env.NEXT_PUBLIC_SITE_URL)
-    || originOf(env.VERCEL_URL)
-    || PRODUCTION_SITE_URL;
+    || originOf(env.NEXT_PUBLIC_SITE_URL);
+  if (explicit) return explicit;
+
+  // Vercel sets VERCEL_ENV to 'production' | 'preview' | 'development'.
+  if (env.VERCEL_ENV && env.VERCEL_ENV !== 'production') {
+    console.error(
+      `site-url: no site origin configured (VERCEL_ENV=${env.VERCEL_ENV}); ` +
+      `falling back to ${PRODUCTION_SITE_URL}. Auth redirects and journey links ` +
+      `will point at production. Set VALORIA_SITE_URL for this environment.`
+    );
+  }
+  return PRODUCTION_SITE_URL;
 }
+
