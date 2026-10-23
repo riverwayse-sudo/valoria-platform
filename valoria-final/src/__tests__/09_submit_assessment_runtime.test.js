@@ -227,6 +227,9 @@ describe("submit-assessment runtime", () => {
     const res = await invoke(validBody(questions));
     expect(res.statusCode).toBe(200);
     expect(res.body.alreadyCompleted).toBe(true);
+    // The recovery path must hand back the original report token, otherwise a
+    // participant whose first response was lost can never reach their report.
+    expect(res.body.report_token).toBe("tok-existing");
     const inserts = calls.filter(c => c.method === "POST" && c.url.includes("/rest/v1/valu_assessments"));
     expect(inserts).toHaveLength(0);
   });
