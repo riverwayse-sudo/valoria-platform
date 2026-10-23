@@ -206,4 +206,76 @@ describe("submit-assessment runtime", () => {
     expect(res.statusCode).toBe(502);
     expect(res.body.report_token).toBeUndefined();
   });
+
+  test("a retry after an ambiguous first response does not create a duplicate record", async () => {
+    // Simulates: the first submission persisted the row but the client never
+    // received the response. The retry must find the existing record and return
+    // it, with no second insert.
+    const calls = stubFetch({
+      existingAssessment: {
+        id: "existing-1",
+        user_id: USER_ID,
+        taster_id: TASTER_ID,
+        total_score: 61,
+        designation: "Proficient",
+        cluster_scores: { P: 60 },
+        skill_scores: {},
+        completed_at: "2026-01-02T00:00:00Z",
+        report_token: "tok-existing",
+      },
+    });
+    const res = await invoke(validBody(questions));
+    expect(res.statusCode).toBe(200);
+    expect(res.body.alreadyCompleted).toBe(true);
+    const inserts = calls.filter(c => c.method === "POST" && c.url.includes("/rest/v1/valu_assessments"));
+    expect(inserts).toHaveLength(0);
+  });
+
+  test("a unique-constraint race on insert recovers to the existing record", async () => {
+    // Two concurrent submissions: the second loses the race and PostgREST
+    // answers 409. The handler must resolve to the winner's record, not fail.
+    const calls = stubFetch({ insertStatus: 409 });
+    // After the 409, the recovery lookup must find the row the winner wrote.
+    const base = global.fetch;
+    global.fetch = jest.fn(async (url, options = {}) => {
+      const u = String(url);
+      const method = options.method || "GET";
+      if (method === "GET" && u.includes("/rest/v1/valu_assessments")) {
+        return { ok: true, status: 200, json: async () => [{
+          id: "winner", user_id: USER_ID, taster_id: TASTER_ID, total_score: 58,
+          designation: "Proficient", cluster_scores: {}, skill_scores: {},
+          completed_at: "2026-01-02T00:00:00Z", report_token: "tok-winner",
+        }], text: async () => "[]" };
+      }
+      return base(url, options);
+    });
+    const res = await invoke(validBody(questions));
+    expect(res.statusCode).toBe(200);
+    expect(res.body.alreadyCompleted).toBe(true);
+    expect(res.body.report_token).toBe("tok-winner");
+    expect(calls).toBeDefined();
+  });
+
+  test("a saved row with no report token is reported honestly, not as success", async () => {
+    stubFetch({ insertRows: [{ identity_hash: "fp" }] }); // no report_token
+    const res = await invoke(validBody(questions));
+    expect(res.statusCode).toBe(502);
+    expect(res.body.error).toMatch(/saved, but report access could not be confirmed/i);
+    expect(res.body.report_token).toBeUndefined();
+  });
+
+  test("the success response carries the canonical points payload the dashboard reads", async () => {
+    stubFetch();
+    const res = await invoke(validBody(questions));
+    expect(res.statusCode).toBe(200);
+    // Shape the site's dashboard/report reads back: index + designation + clusters.
+    expect(res.body.results).toEqual(expect.objectContaining({
+      valuIndex: expect.any(Number),
+      desig: expect.objectContaining({ name: expect.any(String) }),
+      clusterScores: expect.any(Object),
+      skillScores: expect.any(Object),
+    }));
+    // Must survive a JSON round-trip (it is sent over the wire).
+    expect(JSON.parse(JSON.stringify(res.body)).report_token).toBe("tok-123");
+  });
 });
