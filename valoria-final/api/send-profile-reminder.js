@@ -2,11 +2,12 @@
 // Internal scheduled job: remind completed VALU users who have not finished
 // their professional profile. This endpoint is never a browser capability.
 
+import { resolveSiteUrl } from "../lib/site-url.js";
+
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 const BREVO_KEY = process.env.BREVO_API_KEY;
-const VALORIA_SITE_URL = process.env.VALORIA_SITE_URL || 'https://valoriainstitute.com';
 
 function send(res, status, data) {
   if (res && typeof res.status === 'function' && typeof res.json === 'function') return res.status(status).setHeader('Cache-Control', 'no-store').json(data);
@@ -51,7 +52,7 @@ export default async function handler(req, res) {
       const firstName = assessment.name?.trim()?.split(' ')[0] || 'there';
       const designation = String(assessment.designation || '').replace(/[<>]/g, '');
       const items = `${missingAvatar ? '<li>Add a clear professional photo</li>' : ''}${missingProfile ? '<li>Complete the remaining professional profile information</li>' : ''}`;
-      const html = `<div style="font-family:sans-serif;font-size:14px;line-height:1.7;color:#1A1A2E;max-width:520px;"><p style="font-size:11px;font-weight:700;letter-spacing:.14em;color:#C9A84C;text-transform:uppercase;margin:0 0 16px;">VALORIA INSTITUTE</p><p style="font-size:20px;font-weight:300;margin:0 0 16px;">Almost there, ${firstName}.</p><p>You completed your VALU Index${designation ? ` and scored as <strong>${designation}</strong>` : ''}, but your professional profile is not complete yet.</p><p>Please complete the outstanding details:</p><ul>${items}</ul><p style="margin:28px 0;"><a href="${VALORIA_SITE_URL}/profile/setup" style="display:inline-block;padding:12px 24px;background:#C9A84C;color:#1A1A2E;font-size:12px;font-weight:700;letter-spacing:.1em;text-decoration:none;">COMPLETE YOUR PROFILE</a></p><p style="color:#888;font-size:12px;">Valoria Institute · African Talent Bureau Ltd · Lagos, Nigeria</p></div>`;
+      const html = `<div style="font-family:sans-serif;font-size:14px;line-height:1.7;color:#1A1A2E;max-width:520px;"><p style="font-size:11px;font-weight:700;letter-spacing:.14em;color:#C9A84C;text-transform:uppercase;margin:0 0 16px;">VALORIA INSTITUTE</p><p style="font-size:20px;font-weight:300;margin:0 0 16px;">Almost there, ${firstName}.</p><p>You completed your VALU Index${designation ? ` and scored as <strong>${designation}</strong>` : ''}, but your professional profile is not complete yet.</p><p>Please complete the outstanding details:</p><ul>${items}</ul><p style="margin:28px 0;"><a href="${resolveSiteUrl()}/profile/setup" style="display:inline-block;padding:12px 24px;background:#C9A84C;color:#1A1A2E;font-size:12px;font-weight:700;letter-spacing:.1em;text-decoration:none;">COMPLETE YOUR PROFILE</a></p><p style="color:#888;font-size:12px;">Valoria Institute · African Talent Bureau Ltd · Lagos, Nigeria</p></div>`;
       const sendRes = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': BREVO_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ sender: { name: 'Valoria Institute', email: 'info@valoriainstitute.com' }, to: [{ email, name: assessment.name || undefined }], subject: missingAvatar ? 'Add your photo to complete your Valoria profile' : 'Complete your Valoria profile to go live', htmlContent: html, tags: ['profile-reminder'] }) });
       if (!sendRes.ok) return send(res, 502, { error: 'Profile reminder email failed.' });
     }

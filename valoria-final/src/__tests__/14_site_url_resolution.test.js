@@ -112,4 +112,32 @@ describe("handlers build environment-specific URLs", () => {
     }
     expect(offenders).toEqual([]);
   });
+
+  test("every api module that builds a site URL resolves it the same way", () => {
+    // The previous test only inspected the assignment shape `const NAME =
+    // "https://valoriainstitute.com"`. send-profile-reminder.js survived it
+    // because it wrote `process.env.VALORIA_SITE_URL || "https://..."`, which
+    // matches none of the guarded names: it honoured only one variable name and
+    // fell back to production silently, so a staging reminder emailed a
+    // production profile link. Assert the resolver itself, not the literal.
+    const offenders = [];
+    for (const file of require("fs").readdirSync(path.join(root, "api"))) {
+      if (!file.endsWith(".js")) continue;
+      const source = readApi(file);
+      // A module that builds a site URL must route it through resolveSiteUrl().
+      const buildsSiteUrl = /\$\{[A-Za-z_]*(SITE_URL|APP_URL|SiteUrl)[A-Za-z_]*\}\//.test(source)
+        || /["']https:\/\/valoriainstitute\.com\/(profile|auth|journey|report)/.test(source);
+      if (!buildsSiteUrl) continue;
+      if (!source.includes("resolveSiteUrl")) offenders.push(file);
+      if (/process\.env\.VALORIA_SITE_URL\s*\|\|/.test(source)) offenders.push(`${file} (ad-hoc env read)`);
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test("send-profile-reminder resolves the site origin instead of reading one variable", () => {
+    const source = readApi("send-profile-reminder.js");
+    expect(source).toContain("resolveSiteUrl");
+    expect(source).toContain("resolveSiteUrl()}/profile/setup");
+    expect(source).not.toMatch(/process\.env\.VALORIA_SITE_URL\s*\|\|/);
+  });
 });
