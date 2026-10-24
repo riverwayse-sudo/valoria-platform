@@ -225,6 +225,45 @@ describe("generate-and-send-report — report delivery routing", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.emailPending).toBe(true);
   });
+
+  // Recipient binding. A public trigger is unauthenticated, so the delivery
+  // address must come from the stored assessment the token resolved to. If the
+  // request body could name the recipient, anyone holding a report token could
+  // mail that report to an arbitrary address.
+  test("the recipient is the stored assessment's email, never a caller-supplied one", async () => {
+    const calls = stub();
+    const res = await invoke({ body: { report_token: REPORT_TOKEN, email: "attacker@evil.example" } });
+    expect(res.statusCode).toBe(200);
+    const send = calls.find((c) => c.url.includes("/api/send-email"));
+    expect(send.body.email).toBe(EMAIL);
+    expect(send.body.email).not.toBe("attacker@evil.example");
+  });
+
+  test("a worker cannot redirect delivery to a caller-supplied address either", async () => {
+    // The CRON worker may name the identity hash, but not the destination.
+    const calls = stub();
+    const res = await invoke({
+      body: { identity_hash: IDENTITY, email: "attacker@evil.example" },
+      headers: { authorization: `Bearer ${CRON}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const send = calls.find((c) => c.url.includes("/api/send-email"));
+    expect(send.body.email).toBe(EMAIL);
+  });
+
+  test("a stored email is trimmed before it is used as the recipient", async () => {
+    const calls = stub({ assessment: { ...ASSESSMENT, email: `  ${EMAIL}  ` } });
+    await invoke();
+    const send = calls.find((c) => c.url.includes("/api/send-email"));
+    expect(send.body.email).toBe(EMAIL);
+  });
+
+  test("a whitespace-only stored email defers delivery instead of sending", async () => {
+    const calls = stub({ assessment: { ...ASSESSMENT, email: "   " } });
+    const res = await invoke();
+    expect(res.body.emailPending).toBe(true);
+    expect(calls.some((c) => c.url.includes("/api/send-email"))).toBe(false);
+  });
 });
 
 describe("generate-and-send-report — report state writes are confirmed", () => {

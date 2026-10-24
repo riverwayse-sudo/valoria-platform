@@ -459,5 +459,46 @@ confirmed by the operator before it lands:
    validated against a real snapshot submission (the journey in §2.4) before
    being applied anywhere.
 
-**Disposition:** keep open, do not close, do not merge in this pass. Requires an
-operator decision and a database-owner review.
+### 7.1 Verification against the candidate head (2026-10-23)
+
+Both open questions above were checked against the current candidate, not just the
+source comment. They resolve as follows.
+
+**The candidate and #126 do not interact.** `remediation/staging-2026-10-23` adds
+**no** migrations: the `supabase/migrations/` tree is byte-identical to `main`.
+So nothing in this pass depends on, or conflicts with, the #126 SQL.
+
+**The revoked client INSERT has no client caller.** The only client-side uses of
+the affected session table are reads:
+
+* `src/app/dashboard/page.jsx` and `src/components/ValuCompletionNudge.jsx` in
+  `valoria-site` both `select` from `assessment_sessions`.
+
+#126 revokes `INSERT` on `assessment_sessions`/`taster_sessions`, **not** `SELECT`,
+and `20261014153000_assessment_sessions_owner_read_contract.sql` grants
+`select ... to authenticated` under an owner-only policy. The resume/dashboard
+signal therefore keeps working. There is no client INSERT to break.
+
+**The snapshot path is unaffected by the revokes.** §7's second question was
+whether revoking INSERT on `taster_sessions`/`taster_identity_candidates` would
+break snapshot submission. It does not:
+
+* `public.submit_taster_with_identity_candidate` is declared `SECURITY DEFINER`
+  (`supabase/migrations/20261016121500_fix_taster_submission_ambiguous_reference.sql`),
+  so it executes with its owner's privileges, not the caller's.
+* Its `INSERT INTO public.taster_sessions` / `taster_identity_candidates` run as
+  that owner, which the `FROM PUBLIC, anon, authenticated` revoke does not touch.
+* It is granted only `TO service_role`, and `api/submit-taster.js` calls it with
+  the service-role key.
+
+**Residual, and why this stays an operator decision.** The migration's *effect* is
+already applied to the connected Supabase project (per the PR description) while
+the SQL is unmerged, so the deployed grants and the source-of-record are out of
+step. Source alone cannot confirm the deployed function owner or the live grant
+state; that needs a database-owner check.
+
+**Disposition:** unchanged — keep open, do not close, do not merge in this pass.
+The two source-level questions are now answered and the revokes are shown to be
+safe for the snapshot journey; what remains is the operator's confirmation that
+the deployed grant state matches this SQL. No candidate code change is required,
+and none is made.
