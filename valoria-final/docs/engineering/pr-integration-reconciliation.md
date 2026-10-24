@@ -1,30 +1,81 @@
 # Open-PR reconciliation and integration order
 
-Six pull requests are open across `valoria-platform` and `valoria-site`, all
-draft and unmerged. Several repair the same incidents from different angles, and
-two pairs touch the same files on different branches. This document records the
-comparison, the recommended integration order, and the disposition of each PR.
+Eight pull requests are open across `valoria-platform` and `valoria-site`. Seven
+are draft; #126 is a non-draft PR that has been open since 2026-10-22 and is
+covered separately in §7. Several repair the same incidents from different
+angles, and two pairs touch the same files on different branches. This document
+records the comparison, the recommended integration order, and the disposition
+of each PR.
 
 Nothing here authorises a merge. Every PR stays draft until the staging
 acceptance journey passes and an operator authorises release.
 
-Verified state: all six are `state: open`, `draft: true`, `merged: false`.
-`main` is untouched in both repositories.
+Verified state (re-read from the API immediately before this revision):
+all eight are `state: open`, `merged: false`, `mergeable: true`. `main` is
+untouched in both repositories.
+
+## 0. Integration decisions taken in this pass
+
+Two PRs duplicated work already fixed on the remediation branches. Both
+duplicates were folded into `#62`/`#133` rather than waiting, so the candidate is
+self-contained and does not depend on unrelated PRs landing first:
+
+| Duplicate | Fixed independently by | Folded into | Reason |
+| --- | --- | --- | --- |
+| `submit-taster` cluster payload | #60 | **#62** | Byte-identical one-line fix. Leaving it out keeps snapshot submission broken on the candidate. |
+| `vercel.json` API rewrite + catch-all | #60 + #63 | **#62** | Priority 1 (asset loading and routing). Same root cause, both halves needed. |
+| Email/report abuse controls | #135 | **#133** | #135's analysis was correct where the first attempt was wrong; its design is adopted wholesale, with the missing HTML escaping added. |
+
+#60, #61, #63 and #135 remain open and draft and are **not** closed, merged or
+superseded. They are now partly redundant against `#62`/`#133`; §5 records what
+each still uniquely contributes.
 
 ---
 
 ## 1. Inventory
 
-| PR | Repo | Head branch | Base | Commits | Files | Scope |
-| --- | --- | --- | --- | --- | --- | --- |
-| #60 | platform | `fix/valu-critical-path-audit-2026-10-23` | `main` | — | 5 | Snapshot submit routing + taster cluster payload |
-| #61 | platform | `test/valu-critical-path-regressions-2026-10-23` | **#60's branch** | — | 2 | Tests for #60 |
-| #62 | platform | `remediation/staging-2026-10-23` | `main` | 13 | 25 | Full platform remediation (this audit) |
-| #63 | platform | `fix/valu-missing-asset-404-2026-10-23` | `main` | — | 2 | Missing-asset 404 instead of the SPA shell |
-| #133 | site | `remediation/staging-2026-10-23` | `main` | 13 | 50 | Full site remediation (this audit) |
-| #134 | site | `fix/valu-confirmation-snapshot-recovery-2026-10-23` | `main` | — | 2 | Snapshot recovery on the confirmation landing |
+| PR | Repo | Head branch | Base | Head | Commits | Files | Scope |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| #60 | platform | `fix/valu-critical-path-audit-2026-10-23` | `main` | `f781c94` | — | 5 | Snapshot submit routing + taster cluster payload |
+| #61 | platform | `test/valu-critical-path-regressions-2026-10-23` | **#60's branch** | `fcefb3c` | — | 2 | Tests for #60 |
+| #62 | platform | `remediation/staging-2026-10-23` | `main` | `3d8213a` | 15 | 31 | Full platform remediation (this audit) |
+| #63 | platform | `fix/valu-missing-asset-404-2026-10-23` | `main` | `2b3c623` | — | 2 | Missing-asset 404 instead of the SPA shell |
+| #133 | site | `remediation/staging-2026-10-23` | `main` | `61f5dff` | 16 | 55 | Full site remediation (this audit) |
+| #134 | site | `fix/valu-confirmation-snapshot-recovery-2026-10-23` | `main` | `1e45583` | — | 2 | Snapshot recovery on the confirmation landing |
+| #135 | site | `fix/valu-email-report-abuse-controls-2026-10-23` | `main` | `ba4bf3e` | — | 6 | Email/report abuse controls (duplicates #133) |
+| #126 | site | `security/tighten-valu-client-privileges-20261022` | `main` | `0f426c8` | — | 2 | RLS/privilege tightening + one index (see §7) |
 
-`mergeable_state` is `clean` for #60, #61 and #63 against their current bases.
+`mergeable` is `true` for all eight against their current bases.
+
+### Changed files per PR
+
+| PR | Files |
+| --- | --- |
+| #60 | `.env.example`, `api/claim-listing.js`, `api/submit-taster.js`, `src/__tests__/07_taster_contact_contract.test.js`, `vercel.json` |
+| #61 | `src/__tests__/07_taster_contact_contract.test.js`, `src/__tests__/09_valu_api_routing_contract.test.js` |
+| #62 | 31 files — 13 API handlers, `lib/site-url.js`, `vercel.json`, `package.json`, `scripts/find-block-scope-bugs.mjs`, 13 test suites, 2 fixtures, 2 docs |
+| #63 | `src/__tests__/10_missing_asset_404_contract.test.js`, `vercel.json` |
+| #133 | 55 files — see §2.2 |
+| #134 | `src/__tests__/confirmation-snapshot-recovery-contract.test.js`, `src/app/auth/callback/page.jsx` |
+| #135 | `src/__tests__/api-abuse-controls-contract.test.js`, `api/trigger-report/route.js`, `api/welcome-email/route.js`, `login/page.jsx`, `signup/page.jsx`, `lib/api-guard.js` |
+| #126 | `supabase/migrations/20261022100000_tighten_client_privileges_on_internal_valu_tables.sql`, `supabase/migrations/20261022110000_index_career_applications_reviewed_by.sql` |
+
+### CI status at the current head
+
+| PR | Result |
+| --- | --- |
+| #60 | 6/6 success |
+| #61 | 2/2 success |
+| #62 | in progress at time of writing; 6/6 success on the preceding head `89edd18` |
+| #63 | 6/6 success |
+| #133 | in progress at time of writing; the `Secret Scan` failure on head `f0c96d1` is fixed by `61f5dff` (a synthetic UUID fixture tripped gitleaks) |
+| #134 | 8 success, 1 skipped |
+| #135 | 7 success, 1 skipped, 1 failure |
+| #126 | 8 success, 1 skipped |
+
+**Do not read #61's green CI as evidence that it is independently mergeable.**
+CI runs against its stacked base, so it validates `#60 + #61` together, not #61
+against `main`.
 
 ---
 
@@ -39,8 +90,11 @@ Verified state: all six are `state: open`, `draft: true`, `merged: false`.
 | #60 | Adds a rewrite `"/valu/assessment/api/:path*" → "/api/:path*"` | Start of `rewrites` |
 | #63 | Narrows the catch-all: `"/(.*)"` → `"/((?!api/)(?!.*\\.[a-zA-Z0-9]+$).*)"` | Third `rewrites` entry |
 
-`main` currently carries neither. **#62 does not touch `vercel.json` at all**, so
-there is no three-way conflict; #60 and #63 will apply to `main` independently.
+`main` currently carries neither. **#62 now carries both changes**, so the
+candidate does not depend on #60 or #63 landing. #60 and #63 are therefore now
+partly redundant; if they are ever merged after #62, both are no-op edits against
+an already-correct `vercel.json`.
+
 They are semantically complementary rather than duplicated:
 
 * #60 makes the assessment SPA's `/api/*` calls resolve behind the
@@ -67,6 +121,15 @@ in either order without conflict.
 implicitly or require retargeting #61 to `main` after #60 lands. Retarget #61 to
 `main` **after** #60 merges.
 
+#61 has a second, independent blocker introduced by #62: its
+`src/__tests__/09_valu_api_routing_contract.test.js` asserts
+`indexOfRewrite("/(.*)") >= 0` — that the catch-all source is literally `/(.*)`.
+#62 (and #63) replace that source with a tightened expression, so the assertion
+fails and the index is `-1`. #61 must be updated to assert the destination and
+the ordering instead of the exact source string, which is what
+`src/__tests__/19_vercel_routing_contract.test.js` does. Do not "fix" this by
+reverting the catch-all: that reintroduces the missing-asset/MIME defect.
+
 ### 2.4 #62 and #60 both fix the taster cluster payload
 
 This is the one genuine duplicate, and it matters because **only one of the two
@@ -89,16 +152,21 @@ raises `'cluster scores must be an object'` when
 fails with a 502**, and the participant's 15 answers are lost.
 
 * #60 fixes it: `p_cluster_scores: results.points`.
-* #62 does **not** fix it — `submit-taster.js` is unchanged on
-  `remediation/staging-2026-10-23`, and the defect is present on `main`
-  identically (`git show main:.../submit-taster.js` line 96).
+* #62 **now fixes it too**, at the same line, with the identical value. The two
+  diffs are byte-for-byte the same one-line change, verified against #60's patch.
 
-So #62 is **not** a superset of #60. Two options:
+So the duplicate has been resolved by **option 1**: the fix is folded into #62.
+#62 is now self-contained on the snapshot path and does not need #60 to land
+first. #60 and #61 are left open and draft; #60 still uniquely contributes the
+`claim-listing.js` change and the `.env.example` `SUPABASE_ANON_KEY` entry, and
+#61 still uniquely contributes the `09_valu_api_routing_contract` suite.
 
-1. Fold #60's one-line fix (and #61's tests) into #62, or
-2. Land #60/#61 first, then rebase #62.
-
-Either is safe. Leaving both unlanded keeps snapshot submission broken.
+#62 adds `src/__tests__/18_submit_taster_runtime.test.js` (19 tests) as the
+regression coverage for this fix. It executes the real handler with only
+`global.fetch` stubbed and asserts the RPC payload, so it fails if the field
+regresses, if it is replaced with an empty object, or if the 15 answers are
+truncated. #61's coverage of the same contract is contract-style (it reads the
+file as text), so the runtime suite is the stronger of the two.
 
 `src/VALUIndexV4Gate.jsx` line 48 also reads `results.normalisedScores`, which
 would throw on the taster result screen. That component is imported only by
@@ -109,11 +177,86 @@ the next reader is not misled.
 
 ### 2.5 #62 and #63 both concern asset handling
 
-#62 fixes the site-side half of the asset incident (`src/middleware.js` no
-longer runs for `/valu/assessment*`, and `src/lib/middleware-routing.js` holds
-the bypass). #63 fixes the platform-side half (a missing asset returns `404`
-rather than the shell). They are complementary; the incident is only fully
-closed with both.
+The asset incident has three halves, all now in the candidate:
+
+* Site side (#133) — `src/middleware.js` no longer runs for `/valu/assessment*`,
+  with the bypass in `src/lib/middleware-routing.js`.
+* Platform routing (#62, from #63) — the catch-all no longer answers `200
+  index.html` for a path that looks like a file.
+* Platform API routing (#62, from #60) — `/valu/assessment/api/*` now reaches the
+  Vercel functions instead of the catch-all.
+
+#63 alone closed only the middle one. #62 carries all three, so #63 is now
+redundant against it.
+
+### 2.6 #133 and #135 both close the same two abuse surfaces
+
+#135 (`fix/valu-email-report-abuse-controls-2026-10-23`) and #133 fix the same two
+audit findings — the open welcome-email relay and the report-trigger credential.
+They are independent implementations, and #135's is the better one. Measured
+overlap (from #135's own merge simulation, reproduced here):
+
+| Pair | Overlapping files | Merge result |
+| --- | --- | --- |
+| #133 ∩ #135 | 4 | **3 conflicts** (`trigger-report/route.js`, `welcome-email/route.js`, `login/page.jsx`) |
+| #133 ∩ #134 | 0 | complementary, clean |
+
+Resolved by folding #135 into #133 rather than merging both. What was taken and
+what was changed:
+
+* **Adopted verbatim** — `src/lib/api-guard.js`, including `isValidReportToken`.
+  Its regex is character-for-character the platform's
+  (`valoria-final/api/generate-and-send-report.js:30`), so the site cannot forward
+  a token the upstream is guaranteed to reject. Also `signupEmailEligible`, the
+  per-IP and per-recipient limits, and `user_id` on the signup call.
+* **Added, because #135 omitted it** — the caller-supplied `name` is HTML-escaped
+  and length-capped before it is interpolated into the email HTML. #135 removed
+  the provider-body leak but left the name unescaped.
+* **Corrected** — #135's route still logged the Brevo error body
+  (`console.error(..., errText)`); that body can echo the recipient address, so
+  only the status is logged.
+* **Corrected** — the first #133 attempt required a session on `trigger-report`.
+  That was wrong and would have broken the legitimate caller: `/login` fires the
+  trigger *before* sign-in, and the upstream already applies its own per-IP and
+  per-token limits to public triggers. The session requirement is removed. See
+  §2.7.
+* **Kept from #133** — the runtime test harness. #135's tests assert on source
+  strings (`expect(route).toContain('isValidReportToken')`) because its jest setup
+  did not transform the ESM routes; #133's `jest.config.js` does, so the tests
+  execute the real handlers instead. `api-endpoint-security.test.js` covers the
+  legitimate paths as well as the abuse paths.
+
+#135 is left open and draft. After #133 lands it is fully redundant; it is not
+closed, because that decision belongs to the owner.
+
+### 2.7 The report-trigger contract, and why there is no session check
+
+The relay in `src/app/api/trigger-report/route.js` had a reachable caller and
+still did not work. `create-account.js:123` and `resend-confirmation.js:70` both
+build the confirmation redirect as
+`${VALORIA_SITE_URL}/auth/callback?identity_hash=…&report_token=…`, and `/login`
+reads `identity_hash` off the query string and fires the relay. The relay
+forwarded only `identity_hash` and dropped the `report_token` that was already on
+the URL, so the upstream refused every call with
+`"Valid report token is required"` (`400` → `502`) and the instant path silently
+fell back to the `sweep-unsent-reports` cron.
+
+`identity_hash` is not a credential: it is `fp_${hash}`, a deterministic 32-bit
+fingerprint of the lowercased `name|role` pair
+(`valoria-final/src/lockEngine.js`), so it is guessable and two people with the
+same name and role share one. Forwarding it to a privileged endpoint treated a
+guessable identifier as proof of identity.
+
+The route now forwards `report_token` and nothing else. It does **not** require a
+session, deliberately: the caller cannot hold one yet, and the upstream is the
+authority — `generate-and-send-report.js:169-177` applies a per-IP limit
+(10/hour) and a per-token limit via `consume_rate_limit` to any non-worker
+request. Re-authenticating here would add nothing and would break the workflow.
+
+`/api/welcome-email` is the opposite case and its limiter fails **open**,
+matching `enquiries` and `waitlist`. That is safe only because the eligibility
+check is independent of the limiter and fails closed on its own: a test fails
+both limits and confirms a foreign recipient is still refused.
 
 ---
 
@@ -121,50 +264,57 @@ closed with both.
 
 Ordered by dependency, then by risk. Each step is independently verifiable.
 
+Because the candidate now carries the fixes that #60 and #63 contributed, the
+order below is the recommended *release* order, not a dependency chain. Steps 1–2
+are the candidate; steps 3–5 are optional follow-ups that add coverage or close
+the remaining site-side gap.
+
 | Step | PR | Why here |
 | --- | --- | --- |
-| 1 | **#60** | Unblocks snapshot submission; #61 depends on it |
-| 2 | **#61** | Retarget to `main` first; adds #60's regression coverage |
-| 3 | **#63** | Small, isolated `vercel.json` change; no dependency |
-| 4 | **#134** | Independent of #133; recovery on the confirmation landing |
-| 5 | **#62** | Rebase on `main` after #60/#61; resolve the `submit-taster` overlap |
-| 6 | **#133** | Rebase on `main` after #62/#63 so the parity vectors match |
+| 1 | **#62** | Self-contained: snapshot payload, both `vercel.json` fixes, 13 handler changes, 15 test suites. Platform release candidate. |
+| 2 | **#133** | Site release candidate. Rebase on `main` after #62 so the scoring parity vectors match the landed engine. |
+| 3 | **#134** | Closes the confirmation-landing recovery gap, which is the one incident neither candidate fully covers (see §4). Independent of #133 — zero shared files. |
+| 4 | **#61** | Only after updating its `/(.*)` assertion (§2.3). Adds contract coverage that #62 already has at runtime. |
+| 5 | **#60**, **#63**, **#135** | Redundant once #62/#133 land. Merge only if their remaining unique content is wanted; otherwise close with a note. |
 
 Notes:
 
-* Steps 1–3 are platform `vercel.json` + one API file. Steps 5–6 are the large
-  remediation branches and should land last, once the small fixes are in and CI
-  is green.
 * #62 and #133 should land **together or in adjacent releases**. #133's scoring
   parity vectors are generated from #62's engine; a site release against an
   older platform engine is the exact drift the parity check exists to catch.
-* #133 and #134 are independent, but #134's recovery path calls
-  `/api/claim-taster`, which exists on `main` already, so #134 needs nothing
-  from #133.
+* #134 is the one item with no coverage in either candidate. It calls
+  `/api/claim-taster`, which already exists on `main`, so it needs nothing from
+  #133 and is low risk. Recommend landing it in the same release as #133.
+* Do **not** merge #60 or #63 *before* #62. #63 narrows the catch-all; #62 adds
+  the API rewrite that depends on it. Landing #63 alone would turn
+  `/valu/assessment/api/*` from a silent wrong-200 into a 404 while the SPA's API
+  calls remain unrouted. #62 contains both halves, so it has no such hazard.
 
-### Ordering hazard — do not merge #63 before #60
+### Ordering hazard — resolved inside #62
 
 #63 narrows the catch-all to exclude paths containing a dot and paths under
-`api/`. #60 adds the `/valu/assessment/api/*` rewrite. If #63 lands first and
-#60 is delayed, `/valu/assessment/api/*` requests hit the narrowed catch-all and
-return `404` instead of `index.html` — a louder failure, but still a failure.
-Neither ordering is dangerous once both are in; the risk is releasing #63 alone
-while the SPA's API calls remain unrouted.
+`api/`. #60 adds the `/valu/assessment/api/*` rewrite. If #63 landed alone,
+`/valu/assessment/api/*` requests would hit the narrowed catch-all and return
+`404` instead of `index.html` — a louder failure, but still a failure.
+
+#62 carries both changes in one commit, so the hazard does not apply to the
+candidate: the API rewrite sits ahead of the fallback and the fallback is
+narrowed. The hazard remains relevant only if someone merges #63 in isolation.
 
 ---
 
 ## 4. Release-path confirmation
 
-Both fixes the operator asked about **are** in the intended release path, but in
-different PRs, and neither is in #62 or #133:
+Status of the two fixes the operator asked about, after this pass:
 
-* **Missing-asset fix** — PR **#63** (platform). The site-side root cause (the
-  middleware treating asset requests as page requests) is in PR **#133**.
-  Both are required.
-* **Confirmation-recovery fix** — PR **#134** (site). It is not in #133. Note
-  #134 does **not** add a new route: it calls the pre-existing
-  `/api/claim-taster`, which is already on `main`. So #134 is additive and low
-  risk.
+* **Missing-asset / MIME fix** — now **in the candidate**. The platform half is
+  in #62 (`vercel.json`, both the catch-all narrowing and the API rewrite); the
+  site half is in #133 (`src/middleware.js` no longer runs for
+  `/valu/assessment*`). #63 is now redundant against #62.
+* **Confirmation-recovery fix** — still **only in #134**, and it is the one
+  incident with no coverage in either candidate. It is additive: it calls the
+  pre-existing `/api/claim-taster`, which is already on `main`, and adds no new
+  route. Recommend landing #134 alongside #133.
 
 ---
 
@@ -172,12 +322,14 @@ different PRs, and neither is in #62 or #133:
 
 | PR | Disposition | Blocker |
 | --- | --- | --- |
-| #60 | Land first | None; needs a rebase check against #63's `vercel.json` edit |
-| #61 | Land with #60 | Retarget base from #60's branch to `main` |
-| #62 | Land after #60/#61 | Rebase; reconcile the `submit-taster` overlap |
-| #63 | Land after #60 | None |
-| #133 | Land last | Rebase; regenerate parity vectors against the landed platform engine |
-| #134 | Land any time | None |
+| #62 | **Release candidate.** Land first | None. Awaiting staging acceptance and owner authorisation. |
+| #133 | **Release candidate.** Land with or just after #62 | Rebase on `main` after #62; regenerate parity vectors against the landed platform engine. |
+| #134 | Land with #133 — only fix for an incident neither candidate covers | None |
+| #61 | Land only after the `/(.*)` assertion is updated | Stacked on #60; its routing test fails against the tightened catch-all (§2.3) |
+| #60 | Redundant after #62. Keep open | Its snapshot fix is byte-identical to #62's. Unique content: `claim-listing.js`, `.env.example` `SUPABASE_ANON_KEY`. |
+| #63 | Redundant after #62. Keep open | Its `vercel.json` change is contained in #62's. |
+| #135 | Redundant after #133. Keep open | Its design is adopted in #133, with HTML escaping added and the provider-body log removed. |
+| #126 | **Separate review** — see §7 | Not a duplicate; touches shared database objects. |
 
 No PR should be merged, closed, or retargeted until the staging acceptance
 journey in the audit plan passes and an operator authorises release.
@@ -186,8 +338,58 @@ journey in the audit plan passes and an operator authorises release.
 
 ## 6. Open questions for the operator
 
-1. Should #60's `submit-taster` fix be folded into #62 rather than landing #60
-   separately? (Reduces the number of open PRs but makes #62 larger.)
+1. ~~Should #60's `submit-taster` fix be folded into #62?~~ **Answered: yes,
+   folded.** See §0 and §2.4. The same question for #135 is answered the same
+   way in §2.6.
 2. Is `src/prime-assessment-v4.jsx` / `VALUIndexV4Gate.jsx` intended to be
-   deleted, or is it pending re-wiring? It reads a field that does not exist.
-3. Should #61 be retargeted to `main` now, or left stacked on #60?
+   deleted, or is it pending re-wiring? It reads `results.normalisedScores`,
+   which does not exist. It is unreachable from the Vite entry point, so it is
+   dead code rather than a live crash, and it is out of scope for this pass.
+3. Should #61 be retargeted to `main` now, or left stacked on #60? Either way its
+   routing assertion must be updated first (§2.3).
+4. After #62 and #133 land, may #60, #63 and #135 be closed as redundant? They
+   are kept open here because closing is the owner's decision, not the agent's.
+5. #126 needs an owner decision on migration deployment — see §7.
+
+---
+
+## 7. Stale PR #126 — separate review
+
+`#126` (`security/tighten-valu-client-privileges-20261022`) is **not** a draft and
+has been open since 2026-10-22. It is not part of the remediation set and is
+**not** a duplicate of anything above. It is recorded here rather than closed,
+because closing it would discard unmerged security work.
+
+**What it changes** (2 migrations, neither present on `main`):
+
+* `20261022100000_tighten_client_privileges_on_internal_valu_tables.sql` —
+  `REVOKE ALL` on `identity_reconciliation_reviews`,
+  `taster_identity_candidates`, `taster_progress` from
+  `PUBLIC, anon, authenticated`; the same for `private.marketplace_showcase_approvals`
+  and `private.valu_reconciliation_health_snapshots`; and `REVOKE INSERT` on
+  `assessment_sessions` and `taster_sessions`.
+* `20261022110000_index_career_applications_reviewed_by.sql` — a covering index on
+  `career_applications (reviewed_by)`.
+
+**Why it is not obsolete.** The files are absent from `main` (50 migrations
+present, none dated 2026-10-22 or later), so nothing in it has been merged
+elsewhere. It is genuine, unlanded defence-in-depth.
+
+**Why it is not in this pass.** It changes privileges on tables that the platform
+candidate writes to — `taster_sessions` and `taster_identity_candidates` are
+written by the RPC that `#62` fixes in §2.4. Deploying a `REVOKE` on those
+tables is a database change to shared objects, and the brief forbids altering
+shared production configuration without authorisation. Two things must be
+confirmed by the operator before it lands:
+
+1. The application routes reach these tables with the **service role**, which
+   bypasses RLS and grants. If any route uses the anon or authenticated role,
+   this migration would break it. The migration's own comment asserts server
+   routes use the service role; that should be verified against the deployed
+   configuration, not just the source.
+2. The `taster_sessions` / `taster_identity_candidates` revokes should be
+   validated against a real snapshot submission (the journey in §2.4) before
+   being applied anywhere.
+
+**Disposition:** keep open, do not close, do not merge in this pass. Requires an
+operator decision and a database-owner review.
