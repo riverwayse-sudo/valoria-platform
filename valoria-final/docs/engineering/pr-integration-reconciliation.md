@@ -54,7 +54,8 @@ Gaps found in this pass and adopted into the candidate:
    so in practice that route authenticated with the **service-role key** — a
    privilege escalation relative to what the check needs, and a silent one,
    because the fallback is written as a valid chain. The variable is now
-   documented.
+   documented. PR #60 fixes the same thing and is the origin of this item.
+   #60 additionally pins `runtime: 'edge'` on the route; #62 does not, see §5.
 2. **`api/send-profile-reminder.js` and `api/send-email.js` still resolved the
    site origin their own way** while the other three modules used
    `lib/site-url.js`. See §2.8.
@@ -393,7 +394,7 @@ Status of the two fixes the operator asked about, after this pass:
 | #133 | **Release candidate.** Land with or just after #62 | Rebase on `main` after #62; regenerate parity vectors against the landed platform engine. |
 | #134 | **Folded into #133.** Keep open | None. The recovery fix is now in #133's callback page; the only difference is comment wording. Its own suite passes against #133. |
 | #61 | **Assertion repaired on its own branch** (`bd4ba85`); land with or after #62 | None remaining on the routing test: it now passes against both the current and tightened fallback and still catches the original defect. Still stacked on #60, so retarget to `main` after #60 or #62 lands. |
-| #60 | Redundant after #62. Keep open | Its snapshot fix is byte-identical to #62's and its `vercel.json` change is contained in #62's. Its two genuinely unique items — the `.env.example` `SUPABASE_ANON_KEY` entry and the `claim-listing.js` `runtime: 'edge'` declaration — have been adopted into #62 (§0.1), so nothing unique remains. |
+| #60 | Redundant after #62. Keep open | Its snapshot fix is byte-identical to #62's and its `vercel.json` change is contained in #62's. Its unique `.env.example` `SUPABASE_ANON_KEY` entry is adopted into #62 (§0.1). It also adds `export const config = { runtime: 'edge' }` to `claim-listing.js`, which #62 **deliberately does not**: none of the fetch-based Supabase routes in that family (`claim-taster`, `submit-taster`, `submit-assessment`, `taster-progress`) declare a runtime, so adding it to one of them would make the family inconsistent. #62 runs it on the default runtime, which is what the other five already do. |
 | #63 | Redundant after #62. Keep open | Fully contained: its `vercel.json` change is byte-identical to #62's and its `10_missing_asset_404_contract.test.js` is a subset of #62's routing test. |
 | #135 | Redundant after #133. Keep open | Fully contained. Its design is adopted in #133 with HTML escaping added and the provider-body log removed; its `api-abuse-controls-contract.test.js` passes unmodified against #133. |
 | #126 | **Separate review** — see §7 | Not a duplicate; touches shared database objects. |
