@@ -336,4 +336,51 @@ describe("submit-taster runtime — retry and duplicate safety", () => {
     expect(res.statusCode).toBe(429);
     expect(rpcCall(calls)).toBeUndefined();
   })
+
 })
+
+// The payload must match the SQL function's parameter list exactly. The original
+// defect was a payload/schema mismatch that no code-level test would have caught
+// because both sides were individually valid — the handler sent a key the
+// function did not accept, and the function rejected the call. Pinning the two
+// against each other closes that whole class.
+describe("submit-taster payload matches the RPC signature", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+
+  function rpcParameters() {
+    const dir = path.join(__dirname, "../../supabase/migrations");
+    const sql = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".sql"))
+      .map((f) => fs.readFileSync(path.join(dir, f), "utf8"))
+      .join("\n");
+    // The latest CREATE OR REPLACE wins in Postgres; take the last declaration.
+    const decls = [
+      ...sql.matchAll(
+        /CREATE OR REPLACE FUNCTION\s+public\.submit_taster_with_identity_candidate\s*\(([\s\S]*?)\)\s*(?:RETURNS|LANGUAGE)/gi
+      ),
+    ];
+    expect(decls.length).toBeGreaterThan(0);
+    const body = decls[decls.length - 1][1];
+    return [...body.matchAll(/\b(p_[a-z_]+)\s+/g)].map((m) => m[1]).sort();
+  }
+
+  test("every parameter the function declares is sent, and nothing extra", async () => {
+    const calls = stubFetch();
+    await invoke(submitBody());
+
+    const sent = Object.keys(rpcCall(calls).body).sort();
+    expect(sent).toEqual(rpcParameters());
+  });
+
+  test("the payload carries no field the function does not declare", async () => {
+    const calls = stubFetch();
+    await invoke(submitBody());
+
+    const declared = new Set(rpcParameters());
+    const extra = Object.keys(rpcCall(calls).body).filter((k) => !declared.has(k));
+    expect(extra).toEqual([]);
+  });
+});
+
