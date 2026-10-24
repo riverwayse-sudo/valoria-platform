@@ -1,4 +1,5 @@
 import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
+import { resolveSiteUrl } from "../lib/site-url.js";
 
 export const config = { runtime: "edge" };
 
@@ -7,7 +8,9 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
-const APP_URL = "https://valoriainstitute.com/journey/continue?stage=assess";
+// Environment-specific; hardcoding production sent staging assessment reminders
+// to the production journey.
+const APP_URL = `${resolveSiteUrl()}/journey/continue?stage=assess`;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {

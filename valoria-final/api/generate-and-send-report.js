@@ -1,4 +1,4 @@
-import { checkRateLimit } from "./_rateLimit.js";
+import { enforceRateLimit } from "./_rateLimit.js";
 
 // Server-side report generation + email send for the sweep workflow.
 // Public browser triggers are rate-limited; cron workers remain authenticated.
@@ -20,11 +20,6 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_M
   } finally {
     clearTimeout(timer);
   }
-}
-
-function getSiteOrigin() {
-  try { return new URL(process.env.SITE_ORIGIN || "https://valoriainstitute.com").origin; }
-  catch { return "https://valoriainstitute.com"; }
 }
 
 function isValidIdentityHash(value) {
@@ -75,8 +70,14 @@ async function claimReport(identityHash, idempotencyKey) {
 }
 
 async function patchAssessment(identityHash, body) {
-  const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identityHash)}`, { method: "PATCH", headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: "return=minimal" }, body: JSON.stringify(body) });
+  // return=representation so a PATCH that matched no row is distinguishable from
+  // one that wrote. The report state machine (READY / EMAIL_PENDING / SENT /
+  // FAILED) is driven entirely through here; a silently empty write would leave
+  // the row stuck while the caller believed the transition had been persisted.
+  const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identityHash)}`, { method: "PATCH", headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: "return=representation" }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error("Failed to update report state");
+  const updated = await res.json().catch(() => []);
+  if (!Array.isArray(updated) || updated.length === 0) throw new Error("Report state update matched no assessment row");
 }
 
 async function saveAiReport(identityHash, report) { await patchAssessment(identityHash, { ai_report: report, report_status: "READY", report_locked_at: null, report_failure_code: null }); }
@@ -141,8 +142,12 @@ Start directly with ## YOUR SCORE. No introduction before it.`;
   return data.content?.[0]?.text || null;
 }
 
-async function sendReportEmail(email, identityHash, reportText) {
-  const res = await fetchWithTimeout(`${getSiteOrigin()}/api/send-email`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` }, body: JSON.stringify({ email, identity_hash: identityHash, reportText }) });
+async function sendReportEmail(origin, email, identityHash, reportText) {
+  // /api/send-email is a route in *this* deployment. Calling a site origin here
+  // was wrong: the site does not serve /api/send-email (its /valu/assessment
+  // rewrite points back at the platform), so delivery would 404. Resolve the
+  // origin from the incoming request instead of naming a host.
+  const res = await fetchWithTimeout(`${origin}/api/send-email`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${CRON_SECRET}` }, body: JSON.stringify({ email, identity_hash: identityHash, reportText }) });
   if (!res.ok) throw new Error("send-email failed");
 }
 
@@ -162,8 +167,11 @@ export default async function handler(req, res) {
   }
 
   if (!isAuthorizedWorker) {
-    const ipLimit = await checkRateLimit(req, { namespace: "report-trigger-ip", limit: 10, windowSeconds: 60 * 60 });
-    if (!ipLimit.allowed) return ipLimit.response;
+    // This handler is runtime:"nodejs" and uses the node-style (req, res) API.
+    // checkRateLimit returns a Web Response, which cannot be returned from this
+    // handler — the branch would fall through and the IP limit would never be
+    // enforced. enforceRateLimit writes to `res` directly.
+    if (!await enforceRateLimit(req, res, { namespace: "report-trigger-ip", limit: 10, windowSeconds: 60 * 60 })) return;
     try {
       const limit = await consumePublicTriggerRateLimit(report_token);
       if (!limit?.allowed) {
@@ -211,7 +219,7 @@ export default async function handler(req, res) {
       // turn a valid report into a failed generation just because email is absent.
       return res.status(200).json({ ok: true, reportReady: true, emailPending: true });
     }
-    await sendReportEmail(assessment.email.trim(), identity_hash, reportText);
+    await sendReportEmail(new URL(req.url).origin, assessment.email.trim(), identity_hash, reportText);
     await markEmailSent(identity_hash);
     return res.status(200).json({ ok: true, sent: true });
   } catch (err) {
