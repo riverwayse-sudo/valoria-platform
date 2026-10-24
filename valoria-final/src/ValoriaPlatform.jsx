@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { siteUrl } from './siteOrigin.js';
 import PRIMEAssessment from './PRIMEAssessment.jsx';
 import {
   getAssessmentLock,
@@ -30,9 +31,9 @@ export function ValoriaNav({ minimal = false }) {
   ];
 
   const navLinks = [
-    { label: 'Marketplace', href: 'https://valoriainstitute.com/marketplace' },
-    { label: 'PRIME Framework', href: 'https://valoriainstitute.com/prime' },
-    { label: 'About', href: 'https://valoriainstitute.com/about-us' },
+    { label: 'Marketplace', href: siteUrl('/marketplace') },
+    { label: 'PRIME Framework', href: siteUrl('/prime') },
+    { label: 'About', href: siteUrl('/about-us') },
   ];
 
   const linkStyle = {
@@ -69,8 +70,8 @@ export function ValoriaNav({ minimal = false }) {
           transition: 'background 0.3s, border-color 0.3s',
         }}
       >
-        <a href="https://valoriainstitute.com" aria-label="Valoria Institute — home" style={{ lineHeight: 0, flexShrink: 0 }}>
-          <img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style={{ height: 40, width: 'auto', display: 'block' }} />
+        <a href={siteUrl('/')} aria-label="Valoria Institute — home" style={{ lineHeight: 0, flexShrink: 0 }}>
+          <img src={siteUrl('/logo.png')} alt="Valoria Institute" style={{ height: 40, width: 'auto', display: 'block' }} />
         </a>
 
         {!minimal && (
@@ -84,7 +85,7 @@ export function ValoriaNav({ minimal = false }) {
               </a>
             ))}
             <a
-              href="https://valoriainstitute.com/dashboard"
+              href={siteUrl('/dashboard')}
               style={linkStyle}
               onMouseEnter={e => e.currentTarget.style.color = BRAND.PARCHMENT}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(247,244,238,0.45)'}
@@ -156,7 +157,7 @@ export function ValoriaFooter() {
           marginBottom: 'clamp(32px,4vw,52px)',
         }}>
           <div>
-            <img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style={{ height: 56, width: 'auto', display: 'block', marginBottom: 14 }} />
+            <img src={siteUrl('/logo.png')} alt="Valoria Institute" style={{ height: 56, width: 'auto', display: 'block', marginBottom: 14 }} />
             <p style={{ fontSize: 13, fontWeight: 300, color: 'rgba(247,244,238,0.35)', lineHeight: 1.7, maxWidth: 260, marginBottom: 12, fontFamily: BRAND.FONT_UI }}>
               The marketplace where African professionals rise. One assessed standard. Three ways to engage.
             </p>
@@ -168,11 +169,11 @@ export function ValoriaFooter() {
             <div style={colTitle}>Platform</div>
             {[
               { label: 'VALU Index', href: '#' },
-              { label: 'Marketplace', href: 'https://valoriainstitute.com/marketplace' },
-              { label: 'PRIME Framework', href: 'https://valoriainstitute.com/prime' },
-              { label: 'ATB Connect', href: 'https://valoriainstitute.com/atb-connect' },
-              { label: 'ATB Spotlight', href: 'https://valoriainstitute.com/spotlight' },
-              { label: 'Facilitators', href: 'https://valoriainstitute.com/facilitators' },
+              { label: 'Marketplace', href: siteUrl('/marketplace') },
+              { label: 'PRIME Framework', href: siteUrl('/prime') },
+              { label: 'ATB Connect', href: siteUrl('/atb-connect') },
+              { label: 'ATB Spotlight', href: siteUrl('/spotlight') },
+              { label: 'Facilitators', href: siteUrl('/facilitators') },
             ].map(({ label, href }) => (
               <a key={label} href={href} style={colLink}
                 onMouseEnter={e => e.currentTarget.style.color = BRAND.GOLD}
@@ -183,9 +184,9 @@ export function ValoriaFooter() {
           <div>
             <div style={colTitle}>Company</div>
             {[
-              { label: 'About Us', href: 'https://valoriainstitute.com/about-us' },
-              { label: 'Programmes', href: 'https://valoriainstitute.com/programmes' },
-              { label: 'Contact', href: 'https://valoriainstitute.com/contact-us' },
+              { label: 'About Us', href: siteUrl('/about-us') },
+              { label: 'Programmes', href: siteUrl('/programmes') },
+              { label: 'Contact', href: siteUrl('/contact-us') },
             ].map(({ label, href }) => (
               <a key={label} href={href} style={colLink}
                 onMouseEnter={e => e.currentTarget.style.color = BRAND.GOLD}
@@ -196,8 +197,8 @@ export function ValoriaFooter() {
           <div>
             <div style={colTitle}>Legal</div>
             {[
-              { label: 'Privacy Policy', href: 'https://valoriainstitute.com/privacypolicy' },
-              { label: 'Terms of Use', href: 'https://valoriainstitute.com/terms-of-use' },
+              { label: 'Privacy Policy', href: siteUrl('/privacypolicy') },
+              { label: 'Terms of Use', href: siteUrl('/terms-of-use') },
             ].map(({ label, href }) => (
               <a key={label} href={href} style={colLink}
                 onMouseEnter={e => e.currentTarget.style.color = BRAND.GOLD}
@@ -212,13 +213,13 @@ export function ValoriaFooter() {
             >
               Take the VALU Index →
             </a>
-            <a href="https://valoriainstitute.com/signup" style={colLink}
+            <a href={siteUrl('/signup')} style={colLink}
               onMouseEnter={e => e.currentTarget.style.color = BRAND.GOLD}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(247,244,238,0.4)'}
             >
               Create Account
             </a>
-            <a href="https://valoriainstitute.com/login" style={colLink}
+            <a href={siteUrl('/login')} style={colLink}
               onMouseEnter={e => e.currentTarget.style.color = BRAND.GOLD}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(247,244,238,0.4)'}
             >
