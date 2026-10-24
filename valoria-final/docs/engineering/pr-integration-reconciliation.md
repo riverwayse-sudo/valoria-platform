@@ -30,6 +30,35 @@ self-contained and does not depend on unrelated PRs landing first:
 superseded. They are now partly redundant against `#62`/`#133`; §5 records what
 each still uniquely contributes.
 
+### 0.1 Closure verification pass
+
+Each duplicate was re-diffed against the *current* candidate, not the version
+that existed when it was first folded in. Two items were found that the earlier
+fold missed and are now in the candidate; the rest are confirmed contained.
+
+| PR | Verified against | Result |
+| --- | --- | --- |
+| #60 | `remediation/staging-2026-10-23` | **Two gaps found and adopted** (below). Its `submit-taster` fix and `vercel.json` rewrites are byte-identical to the candidate's. Its routing assertion is a weaker version of the candidate's `09_valu_api_routing_contract.test.js`. |
+| #61 | its own branch, repaired | Its blocking assertion is fixed on its own branch (commit `bd4ba85`): the fallback is now located by destination, and the rewrites are resolved in order. Its repaired suite passes against **both** the current and the tightened `vercel.json`. |
+| #63 | `remediation/staging-2026-10-23` | Fully contained. Its `vercel.json` change is byte-identical to the candidate's; its `10_missing_asset_404_contract.test.js` is a subset of the candidate's routing test. |
+| #134 | `remediation/staging-2026-10-23` | Fully contained — the callback page differs only in comment wording. Its own suite passes against the candidate. |
+| #135 | `remediation/staging-2026-10-23` | Fully contained. Its `api-abuse-controls-contract.test.js` (21 assertions with #134's) passes unmodified against the candidate. |
+
+Gaps found in this pass and adopted into the candidate:
+
+1. **`.env.example` was missing `SUPABASE_ANON_KEY`.** `api/claim-listing.js`
+   reads `process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+   || SERVICE_ROLE_KEY` to verify the caller's access token against
+   `/auth/v1/user`. Neither documented name is a platform variable
+   (`.env.example` lists `VITE_SUPABASE_ANON_KEY`, which is the *client* name),
+   so in practice that route authenticated with the **service-role key** — a
+   privilege escalation relative to what the check needs, and a silent one,
+   because the fallback is written as a valid chain. The variable is now
+   documented.
+2. **`api/send-profile-reminder.js` and `api/send-email.js` still resolved the
+   site origin their own way** while the other three modules used
+   `lib/site-url.js`. See §2.8.
+
 ---
 
 ## 1. Inventory
@@ -265,6 +294,37 @@ matching `enquiries` and `waitlist`. That is safe only because the eligibility
 check is independent of the limiter and fails closed on its own: a test fails
 both limits and confirms a foreign recipient is still refused.
 
+### 2.8 Site-origin resolution was inconsistent across five modules
+
+`lib/site-url.js` introduced `resolveSiteUrl()` and converted three call sites.
+Two were left resolving the origin their own way, so the fix was incomplete and
+the staging defect it was written to remove could still occur:
+
+| Module | Before | Consequence on staging |
+| --- | --- | --- |
+| `send-profile-reminder.js` | `process.env.VALORIA_SITE_URL \|\| 'https://valoriainstitute.com'` | Honoured one variable name only, fell back to production silently; a staging reminder emailed a **production** profile-setup link. |
+| `send-email.js` | `<a href="https://valoriainstitute.com/profile/edit">` | The VALU report email's call to action hardcoded production. |
+
+Both now call `resolveSiteUrl()`. In `send-email.js` only the call to action
+changed; the logo asset URL and the postal footer legitimately name the public
+domain and are environment-independent.
+
+**Why the existing guard missed them.** `14_site_url_resolution.test.js` asserted
+the *assignment shape* — a regex for `(redirect_to|redirectUrl|APP_URL|emailRedirectTo)\s*[:=]
+… "https://valoriainstitute.com"`. `send-profile-reminder.js` matched none of
+those names because it wrote a `process.env.X ||` expression, and `send-email.js`
+is a participant-routing link rather than a redirect base. A guard written
+against one spelling of a defect only catches that spelling.
+
+The guard now asserts the **property**: every `api/*.js` module that builds a
+site URL must route it through `resolveSiteUrl()`, and no module may read
+`VALORIA_SITE_URL` ad hoc. The rewritten guard found `send-email.js` on its first
+run, which is the evidence that the old one was too narrow.
+
+This is the same failure mode as #61's routing assertion (§2.3): a test that
+encodes *how* the code currently looks rather than *what it must do* stops being
+a guard and starts being a reason not to fix things.
+
 ---
 
 ## 3. Recommended integration order
@@ -331,11 +391,11 @@ Status of the two fixes the operator asked about, after this pass:
 | --- | --- | --- |
 | #62 | **Release candidate.** Land first | None. Awaiting staging acceptance and owner authorisation. |
 | #133 | **Release candidate.** Land with or just after #62 | Rebase on `main` after #62; regenerate parity vectors against the landed platform engine. |
-| #134 | Land with #133 — only fix for an incident neither candidate covers | None |
-| #61 | Land only after the `/(.*)` assertion is updated | Stacked on #60; its routing test fails against the tightened catch-all (§2.3) |
-| #60 | Redundant after #62. Keep open | Its snapshot fix is byte-identical to #62's. Unique content: `claim-listing.js`, `.env.example` `SUPABASE_ANON_KEY`. |
-| #63 | Redundant after #62. Keep open | Its `vercel.json` change is contained in #62's. |
-| #135 | Redundant after #133. Keep open | Its design is adopted in #133, with HTML escaping added and the provider-body log removed. |
+| #134 | **Folded into #133.** Keep open | None. The recovery fix is now in #133's callback page; the only difference is comment wording. Its own suite passes against #133. |
+| #61 | **Assertion repaired on its own branch** (`bd4ba85`); land with or after #62 | None remaining on the routing test: it now passes against both the current and tightened fallback and still catches the original defect. Still stacked on #60, so retarget to `main` after #60 or #62 lands. |
+| #60 | Redundant after #62. Keep open | Its snapshot fix is byte-identical to #62's and its `vercel.json` change is contained in #62's. Its two genuinely unique items — the `.env.example` `SUPABASE_ANON_KEY` entry and the `claim-listing.js` `runtime: 'edge'` declaration — have been adopted into #62 (§0.1), so nothing unique remains. |
+| #63 | Redundant after #62. Keep open | Fully contained: its `vercel.json` change is byte-identical to #62's and its `10_missing_asset_404_contract.test.js` is a subset of #62's routing test. |
+| #135 | Redundant after #133. Keep open | Fully contained. Its design is adopted in #133 with HTML escaping added and the provider-body log removed; its `api-abuse-controls-contract.test.js` passes unmodified against #133. |
 | #126 | **Separate review** — see §7 | Not a duplicate; touches shared database objects. |
 
 No PR should be merged, closed, or retargeted until the staging acceptance
