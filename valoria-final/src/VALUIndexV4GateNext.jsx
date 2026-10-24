@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { siteUrl } from './siteOrigin.js';
 import './valu-results-responsive.css';
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -161,7 +162,7 @@ export default function VALUIndexV4GateNext(){
      {error&&<div style={S.error}>{error}</div>}
      <button type="submit" disabled={!validSignup||saving} style={{...S.primary,opacity:(!validSignup||saving)?.5:1}}>{saving?'SAVING YOUR JOURNEY…':'START MY VALU SNAPSHOT →'}</button>
      <div style={S.saveNote}><span>✓</span> Progress is saved. You can return without starting again.</div>
-     <p style={S.login}>Already have an account? <a href="https://valoriainstitute.com/login" style={{color:GOLD}}>Sign in</a></p>
+     <p style={S.login}>Already have an account? <a href={siteUrl('/login')} style={{color:GOLD}}>Sign in</a></p>
     </div>
    </form>
   </div>
@@ -195,8 +196,8 @@ export default function VALUIndexV4GateNext(){
    <div style={S.nextStepTag}>YOUR NEXT STEP</div><h2 style={S.nextTitle}>Continue your VALU journey.</h2>
    <p style={S.nextText}>Sign in with the email you used to register to connect this snapshot to your professional journey and continue toward your full VALU Index.</p>
    <div className="valu-results-actions" style={S.resultActions}>
-    <a href={`https://valoriainstitute.com/login?pending_taster_id=${encodeURIComponent(tasterId)}`} style={S.primaryLink}>CONFIRM EMAIL & SIGN IN <span aria-hidden="true">→</span></a>
-    <a href={`https://valoriainstitute.com/journey/continue?stage=assess&taster_id=${encodeURIComponent(tasterId)}`} style={S.secondary}>Already signed in? Continue your journey</a>
+    <a href={siteUrl(`/login?pending_taster_id=${encodeURIComponent(tasterId)}`)} style={S.primaryLink}>CONFIRM EMAIL & SIGN IN <span aria-hidden="true">→</span></a>
+    <a href={siteUrl(`/journey/continue?stage=assess&taster_id=${encodeURIComponent(tasterId)}`)} style={S.secondary}>Already signed in? Continue your journey</a>
    </div>
   </section>
   <p style={S.note}>Completing the snapshot does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
