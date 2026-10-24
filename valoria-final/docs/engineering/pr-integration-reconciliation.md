@@ -151,6 +151,13 @@ raises `'cluster scores must be an object'` when
 `jsonb_typeof(p_cluster_scores) <> 'object'`. So **every snapshot submission
 fails with a 502**, and the participant's 15 answers are lost.
 
+Root cause, pinned to a commit: `7458831` ("Replace VALU snapshot percentages
+with points", currently the head of `main`) renamed `normalisedScores` to
+`points` in `src/valuTaster.js` and updated the display in
+`src/VALUIndexV4GateNext.jsx`, but did **not** update `api/submit-taster.js`. The
+rename was incomplete and the submission path has been broken since. This is why
+the defect is on `main` and not staging-specific.
+
 * #60 fixes it: `p_cluster_scores: results.points`.
 * #62 **now fixes it too**, at the same line, with the identical value. The two
   diffs are byte-for-byte the same one-line change, verified against #60's patch.
