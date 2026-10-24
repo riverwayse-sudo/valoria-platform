@@ -502,3 +502,40 @@ The two source-level questions are now answered and the revokes are shown to be
 safe for the snapshot journey; what remains is the operator's confirmation that
 the deployed grant state matches this SQL. No candidate code change is required,
 and none is made.
+## 8. `ValoriaPlatform.jsx` / `PRIMEAssessment.jsx`: reachability evidence
+
+These two files hardcode `https://valoriainstitute.com` in 25 places and were left
+unconverted in #62. That is only acceptable if they cannot reach a deployed entry
+point, so the claim was tested rather than asserted.
+
+**Entry points.** Vite is configured with `entries: ['index.html']`
+(`vite.config.js`), and `index.html` loads exactly one module:
+`<script type="module" src="/src/main.jsx">`. `main.jsx` imports `VALUIndexV4App`,
+`AssessmentNavigation` and `assessment.css` — nothing else.
+
+**No import path exists.** `ValoriaPlatform.jsx` imports `PRIMEAssessment.jsx`, so
+they form one cluster, but nothing imports `ValoriaPlatform.jsx`. A repository-wide
+search for `from './PRIMEAssessment'` / `from './ValoriaPlatform'` (and the
+`require` forms) outside `node_modules`/`dist` returns only that internal edge plus
+`fix.js`, a one-off Node maintenance script that rewrites the file's text and is
+itself not part of any bundle.
+
+**Build-level proof.** `vite build` emits a single chunk
+(`assets/index-<hash>.js`). Searching that output for `PRIMEAssessment`,
+`ValoriaPlatform` and `prime-assessment-v4` returns **zero** matches. The static
+files in `public/` (`Waitlist.html`, `Index.html`, `About_Valoria.html`) contain
+inline scripts only and import no `src` module, so they cannot mount either
+component. `vercel.json` routes the SPA catch-all to `index.html`; there is no
+separate route that could load them.
+
+**Verdict.** Unreachable from every deployed entry point, by import graph and by
+build output.
+
+**Residual risk, stated plainly.** They are dead code, not "unrelated" code: they
+still carry the production literals, and `fix.js` still targets
+`ValoriaPlatform.jsx`. The moment anyone adds an import from `main.jsx` the defect
+returns, and no test would catch it because the guard in
+`21_spa_site_origin_contract.test.js` only inspects the live components. Removing
+the two files, or converting them and extending the guard, is the durable fix.
+Neither is done here: deleting them is a change outside this pass's scope, and the
+brief asks for no unrelated refactors.
