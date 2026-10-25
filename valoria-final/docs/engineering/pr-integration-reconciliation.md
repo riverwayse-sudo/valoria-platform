@@ -531,11 +531,23 @@ separate route that could load them.
 **Verdict.** Unreachable from every deployed entry point, by import graph and by
 build output.
 
-**Residual risk, stated plainly.** They are dead code, not "unrelated" code: they
-still carry the production literals, and `fix.js` still targets
-`ValoriaPlatform.jsx`. The moment anyone adds an import from `main.jsx` the defect
-returns, and no test would catch it because the guard in
-`21_spa_site_origin_contract.test.js` only inspects the live components. Removing
-the two files, or converting them and extending the guard, is the durable fix.
-Neither is done here: deleting them is a change outside this pass's scope, and the
-brief asks for no unrelated refactors.
+**Residual risk — now closed (fix-forward pass).** They were dead code, not
+"unrelated" code: they still carried the production literals, so the moment
+anything imported them the staging defect returned untested. That risk has been
+removed rather than left standing:
+
+* Both files now import `siteUrl` from `./siteOrigin.js`; all 25 production
+  literals are gone (`grep` for `https://valoriainstitute.com` across `src/`
+  returns only the helper's own documented fallback and its explanatory comment).
+  Addresses such as `info@valoriainstitute.com` were deliberately left alone —
+  they are contact details, not origins.
+* The guard in `21_spa_site_origin_contract.test.js` was widened from the live
+  entry list to **every** `.js`/`.jsx` file under `src/`, so a reintroduced
+  literal fails the suite wherever it appears. Mutation-verified: restoring one
+  literal fails the new test.
+* The helper's production fallback is asserted, not merely allowed, because an
+  unset `VALORIA_SITE_URL` must still behave exactly as production does today.
+
+Deleting the two files outright remains an option, but converting them is the
+smaller, reversible change and keeps the components usable if a future route
+mounts them.

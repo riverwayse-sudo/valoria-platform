@@ -281,4 +281,100 @@ describe("submit-assessment runtime", () => {
     // Must survive a JSON round-trip (it is sent over the wire).
     expect(JSON.parse(JSON.stringify(res.body)).report_token).toBe("tok-123");
   });
+
+  test("the insert supplies report_token itself instead of relying on a column default", async () => {
+    // report_token is NOT NULL with a unique index, but no tracked migration
+    // gives it a default and valu_assessments is created by no tracked
+    // migration. Omitting the column meant every submission depended on an
+    // untracked DEFAULT in the target database; where that default is missing
+    // the insert fails with 23502 and the participant sees "Could not save your
+    // result." The handler must therefore send a value.
+    const posts = [];
+    global.fetch = jest.fn(async (url, options = {}) => {
+      const u = String(url);
+      const method = options.method || "GET";
+      const ok = (json, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => json, text: async () => JSON.stringify(json) });
+      if (u.includes("/rest/v1/rpc/consume_rate_limit")) return ok({ allowed: true });
+      if (u.includes("/auth/v1/admin/users/")) return ok({ id: USER_ID, email: "test@example.com", email_confirmed_at: "2026-01-01T00:00:00Z" });
+      if (u.includes("/rest/v1/taster_sessions")) return ok([{ id: TASTER_ID, user_id: USER_ID, name: NAME, role: ROLE, completed_at: "2026-01-01T00:00:00Z" }]);
+      if (u.includes("/rest/v1/valu_assessments")) {
+        if (method === "POST") {
+          posts.push(JSON.parse(options.body));
+          return ok([{ identity_hash: "fp", report_token: JSON.parse(options.body).report_token }], 201);
+        }
+        return ok([]);
+      }
+      throw new Error(`unexpected fetch: ${method} ${u}`);
+    });
+
+    const res = await invoke(validBody(questions));
+    expect(res.statusCode).toBe(200);
+    expect(posts).toHaveLength(1);
+
+    // api/generate-and-send-report.js only accepts an opaque UUID as the report
+    // credential, so a value in any other shape would lock the participant out
+    // of their own report even though the row saved.
+    expect(typeof posts[0].report_token).toBe("string");
+    expect(posts[0].report_token).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    // The token returned to the participant must be the one that was stored.
+    expect(res.body.report_token).toBe(posts[0].report_token);
+  });
+
+  test("each attempt generates a distinct report token", async () => {
+    // Two separate participants (different snapshots) must not share a token,
+    // and the unique index on report_token must never be the thing that rejects
+    // a legitimate second submission.
+    const tokens = [];
+    for (const tasterId of [TASTER_ID, "33333333-3333-4333-8333-333333333333"]) {
+      global.fetch = jest.fn(async (url, options = {}) => {
+        const u = String(url);
+        const method = options.method || "GET";
+        const ok = (json, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => json, text: async () => JSON.stringify(json) });
+        if (u.includes("/rest/v1/rpc/consume_rate_limit")) return ok({ allowed: true });
+        if (u.includes("/auth/v1/admin/users/")) return ok({ id: USER_ID, email: "test@example.com", email_confirmed_at: "2026-01-01T00:00:00Z" });
+        if (u.includes("/rest/v1/taster_sessions")) return ok([{ id: tasterId, user_id: USER_ID, name: NAME, role: ROLE, completed_at: "2026-01-01T00:00:00Z" }]);
+        if (u.includes("/rest/v1/valu_assessments")) {
+          if (method === "POST") {
+            const body = JSON.parse(options.body);
+            tokens.push(body.report_token);
+            return ok([{ identity_hash: "fp", report_token: body.report_token }], 201);
+          }
+          return ok([]);
+        }
+        throw new Error(`unexpected fetch: ${method} ${u}`);
+      });
+      const body = { ...validBody(questions), taster_id: tasterId, handoff_token: handoffToken(USER_ID, tasterId) };
+      const res = await invoke(body);
+      expect(res.statusCode).toBe(200);
+    }
+    expect(tokens).toHaveLength(2);
+    expect(tokens[0]).not.toBe(tokens[1]);
+  });
+
+  test("a duplicate that cannot be recovered is reported as a conflict, never as success", async () => {
+    // The database constraint (valu_assessments_taster_identity_uidx) rejects a
+    // concurrent duplicate with 23505, which PostgREST returns as 409. If the
+    // recovery lookup then cannot find a row this caller owns, the handler must
+    // surface a conflict. Claiming success here would tell the participant their
+    // result was saved while no report token exists for them.
+    global.fetch = jest.fn(async (url, options = {}) => {
+      const u = String(url);
+      const method = options.method || "GET";
+      const ok = (json, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => json, text: async () => JSON.stringify(json) });
+      if (u.includes("/rest/v1/rpc/consume_rate_limit")) return ok({ allowed: true });
+      if (u.includes("/auth/v1/admin/users/")) return ok({ id: USER_ID, email: "test@example.com", email_confirmed_at: "2026-01-01T00:00:00Z" });
+      if (u.includes("/rest/v1/taster_sessions")) return ok([{ id: TASTER_ID, user_id: USER_ID, name: NAME, role: ROLE, completed_at: "2026-01-01T00:00:00Z" }]);
+      if (u.includes("/rest/v1/valu_assessments")) {
+        if (method === "POST") return ok({ message: "duplicate key value violates unique constraint" }, 409);
+        // The row belongs to a different account, so it must not be handed over.
+        return ok([{ id: "someone-else", user_id: "99999999-9999-4999-8999-999999999999", taster_id: TASTER_ID, completed_at: "2026-01-02T00:00:00Z", report_token: "tok-theirs" }]);
+      }
+      throw new Error(`unexpected fetch: ${method} ${u}`);
+    });
+
+    const res = await invoke(validBody(questions));
+    expect(res.statusCode).toBe(409);
+    expect(res.body.report_token).toBeUndefined();
+    expect(res.body.alreadyCompleted).toBeUndefined();
+  });
 });

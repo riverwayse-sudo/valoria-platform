@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "jest",
     "check:block-scope": "node scripts/find-block-scope-bugs.mjs api src lib",
-    "test:all": "npm run check:block-scope && jest"
+    "test:all": "npm run check:block-scope && jest",
+    "verify:assessment-dedup-migration": "node scripts/verify-assessment-dedup-migration.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",

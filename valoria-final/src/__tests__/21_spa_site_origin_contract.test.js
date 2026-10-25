@@ -99,4 +99,44 @@ describe("assessment app links follow the deployment environment", () => {
     // Absent (as in Jest) falls back to production rather than throwing.
     expect(load(undefined).SITE_ORIGIN).toBe("https://valoriainstitute.com");
   });
+
+describe("no source component hardcodes the production site origin", () => {
+  // ValoriaPlatform.jsx and PRIMEAssessment.jsx were previously outside the live
+  // entry graph and carried 25 hardcoded production literals. They are not
+  // bundled today, but they were the documented residual risk: the moment
+  // anything imported them the staging defect returned, and the LIVE-list guard
+  // above would not have caught it. They now route through the shared helper, so
+  // the whole tree is held to the same rule.
+  test("every component resolves site links through siteUrl()/SITE_ORIGIN", () => {
+    const srcDir = path.join(root, "src");
+    const files = fs
+      .readdirSync(srcDir)
+      .filter((f) => /\.jsx?$/.test(f) && f !== "siteOrigin.js");
+
+    const offenders = [];
+    for (const file of files) {
+      const source = read(`src/${file}`);
+      for (const m of source.matchAll(/["'`]https:\/\/valoriainstitute\.com[^"'`]*["'`]/g)) {
+        offenders.push(`${file}: ${m[0]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test("the two previously-unreachable components import the shared helper", () => {
+    for (const file of ["ValoriaPlatform.jsx", "PRIMEAssessment.jsx"]) {
+      const source = read(`src/${file}`);
+      expect(source).toMatch(/import \{ siteUrl \} from ["']\.\/siteOrigin\.js["']/);
+      expect(source).toContain("siteUrl(");
+    }
+  });
+
+  test("the shared helper keeps its documented production fallback", () => {
+    // The fallback is intentional: an unset VALORIA_SITE_URL must behave exactly
+    // as before this change. Removing it would break production, so it is
+    // asserted rather than merely allowed.
+    const source = read("src/siteOrigin.js");
+    expect(source).toContain(": 'https://valoriainstitute.com'");
+  });
+});
 });
