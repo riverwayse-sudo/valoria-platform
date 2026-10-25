@@ -100,3 +100,60 @@ Never hardcode `https://valoriainstitute.com` as a functional link. Use
 projects deploy separately, so it names *this* deployment, not the site, and the
 site's `/auth/callback` route does not exist here. Branding (logo, `mailto:`,
 bare-domain footer text) stays canonical; navigation links must not.
+
+## Verification harnesses
+
+`scripts/verify-migration-reproducibility.mjs` replays the tracked migrations
+against a real PostgreSQL (embedded, `--no-save` into `.pg-verify/`, git-ignored).
+Two modes:
+
+- default — this repository's 84 migrations alone.
+- `--shared` (`npm run verify:migration-reproducibility:shared`) — both
+  repositories' migrations into one database, in version order, because that is
+  the sequence a real database receives. This is the provisioning question; the
+  default mode answers a different one ("is this repository self-sufficient").
+
+Two things about this harness are easy to get wrong:
+
+1. The shim sets `search_path` with `alter database`, which only applies to
+   connections opened afterwards. The replay client is already connected when the
+   shim runs, so `connect()` sets `search_path` per session. Without it, every
+   unqualified pgcrypto call fails and the harness reports a migration defect that
+   does not exist.
+2. A failure count is not a defect count. `20260827_marketplace_governance_v4.sql`
+   is the only tracked migration that creates `schema private`, and it fails
+   partway through, so its transaction rolls back and the schema is gone. The 20
+   migrations that then fail on `schema "private" does not exist` are one cascade.
+
+The schema baseline is larger than handler-reading suggests: seven tables are
+created by no tracked migration in either repository (see
+`docs/engineering/valu-assessments-schema-baseline.md` §5).
+
+## Cross-repository migration versions
+
+The two repositories share one database, so a version used in both is applied
+once and the other file is skipped silently. `src/__tests__/29_cross_repo_migration_versions.test.js`
+pins the known collisions and fails on a new one rather than picking a winner —
+resolving one means renumbering, which is a human decision. It skips the
+cross-repository assertions when the sibling checkout is absent (CI), with a
+warning; a check that cannot see the other repository must not report success.
+
+## Testing asset serving
+
+A missing asset and a mis-served asset look the same in the browser. The
+dangerous one is a script request falling through the SPA catch-all and receiving
+`index.html` as `text/html`; the browser reports a MIME type error, and a
+status-200 check passes. `scripts/verify-asset-serving.mjs` serves the real
+`dist/` through the real `vercel.json` rewrites and asserts the body is the asset.
+It evaluates the config's `source` patterns as the regular expressions Vercel
+compiles them to — reimplementing a pattern is how a test passes while the config
+it checks has changed. Runs in the CI build job.
+
+## Mutation-test every guard
+
+Every guard added here has been checked by breaking the thing it guards and
+confirming the test fails: the dollar-quote guards, the migration collision guard,
+the capture script's `--expect-host` production guard, and the asset verifier. A
+guard that has never failed has not been shown to work. The asset verifier's first
+version passed 10/10 with the incident reintroduced; that is what prompted the
+rewrite, and it is the reason the mutation step is not optional.
