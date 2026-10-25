@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
@@ -99,6 +100,8 @@ export default async function handler(req) {
   const ipLimit = await checkRateLimit(req, { namespace: "account-create-ip", limit: 5, windowSeconds: 3600 });
   if (!ipLimit.allowed) return ipLimit.response;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server misconfigured." }, 500);
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json({ error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason }, 503);
 
   let payload;
   try { payload = await req.json(); } catch { return json({ error: "Invalid request body" }, 400); }

@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -21,6 +22,8 @@ async function rest(path, options = {}) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANON_KEY) return json(res, 500, { error: 'Server misconfigured.' });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
 
   const authorization = String(req.headers?.authorization || '');
   const match = authorization.match(/^Bearer\s+(.+)$/i);

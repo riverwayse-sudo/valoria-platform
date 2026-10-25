@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 import { enforceRateLimit } from "./_rateLimit.js";
 
 // Server-side report generation + email send for the sweep workflow.
@@ -154,6 +155,8 @@ async function sendReportEmail(origin, email, identityHash, reportText) {
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANTHROPIC_API_KEY) return res.status(503).json({ ok: false, error: "Service unavailable" });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return res.status(503).json({ ok: false, error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
 
   const isAuthorizedWorker = Boolean(
     CRON_SECRET && req.headers.authorization === `Bearer ${CRON_SECRET}`

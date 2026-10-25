@@ -2,6 +2,7 @@
 // Internal scheduled job: remind completed VALU users who have not finished
 // their professional profile. This endpoint is never a browser capability.
 
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 import { resolveSiteUrl } from "../lib/site-url.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -29,6 +30,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
   if (getHeader(req, 'authorization') !== `Bearer ${CRON_SECRET}`) return send(res, 401, { error: 'Unauthorized' });
   if (!CRON_SECRET || !SUPABASE_URL || !SERVICE_ROLE_KEY) return send(res, 500, { error: 'Server misconfigured.' });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return send(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
   const payload = await parseBody(req); if (!payload) return send(res, 400, { error: 'Invalid request body.' });
   const identityHash = String(payload?.identity_hash || '').trim();
   if (!/^fp_[a-z0-9]{1,128}$/i.test(identityHash)) return send(res, 400, { error: 'Invalid identity_hash.' });

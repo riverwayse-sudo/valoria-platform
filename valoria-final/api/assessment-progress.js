@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
 import { resolveSiteUrl } from "../lib/site-url.js";
 
@@ -137,6 +138,8 @@ async function createNotification(row) {
 }
 
 async function runReminderSweep(req) {
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json({ error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason }, 503);
   const auth = req?.headers?.get?.("authorization") || "";
   if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) return json({ error: "Unauthorized" }, 401);
 
@@ -211,6 +214,8 @@ export default async function handler(req) {
   }
 
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json({ error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason }, 503);
 
   const body = await req.json().catch(() => ({}));
   if (body.action === "sweep") return runReminderSweep(req);

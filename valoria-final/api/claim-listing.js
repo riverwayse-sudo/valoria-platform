@@ -3,6 +3,7 @@
 // the professional profile. A 35+ VALU score is score eligibility only; actual
 // listing is decided separately by the server-side readiness/governance engine.
 
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const LISTING_THRESHOLD = 35;
@@ -28,6 +29,8 @@ export default async function handler(req) {
     console.error('claim-listing: missing server environment');
     return json({ error: 'Server misconfigured.' }, 500);
   }
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json({ error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason }, 503);
 
   const authHeader = getHeader(req, 'authorization');
   const match = authHeader.match(/^Bearer\s+(.+)$/i);

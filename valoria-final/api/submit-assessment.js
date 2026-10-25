@@ -3,6 +3,7 @@
 // and presentation mappings, but it may not invent score-bearing options.
 // The canonical question bank remains the source of truth for scoring.
 
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 import { randomUUID } from 'node:crypto';
 import { computeResults } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
@@ -114,6 +115,8 @@ export default async function handler(req, res) {
     console.error('submit-assessment: missing Supabase server configuration');
     return json(res, 500, { error: 'Server misconfigured.' });
   }
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
 
   const forwarded = req.headers['x-forwarded-for'];
   const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();

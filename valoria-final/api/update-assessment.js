@@ -3,6 +3,7 @@
 // verified Supabase Auth user whose email matches the assessment. Internal
 // report/email fields require CRON_SECRET.
 
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -41,6 +42,8 @@ function hasCronSecret(req) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SERVICE_ROLE_KEY || !SUPABASE_URL) return json(res, 500, { error: 'Server misconfigured.' });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
 
   const { identity_hash, fields } = req.body || {};
   if (typeof identity_hash !== 'string' || !IDENTITY_RE.test(identity_hash.trim())) {

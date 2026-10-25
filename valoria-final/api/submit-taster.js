@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 import { createHash } from 'node:crypto';
 import { TASTER_QUESTIONS, computeTasterResult, EXPERIENCE_BANDS, VALU_VERSION } from '../src/valuTaster.js';
 
@@ -40,6 +41,8 @@ async function consumeRateLimit(ip) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json(res, 500, { error: 'Server misconfigured.' });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
 
   const forwarded = req.headers['x-forwarded-for'];
   const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();

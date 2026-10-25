@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
@@ -40,6 +41,8 @@ function confirmationEmailHtml(name, actionLink) {
 export default async function handler(req) {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Service temporarily unavailable." }, 503);
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json({ error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason }, 503);
 
   const ipLimit = await checkRateLimit(req, { namespace: "confirmation-resend-ip", limit: 10, windowSeconds: 900 });
   if (!ipLimit.allowed) return ipLimit.response;
