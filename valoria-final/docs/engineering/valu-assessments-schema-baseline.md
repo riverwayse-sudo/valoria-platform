@@ -190,7 +190,51 @@ Until then: **do not author a speculative `CREATE TABLE`.** A baseline invented
 from handler assumptions would be worse than the gap, because it would look
 authoritative while silently disagreeing with production.
 
-## 5. Bearing on release
+## 5. Measured scope, 2026-10-23 (Phase 6)
+
+Phase 5 recorded two missing tables, `valu_assessments` and `taster_sessions`.
+That was the pair found by reading handler code. Replaying the **shared** database
+— both repositories into one database, which is the real provisioning path — shows
+the gap is wider, and that most of the reported failure count is cascade rather
+than independent defect.
+
+`npm run verify:migration-reproducibility:shared`: 135 migrations (platform 84,
+site 51), applied **22/135**.
+
+**Tables that no tracked migration in either repository creates** (7):
+
+| Table | Referenced by (migrations, both repos) | Owner by usage |
+| --- | --- | --- |
+| `valu_assessments` | 44 | platform |
+| `professional_profiles` | 67 | platform |
+| `taster_sessions` | 28 | platform |
+| `valoria_journey_events` | 10 | platform |
+| `assessment_sessions` | 2 | either |
+| `professional_standard_event_registrations` | 4 | either |
+| `users` | 9 | site |
+
+`users` is a `public` mirror of `auth.users`, not a Supabase-provided object:
+`20260919161200_reconcile_auth_user_and_profile_ownership.sql` inserts into it and
+`20260916133933_complete_valu_pipeline_reconciliation.sql` puts a trigger on it.
+
+**Two further objects are views, not tables** — `marketplace_professionals` and
+`marketplace_public_roster`. A tracked migration already defines both, so they
+need no baseline of their own; they only need their base tables to exist first.
+
+**One failure is cascade, not defect.** `20260827_marketplace_governance_v4.sql`
+is the only tracked migration that creates `schema private`. It fails partway
+through on `relation "public.professional_profiles" does not exist`, so its
+transaction rolls back and the schema is never created. The 20 migrations that
+then fail on `schema "private" does not exist` are consequences of that single
+rollback. Fixing the baseline without noticing this leaves 20 of the 35 root
+causes unexplained.
+
+So the baseline must create **7 tables plus the `private` schema**, and must do so
+in an order that satisfies the foreign keys among them. The remaining failures in
+the shared replay are the site repository's migrations running before their own
+dependencies exist, which is the same class of gap.
+
+## 6. Bearing on release
 
 This does not block the code-level fixes, which are verified independently:
 
@@ -199,5 +243,5 @@ This does not block the code-level fixes, which are verified independently:
 
 It **does** block the claim that the database setup is reproducible, and
 therefore blocks full release certification. A new environment cannot be
-provisioned from these repositories: the two most important tables would not
+provisioned from these repositories: seven tables, including the two most important, would not
 exist.
