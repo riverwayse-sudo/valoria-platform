@@ -16,7 +16,8 @@
     "verify:deployment-routing": "node scripts/verify-deployment-routing.mjs",
     "verify:migration-reproducibility": "node scripts/verify-migration-reproducibility.mjs",
     "verify:schema-contract": "node scripts/derive-required-schema-contract.mjs",
-    "verify:migration-reproducibility:shared": "node scripts/verify-migration-reproducibility.mjs --shared"
+    "verify:migration-reproducibility:shared": "node scripts/verify-migration-reproducibility.mjs --shared",
+    "verify:asset-serving": "node scripts/verify-asset-serving.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",
