@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import './valu-results-responsive.css';
 // API routes are deployed at the domain root, not under Vite's nested assessment base path.
 const API_BASE = '';
 
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from './valuTaster.js';
 
 const CLUSTERS={P:'Presence',R:'Relationships',I:'Intelligence',M:'Mastery',E:'Enterprise'};
+const DIMENSION_MEANINGS={P:'How you lead with impact.',R:'How you build trusted connections.',I:'How you think and solve problems.',M:'How you develop and deliver.',E:'How you create opportunity and value.'};
 const COLORS={P:'#C9A84C',R:'#C9A84C',I:'#C9A84C',M:'#C9A84C',E:'#C9A84C'};
 const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS='#D4C9A8', DIM='rgba(250,250,247,.68)';
 
@@ -121,7 +123,7 @@ export default function VALUIndexV4GateNext(){
 
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
- if(phase==='signup')return <Shell>
+ if(phase==='signup')return <Shell mode="signup">
   <div className="valu-entry-grid" style={S.entryGrid}>
    <section className="valu-entry-intro" style={S.entryIntro}>
     <div style={S.homeKicker}>A PROFESSIONAL VALUE ASSESSMENT</div>
@@ -174,17 +176,30 @@ export default function VALUIndexV4GateNext(){
   {error&&<div style={S.error}>{error}</div>}<p style={S.note}>Your answers are saved as a directional snapshot. They do not become the official VALU Index score.</p>
  </Shell>;
 
- return <Shell>
+ return <Shell mode="results">
   <StepBar active={3}/>
-  <div style={S.eyebrow}>SNAPSHOT SAVED · VALU v{VALU_VERSION}</div><h1 style={S.h1}>Your first read is <em>ready.</em></h1>
-  <p style={S.p}>Your account has been captured and your 15-question snapshot is saved. The snapshot is directional; the full assessment establishes your official VALU Index.</p>
-  <div style={S.resultGrid}>{scores.map(([id,value])=><div key={id} style={S.resultRow}><div><b style={{color:COLORS[id]}}>{id}</b><span>{CLUSTERS[id]}</span></div><strong>{value}</strong></div>)}</div>
-  <div style={S.highlight}><div style={S.eyebrow}>YOUR STRONGEST SIGNAL</div><div style={S.signal}>{result?.strongest?.name}</div><p style={S.p}>The full VALU assessment goes deeper across the PRIME framework and produces the authoritative score.</p></div>
-  <div style={S.next}><div style={S.eyebrow}>NEXT STEP</div><h2 style={S.nextTitle}>Confirm your email, then continue.</h2><p style={S.p}>We have saved your snapshot. Confirm the email used for your account, sign in, and Valoria will attach this result to your professional journey.</p>
-   <a href={`https://valoriainstitute.com/login?pending_taster_id=${encodeURIComponent(tasterId)}`} style={S.primaryLink}>CONFIRM & SIGN IN →</a>
-   <a href={`https://valoriainstitute.com/journey/continue?stage=assess&taster_id=${encodeURIComponent(tasterId)}`} style={S.secondary}>I'M ALREADY SIGNED IN — CONTINUE</a>
-  </div>
-  <p style={S.note}>Signup or the snapshot does not grant marketplace listing. Listing remains governed by the full assessment, profile, capability and eligibility checks.</p>
+  <section className="valu-results-header" style={S.resultsHeader}>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> SNAPSHOT COMPLETE <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <h1 className="valu-results-title" style={S.h1}>Your first read is <em>ready.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your 15-question snapshot is complete. This is an initial, directional view—not your official VALU Index. Your full assessment establishes your authoritative result.</p>
+  </section>
+  <section aria-label="PRIME snapshot scores" style={S.scoreSection}>
+   <div style={S.sectionHeading}><div style={S.eyebrow}>YOUR PRIME SNAPSHOT</div><span style={S.sectionHint}>Normalised scores · out of 100</span></div>
+   <div className="valu-result-grid" style={S.resultGrid}>{scores.map(([id,value])=><div key={id} style={{...S.resultRow,...(id===result?.strongest?.id?S.resultRowStrong:{})}}><div style={S.dimensionCode}>{id} <span style={S.dimensionCodeDivider}>·</span> PRIME DIMENSION</div><h2 style={S.scoreName}>{CLUSTERS[id]}</h2><p style={S.dimensionMeaning}>{DIMENSION_MEANINGS[id]}</p><strong style={S.scoreValue}>{value}<small style={S.scoreOutOf}>/100</small></strong><div style={S.scoreTrack}><span style={{...S.scoreBar,width:`${Math.max(0,Math.min(100,Number(value)||0))}%`}}/></div>{id===result?.strongest?.id&&<span style={S.scoreBadge}>STRONGEST SIGNAL</span>}</div>)}</div>
+  </section>
+  <section className="valu-results-insight" style={S.highlight}>
+   <div style={S.insightLabel}>YOUR STRONGEST SIGNAL</div><div style={S.signal}>{result?.strongest?.name||CLUSTERS[result?.strongest?.id]||'Your strongest dimension'}</div>
+   <p style={S.insightText}>Your snapshot points to a relative strength in this dimension. The full VALU assessment explores all five PRIME dimensions in greater depth.</p>
+  </section>
+  <section className="valu-results-next" style={S.next}>
+   <div style={S.nextStepTag}>YOUR NEXT STEP</div><h2 style={S.nextTitle}>Continue your VALU journey.</h2>
+   <p style={S.nextText}>Sign in with the email you used to register to connect this snapshot to your professional journey and continue toward your full VALU Index.</p>
+   <div className="valu-results-actions" style={S.resultActions}>
+    <a href={`https://valoriainstitute.com/login?pending_taster_id=${encodeURIComponent(tasterId)}`} style={S.primaryLink}>CONFIRM EMAIL & SIGN IN <span aria-hidden="true">→</span></a>
+    <a href={`https://valoriainstitute.com/journey/continue?stage=assess&taster_id=${encodeURIComponent(tasterId)}`} style={S.secondary}>Already signed in? Continue your journey</a>
+   </div>
+  </section>
+  <p style={S.note}>Completing the snapshot does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
@@ -192,7 +207,7 @@ function StepBar({active}){return <div className="valu-assessment-steps" style={
 function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 const S={
- page:{minHeight:'calc(100dvh - 65px)',height:'auto',background:DARK,color:PARCH,padding:'28px 32px 34px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
+ page:{minHeight:'calc(100dvh - 65px)',height:'auto',background:DARK,color:PARCH,padding:'clamp(22px,4vw,38px) clamp(16px,4vw,32px) 34px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
  shell:{width:'100%',maxWidth:1160,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:'auto'},
  topBrand:{display:'flex',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottom:'1px solid rgba(212,201,168,.13)',marginBottom:24,flex:'0 0 auto'},
  brandMark:{fontSize:15,fontWeight:900,letterSpacing:'.08em',color:PARCH},
@@ -243,14 +258,40 @@ const S={
  options:{display:'grid',gap:10},
  option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'34px 1fr',alignItems:'center',gap:14,textAlign:'left',padding:'17px 18px',border:'1px solid',borderRadius:9,color:PARCH,fontSize:14,lineHeight:1.55,cursor:'pointer',fontFamily:'inherit',transition:'border-color .18s,background .18s'},
  optionLetter:{width:30,height:30,border:'1px solid rgba(201,168,76,.42)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:GOLD,fontSize:11,fontWeight:700},
- h1:{fontSize:'clamp(40px,7vw,64px)',fontWeight:500,lineHeight:1.04,letterSpacing:'-.035em',margin:'0 0 14px'},
+ h1:{fontSize:'clamp(36px,5vw,54px)',fontWeight:600,lineHeight:1.06,letterSpacing:'-.04em',margin:'14px 0 12px'},
  p:{fontSize:13,lineHeight:1.75,color:DIM},
- resultGrid:{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8,margin:'24px 0'},
- resultRow:{padding:'15px 8px',border:'1px solid rgba(212,201,168,.16)',background:SURFACE,borderRadius:8,textAlign:'center',fontSize:10},
- highlight:{padding:22,border:'1px solid rgba(201,168,76,.25)',borderRadius:10,background:SURFACE,marginTop:14},
- signal:{fontSize:25,marginTop:8,color:PARCH},
- next:{marginTop:16,padding:24,border:'1px solid rgba(201,168,76,.3)',borderRadius:10,background:'rgba(201,168,76,.055)'},
- nextTitle:{fontSize:22,fontWeight:600,margin:'9px 0 8px'}
+ resultsHeader:{maxWidth:790,margin:'0 auto',width:'100%'},
+ resultsEyebrow:{display:'flex',alignItems:'center',gap:9,fontSize:9,fontWeight:800,letterSpacing:'.13em',color:BRASS,flexWrap:'wrap'},
+ statusDot:{width:7,height:7,borderRadius:'50%',background:'#91B79A',display:'inline-block'},
+ statusDivider:{opacity:.45},
+ resultsIntro:{fontSize:14,lineHeight:1.75,color:DIM,maxWidth:690,margin:'0 0 24px'},
+ scoreSection:{maxWidth:900,width:'100%',margin:'0 auto'},
+ sectionHeading:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:12},
+ sectionHint:{fontSize:10,color:'rgba(250,250,247,.5)'},
+ resultGrid:{display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:10,margin:'0 0 18px'},
+ resultRow:{position:'relative',minWidth:0,minHeight:225,padding:'18px 15px 15px',border:'1px solid rgba(212,201,168,.16)',background:SURFACE,borderRadius:10,textAlign:'left',fontSize:11,display:'flex',flexDirection:'column',gap:10,overflow:'hidden'},
+ resultRowStrong:{borderColor:'rgba(201,168,76,.7)',background:'linear-gradient(160deg,rgba(201,168,76,.12),#2E2E4A 65%)'},
+ dimensionCode:{fontSize:8,fontWeight:900,letterSpacing:'.14em',lineHeight:1.4,color:GOLD,marginBottom:1},
+ dimensionCodeDivider:{color:BRASS,padding:'0 3px'},
+ scoreName:{fontSize:16,fontWeight:800,lineHeight:1.3,letterSpacing:'-.02em',color:PARCH,overflowWrap:'anywhere',margin:0},
+ dimensionMeaning:{fontSize:10.5,fontWeight:500,lineHeight:1.6,color:DIM,margin:'-5px 0 8px',minHeight:50},
+ scoreValue:{fontSize:27,fontWeight:700,lineHeight:1.1,letterSpacing:'-.04em',color:PARCH,marginTop:'auto'},
+ scoreOutOf:{fontSize:10,fontWeight:500,letterSpacing:0,color:'rgba(250,250,247,.42)',marginLeft:3},
+ scoreTrack:{height:3,background:'rgba(250,250,247,.1)',borderRadius:9,overflow:'hidden',width:'100%'},
+ scoreBar:{display:'block',height:'100%',background:GOLD,borderRadius:9},
+ scoreBadge:{fontSize:7,fontWeight:800,letterSpacing:'.07em',lineHeight:1.4,color:GOLD,minHeight:20},
+ highlight:{maxWidth:900,boxSizing:'border-box',width:'100%',margin:'0 auto 14px',padding:'22px 24px',border:'1px solid rgba(201,168,76,.32)',borderRadius:12,background:'linear-gradient(110deg,rgba(201,168,76,.09),#2E2E4A 65%)'},
+ insightLabel:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
+ signal:{fontSize:27,fontWeight:600,letterSpacing:'-.025em',marginTop:8,color:PARCH},
+ insightText:{fontSize:12,lineHeight:1.65,color:DIM,margin:'8px 0 0',maxWidth:690},
+ next:{maxWidth:900,boxSizing:'border-box',width:'100%',margin:'0 auto',padding:'22px 24px',border:'1px solid rgba(201,168,76,.3)',borderRadius:12,background:'rgba(201,168,76,.045)'},
+ nextStepTag:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
+ nextTitle:{fontSize:'clamp(22px,3vw,28px)',fontWeight:600,letterSpacing:'-.025em',margin:'8px 0'},
+ nextText:{fontSize:12,lineHeight:1.7,color:DIM,maxWidth:700,margin:'0 0 16px'},
+ resultActions:{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'},
+ primaryLink:{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:10,minHeight:46,boxSizing:'border-box',padding:'13px 18px',borderRadius:7,background:GOLD,color:DARK,fontWeight:900,letterSpacing:'.06em',fontSize:10,textDecoration:'none',textAlign:'center'},
+ secondary:{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,padding:'10px 0',color:BRASS,fontSize:11,fontWeight:700,textDecoration:'none',lineHeight:1.5},
+ note:{fontSize:10,lineHeight:1.65,color:'rgba(250,250,247,.48)',maxWidth:900,margin:'14px auto 0',width:'100%'}
 };
 
 
