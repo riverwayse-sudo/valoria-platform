@@ -13,6 +13,7 @@
     "test:all": "npm run check:block-scope && jest",
     "verify:assessment-dedup-migration": "node scripts/verify-assessment-dedup-migration.mjs",
     "verify:concurrent-submission": "node scripts/verify-concurrent-submission.mjs",
+    "verify:deployment-routing": "node scripts/verify-deployment-routing.mjs",
     "verify:migration-reproducibility": "node scripts/verify-migration-reproducibility.mjs",
     "verify:schema-contract": "node scripts/derive-required-schema-contract.mjs"
   },
