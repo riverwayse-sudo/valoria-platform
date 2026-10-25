@@ -5,3 +5,6 @@ dist
 
 .vercel
 .env*.local
+
+# Scratch dir for the on-demand PGlite migration verifier
+.pglite-verify/

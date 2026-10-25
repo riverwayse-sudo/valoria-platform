@@ -3,6 +3,7 @@
 // and presentation mappings, but it may not invent score-bearing options.
 // The canonical question bank remains the source of truth for scoring.
 
+import { randomUUID } from 'node:crypto';
 import { computeResults } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
 import { computeFingerprint } from '../src/lockEngine.js';
@@ -185,6 +186,17 @@ export default async function handler(req, res) {
     skill_scores: results.skillScores, completed_at: completedAt, expires_at: expiresAt, ai_report: null,
     taster_id: tasterId, user_id: resolvedUserId, email: resolvedEmail,
     answers, timings, shuffle_map: shuffleMap, assessment_version: 'FULL_VALU_V1',
+    // Generate the report token here rather than relying on a column default.
+    // report_token is NOT NULL with a unique index, but no tracked migration
+    // defines a default for it, and valu_assessments is created by no tracked
+    // migration at all. The previous version omitted this column, so every
+    // submission depended on an untracked DEFAULT existing in the target
+    // database; on a database without it the insert failed with 23502 and the
+    // participant saw "Could not save your result." Supplying it explicitly
+    // makes the insert self-contained, and the public report path already
+    // expects an opaque UUID (api/generate-and-send-report.js validates this
+    // exact shape).
+    report_token: randomUUID(),
   };
 
   try {
