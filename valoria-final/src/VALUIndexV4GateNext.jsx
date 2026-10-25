@@ -123,7 +123,7 @@ export default function VALUIndexV4GateNext(){
 
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
- if(phase==='signup')return <Shell>
+ if(phase==='signup')return <Shell mode="signup">
   <div className="valu-entry-grid" style={S.entryGrid}>
    <section className="valu-entry-intro" style={S.entryIntro}>
     <div style={S.homeKicker}>A PROFESSIONAL VALUE ASSESSMENT</div>
