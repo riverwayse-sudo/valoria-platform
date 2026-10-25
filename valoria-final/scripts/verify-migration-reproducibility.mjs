@@ -118,8 +118,18 @@ const server = spawn(
 async function connect() {
   const c = new Pg.Client({ host: '127.0.0.1', port, user: 'valoria', database: 'postgres' })
   await c.connect()
+  // The shim mirrors Supabase's search_path with `alter database ... set
+  // search_path`, which only takes effect for connections opened afterwards. This
+  // client is already connected when the shim runs, so without this the session
+  // keeps the default `"$user", public` and every unqualified pgcrypto call
+  // (gen_random_bytes, gen_random_uuid, crypt) fails with "function does not
+  // exist". That is a harness artifact, not a migration defect, and it inflated
+  // the failure count by attributing a cause that is not real. Setting it per
+  // session matches what Supabase actually presents to a migration.
+  await c.query('set search_path to public, extensions, auth')
   return c
 }
+
 async function waitReady() {
   for (let i = 0; i < 60; i++) {
     try {
