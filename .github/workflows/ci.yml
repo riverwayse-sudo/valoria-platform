@@ -69,6 +69,10 @@ jobs:
         env:
           CI: true
           NEXT_TELEMETRY_DISABLED: 1
+      - name: Verify asset serving against the deployment configuration
+        run: node scripts/verify-asset-serving.mjs
+        env:
+          CI: true
 
   secret-scan:
     name: Secret Scan
