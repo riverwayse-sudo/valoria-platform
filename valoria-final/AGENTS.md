@@ -17,8 +17,25 @@ npm run test:all                       # block-scope check + jest
 npm run check:block-scope              # static: vars read outside their block
 npm run verify:assessment-dedup-migration   # executes a migration on real PostgreSQL
 npm run verify:concurrent-submission        # proves the duplicate race is closed under real concurrency
+npm run verify:deployment-routing           # applies Vercel rewrite order to the real dist/ tree
 npm run build
 ```
+
+## Deployment routing
+
+Vercel reads `vercel.json` from the **project root** and nothing else. A
+`public/vercel.json` is copied by Vite into `dist/`, where Vercel never looks, so
+it is inert — but it will be read by whoever debugs a 404 next, and if it holds a
+naive `/(.*)` → `/index.html` catch-all it tells them to reintroduce the asset/MIME
+defect. Keep exactly one config, at the root. `24_deployment_config_integrity`
+enforces this.
+
+`verify:deployment-routing` checks routing **offline** against the real build
+output, so it works while previews are SSO-gated. Run `npm run build` first. It
+asserts that every asset referenced by `dist/index.html` exists at the path the
+browser requests, that no asset-like path can be answered by the SPA fallback,
+that application routes still are, and that the API prefixes resolve ahead of the
+fallback. Before/after on the fixed config: 12/19 → 19/19.
 
 ## Untracked database objects
 
