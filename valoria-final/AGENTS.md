@@ -101,6 +101,35 @@ projects deploy separately, so it names *this* deployment, not the site, and the
 site's `/auth/callback` route does not exist here. Branding (logo, `mailto:`,
 bare-domain footer text) stays canonical; navigation links must not.
 
+## A preview deployment must not write to production
+
+`lib/environment-guard.js` refuses a privileged write from a non-production
+deployment. Before it existed, Vercel's preview environment carried the same
+Supabase URL and service-role key as production and no handler checked
+`VERCEL_ENV`, so a preview built from any branch could write real participant
+data. That is why the staging acceptance suite was never run: running it would
+have written to production.
+
+The decision is a pure function (`decideWriteAllowed`) so every environment
+combination is testable without a deployment. Production and an unset
+`VERCEL_ENV` (local dev, the test runner) proceed; any other value proceeds only
+when the Supabase project matches `STAGING_SUPABASE_PROJECT_REF`. Everything else
+fails closed with a 503 naming the reason.
+
+All 20 handlers that hold the service-role key and write call it. Put the call on
+the **write path**, not at the top of the handler: `assessment-progress.js` serves
+a read-only resume GET and a write POST, and `notifications.js` reads on GET and
+writes on PATCH. A top-of-handler guard breaks the read.
+
+Count the writers with a script, not by eye. Grepping for `method: 'POST'` with
+single quotes found 12; the real number is 20, because some files use double
+quotes and some write through `/auth/v1/admin` instead. The test that asserts
+completeness accepts either quote style for that reason. The site has the same
+shape and a harder edge: five `/api` routes plus `/journey/continue` write inside
+their **GET** handler, so the site guard treats a listed path as a write whatever
+the method. `src/__tests__/environment-write-guard.test.js` fails if a writing GET
+route is added without listing it.
+
 ## Verification harnesses
 
 `scripts/verify-migration-reproducibility.mjs` replays the tracked migrations
