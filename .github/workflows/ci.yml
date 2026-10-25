@@ -107,3 +107,28 @@ jobs:
             grep -q "^${KEY}=" .env.example || { echo "ERROR: ${KEY} is missing from .env.example"; exit 1; }
             echo "${KEY} documented ✓"
           done
+
+  verifiers:
+    name: Deterministic Verifiers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Setup Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: valoria-final/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run deterministic verifiers
+        # These check properties a unit test cannot: that the deployment rewrites
+        # actually serve the built assets, that the submission constraint holds
+        # under real concurrent connections, that the schema-rollback behaviour
+        # behind the largest block of migration failures is as diagnosed, and that
+        # the block-scope bug class has not returned. Each starts a real
+        # PostgreSQL and needs no credentials, so they run on every commit.
+        run: npm run verify:ci
+        env:
+          CI: true
+

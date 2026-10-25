@@ -17,7 +17,9 @@
     "verify:migration-reproducibility": "node scripts/verify-migration-reproducibility.mjs",
     "verify:schema-contract": "node scripts/derive-required-schema-contract.mjs",
     "verify:migration-reproducibility:shared": "node scripts/verify-migration-reproducibility.mjs --shared",
-    "verify:asset-serving": "node scripts/verify-asset-serving.mjs"
+    "verify:asset-serving": "node scripts/verify-asset-serving.mjs",
+    "verify:schema-rollback": "node scripts/verify-schema-rollback.mjs",
+    "verify:ci": "npm run check:block-scope && npm run verify:deployment-routing && npm run verify:assessment-dedup-migration && npm run verify:concurrent-submission && npm run verify:schema-rollback"
   },
   "dependencies": {
     "react": "^18.2.0",
