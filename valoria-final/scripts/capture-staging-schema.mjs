@@ -35,8 +35,43 @@ import { execFileSync } from 'node:child_process'
 
 const TARGET_TABLES = ['valu_assessments', 'taster_sessions']
 const root = process.cwd()
-const OUT_DIR = path.join(root, '.schema-capture')
+// Output defaults to .schema-capture/ (git-ignored). --out-dir exists so the
+// self-test can direct output to a temporary directory without changing the
+// working directory, which has to stay at the repository root for the pg client
+// and the migration directories to resolve.
+const OUT_DIR = (() => {
+  const hit = process.argv.find((a) => a.startsWith('--out-dir='))
+  return hit ? path.resolve(hit.slice('--out-dir='.length)) : path.join(root, '.schema-capture')
+})()
 const CACHE_DIR = path.join(root, '.pg-verify')
+
+// Versions that collide across the two repositories, from
+// docs/engineering/migration-collision-register.md. Supabase applies one file per
+// version, so for each of these only one candidate ran — and the applied SQL is
+// the only record of which.
+const COLLISION_VERSIONS = [
+  '20260816',
+  '20260827',
+  '20260828',
+  '20260908150000',
+  '20260921121500',
+  '20260921124500',
+  '20260921130000',
+]
+
+// Objects the collisions define. The live bodies of these are the state the
+// database is actually in, which decides the collision where no later migration
+// redefines the object.
+const COLLISION_FUNCTIONS = [
+  'valu_assessment_is_current',
+  'enforce_valu_profile_lifecycle',
+  'guard_professional_platform_fields',
+  'evaluate_professional_capability',
+  'sync_professional_capability',
+  'evaluate_professional_readiness',
+  'sync_professional_listing_status',
+  'link_taster_to_profile',
+]
 
 // The contract Phase 4 derived from tracked migrations and handler code. The
 // drift report checks the live schema against it, so a live column that is
@@ -229,12 +264,53 @@ const QUERIES = {
                         from supabase_migrations.schema_migrations
                        order by version`,
 
+  // The applied SQL for versions that collide across the two repositories. This
+  // is the decisive evidence: it shows which of two same-version files actually
+  // ran, which the file contents alone cannot. `statements` is a text[] of the
+  // statements Supabase recorded at apply time. It is not present on every
+  // Supabase version, so a failure here is captured and reported, not fatal.
+  collision_applied_sql: `select version, name,
+                                 array_to_string(statements, E'\\n\\n') as applied_sql
+                            from supabase_migrations.schema_migrations
+                           where version = any($1)
+                           order by version`,
+
+  // Function bodies in the `private` schema. Collision 2 leaves
+  // `sync_professional_capability` defined by whichever copy ran, and no later
+  // migration redefines it, so the live body is the only record of which one
+  // took effect.
+  private_functions: `select p.proname as function_name,
+                             pg_get_function_identity_arguments(p.oid) as arguments,
+                             pg_get_functiondef(p.oid) as source
+                        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'private' and p.prokind = 'f'
+                       order by p.proname`,
+
+  // The specific public functions the collisions define. Whichever copy ran,
+  // these bodies show the state the database is actually in.
+  collision_function_bodies: `select n.nspname as schema, p.proname as function_name,
+                                     pg_get_function_identity_arguments(p.oid) as arguments,
+                                     pg_get_functiondef(p.oid) as source
+                                from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                               where n.nspname in ('public', 'private')
+                                 and p.proname = any($1)
+                               order by n.nspname, p.proname`,
+
   // Any table the live database has that no tracked migration creates. This is
   // the general form of the Phase 4 finding, not limited to the two tables.
   untracked_candidates: `select c.relname as table_name
                            from pg_class c join pg_namespace n on n.oid = c.relnamespace
                           where n.nspname = 'public' and c.relkind = 'r'
                           order by c.relname`,
+}
+
+// Which array each query receives as $1. Every query uses a single placeholder so
+// there are no gaps to pad: pg cannot infer the type of an unused positional
+// parameter, and a null placeholder fails with "could not determine data type of
+// parameter $1". Binding by name avoids that class of failure entirely.
+const QUERY_PARAMS = {
+  collision_applied_sql: COLLISION_VERSIONS,
+  collision_function_bodies: COLLISION_FUNCTIONS,
 }
 
 // Table names created by tracked migrations in either repository.
@@ -253,7 +329,14 @@ function trackedTableNames() {
 }
 
 const Pg = await loadPg()
-const client = new Pg.Client({ connectionString, ssl: { rejectUnauthorized: false } })
+// Supabase enforces TLS, so SSL is on by default. A disposable local fixture for
+// testing this script does not have certificates, so `--no-ssl` exists for that
+// case only; the host guard still applies either way.
+const useSsl = !process.argv.includes('--no-ssl')
+const client = new Pg.Client({
+  connectionString,
+  ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+})
 
 const capture = { captured_at: new Date().toISOString(), host: actualHost, queries: {}, errors: {} }
 
@@ -263,7 +346,9 @@ try {
 
   for (const [key, sql] of Object.entries(QUERIES)) {
     try {
-      const params = /any\(\$1\)/.test(sql) ? [TARGET_TABLES] : []
+      // Single placeholder per query, bound by name. A query with no placeholder
+      // gets no parameters.
+      const params = /\$1\b/.test(sql) ? [QUERY_PARAMS[key] ?? TARGET_TABLES] : []
       const res = await client.query(sql, params)
       capture.queries[key] = res.rows
       console.log(`  captured ${key} (${res.rows.length} rows)`)
@@ -357,7 +442,46 @@ if (!hist) {
   md.push('')
 }
 
-md.push('## 4. Next step\n')
+md.push('## 4. Collision evidence\n')
+md.push('For each version that collides across the two repositories, which file ran is not')
+md.push('recoverable from source — Supabase applies one file per version. The applied SQL and')
+md.push('the live function bodies below are the record of what the database actually holds.\n')
+const appliedSql = capture.queries.collision_applied_sql
+if (!appliedSql) {
+  md.push(`Applied SQL not readable: ${capture.errors.collision_applied_sql ?? 'unavailable'}\n`)
+} else {
+  md.push(`Readable for ${appliedSql.length} of ${COLLISION_VERSIONS.length} colliding versions.\n`)
+  md.push('| version | name | applied SQL length |')
+  md.push('| --- | --- | --- |')
+  for (const r of appliedSql) {
+    md.push(`| ${r.version} | ${r.name ?? ''} | ${(r.applied_sql ?? '').length} |`)
+  }
+  md.push('')
+  md.push('Match each applied SQL body against the candidate files to identify which ran.\n')
+}
+
+const bodies = capture.queries.collision_function_bodies || []
+md.push(`### Live bodies of the functions the collisions define (${bodies.length})\n`)
+if (bodies.length === 0) {
+  md.push('None present. Either the collisions did not define them, or the capture could not read them.\n')
+} else {
+  for (const b of bodies) {
+    md.push(`- \`${b.schema}.${b.function_name}(${b.arguments})\` — ${(b.source ?? '').length} chars`)
+  }
+  md.push('')
+  md.push('The full source is in `capture.json` under `queries.collision_function_bodies`.\n')
+}
+
+const privateFns = capture.queries.private_functions || []
+md.push(`### \`private\` schema functions (${privateFns.length})\n`)
+if (privateFns.length === 0) {
+  md.push('None present. If the baseline should have created this schema, that is the cascade finding.\n')
+} else {
+  for (const f of privateFns) md.push(`- \`private.${f.function_name}(${f.arguments})\``)
+  md.push('')
+}
+
+md.push('## 5. Next step\n')
 md.push('Author the baseline migration from `capture.json`, not from this summary. The full')
 md.push('column, constraint, index, trigger, policy and privilege definitions are there.')
 md.push('Review grants, ownership and RLS before committing anything — a baseline that')

@@ -168,5 +168,31 @@ reading the database, and no resolution should be applied until they are:
 
 The minimum access required is a read-only connection to the staging database with
 `STAGING_DATABASE_URL` and `--expect-host`, which is what
-`scripts/capture-staging-schema.mjs` already enforces. Its production guard is
-tested; it has never had a real target.
+`scripts/capture-staging-schema.mjs` already enforces.
+
+## The capture instrument is ready; it has no target
+
+The four questions above are answered by a single run of
+`scripts/capture-staging-schema.mjs`. That script now reads, in addition to the
+schema shape:
+
+- `collision_applied_sql` — the SQL Supabase recorded at apply time for each
+  colliding version (`supabase_migrations.schema_migrations.statements`). This
+  answers question 1 directly: match the applied SQL against the candidate files.
+  On Supabase versions without that column the capture records the error and
+  continues rather than aborting.
+- `collision_function_bodies` — the live `pg_get_functiondef` of the objects the
+  collisions define. This answers question 3, and question 2 in part.
+- `private_functions` — every function in the `private` schema.
+
+The instrument is exercised end to end against a disposable fixture by
+`scripts/verify-capture-tooling.mjs`, which runs in CI: 22 checks covering the host
+guard, the applied-SQL capture, the live function bodies, the handoff columns and
+trigger, and the degrade-don't-abort path. Writing that test found a real defect —
+binding a single `$2` placeholder against an array of `[null, …]` fails with
+`could not determine data type of parameter $1` — so the instrument would have
+failed on its first real use. Every query now takes one placeholder.
+
+Passing the self-test means the tool is ready. It is not staging evidence. The
+blockers below remain open until the capture runs against the real database.
+
