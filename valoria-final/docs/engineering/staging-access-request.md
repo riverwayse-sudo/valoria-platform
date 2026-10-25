@@ -149,3 +149,65 @@ neither has been observed.
 | Assessment journey, submit, persistence, resume, scoring on staging | BLOCKED | §1, §2 |
 
 Release status remains **CONDITIONALLY VERIFIED — NOT RELEASE-READY**.
+
+## Decision record — three outstanding owner decisions
+
+No decision below has been made. This record exists so each one can be actioned and
+closed in place, and so the release blocker has a single visible cause. Each row was
+re-verified this round by checking the secrets API, the environment, and the preview
+hosts directly — not carried over from a previous round.
+
+| # | Decision | State | Authorizer | Re-verified |
+| --- | --- | --- | --- | --- |
+| D1 | Read-only staging database access (or a designated operator to run the queries) | **OUTSTANDING** | Supabase project owner | secrets API `403` both repos; `STAGING_DATABASE_URL` absent |
+| D2 | Approved access to both protected preview deployments | **OUTSTANDING** | Vercel project owner | both hosts `302 → vercel.com/sso-api` |
+| D3 | Staging-only Supabase Auth allowlist update | **OUTSTANDING** | Supabase project owner | not requested until D2 confirms the origins |
+
+### D1 — read-only staging database access
+
+Approve **one** of:
+
+- [ ] A read-only connection string, supplied as `STAGING_DATABASE_URL`, plus the
+      expected host. Read-only is sufficient: the capture issues only `SELECT`s.
+- [ ] Or: an authorized operator runs the two queries in §2 and returns their output
+      as text. This answers three of the register's four questions.
+
+### D2 — protected preview access
+
+Approve **one** of:
+
+- [ ] A Protection Bypass for Automation secret (preferred — leaves protection on
+      for everyone else).
+- [ ] Or: set Vercel Authentication to "Only Production Deployments".
+
+Not acceptable, and not requested: disabling deployment protection entirely, or
+promoting a preview to production.
+
+### D3 — staging-only Auth allowlist
+
+- [ ] Authorize adding the staging site and platform origins to the Supabase Auth
+      redirect allowlist and pointing the confirmation template at the agreed
+      dashboard journey, for the **staging project only**.
+
+Production allowlist explicitly out of scope. The callback contract is in
+`cross-repository-callback-contract.md`; the values are environment-specific and
+must not be hardcoded to a preview host.
+
+## What happens when each decision lands
+
+Nothing further is needed from the owner beyond the decision; the work is ready.
+
+| On | Immediate next action | Instrument |
+| --- | --- | --- |
+| D1 | Capture schema + applied migration history; resolve the 7 collisions; confirm the 3 ordering defects | `capture-staging-schema.mjs` (22/22 self-tested) |
+| D2 | Run the browser journey against the preview | — |
+| D3 | Verify registration, confirmation and handoff | — |
+
+## Stopping condition
+
+Per the Phase 9 directive, no further code-only work is proposed while D1–D3 are
+outstanding. Source-level findings cannot resolve the applied migration history,
+prove clean provisioning, or verify the user journey, and none of them is
+represented as doing so. The release stays blocked until the decisions above are
+made and the resulting evidence is collected.
+
