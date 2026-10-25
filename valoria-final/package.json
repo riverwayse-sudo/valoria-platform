@@ -4,14 +4,17 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "vite build",
+    "capture:staging-schema": "node scripts/capture-staging-schema.mjs",
+    "check:block-scope": "node scripts/find-block-scope-bugs.mjs api src lib",
+    "dev": "vite",
     "preview": "vite preview",
     "test": "jest",
-    "check:block-scope": "node scripts/find-block-scope-bugs.mjs api src lib",
     "test:all": "npm run check:block-scope && jest",
     "verify:assessment-dedup-migration": "node scripts/verify-assessment-dedup-migration.mjs",
-    "verify:concurrent-submission": "node scripts/verify-concurrent-submission.mjs"
+    "verify:concurrent-submission": "node scripts/verify-concurrent-submission.mjs",
+    "verify:migration-reproducibility": "node scripts/verify-migration-reproducibility.mjs",
+    "verify:schema-contract": "node scripts/derive-required-schema-contract.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",

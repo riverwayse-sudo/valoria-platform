@@ -11,3 +11,6 @@ dist
 
 # Scratch dir for the real-PostgreSQL concurrency verifier
 .pg-verify/
+
+# Scratch dir for schema capture and reproducibility harness
+.schema-capture/
