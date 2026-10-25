@@ -82,6 +82,14 @@ export default async function handler(req, res) {
 
 
   const results = computeTasterResult(answers);
+  const clusterScores = results.points;
+  const clusterIds = ['P', 'R', 'I', 'M', 'E'];
+  if (!clusterScores || typeof clusterScores !== 'object' || clusterIds.some(id => !Number.isFinite(clusterScores[id]))) {
+    // Fail loudly instead of posting a body whose cluster scores serialize away,
+    // which the RPC rejects as a signature mismatch and misreports as a save failure.
+    console.error('submit-taster: cluster scores unavailable for submission', submission_key);
+    return json(res, 500, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
+  }
   try {
     const submitRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_taster_with_identity_candidate`, {
       method: 'POST',
@@ -93,14 +101,15 @@ export default async function handler(req, res) {
         p_experience: experience,
         p_email: normalizedEmail,
         p_answers: answers,
-        p_cluster_scores: results.normalisedScores,
+        p_cluster_scores: clusterScores,
         p_strongest_cluster: results.strongest.id,
         p_weakest_cluster: results.weakest.id,
         p_taster_version: String(VALU_VERSION),
       }),
     });
     if (!submitRes.ok) {
-      console.error('submit-taster: atomic submission failed', submitRes.status);
+      const detail = await submitRes.text().catch(() => '');
+      console.error('submit-taster: atomic submission failed', submitRes.status, detail.slice(0, 500));
       return json(res, 502, { error: 'We could not securely save your snapshot and recovery record together. Please retry.' });
     }
     const payload = await submitRes.json();
