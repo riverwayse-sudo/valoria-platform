@@ -208,3 +208,30 @@ than guessing from a grep: `verify-assessment-dedup-migration` and
 path, not the build output. Putting them in a build job would be a mistake, and
 putting `verify:deployment-routing` in a job without a build fails CI — as it did
 once.
+
+## The staging capture instrument
+
+`scripts/capture-staging-schema.mjs` is the only way to answer the questions the
+collision register is blocked on: which of two same-version files actually ran
+(from `supabase_migrations.schema_migrations.statements`), and the live body of
+the objects the collisions define (`pg_get_functiondef`). It is read-only, and it
+refuses to run without `--expect-host` matching the connection host.
+
+`scripts/verify-capture-tooling.mjs` exercises it against a disposable fixture and
+runs in CI. Keep that test passing: an instrument that fails on first use wastes the
+access window it was built for. Writing it found a real defect — a query using only
+`$2` bound against `[null, …]` fails with `could not determine data type of
+parameter $1`, because pg cannot infer the type of an unused positional parameter.
+**Give every query a single `$1` and bind by name**, rather than padding gaps.
+
+The fixture is synthetic. Passing the self-test is tool readiness, not staging
+evidence, and the script says so on success. Never present it as verification of
+staging.
+
+## Access blockers are not code problems
+
+Preview SSO and the missing staging credentials cannot be worked around in code.
+`docs/engineering/staging-access-request.md` records the exact change each blocker
+needs, the authorizer, and the criteria each unblocks. Do not disable deployment
+protection, promote a preview, or point the capture at a host that is not staging to
+make a check pass.
