@@ -16,6 +16,7 @@ handoff changes.
 npm run test:all                       # block-scope check + jest
 npm run check:block-scope              # static: vars read outside their block
 npm run verify:assessment-dedup-migration   # executes a migration on real PostgreSQL
+npm run verify:concurrent-submission        # proves the duplicate race is closed under real concurrency
 npm run build
 ```
 
@@ -54,6 +55,15 @@ against a real PostgreSQL engine (PGlite) and checks behaviour, including the
 refusal path over pre-existing duplicates. It provisions PGlite into
 `.pglite-verify/` (git-ignored) rather than node_modules, and leaves
 `package.json` untouched.
+
+PGlite is a single-connection engine, so it cannot exercise a race: with one
+connection transactions cannot overlap. Where a constraint exists to make
+concurrent writers safe, verify it with `scripts/verify-concurrent-submission.mjs`,
+which starts a real multi-process PostgreSQL server and drives separate
+connections through the handler's read-then-insert sequence with a barrier
+between the two. It provisions binaries with `--no-save` into `.pg-verify/`
+(git-ignored). A mutation run with the constraint removed must produce
+duplicates; if it does not, the test is not exercising the race.
 
 ## Handler correctness
 
