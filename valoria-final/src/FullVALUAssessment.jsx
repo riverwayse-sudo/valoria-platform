@@ -94,6 +94,7 @@ export default function FullVALUAssessment() {
   const [timings,setTimings] = useState([]);
   const [saving,setSaving] = useState(false);
   const [result,setResult] = useState(null);
+  const [saveState,setSaveState] = useState('idle'); // idle | saved | failed
   const [error,setError] = useState('');
   const [reportStatus,setReportStatus] = useState('');
   const [sessionId,setSessionId] = useState('');
@@ -265,7 +266,16 @@ export default function FullVALUAssessment() {
         session_seed:0,
       }).then(data => {
         if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
-      }).catch(() => {});
+        if (mountedRef.current) setSaveState('saved');
+      }).catch(err => {
+        // Previously swallowed. The footer promises the participant that progress
+        // is saved automatically, so a silent failure is a false assurance: they
+        // can close the tab believing a half-finished assessment is safe. The
+        // local mirror below still holds the answers, but the server row — the
+        // one resume actually reads — does not.
+        if (mountedRef.current) setSaveState('failed');
+        console.error('Assessment progress could not be saved:', err);
+      });
     }, 250);
     return () => window.clearTimeout(timer);
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
@@ -289,12 +299,15 @@ export default function FullVALUAssessment() {
         session_seed:0,
       });
       if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
+      if (mountedRef.current) setSaveState('saved');
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
         try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
         setHandoffToken('');
         setHandoffStatus('account_required');
         setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
+      } else if (mountedRef.current) {
+        setSaveState('failed');
       }
     }
   }
@@ -369,7 +382,13 @@ export default function FullVALUAssessment() {
         answers,
         timings,
         session_seed:0,
-      }).catch(() => {});
+      }).catch(err => {
+        // The assessment itself is already scored and persisted by
+        // /api/submit-assessment above, so this is not data loss. But this write
+        // records the session as finished; discarding the error silently would
+        // leave a scored session still looking resumable with no trace of why.
+        console.error('Completion progress marker could not be saved:', err);
+      });
 
       const linkRes = await fetch(API_BASE + '/api/link-assessment-to-taster', {
         method:'POST',
@@ -458,7 +477,12 @@ export default function FullVALUAssessment() {
       <div style={S.options}>
         {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
       </div>
-      <div style={S.footer}><span>{answeredCount} answered</span><span>Progress is saved automatically.</span></div>
+      <div style={S.footer}>
+        <span>{answeredCount} answered</span>
+        {saveState === 'failed'
+          ? <span style={S.footerFail} role="status">Progress could not be saved — check your connection. Your answers are kept on this device.</span>
+          : <span role="status">{saveState === 'saved' ? 'Progress saved.' : 'Progress is saved automatically.'}</span>}
+      </div>
       {current === QUESTIONS.length - 1 && <button
         type="button"
         onClick={submitAssessment}
@@ -501,6 +525,7 @@ const S = {
   option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'32px 1fr',gap:12,alignItems:'center',textAlign:'left',padding:'12px 15px',border:'1px solid rgba(247,244,238,.1)',borderRadius:7,background:'#2E2E4A',color:T.parchment,fontSize:12.5,lineHeight:1.4,cursor:'pointer',minHeight:52},
   optionLetter:{width:26,height:26,borderRadius:'50%',border:'1px solid rgba(201,168,76,.3)',display:'flex',alignItems:'center',justifyContent:'center',color:T.gold,fontSize:10},
   footer:{display:'flex',justifyContent:'space-between',gap:16,color:T.faint,fontSize:10,marginTop:14},
+  footerFail:{color:'#F09595'},
   saving:{marginTop:18,color:T.gold,fontSize:12},
   submitHint:{marginTop:10,color:T.faint,fontSize:11,lineHeight:1.6},
   error:{marginTop:18,padding:12,border:'1px solid rgba(216,90,48,.3)',background:'rgba(216,90,48,.08)',color:'#F09595',fontSize:12,borderRadius:6},
