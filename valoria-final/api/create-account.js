@@ -1,11 +1,14 @@
 export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
+import { resolveSiteUrl } from "../lib/site-url.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const VALORIA_SITE_URL = "https://valoriainstitute.com";
+// Environment-specific. Hardcoding production here sent staging registrations
+// to the production site.
+const VALORIA_SITE_URL = resolveSiteUrl();
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -21,7 +24,14 @@ function escapeHtml(str) {
 }
 
 
-function journeyEmailHtml(name, score, designation) {
+function journeyEmailHtml(name, score, designation, siteUrl) {
+  // The call-to-action is a functional navigation link, not branding: it takes
+  // the participant to their profile. Hardcoding production sent a staging
+  // participant to the production profile page while their account lives in the
+  // staging database — the same stranding the auth redirect had before
+  // lib/site-url.js was introduced. The brand footer below deliberately stays
+  // canonical.
+  const profileUrl = `${siteUrl}/profile/edit`;
   return `
     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
     <body style="margin:0;padding:0;background:#1A1A2E;font-family:Arial,sans-serif;color:#F7F4EE;">
@@ -37,7 +47,7 @@ function journeyEmailHtml(name, score, designation) {
         </div>
         <h2 style="font-size:18px;color:#F7F4EE;">What happens next</h2>
         <p style="font-size:14px;line-height:1.8;color:rgba(247,244,238,.7);">1. Confirm your email address.<br>2. Return to Valoria securely.<br>3. Complete your professional profile.<br>4. Any marketplace listing is considered only after eligibility checks.</p>
-        <div style="text-align:center;margin:34px 0;"><a href="https://valoriainstitute.com/profile/edit" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">COMPLETE YOUR PROFILE →</a></div>
+        <div style="text-align:center;margin:34px 0;"><a href="${profileUrl}" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">COMPLETE YOUR PROFILE →</a></div>
         <p style="font-size:11px;line-height:1.6;color:rgba(247,244,238,.35);text-align:center;">Valoria Institute · Worth. Built.<br>Questions? info@valoriainstitute.com</p>
       </div>
     </body></html>`;
@@ -118,6 +128,9 @@ export default async function handler(req) {
   }
 
   const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/auth/callback?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/auth/callback`;
+  // Supabase will only honour this redirect if it is in the project's Auth
+  // redirect allowlist. On staging the staging origin must be allowlisted, or
+  // Supabase silently falls back to the Site URL and the callback never fires.
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
@@ -241,7 +254,7 @@ export default async function handler(req) {
             from: "Valoria Institute <hello@valoriainstitute.com>",
             to: normalizedEmail,
             subject: "Your VALU Assessment Is Saved — Here's What Happens Next",
-            html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation),
+            html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation, VALORIA_SITE_URL),
           }),
         });
         if (!journeyEmailRes.ok) console.error("create-account: journey email failed", journeyEmailRes.status);

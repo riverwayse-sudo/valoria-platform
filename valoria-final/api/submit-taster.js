@@ -93,7 +93,16 @@ export default async function handler(req, res) {
         p_experience: experience,
         p_email: normalizedEmail,
         p_answers: answers,
-        p_cluster_scores: results.normalisedScores,
+        // Must be the points object. computeTasterResult() returns
+        // { points, maxPoints, strongest, weakest }. Commit 7458831
+        // ("Replace VALU snapshot percentages with points") renamed
+        // normalisedScores to points in valuTaster.js but did not update this
+        // handler, so `results.normalisedScores` was undefined; JSON.stringify
+        // then dropped the key and the RPC rejected the whole submission with
+        // 'cluster scores must be an object' (22023) — a 502 that lost all 15
+        // answers. Points are the canonical display and storage unit for a
+        // snapshot; do not substitute a percentage or an empty object.
+        p_cluster_scores: results.points,
         p_strongest_cluster: results.strongest.id,
         p_weakest_cluster: results.weakest.id,
         p_taster_version: String(VALU_VERSION),

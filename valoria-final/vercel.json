@@ -1,11 +1,15 @@
 {
   "rewrites": [
     {
+      "source": "/valu/assessment/api/:path*",
+      "destination": "/api/:path*"
+    },
+    {
       "source": "/valu/assessment/assets/:path*",
       "destination": "/assets/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/)(?!.*\\.[a-zA-Z0-9]+$).*)",
       "destination": "/index.html"
     }
   ],

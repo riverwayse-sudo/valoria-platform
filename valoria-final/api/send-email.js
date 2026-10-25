@@ -1,3 +1,5 @@
+import { resolveSiteUrl } from "../lib/site-url.js";
+
 export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -60,7 +62,7 @@ export default async function handler(req) {
       <p style="font-size:15px;color:rgba(247,244,238,0.5);margin-bottom:32px;">Your VALU Index assessment is complete. Here is your full AI report.</p>
       <div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:24px;margin-bottom:32px;text-align:center;"><div style="font-size:52px;font-weight:700;color:#C9A84C;line-height:1;">${escapeHtml(stored.total_score)}</div><div style="font-size:11px;color:rgba(247,244,238,0.4);letter-spacing:0.12em;margin-top:6px;">VALU INDEX · OUT OF 100</div><div style="font-size:15px;color:#F7F4EE;margin-top:8px;font-weight:600;">${escapeHtml(stored.designation)}</div><div style="font-size:12px;color:rgba(247,244,238,0.3);margin-top:4px;">${escapeHtml(stored.role)}</div></div>
       <div style="background:#1A1A2E;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:28px;margin-bottom:32px;">${reportHtml}</div>
-      <div style="text-align:center;margin-bottom:40px;"><a href="https://valoriainstitute.com/profile/edit" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">COMPLETE YOUR PROFILE &rarr;</a></div>
+      <div style="text-align:center;margin-bottom:40px;"><a href="${resolveSiteUrl()}/profile/edit" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">COMPLETE YOUR PROFILE &rarr;</a></div>
       <p style="font-size:11px;color:rgba(247,244,238,0.2);text-align:center;border-top:1px solid rgba(255,255,255,0.06);padding-top:24px;">Valoria Institute &middot; Africa's Professional Capability Index<br>Questions? info@valoriainstitute.com</p>
     </div></body></html>`;
 
