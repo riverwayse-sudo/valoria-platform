@@ -199,7 +199,22 @@ the gap is wider, and that most of the reported failure count is cascade rather
 than independent defect.
 
 `npm run verify:migration-reproducibility:shared`: 135 migrations (platform 84,
-site 51), applied **22/135**.
+site 51), applied **23/135**.
+
+The chain stops at `platform:20260816_admin_governance_transitions.sql` with
+`type "public.professional_profiles" does not exist` (`sqlstate 42704`). That is
+the exact stopping point: everything before it applied, and 112 migrations after
+it failed. A clean environment cannot be provisioned from source until a baseline
+for the assumed objects is added.
+
+**112 failures are not 112 defects.** They resolve into three classes, and only
+one of them is a baseline gap:
+
+| Class | Count | Meaning |
+| --- | --- | --- |
+| Infrastructure absent from a bare PostgreSQL | 5 | `schema "cron"`, `cron.job`, `storage.buckets`, `extension "pg_net"` — Supabase-managed, present in a real project. A harness limitation, not a defect. |
+| Cascade from the `private` schema rollback | 29 | 27 direct `schema "private" does not exist`, plus 2 that surface as a missing `identity_reconciliation_reviews.review_actor_type` because `20261015121000` adds that column and then fails creating `private.valu_reconciliation_health()`. |
+| Genuine baseline gap | 78 | A relation or function the migrations require that no tracked artifact creates. |
 
 **Tables that no tracked migration in either repository creates** (7):
 
@@ -217,17 +232,28 @@ site 51), applied **22/135**.
 `20260919161200_reconcile_auth_user_and_profile_ownership.sql` inserts into it and
 `20260916133933_complete_valu_pipeline_reconciliation.sql` puts a trigger on it.
 
-**Two further objects are views, not tables** — `marketplace_professionals` and
+The replay reports **21 distinct missing relations** beyond these seven —
+`marketplace_public_roster`, `professional_documents`, `lead_captures`,
+`taster_progress`, `organization_capabilities`, `introduction_requests`,
+`professional_capabilities`, `facilitation_engagements`, `lead_automation_configs`,
+`opportunity_applications`, `professional_journey`, `assessment_identity_links`,
+`professional_certificates`, and others. Some are views whose base tables are
+missing; some are objects the baseline must also create. The seven above are the
+ones named repeatedly enough to be certain of; the full set must come from the
+capture, not from this list. This is why the seven are a lower bound, not the
+complete schema.
+
+**Two of these are views, not tables** — `marketplace_professionals` and
 `marketplace_public_roster`. A tracked migration already defines both, so they
 need no baseline of their own; they only need their base tables to exist first.
 
 **One failure is cascade, not defect.** `20260827_marketplace_governance_v4.sql`
 is the only tracked migration that creates `schema private`. It fails partway
 through on `relation "public.professional_profiles" does not exist`, so its
-transaction rolls back and the schema is never created. The 20 migrations that
+transaction rolls back and the schema is never created. The 29 migrations that
 then fail on `schema "private" does not exist` are consequences of that single
-rollback. Fixing the baseline without noticing this leaves 20 of the 35 root
-causes unexplained.
+rollback. Fixing the baseline without noticing this leaves 29 of the 112
+failures unexplained, and would misattribute them to missing tables.
 
 So the baseline must create **7 tables plus the `private` schema**, and must do so
 in an order that satisfies the foreign keys among them. The remaining failures in
