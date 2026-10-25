@@ -235,3 +235,24 @@ Preview SSO and the missing staging credentials cannot be worked around in code.
 needs, the authorizer, and the criteria each unblocks. Do not disable deployment
 protection, promote a preview, or point the capture at a host that is not staging to
 make a check pass.
+
+## Summarise the migration replay by cause, not by count
+
+`npm run verify:migration-reproducibility:shared` reports "112 migrations failed",
+which is true and nearly useless. `node scripts/classify-migration-failures.mjs`
+turns it into a cause breakdown and writes
+`docs/engineering/migration-failure-register.md`. Run it after every replay.
+
+Summarising by hand got it wrong twice, so the classification is a script with a
+mutation-verified test (`src/__tests__/32_migration_failure_classification.test.js`):
+
+- Do not call a failure a "baseline gap" until you have checked whether the object
+  has a creator that itself failed earlier in the same run. Those are cascades.
+- A creator can be a **view**, not only a table. `marketplace_public_roster` and
+  `marketplace_professionals` are views; scanning only for `create table` reported
+  them as gaps.
+- Supabase infrastructure (`cron`, `storage.buckets`, `pg_net`) must be reported
+  separately from the defect count. A bare PostgreSQL has none of it, so those
+  failures say nothing about the migration set.
+
+Corrected split: 49 baseline gaps + 3 ordering defects = 52 real defects, not 83.
