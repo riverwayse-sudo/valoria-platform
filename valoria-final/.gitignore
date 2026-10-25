@@ -8,3 +8,6 @@ dist
 
 # Scratch dir for the on-demand PGlite migration verifier
 .pglite-verify/
+
+# Scratch dir for the real-PostgreSQL concurrency verifier
+.pg-verify/

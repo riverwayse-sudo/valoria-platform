@@ -10,7 +10,8 @@
     "test": "jest",
     "check:block-scope": "node scripts/find-block-scope-bugs.mjs api src lib",
     "test:all": "npm run check:block-scope && jest",
-    "verify:assessment-dedup-migration": "node scripts/verify-assessment-dedup-migration.mjs"
+    "verify:assessment-dedup-migration": "node scripts/verify-assessment-dedup-migration.mjs",
+    "verify:concurrent-submission": "node scripts/verify-concurrent-submission.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",
