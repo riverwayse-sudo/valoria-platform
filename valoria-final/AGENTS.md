@@ -157,3 +157,54 @@ the capture script's `--expect-host` production guard, and the asset verifier. A
 guard that has never failed has not been shown to work. The asset verifier's first
 version passed 10/10 with the incident reintroduced; that is what prompted the
 rewrite, and it is the reason the mutation step is not optional.
+
+## Migration collisions in a shared database
+
+The two repositories share one database, and each holds migrations the other does
+not, so the shared sequence is the union — 135 migrations — and no single
+repository can reproduce it. `docs/engineering/migration-collision-register.md`
+records every version collision with evidence.
+
+Two cross-repository collisions differ in kind and must not be treated alike:
+
+- `20260908150000` is a provisioning gap. The platform file adds four
+  `taster_sessions` handoff columns and creates the trigger that uses them; the
+  site file of the same version does neither, and nothing later restores them. So
+  whichever file loses, the other's work is silently skipped. The tempting
+  "resolution" — delete the losing file — would remove the only creator of the
+  handoff mechanism. `src/__tests__/31_shared_database_object_coverage.test.js`
+  guards the objects rather than the versions, because a version check cannot see
+  this: the version exists in both repositories either way.
+- `20260921121500` is mostly superseded. Six of its seven objects are redefined by
+  later versions, which live in *different repositories*; only
+  `sync_professional_capability` is defined here and nowhere later.
+
+Resolution needs the recorded versions from the database. Do not renumber from
+source, do not delete a file to silence the guard, and do not mark a migration
+applied to get past an error.
+
+## The `private` schema cascade
+
+29 of the 112 failures in the shared replay are one rollback. `schema private` is
+created only by `20260827_marketplace_governance_v4.sql`, which then fails on a
+missing table, so the schema rolls back with it and every later consumer fails on
+`schema "private" does not exist`. `scripts/verify-schema-rollback.mjs` measures
+this on a real PostgreSQL: a schema created inside a failing transaction is lost,
+one created in an earlier committed transaction survives. That is why the fix is
+to create the schema once, early, on its own — and why attributing those 29
+failures to missing tables would be wrong.
+
+A failure count is never a defect count. Classify before acting: Supabase-managed
+infrastructure (`cron`, `storage.buckets`, `pg_net`) is absent from a bare
+PostgreSQL and is a harness limitation, not a defect.
+
+## Verifier placement in CI
+
+Verifiers are split by what they actually need. `verify:ci` runs without a build
+(block-scope, dedup, concurrency, schema rollback); `verify:build` runs in the
+build job because it reads the built `dist/` tree. Check the dependency rather
+than guessing from a grep: `verify-assessment-dedup-migration` and
+`verify-concurrent-submission` both match `dist`, but only as the pglite module
+path, not the build output. Putting them in a build job would be a mistake, and
+putting `verify:deployment-routing` in a job without a build fails CI — as it did
+once.
