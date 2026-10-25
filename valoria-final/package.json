@@ -15,7 +15,8 @@
     "verify:concurrent-submission": "node scripts/verify-concurrent-submission.mjs",
     "verify:deployment-routing": "node scripts/verify-deployment-routing.mjs",
     "verify:migration-reproducibility": "node scripts/verify-migration-reproducibility.mjs",
-    "verify:schema-contract": "node scripts/derive-required-schema-contract.mjs"
+    "verify:schema-contract": "node scripts/derive-required-schema-contract.mjs",
+    "verify:migration-reproducibility:shared": "node scripts/verify-migration-reproducibility.mjs --shared"
   },
   "dependencies": {
     "react": "^18.2.0",

@@ -18,9 +18,20 @@
 //   node scripts/verify-migration-reproducibility.mjs
 //   node scripts/verify-migration-reproducibility.mjs --baseline=supabase/migrations/<file>.sql
 //   node scripts/verify-migration-reproducibility.mjs --compare=.schema-capture/capture.json
+//   node scripts/verify-migration-reproducibility.mjs --shared --site=/path/to/valoria-site
 //
 // Exits 0 when the full chain applies, 1 otherwise. A failure is a result, not an
 // error: it is the measurement this script exists to produce.
+//
+// --shared replays BOTH repositories into one database, which is the real
+// provisioning path: the two repositories share a single Supabase project
+// (AGENTS.md: "Shared database with valoria-site"), and each writes part of the
+// schema. Replaying only this repository's migrations cannot succeed, because 47
+// of them alter tables the site repository creates — `professional_certificates`,
+// `assessment_identity_links`, `identity_reconciliation_reviews` and others. The
+// default single-repository run is still the right measurement for "is THIS
+// repository self-sufficient", but it is not the provisioning question, and
+// reporting it as one would understate what actually works.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -43,6 +54,13 @@ function argValue(name) {
 }
 const baselinePath = argValue('baseline')
 const comparePath = argValue('compare')
+
+// --shared merges the site repository's migrations into the replay. The two
+// repositories share one database, so the provisioning path is the union of
+// their sequences, not either one alone.
+const sharedMode = process.argv.includes('--shared')
+const siteRoot = argValue('site') || '/workspace/project/valoria-site'
+const SITE_MIGRATIONS_DIR = path.join(siteRoot, 'supabase', 'migrations')
 
 function npmInstall(...pkgs) {
   execFileSync('npm', ['install', '--no-save', '--no-audit', '--no-fund', '--prefix', CACHE_DIR, ...pkgs], {
@@ -142,6 +160,48 @@ function migrationFiles() {
     .sort()
 }
 
+// Supabase records an applied migration by its version — the leading numeric
+// prefix of the filename — and refuses to apply a second file with a version it
+// has already seen. Two files sharing a version therefore cannot both be part of
+// a provisioned database: whichever is applied first wins, and the other is
+// skipped silently. That is a defect in a shared database, because a table or
+// trigger the skipped file was supposed to create never exists, and no error is
+// raised anywhere.
+//
+// Returns the full list of { file, dir, label, version, repo } in version order,
+// plus the collisions, so the caller can report rather than hide them.
+function collectSharedMigrations() {
+  const entries = []
+  const add = (dir, repo) => {
+    if (!fs.existsSync(dir)) return
+    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.sql'))) {
+      const m = file.match(/^(\d+)_/)
+      entries.push({ file, dir, label: `${repo}:${file}`, version: m ? m[1] : file, repo })
+    }
+  }
+  add(MIGRATIONS_DIR, 'platform')
+  add(SITE_MIGRATIONS_DIR, 'site')
+
+  // Same version, different content, across the two repositories. Ordering by
+  // label keeps platform before site for an equal version, which is the order
+  // the versions imply but does not determine — hence the collision report.
+  entries.sort((a, b) => (a.version === b.version ? a.label.localeCompare(b.label) : a.version.localeCompare(b.version)))
+
+  const byVersion = new Map()
+  for (const e of entries) {
+    if (!byVersion.has(e.version)) byVersion.set(e.version, [])
+    byVersion.get(e.version).push(e)
+  }
+  const collisions = []
+  for (const [version, list] of byVersion) {
+    if (list.length < 2) continue
+    const bodies = list.map((e) => fs.readFileSync(path.join(e.dir, e.file), 'utf8'))
+    const identical = bodies.every((b) => b === bodies[0])
+    collisions.push({ version, entries: list, identical })
+  }
+  return { entries, collisions }
+}
+
 let exitCode = 0
 try {
   await waitReady()
@@ -175,18 +235,39 @@ try {
 
   console.log(`\n${baselinePath ? '3' : '2'}. replaying the tracked migration sequence`)
   const files = migrationFiles()
-  console.log(`   ${files.length} migrations found`)
+
+  // In shared mode the replay is the union of both repositories' migrations, in
+  // version order, because that is the sequence a single database receives.
+  let plan
+  if (sharedMode) {
+    const { entries, collisions } = collectSharedMigrations()
+    plan = entries
+    console.log(`   ${entries.length} migrations found across both repositories`)
+    console.log(`   (platform ${files.length}, site ${entries.length - files.length})`)
+    if (collisions.length) {
+      console.log(`\n   ${collisions.length} version collision(s) — Supabase applies one per version, so the other is skipped silently:`)
+      for (const c of collisions) {
+        console.log(`     ${c.version}${c.identical ? ' (identical content, harmless)' : ''}`)
+        for (const e of c.entries) console.log(`       ${e.repo}: ${e.file}`)
+      }
+    } else {
+      console.log('   no version collisions')
+    }
+  } else {
+    plan = files.map((f) => ({ file: f, dir: MIGRATIONS_DIR, label: f, repo: 'platform' }))
+    console.log(`   ${files.length} migrations found`)
+  }
 
   const applied = []
   const failures = []
-  for (const file of files) {
-    const res = await applyFile(client, path.join(MIGRATIONS_DIR, file), file)
-    if (res.ok) applied.push(file)
+  for (const entry of plan) {
+    const res = await applyFile(client, path.join(entry.dir, entry.file), entry.label)
+    if (res.ok) applied.push(entry.label)
     else failures.push(res)
   }
   const firstFailure = failures[0] || null
 
-  console.log(`   applied ${applied.length}/${files.length}`)
+  console.log(`   applied ${applied.length}/${plan.length}`)
   if (failures.length) {
     console.log(`\n   ${failures.length} migration(s) failed. The first is ${firstFailure.file}:`)
     console.log(`     ${firstFailure.message}`)
@@ -216,14 +297,14 @@ try {
   // Which migrations reference the target tables? Those are the ones that
   // cannot work until a baseline exists, so the failure point should sit at or
   // before the earliest of them.
-  const referencing = files.filter((f) => {
-    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8')
+  const referencing = plan.filter((e) => {
+    const sql = fs.readFileSync(path.join(e.dir, e.file), 'utf8')
     return /valu_assessments|taster_sessions/.test(sql)
   })
   const earliest = referencing[0]
   console.log(`\n   ${referencing.length} migrations reference ${TARGET_TABLES.join(' or ')}`)
-  console.log(`   earliest is ${earliest}`)
-  if (firstFailure && earliest && firstFailure.file > earliest) {
+  console.log(`   earliest is ${earliest ? earliest.label : 'none'}`)
+  if (firstFailure && earliest && firstFailure.file > earliest.label) {
     console.log('   NOTE: the chain failed after the earliest reference, which is unexpected')
   }
 
@@ -275,13 +356,23 @@ try {
 
   console.log('\n─── result ───')
   if (firstFailure) {
-    console.log(`NOT REPRODUCIBLE: the chain stops at ${firstFailure.file} (${applied.length}/${files.length} applied).`)
+    console.log(`NOT REPRODUCIBLE: the chain stops at ${firstFailure.file} (${applied.length}/${plan.length} applied).`)
     console.log('A clean environment cannot be provisioned from source until a baseline for the')
     console.log('tables the migrations assume is added. This is expected given the Phase 4 finding.')
     exitCode = 1
   } else {
-    console.log(`REPRODUCIBLE: all ${files.length} migrations applied to an empty database.`)
+    console.log(`REPRODUCIBLE: all ${plan.length} migrations applied to an empty database.`)
     exitCode = 0
+  }
+  if (sharedMode) {
+    const { collisions } = collectSharedMigrations()
+    const real = collisions.filter((c) => !c.identical)
+    if (real.length) {
+      console.log(`\n${real.length} version collision(s) with differing content: a database receives only`)
+      console.log('one file per version, so the other is never applied and the objects it defines')
+      console.log('never exist. Each is reported above.')
+      exitCode = 1
+    }
   }
 } catch (err) {
   console.error('\nharness error:', err?.message || err)
