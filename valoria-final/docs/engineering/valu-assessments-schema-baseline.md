@@ -81,6 +81,15 @@ closed by `20261023130000_unique_full_assessment_per_snapshot.sql`. That
 migration is **additive and safe on any shape** of the table, because it only
 adds a partial unique index over two columns the handler already queries.
 
+A note on that index, because its own comment previously overstated its role.
+The predicate `where taster_id is not null and identity_hash is not null` is not
+what stops null-keyed rows colliding: PostgreSQL treats NULLs as distinct in a
+unique index by default, so a plain index would not collide them either. The
+predicate's real value is scope — it constrains only the rows the application
+queries and keeps the index small. Verified on a real server (16/16 checks,
+including a probe that inserts two `(null, null)` rows through a plain unique
+index and confirms both are accepted). The comment has been corrected.
+
 ## 3. Contract required by tracked artifacts
 
 Derived from migrations, handler code, and the site's foreign keys. This is the

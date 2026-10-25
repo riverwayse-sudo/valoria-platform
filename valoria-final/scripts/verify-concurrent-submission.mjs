@@ -352,6 +352,32 @@ try {
   )
   check('confirming the race is real and not an artefact of the test', mutatedRows.rows[0].n === N, `${mutatedRows.rows[0].n}/${N}`)
 
+  section('7. why the index predicate exists — it is not the NULL-collision guard')
+  // The migration comment implies the partial predicate is what stops null-keyed
+  // rows colliding. That is not accurate: PostgreSQL treats NULLs as distinct in
+  // a unique index by default (NULLS DISTINCT), so a plain index would not
+  // collide them either. This check records the real reason the predicate is
+  // there — a partial index over only the rows the application actually queries
+  // is smaller and excludes legacy/unlinked rows from the constraint's scope —
+  // so the comment is not relied on for a property the database provides.
+  await setup.query(`create table public.predicate_probe (a text, b text)`)
+  await setup.query(`create unique index predicate_probe_plain on public.predicate_probe (a, b)`)
+  let nullsCollide = false
+  try {
+    await setup.query(`insert into public.predicate_probe values (null, null)`)
+    await setup.query(`insert into public.predicate_probe values (null, null)`)
+    nullsCollide = false
+  } catch {
+    nullsCollide = true
+  }
+  const probeRows = await setup.query(`select count(*)::int as n from public.predicate_probe`)
+  check(
+    'a plain unique index already treats null keys as distinct',
+    nullsCollide === false && probeRows.rows[0].n === 2,
+    `${probeRows.rows[0].n} null rows accepted, collision=${nullsCollide}`
+  )
+  await setup.query(`drop table public.predicate_probe`)
+
   await setup.end()
 
   const failed = results.filter((r) => !r.ok)

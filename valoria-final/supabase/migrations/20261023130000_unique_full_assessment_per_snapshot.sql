@@ -65,8 +65,12 @@ begin
 end
 $$;
 
--- Partial: rows with a null taster_id or identity_hash are legacy/unlinked and
--- must not collide with each other or block the index.
+-- Partial: the index covers only the rows the application queries. A plain
+-- index would also be correct for null keys — PostgreSQL treats NULLs as
+-- distinct in a unique index by default, so null-keyed rows would not collide
+-- either way — but scoping the constraint to (taster_id, identity_hash) pairs
+-- that are both present keeps legacy/unlinked rows out of the constraint and
+-- keeps the index small. The predicate matches the handler's lookup exactly.
 create unique index if not exists valu_assessments_taster_identity_uidx
   on public.valu_assessments (taster_id, identity_hash)
   where taster_id is not null and identity_hash is not null;
