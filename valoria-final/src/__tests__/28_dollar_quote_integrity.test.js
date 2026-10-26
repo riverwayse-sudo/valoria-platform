@@ -21,7 +21,16 @@
 const fs = require("fs");
 const path = require("path");
 
-const MIGRATIONS_DIR = path.join(__dirname, "..", "..", "supabase", "migrations");
+// Both directories hold migrations that Supabase applies. The repository root
+// supabase/migrations was not scanned here, and a truncated delimiter
+// (`do $` ... `$;` instead of `do $$` ... `$$;`) in
+// supabase/migrations/20260921123000_canonical_lead_pipeline.sql survived every
+// guard for exactly that reason: the same defect this suite was written for was
+// still present, one directory over. Scan both.
+const MIGRATIONS_DIRS = [
+  path.join(__dirname, "..", "..", "supabase", "migrations"),
+  path.join(__dirname, "..", "..", "..", "supabase", "migrations"),
+].filter((d) => fs.existsSync(d));
 
 // Comments and string literals can contain a lone `$` legitimately, so remove
 // them before looking for delimiters.
@@ -33,28 +42,41 @@ function strip(sql) {
 }
 
 function migrationFiles() {
-  return fs
-    .readdirSync(MIGRATIONS_DIR)
-    .filter((f) => f.endsWith(".sql"))
-    .sort();
+  const out = [];
+  for (const dir of MIGRATIONS_DIRS) {
+    for (const f of fs.readdirSync(dir).filter((n) => n.endsWith(".sql"))) {
+      out.push({ dir, file: f });
+    }
+  }
+  return out;
+}
+
+function readMigration({ dir, file }) {
+  return fs.readFileSync(path.join(dir, file), "utf8");
+}
+
+function label({ dir, file }) {
+  return `${path.relative(path.join(__dirname, "..", "..", ".."), dir)}/${file}`;
 }
 
 describe("dollar-quote integrity", () => {
   const files = migrationFiles();
 
-  test("the migrations directory is non-empty", () => {
+  test("the migrations directories are non-empty", () => {
     expect(files.length).toBeGreaterThan(0);
+    // Both must be present, or the scan is silently half its reach.
+    expect(MIGRATIONS_DIRS.length).toBe(2);
   });
 
   test("no migration contains a truncated dollar-quote delimiter", () => {
     const offenders = [];
     for (const file of files) {
-      const sql = strip(fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8"));
+      const sql = strip(readMigration(file));
       const lines = sql.split("\n");
       lines.forEach((line, i) => {
         // `$` that opens or closes a quoted body must be `$$` or `$tag$`.
         if (/(?:^|\s)\$[^$\w]?\s*$/.test(line) || /^\s*\$;\s*$/.test(line)) {
-          offenders.push(`${file}:${i + 1}: ${line.trim()}`);
+          offenders.push(`${label(file)}:${i + 1}: ${line.trim()}`);
         }
       });
     }
@@ -66,14 +88,14 @@ describe("dollar-quote integrity", () => {
     // the other direction and produces the same parse failure.
     const unbalanced = [];
     for (const file of files) {
-      const sql = strip(fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8"));
+      const sql = strip(readMigration(file));
       const counts = new Map();
       for (const m of sql.matchAll(/\$([A-Za-z_]*)\$/g)) {
         const tag = m[1];
         counts.set(tag, (counts.get(tag) || 0) + 1);
       }
       for (const [tag, n] of counts) {
-        if (n % 2 !== 0) unbalanced.push(`${file}: $${tag}$ appears ${n} time(s)`);
+        if (n % 2 !== 0) unbalanced.push(`${label(file)}: $${tag}$ appears ${n} time(s)`);
       }
     }
     expect(unbalanced).toEqual([]);

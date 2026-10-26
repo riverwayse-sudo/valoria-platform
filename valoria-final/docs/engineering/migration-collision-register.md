@@ -12,7 +12,44 @@ changes. It is source-only: the applied history has not been read from the
 database (see *Unresolved* at the end), and no resolution here is final until it
 has been compared against the recorded versions.
 
-Measured 2026-10-23 against platform `ad2c3165` and site `454b1aed`.
+Measured 2026-10-23 against platform `ad2c3165` and site `454b1aed`; corrected the
+same day against both platform migration directories.
+
+## Correction, 2026-10-23: this register was incomplete
+
+The first version of this register scanned one platform migrations directory,
+`valoria-final/supabase/migrations`. The platform has a **second** migrations
+directory at the repository root, `supabase/migrations`, holding six files. Four of
+them share a version with valoria-site, so four collisions were missing from the
+summary below. Re-measured against both directories:
+
+| Version | Platform file | Site file | Kind |
+| --- | --- | --- | --- |
+| `20260921123000` | `supabase/migrations/…_canonical_lead_pipeline.sql` | same name | **was divergent; now fixed** |
+| `20260921131500` | `supabase/migrations/…_lead_meeting_automation.sql` | same name | byte-identical |
+| `20260921133500` | `supabase/migrations/…_configure_session_02_meeting_link.sql` | same name | byte-identical |
+
+The fourth root file, `20261008120000`, `20261008123000` and `20261008143000`, have
+no site counterpart.
+
+### `20260921123000` was not merely divergent — it could not apply at all
+
+The platform root copy carried a truncated dollar-quote delimiter: `do $` … `$;`
+where `do $$` … `$$;` was meant. PostgreSQL rejects a bare `$` delimiter with
+`syntax error at or near "$"`, so this file could never have applied to any
+database, and the lead-pipeline work it performs (the
+`trg_capture_event_registration_lead` trigger and the `valoria-sync-leads-to-brevo`
+/ `valoria-process-meta-leads` cron jobs) never ran from this file. The site copy
+of the same version used `$$` correctly.
+
+It survived every guard for one reason: `src/__tests__/28_dollar_quote_integrity.test.js`
+exists specifically to catch this defect class — its header names `as $` where
+`as $$` was meant — but it scanned only `valoria-final/supabase/migrations`. The
+same defect, in the sibling directory, was invisible to it.
+
+**Resolved.** The delimiter is corrected and the file is now byte-identical to the
+site copy (`e8c1e88b0aa29f03`). Both migration guards now scan both platform
+directories, and reintroducing the defect fails `28_dollar_quote_integrity`.
 
 ## Summary
 
@@ -20,8 +57,11 @@ Measured 2026-10-23 against platform `ad2c3165` and site `454b1aed`.
 | --- | --- | --- | --- |
 | `20260908150000` | cross-repo, divergent, **different objects** | **high** | unresolved |
 | `20260921121500` | cross-repo, divergent SQL, same object names | medium | unresolved |
+| `20260921123000` | cross-repo; truncated delimiter made it inapplicable | **high** | **fixed** |
 | `20260921124500` | cross-repo, byte-identical | none | harmless |
 | `20260921130000` | cross-repo, byte-identical | none | harmless |
+| `20260921131500` | cross-repo, byte-identical | none | harmless |
+| `20260921133500` | cross-repo, byte-identical | none | harmless |
 | `20260816` (×17), `20260827` (×9), `20260828` (×2) | within platform, date-only | low | pinned |
 
 ## 1. `20260908150000` — divergent objects (high)

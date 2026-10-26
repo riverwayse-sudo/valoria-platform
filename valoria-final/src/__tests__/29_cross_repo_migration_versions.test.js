@@ -13,6 +13,11 @@
 //     versions covering 28 files (20260816, 20260827, 20260828). Pinned here so a
 //     new duplicate fails rather than joining them unnoticed.
 //
+// Both platform migration directories are scanned (valoria-final/supabase/migrations
+// and the repository-root supabase/migrations). The root directory holds four files
+// that also exist in valoria-site, and scanning only the first directory hid every
+// one of those collisions.
+//
 //   * cross-repository — runs only when the valoria-site checkout is present.
 //     Two shared versions have differing content, so one of the two is not what
 //     the database ran and which one depends on application order. That test is
@@ -25,7 +30,13 @@
 const fs = require("fs");
 const path = require("path");
 
-const PLATFORM_DIR = path.join(__dirname, "..", "..", "supabase", "migrations");
+// Both directories hold migrations Supabase applies, and both hold files that
+// collide with valoria-site. Scanning only the first one hid the collision at
+// 20260921123000 and the collisions at 20260921131500 / 20260921133500.
+const PLATFORM_DIRS = [
+  path.join(__dirname, "..", "..", "supabase", "migrations"),
+  path.join(__dirname, "..", "..", "..", "supabase", "migrations"),
+].filter((d) => fs.existsSync(d));
 
 // The site repository is a sibling checkout in the development workspace and a
 // separate repository in CI, where it is absent. VALORIA_SITE_DIR lets a combined
@@ -45,16 +56,31 @@ function resolveSiteDir() {
 
 const SITE_DIR = resolveSiteDir();
 
-function versions(dir) {
+function versionsIn(dir) {
   const out = new Map();
   if (!fs.existsSync(dir)) return out;
   for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".sql"))) {
     const m = file.match(/^(\d+)_/);
     if (!m) continue;
     if (!out.has(m[1])) out.set(m[1], []);
-    out.get(m[1]).push(file);
+    out.get(m[1]).push({ dir, file });
   }
   return out;
+}
+
+function versionsOf(dirs) {
+  const out = new Map();
+  for (const dir of dirs) {
+    for (const [v, files] of versionsIn(dir)) {
+      if (!out.has(v)) out.set(v, []);
+      out.get(v).push(...files);
+    }
+  }
+  return out;
+}
+
+function readAt(entry) {
+  return fs.readFileSync(path.join(entry.dir, entry.file), "utf8");
 }
 
 // Versions this repository uses for more than one file. These are date-only
@@ -81,12 +107,18 @@ const KNOWN_HARMFUL_CROSS_REPO = {
 
 // Cross-repository versions with byte-identical content. Harmless: applying
 // either produces the same database.
-const KNOWN_HARMLESS_CROSS_REPO = ["20260921124500", "20260921130000"];
+const KNOWN_HARMLESS_CROSS_REPO = [
+  "20260921123000",
+  "20260921124500",
+  "20260921130000",
+  "20260921131500",
+  "20260921133500",
+];
 
 describe("within-repository migration versions", () => {
-  const platform = versions(PLATFORM_DIR);
+  const platform = versionsOf(PLATFORM_DIRS);
 
-  test("the migrations directory is present", () => {
+  test("the migrations directories are present", () => {
     expect(platform.size).toBeGreaterThan(0);
   });
 
@@ -121,17 +153,18 @@ if (!SITE_DIR) {
 }
 
 describeCrossRepo("cross-repository migration versions", () => {
-  const platform = versions(PLATFORM_DIR);
-  const site = versions(SITE_DIR);
+  const platform = versionsOf(PLATFORM_DIRS);
+  const site = versionsOf([SITE_DIR]);
 
   function classify() {
     const shared = [...platform.keys()].filter((v) => site.has(v));
     const harmful = [];
     const harmless = [];
     for (const v of shared) {
-      const pb = fs.readFileSync(path.join(PLATFORM_DIR, platform.get(v)[0]), "utf8");
-      const sb = fs.readFileSync(path.join(SITE_DIR, site.get(v)[0]), "utf8");
-      (pb === sb ? harmless : harmful).push(v);
+      const sb = readAt(site.get(v)[0]);
+      // Any platform copy identical to the site copy makes the version harmless.
+      const anyIdentical = platform.get(v).some((entry) => readAt(entry) === sb);
+      (anyIdentical ? harmless : harmful).push(v);
     }
     return { harmful: harmful.sort(), harmless: harmless.sort() };
   }
