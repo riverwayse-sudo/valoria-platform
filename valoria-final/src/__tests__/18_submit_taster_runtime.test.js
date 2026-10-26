@@ -19,9 +19,14 @@
 
 const { randomUUID, createHash } = require("node:crypto");
 
-const SUPABASE_URL = "https://test-project.supabase.co";
+const SUPABASE_URL = "https://testprojectref000000.supabase.co";
 const SERVICE_ROLE_KEY = "test-service-role-key-not-real";
 
+// The environment guard requires the target project to be positively
+// identified. This suite runs off Vercel, so it opts in to local writes and
+// declares the project the stubbed URL points at.
+process.env.ALLOW_LOCAL_PRIVILEGED_WRITES = "true";
+process.env.STAGING_SUPABASE_PROJECT_REF = "testprojectref000000";
 process.env.SUPABASE_URL = SUPABASE_URL;
 process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE_KEY;
 

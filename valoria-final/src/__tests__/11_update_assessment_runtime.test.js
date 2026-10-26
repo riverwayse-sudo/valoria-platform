@@ -21,7 +21,7 @@
 "use strict";
 
 const SECRET = "test-service-role-key-not-real";
-const SUPABASE_URL = "https://test-project.supabase.co";
+const SUPABASE_URL = "https://testprojectref000000.supabase.co";
 const CRON_SECRET = "test-cron-secret-not-real";
 const USER_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_USER_ID = "33333333-3333-4333-8333-333333333333";
@@ -29,6 +29,11 @@ const ASSESSMENT_ID = "44444444-4444-4444-8444-444444444444";
 const IDENTITY = "fp_abc123";
 const EMAIL = "participant@example.com";
 
+// The environment guard requires the target project to be positively
+// identified. This suite runs off Vercel, so it opts in to local writes and
+// declares the project the stubbed URL points at.
+process.env.ALLOW_LOCAL_PRIVILEGED_WRITES = "true";
+process.env.STAGING_SUPABASE_PROJECT_REF = "testprojectref000000";
 process.env.SUPABASE_URL = SUPABASE_URL;
 process.env.SUPABASE_SERVICE_ROLE_KEY = SECRET;
 process.env.CRON_SECRET = CRON_SECRET;

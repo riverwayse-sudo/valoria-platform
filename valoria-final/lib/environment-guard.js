@@ -12,19 +12,33 @@
 // The guard is a pure decision function so it can be tested exhaustively without a
 // deployment. The handlers call it before any privileged write.
 //
-// The rule, in order:
+// The rule: a privileged write is allowed only when the runtime identity AND the
+// target database are both positively identified. Nothing is allowed by default.
 //
-//   1. VERCEL_ENV=production        -> allow. This is production.
-//   2. VERCEL_ENV unset or empty    -> allow. Not a Vercel-managed deployment, so
-//                                      this is local development or a test runner.
-//                                      Vercel always sets VERCEL_ENV on deployments,
-//                                      so an unset value cannot be a preview.
-//   3. anything else (preview, ...) -> allow only when the configured Supabase
-//                                      project is the one declared as staging.
+//   1. VERCEL_ENV=production  -> the target must be the declared production
+//                                project (PRODUCTION_SUPABASE_PROJECT_REF).
+//   2. VERCEL_ENV set, other  -> the target must be the declared staging project
+//      (preview, development,   (STAGING_SUPABASE_PROJECT_REF).
+//       or anything unknown)
+//   3. VERCEL_ENV unset/empty -> refused unless local writes are explicitly
+//                                enabled (ALLOW_LOCAL_PRIVILEGED_WRITES=true),
+//                                and then the target must still be the declared
+//                                staging project.
 //
-// Rule 3 fails closed at every step: no declared staging project, no Supabase URL,
-// or a URL whose project ref cannot be read all deny the write. The failure mode
-// is a refused write with a clear message, not a silent write to production.
+// There is deliberately no bare "not on Vercel, so allow" branch. An earlier
+// version had one, and it was a hole: a deployment whose VERCEL_ENV failed to
+// propagate, or any runtime Vercel does not manage, would have been treated as
+// local development and allowed to write with production credentials.
+//
+// Case 3 is the local-development and test-runner path. It is opt-in through a
+// named variable rather than inferred from an absent one, and it still requires
+// the target to be the declared staging project. It therefore cannot reach
+// production without someone deliberately declaring the production ref as the
+// staging ref.
+//
+// Every branch fails closed: a missing declaration, an unreadable Supabase URL,
+// or a target that does not match the declaration all refuse the write with a
+// clear reason. The failure mode is a refused write, not a silent write.
 
 /** Extract the project ref from a Supabase URL, or null if it is not one. */
 export function supabaseProjectRef(url) {
@@ -39,6 +53,11 @@ export function supabaseProjectRef(url) {
   return match ? match[1] : null
 }
 
+/** The environment label used in refusal messages. */
+function environmentLabel(vercelEnv) {
+  return vercelEnv ? `VERCEL_ENV=${vercelEnv}` : 'an unidentified runtime (VERCEL_ENV is unset)'
+}
+
 /**
  * Decide whether a privileged write may proceed.
  *
@@ -47,35 +66,69 @@ export function supabaseProjectRef(url) {
  *
  * @returns {{ allowed: boolean, reason: string }}
  */
-export function decideWriteAllowed({ vercelEnv, supabaseUrl, stagingProjectRef }) {
+export function decideWriteAllowed({
+  vercelEnv,
+  supabaseUrl,
+  productionProjectRef,
+  stagingProjectRef,
+  allowLocalWrites,
+}) {
+  const target = supabaseProjectRef(supabaseUrl)
+
   if (vercelEnv === 'production') {
+    if (!productionProjectRef) {
+      return {
+        allowed: false,
+        reason:
+          'refusing a privileged write from VERCEL_ENV=production because the production database is not declared (set PRODUCTION_SUPABASE_PROJECT_REF to the production project ref)',
+      }
+    }
+    if (!target) {
+      return {
+        allowed: false,
+        reason:
+          'refusing a privileged write from VERCEL_ENV=production because SUPABASE_URL does not identify a Supabase project',
+      }
+    }
+    if (target !== productionProjectRef) {
+      return {
+        allowed: false,
+        reason: `refusing a privileged write from VERCEL_ENV=production: SUPABASE_URL points at project ${target}, which is not the declared production project ${productionProjectRef}`,
+      }
+    }
     return { allowed: true, reason: 'production' }
   }
-  if (!vercelEnv) {
-    // Not on Vercel. Local development and the test runner live here.
-    return { allowed: true, reason: 'non-vercel' }
+
+  if (!vercelEnv && allowLocalWrites !== true) {
+    return {
+      allowed: false,
+      reason:
+        'refusing a privileged write because VERCEL_ENV is unset and local writes are not explicitly enabled (set ALLOW_LOCAL_PRIVILEGED_WRITES=true to permit local development against a declared project)',
+    }
   }
 
   if (!stagingProjectRef) {
     return {
       allowed: false,
-      reason: `refusing a privileged write from VERCEL_ENV=${vercelEnv} because no staging database is declared (set STAGING_SUPABASE_PROJECT_REF to the staging project ref)`,
+      reason: `refusing a privileged write from ${environmentLabel(vercelEnv)} because no staging database is declared (set STAGING_SUPABASE_PROJECT_REF to the staging project ref)`,
     }
   }
-  const ref = supabaseProjectRef(supabaseUrl)
-  if (!ref) {
+  if (!target) {
     return {
       allowed: false,
-      reason: `refusing a privileged write from VERCEL_ENV=${vercelEnv} because SUPABASE_URL does not identify a Supabase project`,
+      reason: `refusing a privileged write from ${environmentLabel(vercelEnv)} because SUPABASE_URL does not identify a Supabase project`,
     }
   }
-  if (ref !== stagingProjectRef) {
+  if (target !== stagingProjectRef) {
     return {
       allowed: false,
-      reason: `refusing a privileged write from VERCEL_ENV=${vercelEnv}: SUPABASE_URL points at project ${ref}, which is not the declared staging project ${stagingProjectRef}`,
+      reason: `refusing a privileged write from ${environmentLabel(vercelEnv)}: SUPABASE_URL points at project ${target}, which is not the declared staging project ${stagingProjectRef}`,
     }
   }
-  return { allowed: true, reason: 'declared staging database' }
+  return {
+    allowed: true,
+    reason: vercelEnv ? 'declared staging database' : 'local development against the declared staging database',
+  }
 }
 
 /**
@@ -86,6 +139,8 @@ export function privilegedWriteAllowed() {
   return decideWriteAllowed({
     vercelEnv: process.env.VERCEL_ENV,
     supabaseUrl: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+    productionProjectRef: process.env.PRODUCTION_SUPABASE_PROJECT_REF,
     stagingProjectRef: process.env.STAGING_SUPABASE_PROJECT_REF,
+    allowLocalWrites: process.env.ALLOW_LOCAL_PRIVILEGED_WRITES === 'true',
   })
 }

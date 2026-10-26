@@ -111,10 +111,25 @@ data. That is why the staging acceptance suite was never run: running it would
 have written to production.
 
 The decision is a pure function (`decideWriteAllowed`) so every environment
-combination is testable without a deployment. Production and an unset
-`VERCEL_ENV` (local dev, the test runner) proceed; any other value proceeds only
-when the Supabase project matches `STAGING_SUPABASE_PROJECT_REF`. Everything else
-fails closed with a 503 naming the reason.
+combination is testable without a deployment. A privileged write needs the runtime
+identity **and** the target database positively identified; nothing is allowed by
+default:
+
+* `VERCEL_ENV=production` -> target must match `PRODUCTION_SUPABASE_PROJECT_REF`.
+* `VERCEL_ENV` set to anything else -> target must match `STAGING_SUPABASE_PROJECT_REF`.
+* `VERCEL_ENV` unset/empty -> refused unless `ALLOW_LOCAL_PRIVILEGED_WRITES` is
+  exactly `true`, and then the target must still match the staging ref.
+
+The first version of this guard allowed an unset `VERCEL_ENV` outright, reasoning
+that Vercel always sets it. That is a hole, not a convenience: a deployment whose
+`VERCEL_ENV` failed to propagate, or any runtime Vercel does not manage, was
+treated as local development and could write with production credentials. Do not
+reintroduce a bare "not on Vercel, so allow" branch. The local-development path is
+opt-in through a named variable and is still pinned to the declared project, so it
+cannot reach production without someone declaring the production ref as the
+staging ref.
+
+Every branch fails closed with a 503 naming the reason.
 
 All 20 handlers that hold the service-role key and write call it. Put the call on
 the **write path**, not at the top of the handler: `assessment-progress.js` serves
@@ -186,6 +201,13 @@ the capture script's `--expect-host` production guard, and the asset verifier. A
 guard that has never failed has not been shown to work. The asset verifier's first
 version passed 10/10 with the incident reintroduced; that is what prompted the
 rewrite, and it is the reason the mutation step is not optional.
+
+Mutate the **wrapper**, not only the pure function. A mutation of
+`privilegedWriteAllowed`'s `=== 'true'` check survived the first version of the
+environment-guard suite, because every test passed `allowLocalWrites` straight to
+`decideWriteAllowed` and never exercised the environment parsing. The fix was a
+test that drives the wrapper through `process.env`. Parsing code is part of the
+guard; if no test touches it, it is unverified.
 
 ## Migration collisions in a shared database
 
