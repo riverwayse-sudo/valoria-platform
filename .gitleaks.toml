@@ -1,0 +1,10 @@
+title = "Valoria Platform Gitleaks Configuration"
+
+[[allowlists]]
+description = "RFC 4122 UUID fixtures in the snapshot submission contract test only; scoped to UUID-shaped findings and this single test file."
+paths = [
+  '''^valoria-final/src/__tests__/09_taster_submission_payload_contract\.test\.js$''',
+]
+regexes = [
+  '''(?i)\b[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b''',
+]
