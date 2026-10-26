@@ -6,7 +6,15 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 function authorized(req) {
   if (!CRON_SECRET) return false;
-  const header = req.headers?.authorization || req.headers?.Authorization || "";
+  // This module is declared `runtime: "edge"`, where req.headers is a Web
+  // Headers instance. A plain `req.headers.authorization` lookup returns
+  // undefined on that object, so the previous implementation rejected every
+  // request including correctly authorised ones — the endpoint never worked.
+  // Read via .get() when available, and fall back for node-style callers.
+  const headers = req?.headers;
+  const header = typeof headers?.get === "function"
+    ? (headers.get("authorization") || "")
+    : (headers?.authorization || headers?.Authorization || "");
   return header === `Bearer ${CRON_SECRET}`;
 }
 

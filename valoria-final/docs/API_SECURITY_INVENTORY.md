@@ -6,18 +6,32 @@ This is the protocol contract for the server API. Every new endpoint must be add
 |---|---|---|---|---|---|
 | `/api/submit-assessment` | POST | Public | Assessment answers | Input bounds, duplicate protection, rate limit | Supabase |
 | `/api/update-assessment` | POST | Authenticated | Assessment | Auth + email ownership | Supabase |
-| `/api/get-assessment-data` | GET | Authenticated | Assessment/report | Auth + ownership | Supabase |
+| `/api/get-assessment-data` | POST | Internal | Assessment/report | CRON secret (service-role read) | Supabase |
 | `/api/create-account` | POST | Public | Identity/account | Auth verification, email ownership, rate limit | Supabase/Auth |
 | `/api/claim-listing` | POST | Authenticated | Professional identity | Auth + assessment ownership | Supabase |
+| `/api/claim-taster` | POST | Authenticated | Snapshot claim | Auth + taster ownership | Supabase |
+| `/api/link-assessment-to-taster` | POST | Authenticated | Snapshot/full linkage | Auth + token binding | Supabase |
+| `/api/assessment-progress` | POST | Authenticated | Full assessment progress | Auth + ownership, resume/idempotency | Supabase |
+| `/api/taster-progress` | POST | Capability token | Snapshot progress | Hashed resume token, rate limit, submission-key binding | Supabase |
+| `/api/submit-taster` | POST | Capability token | Snapshot result | Submission-key idempotency | Supabase |
 | `/api/generate-and-send-report` | POST | Public trigger + internal worker | Assessment/report | Opaque report token for public triggers, CRON secret for worker, IP/token rate limits, idempotency, state machine | Supabase, Anthropic, Resend |
-| `/api/save-report` | POST | Internal | AI report | Internal auth, ownership | Supabase |
-| `/api/finalize-report` | POST | Internal | Report status | Internal auth, ownership | Supabase |
+| `/api/save-report` | POST | Internal | AI report | CRON secret, write confirmed via return=representation | Supabase |
+| `/api/finalize-report` | POST | Internal | Report status | CRON secret, mark-sent write confirmed | Supabase |
+| `/api/report` | POST | Internal | AI report generation | CRON secret, requires a completed assessment | Supabase, Anthropic |
 | `/api/send-email` | POST | Internal | Email/report | Internal auth, destination validation | Resend |
 | `/api/resend-confirmation` | POST | Public | Confirmation email | Rate limit, generic response | Supabase, Resend |
 | `/api/send-profile-reminder` | POST | Internal | Reminder email | Internal auth, rate limit | Supabase, Resend |
-| `/api/sweep-unsent-reports` | POST | Internal | Report queue | CRON secret, bounded batch | Supabase |
+| `/api/sweep-unsent-reports` | GET | Internal | Report queue | CRON secret, bounded batch (Vercel cron target) | Supabase |
+| `/api/process-readiness-queue` | GET | Internal | Readiness queue | CRON secret, bounded batch | Supabase |
+| `/api/notifications` | POST | Internal | Notifications | CRON secret | Supabase, Resend |
 | `/api/system-status` | GET | Internal | Operational metadata | CRON secret, no-store | Supabase |
 | `/api/reconciliation-health` | GET | Internal | Aggregate reconciliation health | CRON secret or Vault-backed private invocation key, service-role database access, no participant-level output | Supabase |
+
+`get-assessment-data` is recorded here as POST/Internal because that is what the
+code enforces (`req.method !== "POST"` → 405, CRON secret required). The table
+previously described it as GET/Authenticated, which matched neither the handler
+nor its only caller (`run-report.js`, which POSTs with the CRON secret). A
+runtime test now pins the actual behaviour.
 
 ## Data classification
 

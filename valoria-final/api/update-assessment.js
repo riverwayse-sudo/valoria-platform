@@ -3,6 +3,7 @@
 // verified Supabase Auth user whose email matches the assessment. Internal
 // report/email fields require CRON_SECRET.
 
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -41,6 +42,8 @@ function hasCronSecret(req) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SERVICE_ROLE_KEY || !SUPABASE_URL) return json(res, 500, { error: 'Server misconfigured.' });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
 
   const { identity_hash, fields } = req.body || {};
   if (typeof identity_hash !== 'string' || !IDENTITY_RE.test(identity_hash.trim())) {
@@ -100,11 +103,17 @@ export default async function handler(req, res) {
   if (!Object.keys(patch).length) return json(res, 400, { error: 'No updatable fields supplied.' });
 
   const patchParams = new URLSearchParams({ id: `eq.${assessment.id}` });
+  // When linking ownership, only claim a row that is still unowned or already
+  // ours. Without this, two accounts verifying the same email concurrently could
+  // both pass the checks above and the second PATCH would silently take the row.
+  if (patch.user_id) {
+    patchParams.set('or', `(user_id.is.null,user_id.eq.${patch.user_id})`);
+  }
   let patchRes;
   try {
     patchRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${patchParams}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: 'return=minimal' },
+      headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: 'return=representation' },
       body: JSON.stringify(patch),
     });
   } catch {
@@ -113,6 +122,12 @@ export default async function handler(req, res) {
   if (!patchRes.ok) {
     console.error('update-assessment: patch failed', patchRes.status);
     return json(res, 502, { error: 'Update failed.' });
+  }
+  // return=minimal cannot tell "updated" apart from "matched no row", so a
+  // conditional PATCH that lost the race would have been reported as success.
+  const updatedRows = await patchRes.json().catch(() => []);
+  if (!Array.isArray(updatedRows) || !updatedRows[0]?.id) {
+    return json(res, 409, { error: 'The assessment ownership changed while updating. Reload and retry, or contact Valoria support.' });
   }
 
   return json(res, 200, { ok: true });

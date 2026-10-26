@@ -1,5 +1,6 @@
 // Daily, service-role-only reconciliation monitor.
 // Stores aggregate counts and alerts; never returns participant-level identity evidence.
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 export const config = { runtime: "nodejs", maxDuration: 20 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -55,6 +56,8 @@ export default async function handler(req, res) {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     return json(res, 503, { ok: false, error: "Service unavailable" });
   }
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
 
   const authorization = req.headers.authorization || "";
   const expected = CRON_SECRET ? `Bearer ${CRON_SECRET}` : "";

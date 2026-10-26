@@ -232,9 +232,23 @@ describe("Assessment integrity contracts", () => {
 
   test("progress resume links return through the signed assessment continuation", () => {
     const source = readApi("assessment-progress.js");
-    expect(source).toContain("https://valoriainstitute.com/journey/continue?stage=assess");
+    // The resume origin must be environment-specific. Asserting the production
+    // literal here (as this test used to) pinned the bug: on staging the
+    // reminder sent participants to the production journey.
+    expect(source).toContain("resolveSiteUrl");
+    expect(source).toContain("/journey/continue?stage=assess");
+    expect(source).not.toContain("https://valoriainstitute.com/journey/continue");
     expect(source).not.toContain("https://valoriainstitute.com/valu/assessment/?full=1");
     expect(source).toContain("handoff_token: handoffToken");
+  });
+
+  test("auth redirects and journey links never hardcode the production origin", () => {
+    for (const file of ["create-account.js", "resend-confirmation.js", "assessment-progress.js"]) {
+      const source = readApi(file);
+      expect(source).toContain("resolveSiteUrl");
+      // A hardcoded assignment defeats the resolver entirely.
+      expect(source).not.toMatch(/VALORIA_SITE_URL\s*=\s*["']https?:\/\//);
+    }
   });
 
   test("submission cannot overwrite an existing identity assessment", () => {

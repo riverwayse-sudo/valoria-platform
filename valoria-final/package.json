@@ -4,10 +4,25 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "vite build",
+    "capture:staging-schema": "node scripts/capture-staging-schema.mjs",
+    "check:block-scope": "node scripts/find-block-scope-bugs.mjs api src lib",
+    "dev": "vite",
     "preview": "vite preview",
-    "test": "jest"
+    "test": "jest",
+    "test:all": "npm run check:block-scope && jest",
+    "verify:assessment-dedup-migration": "node scripts/verify-assessment-dedup-migration.mjs",
+    "verify:concurrent-submission": "node scripts/verify-concurrent-submission.mjs",
+    "verify:deployment-routing": "node scripts/verify-deployment-routing.mjs",
+    "verify:migration-reproducibility": "node scripts/verify-migration-reproducibility.mjs",
+    "verify:schema-contract": "node scripts/derive-required-schema-contract.mjs",
+    "verify:migration-reproducibility:shared": "node scripts/verify-migration-reproducibility.mjs --shared",
+    "verify:asset-serving": "node scripts/verify-asset-serving.mjs",
+    "verify:schema-rollback": "node scripts/verify-schema-rollback.mjs",
+    "verify:ci": "npm run check:block-scope && npm run verify:assessment-dedup-migration && npm run verify:concurrent-submission && npm run verify:schema-rollback && npm run verify:capture-tooling",
+    "verify:build": "npm run verify:deployment-routing && npm run verify:asset-serving",
+    "verify:capture-tooling": "node scripts/verify-capture-tooling.mjs",
+    "verify:migration-failures": "node scripts/classify-migration-failures.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",

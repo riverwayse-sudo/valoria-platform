@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 import { verifyValuHandoffToken } from '../lib/valu-handoff-token.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -11,6 +12,8 @@ function json(res, status, data) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json(res, 500, { error: 'Server misconfigured.' });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
 
   const { taster_id: tasterId, identity_hash: identityHash, handoff_token: handoffToken } = req.body || {};
   if (typeof tasterId !== 'string' || !tasterId || typeof identityHash !== 'string' || !/^fp_[a-z0-9]{1,128}$/i.test(identityHash)) {

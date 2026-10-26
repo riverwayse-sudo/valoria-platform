@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -25,6 +26,8 @@ async function hasCompletedAssessment(identityHash) {
 
 export default async function handler(req) {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return new Response(JSON.stringify({ error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
   if (!CRON_SECRET || req.headers.get("authorization") !== `Bearer ${CRON_SECRET}`) {
     return new Response(JSON.stringify({ error: { message: "Unauthorized" } }), { status: 401 });
