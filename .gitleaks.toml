@@ -1,0 +1,19 @@
+title = "Valoria Platform Gitleaks Configuration"
+
+# Extend the built-in ruleset. Without this a custom config REPLACES the default
+# rules, so the scanner would report nothing and every scan would pass silently.
+[extend]
+useDefault = true
+
+# Narrow exception for the RFC 4122 UUID fixtures in the snapshot submission
+# contract test. The exception is scoped to fixture assignment lines only
+# (submission_key / resume_token / taster_id followed by a UUID). It deliberately
+# does NOT use `paths`, because a path entry exempts the whole file and would hide
+# any real credential committed to it. It does not exempt the test directory or
+# the rest of the repository.
+[allowlist]
+description = "RFC 4122 UUID fixtures assigned to submission_key/resume_token/taster_id in the snapshot contract test."
+regexTarget = "line"
+regexes = [
+  '''(?i)\b(submission_key|resume_token|taster_id)\b[^\n]{0,80}?[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}''',
+]
