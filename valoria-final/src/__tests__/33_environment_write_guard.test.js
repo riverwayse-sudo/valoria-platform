@@ -251,6 +251,118 @@ describe("decideWriteAllowed — preview and other non-production environments",
   });
 });
 
+describe("cannot be bypassed by a lookalike or malformed target", () => {
+  // The ref is read from the URL host. A host that merely *contains* the ref, or
+  // nests it under another domain, must not be accepted: the point of the check
+  // is to pin the exact project, and a substring match would not.
+  const LOOKALIKES = [
+    `https://${PROD_REF}.supabase.co.evil.example`,
+    `https://evil.example/${PROD_REF}.supabase.co`,
+    `https://evil-${PROD_REF}.supabase.co`,
+    `https://x${PROD_REF}.supabase.co`,
+    `https://${PROD_REF}.pooler.supabase.com`,
+    `https://${PROD_REF}.supabase.example.com`,
+    `https://sub.${PROD_REF}.supabase.co`,
+  ];
+
+  test.each(LOOKALIKES)("reads no project ref from %s", url => {
+    expect(supabaseProjectRef(url)).toBeNull();
+  });
+
+  test.each(LOOKALIKES)("DENIES production pointed at %s", url => {
+    expect(
+      decideWriteAllowed({ vercelEnv: "production", supabaseUrl: url, productionProjectRef: PROD_REF }).allowed
+    ).toBe(false);
+  });
+
+  test.each(LOOKALIKES)("DENIES a preview pointed at %s", url => {
+    expect(
+      decideWriteAllowed({ vercelEnv: "preview", supabaseUrl: url, stagingProjectRef: STAGE_REF }).allowed
+    ).toBe(false);
+  });
+
+  test("accepts a ref host with a trailing slash, path or port", () => {
+    // These are the same host; only the path/port differs, which does not change
+    // which project the request reaches.
+    for (const url of [
+      `https://${PROD_REF}.supabase.co/`,
+      `https://${PROD_REF}.supabase.co/rest/v1/valu_assessments`,
+      `https://${PROD_REF}.supabase.co:8443`,
+    ]) {
+      expect(supabaseProjectRef(url)).toBe(PROD_REF);
+    }
+  });
+});
+
+describe("cannot be bypassed by environment casing or whitespace", () => {
+  // VERCEL_ENV is compared exactly. Anything that is not exactly "production" is
+  // treated as a non-production runtime, which is the fail-closed direction.
+  const NOT_PRODUCTION = ["PRODUCTION", "Production", "production ", " production", "production\n", "production\t", "productionx"];
+
+  test.each(NOT_PRODUCTION)("treats %j as non-production, not as production", value => {
+    const d = decideWriteAllowed({
+      vercelEnv: value,
+      supabaseUrl: prodUrl,
+      productionProjectRef: PROD_REF,
+      stagingProjectRef: STAGE_REF,
+    });
+    // It must not take the production branch, and pointing at production must deny.
+    expect(d.allowed).toBe(false);
+  });
+
+  test("a non-production runtime cannot reach production even with a production ref declared", () => {
+    expect(
+      decideWriteAllowed({
+        vercelEnv: "PRODUCTION",
+        supabaseUrl: prodUrl,
+        productionProjectRef: PROD_REF,
+        stagingProjectRef: PROD_REF,
+      }).allowed
+    ).toBe(false);
+  });
+});
+
+describe("a declared ref is normalised, a target never is", () => {
+  // The declaration is operator-managed, so a copy-paste slip must not lock a
+  // deployment out of its own database. Normalising it cannot widen access,
+  // because it only ever maps a declaration onto the same project.
+
+  test("accepts an uppercased or padded production declaration", () => {
+    for (const declared of [PROD_REF.toUpperCase(), `  ${PROD_REF}  `, `${PROD_REF}\n`]) {
+      expect(
+        decideWriteAllowed({ vercelEnv: "production", supabaseUrl: prodUrl, productionProjectRef: declared }).allowed
+      ).toBe(true);
+    }
+  });
+
+  test("accepts an uppercased or padded staging declaration", () => {
+    for (const declared of [STAGE_REF.toUpperCase(), ` ${STAGE_REF} `]) {
+      expect(
+        decideWriteAllowed({ vercelEnv: "preview", supabaseUrl: stageUrl, stagingProjectRef: declared }).allowed
+      ).toBe(true);
+    }
+  });
+
+  test("normalising a declaration never lets a different project through", () => {
+    // Uppercasing the staging ref must not authorise a production target.
+    expect(
+      decideWriteAllowed({
+        vercelEnv: "preview",
+        supabaseUrl: prodUrl,
+        stagingProjectRef: STAGE_REF.toUpperCase(),
+      }).allowed
+    ).toBe(false);
+  });
+
+  test("a declaration that normalises to empty is treated as absent", () => {
+    for (const declared of ["", "   ", "\n"]) {
+      const d = decideWriteAllowed({ vercelEnv: "preview", supabaseUrl: stageUrl, stagingProjectRef: declared });
+      expect(d.allowed).toBe(false);
+      expect(d.reason).toContain("no staging database is declared");
+    }
+  });
+});
+
 describe("handlers enforce the guard", () => {
   const API_DIR = path.join(__dirname, "../../api");
 

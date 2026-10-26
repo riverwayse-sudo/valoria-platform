@@ -131,6 +131,23 @@ staging ref.
 
 Every branch fails closed with a 503 naming the reason.
 
+Two more properties, both found by adversarial tests rather than by reading the code:
+
+* A non-production runtime may not target production, however it is labelled. If
+  `STAGING_SUPABASE_PROJECT_REF` names the production project, a non-production
+  runtime is refused. Without this, a misspelled `VERCEL_ENV` plus a staging
+  declaration naming production would reach production — the failure this guard
+  exists to prevent.
+* A declared ref is trimmed and lowercased; a target never is. The declaration is
+  operator-managed, so a copy-paste slip must not lock a deployment out of its own
+  database. Normalising a declaration cannot widen access: it maps a declaration
+  onto the same project, never onto a different one.
+
+Test the guard against a target that merely *contains* the ref, not only against an
+unrelated one. `evil-<ref>.supabase.co`, `<ref>.supabase.co.evil.example` and
+`<ref>.pooler.supabase.com` must all deny; a regex that searched for the ref
+anywhere would have accepted them.
+
 All 20 handlers that hold the service-role key and write call it. Put the call on
 the **write path**, not at the top of the handler: `assessment-progress.js` serves
 a read-only resume GET and a write POST, and `notifications.js` reads on GET and
