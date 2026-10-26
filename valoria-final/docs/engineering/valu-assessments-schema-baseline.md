@@ -190,6 +190,68 @@ Until then: **do not author a speculative `CREATE TABLE`.** A baseline invented
 from handler assumptions would be worse than the gap, because it would look
 authoritative while silently disagreeing with production.
 
+## 4a. Live inspection result, 2026-10-23 (read-only, production project)
+
+An owner ran read-only queries against the single project the connected Supabase
+account exposes — `sbkgpisgkuhbalsxqkdr`, named `valoriainstitute.com`, status
+`ACTIVE_HEALTHY`. This is the **production** project; no isolated staging project
+exists in that account. Nothing was written.
+
+| Check | Result |
+| --- | --- |
+| Projects visible in the connected account | 1 (`sbkgpisgkuhbalsxqkdr`) |
+| Branches listed | 1 (`main`) |
+| Migration records | 192, latest version `20261022105019` |
+| `20261023130000` recorded as applied | **no** |
+| `public.valu_assessments` | exists, 17 rows, RLS enabled |
+| Unique partial index on `taster_id` | **present** |
+
+Two things follow, and both change the plan.
+
+### The unique index on `taster_id` is untracked
+
+A unique partial index over `taster_id` exists in production, and **no tracked
+migration in either repository creates it** — confirmed by enumerating every
+`create unique index` in both platform migration directories and the site directory,
+and every `add constraint … unique` on the table. It is part of the same untracked
+base described in §1, now with a live example. The repository cannot reproduce the
+constraint, and a future environment provisioned from source would not have it.
+
+The exact shape matters and is not yet known. Two cases are possible and they mean
+different things:
+
+- `unique (taster_id)` alone — one full assessment per snapshot, **stricter** than the
+  handler, which permits a second identity on the same snapshot. If this is the shape,
+  the handler's dedup pair and this index disagree, and that is a finding in its own
+  right.
+- `unique (taster_id, identity_hash)` partial — the same constraint
+  `20261023130000` intends, already applied out of band. In that case the migration is
+  redundant on this database but still correct to keep, because a freshly provisioned
+  environment would lack it.
+
+`20261023130000` is written with `if not exists` and a read-only duplicate pre-check,
+so it is safe under either case: where an equivalent index already exists it is a
+no-op, and where it does not it adds the constraint. It does **not** need to be
+applied before release; it needs to be applied before an environment that lacks the
+index serves writes, which is why it is recorded as a merge input rather than a
+staging-only step.
+
+### The one query that settles it
+
+Run read-only, and paste the output — it distinguishes the two cases above and
+closes the index-provenance question:
+
+```sql
+select indexname, indexdef
+  from pg_indexes
+ where schemaname = 'public' and tablename = 'valu_assessments';
+```
+
+If `indexdef` shows `UNIQUE ... (taster_id)` with no `identity_hash`, the stricter
+case holds and the handler needs review. If it shows `(taster_id, identity_hash)`,
+the out-of-band index and the migration agree and no further action is needed beyond
+keeping the migration in the release.
+
 ## 5. Measured scope, 2026-10-23 (Phase 6)
 
 Phase 5 recorded two missing tables, `valu_assessments` and `taster_sessions`.
