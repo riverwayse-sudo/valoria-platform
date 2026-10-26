@@ -10,6 +10,13 @@ handoff changes.
 `api/` Vercel serverless handlers · `src/` the Vite assessment SPA ·
 `supabase/migrations/` tracked DDL · `scripts/` offline checkers.
 
+There are **two** platform migrations directories: `valoria-final/supabase/migrations`
+(59 versions) and the repository-root `supabase/migrations` (6 versions). Both are
+tracked and both hold versions that collide with valoria-site. A guard or script that
+reads only one of them is blind to the other, which is how a truncated dollar-quote
+delimiter in the root directory survived the dollar-quote guard written to catch it.
+Scan both.
+
 ## Commands
 
 ```
