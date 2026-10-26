@@ -399,6 +399,29 @@ describe("handlers enforce the guard", () => {
     expect(src).toMatch(/!__guard\.allowed/);
   });
 
+  // The list above covers handlers. A service-role write can also live in a
+  // helper the handlers share, and the handler scan skips `_`-prefixed files by
+  // design. api/_rateLimit.js was exactly that: it calls the `consume_rate_limit`
+  // RPC with the service-role key and carried no guard. Scan every api file,
+  // including helpers, and treat an RPC call as a write.
+  test("no privileged writer in any api file is left unguarded", () => {
+    const unguarded = fs
+      .readdirSync(API_DIR)
+      .filter(f => f.endsWith(".js"))
+      .filter(f => {
+        const src = fs.readFileSync(path.join(API_DIR, f), "utf8");
+        const privileged = src.includes("SUPABASE_SERVICE_ROLE_KEY");
+        const writes =
+          /method:\s*["'](POST|PATCH|DELETE|PUT)["']/.test(src) ||
+          src.includes("/auth/v1/admin") ||
+          /\brpc\(/.test(src);
+        return privileged && writes;
+      })
+      .filter(f => !fs.readFileSync(path.join(API_DIR, f), "utf8").includes("privilegedWriteAllowed"))
+      .sort();
+    expect(unguarded).toEqual([]);
+  });
+
   test("no privileged writer is missing from this list", () => {
     const writers = fs
       .readdirSync(API_DIR)

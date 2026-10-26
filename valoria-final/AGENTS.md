@@ -153,7 +153,13 @@ the **write path**, not at the top of the handler: `assessment-progress.js` serv
 a read-only resume GET and a write POST, and `notifications.js` reads on GET and
 writes on PATCH. A top-of-handler guard breaks the read.
 
-Count the writers with a script, not by eye. Grepping for `method: 'POST'` with
+Count the writers with a script, not by eye, and scan *every* file — not only
+handlers. `api/_rateLimit.js` calls the `consume_rate_limit` RPC with the
+service-role key, which is a write, and it was the one writer without the guard.
+The completeness check enumerated handlers and skipped `_`-prefixed helpers, and it
+looked for `method: 'POST'` rather than for an RPC call. Both gaps are closed:
+treat `rpc(` as a write, and scan helpers too. The same mistake in a helper with no
+callers would still be caught, because the scan does not follow callers. Grepping for `method: 'POST'` with
 single quotes found 12; the real number is 20, because some files use double
 quotes and some write through `/auth/v1/admin` instead. The test that asserts
 completeness accepts either quote style for that reason. The site has the same
