@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { enforceRateLimit } from './_rateLimit.js';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS } from '../src/valuTaster.js';
@@ -46,6 +47,8 @@ async function getProgress(tokenHash) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json(res, 500, { error: 'Server misconfigured.' });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
   if (!await enforceRateLimit(req, res, { namespace: 'taster-progress', limit: 180, windowSeconds: 3600 })) return;
 
   const body = req.body || {};

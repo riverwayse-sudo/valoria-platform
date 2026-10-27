@@ -1,8 +1,9 @@
 import React from 'react';
+import { SITE_ORIGIN, siteUrl } from './siteOrigin.js';
 
 const T = { parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.28)', dark:'#1A1A2E' };
-const SITE_URL = 'https://valoriainstitute.com';
-const LOGO_URL = 'https://valoriainstitute.com/logo.png';
+const SITE_URL = SITE_ORIGIN;
+const LOGO_URL = siteUrl('/logo.png');
 
 export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {
   return (

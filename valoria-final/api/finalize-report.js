@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -6,6 +7,8 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 export default async function handler(req) {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return new Response(JSON.stringify({ error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason }), { status: 503, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
   if (!CRON_SECRET || req.headers.get("authorization") !== `Bearer ${CRON_SECRET}`) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
@@ -44,10 +47,19 @@ export default async function handler(req) {
 
   const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?identity_hash=eq.${encodeURIComponent(identity_hash)}`, {
     method: "PATCH",
-    headers: { ...headers, "Content-Type": "application/json", Prefer: "return=minimal" },
+    headers: { ...headers, "Content-Type": "application/json", Prefer: "return=representation" },
     body: JSON.stringify({ report_email_sent_at: new Date().toISOString() }),
   });
   if (!updateRes.ok) return new Response(JSON.stringify({ error: "Failed to mark report sent." }), { status: 502 });
+
+  // The email has already gone out, so this is not a clean failure: if the
+  // mark-sent write matched no row, report_email_sent_at stays null and the next
+  // sweep will send the report again. Returning ok:true here hid that and caused
+  // a duplicate email; surface it instead so it is visible to reconciliation.
+  const updated = await updateRes.json().catch(() => []);
+  if (!Array.isArray(updated) || updated.length === 0) {
+    return new Response(JSON.stringify({ error: "Report emailed, but the sent state could not be recorded; it may be re-sent." }), { status: 502 });
+  }
 
   return new Response(JSON.stringify({ ok: true, sent: true }), { status: 200, headers: { "Cache-Control": "no-store" } });
 }

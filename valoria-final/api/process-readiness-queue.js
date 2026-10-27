@@ -1,6 +1,7 @@
 // Service-only worker for the VALU v4 marketplace readiness queue.
 // GitHub Actions invokes this endpoint; CRON_SECRET prevents public execution.
 
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -24,6 +25,8 @@ export async function GET(req) {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !CRON_SECRET) {
     return json({ error: 'Server misconfigured.' }, 500);
   }
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json({ error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason }, 503);
 
   const auth = getHeader(req, 'authorization');
   const cron = getHeader(req, 'x-vercel-cron');

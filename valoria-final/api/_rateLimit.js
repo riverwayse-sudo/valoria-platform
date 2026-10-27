@@ -1,3 +1,5 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
+
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -24,6 +26,15 @@ function hashKeyPart(value) {
 
 async function consume(namespace, limit, windowSeconds, subject) {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) throw new Error('rate-limit configuration missing');
+  // consume_rate_limit is an RPC that writes a counter row with the service-role
+  // key, so it is a privileged write and is guarded like the handlers. Every
+  // caller enforces a rate limit only on a POST; none rate-limit a read, so
+  // refusing here cannot break a resume or read path. The refusal is thrown, not
+  // returned, so callers take their existing "unavailable" branch: enforceRateLimit
+  // responds 503 and checkRateLimit reports not-allowed. Failing closed on a
+  // rate-limit store is the safe direction for an endpoint that has one.
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) throw new Error(`rate-limit write refused: ${__guard.reason}`);
   const rateKey = `v1:${namespace}:${hashKeyPart(subject)}`;
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_rate_limit`, {
     method: 'POST',

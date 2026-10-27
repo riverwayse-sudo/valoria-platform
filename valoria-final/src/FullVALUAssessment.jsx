@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { siteUrl } from './siteOrigin.js';
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 import { QUESTIONS } from './questions.js';
@@ -93,6 +94,7 @@ export default function FullVALUAssessment() {
   const [timings,setTimings] = useState([]);
   const [saving,setSaving] = useState(false);
   const [result,setResult] = useState(null);
+  const [saveState,setSaveState] = useState('idle'); // idle | saved | failed
   const [error,setError] = useState('');
   const [reportStatus,setReportStatus] = useState('');
   const [sessionId,setSessionId] = useState('');
@@ -113,6 +115,17 @@ export default function FullVALUAssessment() {
 
   const question = QUESTIONS[current];
   const progress = Math.round(((current + 1) / QUESTIONS.length) * 100);
+  const answeredCount = Object.keys(answers).length;
+  // The final control must only appear when it can actually do something. It was
+  // rendered whenever the last question was on screen, gated solely on that
+  // question being answered — but submitAssessment() also returns early unless a
+  // handoff token is present. A participant whose handoff had lapsed saw an
+  // enabled, styled SUBMIT button that did nothing at all: no request, no error,
+  // no state change. Treating the token as part of readiness makes the control
+  // honest.
+  const finalAnswered = Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1);
+  const canSubmit = finalAnswered && handoffStatus === 'ready' && Boolean(handoffToken) && !saving && !result;
+  const unansweredCount = QUESTIONS.length - answeredCount;
   const canUse = Boolean(identity.tasterId && identity.name && identity.role && identity.experience);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
@@ -253,7 +266,16 @@ export default function FullVALUAssessment() {
         session_seed:0,
       }).then(data => {
         if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
-      }).catch(() => {});
+        if (mountedRef.current) setSaveState('saved');
+      }).catch(err => {
+        // Previously swallowed. The footer promises the participant that progress
+        // is saved automatically, so a silent failure is a false assurance: they
+        // can close the tab believing a half-finished assessment is safe. The
+        // local mirror below still holds the answers, but the server row — the
+        // one resume actually reads — does not.
+        if (mountedRef.current) setSaveState('failed');
+        console.error('Assessment progress could not be saved:', err);
+      });
     }, 250);
     return () => window.clearTimeout(timer);
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
@@ -277,12 +299,15 @@ export default function FullVALUAssessment() {
         session_seed:0,
       });
       if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
+      if (mountedRef.current) setSaveState('saved');
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
         try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
         setHandoffToken('');
         setHandoffStatus('account_required');
         setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
+      } else if (mountedRef.current) {
+        setSaveState('failed');
       }
     }
   }
@@ -309,7 +334,18 @@ export default function FullVALUAssessment() {
   }
 
   async function submitAssessment() {
-    if (saving || result || handoffStatus !== 'ready' || !handoffToken || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1)) return;
+    // Not a silent no-op: if the control is reached in a state that cannot
+    // submit, say why. Previously every one of these conditions returned without
+    // any feedback, so the participant saw a button that did nothing.
+    if (saving || result) return;
+    if (handoffStatus !== 'ready' || !handoffToken) {
+      setError('Your secure session has expired. Reopen the assessment from your Valoria account and try again.');
+      return;
+    }
+    if (!Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1)) {
+      setError('Please answer the final question before submitting.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -346,7 +382,13 @@ export default function FullVALUAssessment() {
         answers,
         timings,
         session_seed:0,
-      }).catch(() => {});
+      }).catch(err => {
+        // The assessment itself is already scored and persisted by
+        // /api/submit-assessment above, so this is not data loss. But this write
+        // records the session as finished; discarding the error silently would
+        // leave a scored session still looking resumable with no trace of why.
+        console.error('Completion progress marker could not be saved:', err);
+      });
 
       const linkRes = await fetch(API_BASE + '/api/link-assessment-to-taster', {
         method:'POST',
@@ -397,7 +439,7 @@ export default function FullVALUAssessment() {
 
   if (handoffStatus !== 'ready') {
     const signupParams = new URLSearchParams({ taster_id:identity.tasterId, name:identity.name, role:identity.role, experience:identity.experience });
-    const signupUrl = `https://valoriainstitute.com/professional-signup/?${signupParams.toString()}`;
+    const signupUrl = siteUrl(`/professional-signup/?${signupParams.toString()}`);
     const loginParams = new URLSearchParams({ pending_taster_id:identity.tasterId, returnTo:'/dashboard' });
     return <Shell>
       <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
@@ -405,8 +447,8 @@ export default function FullVALUAssessment() {
       <p style={S.p}>To protect your official VALU Index, sign in to a confirmed Valoria account and link this completed snapshot before taking the full assessment. Your snapshot and saved progress are preserved.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
       <a href={signupUrl} style={S.button}>CREATE MY VALORIA ACCOUNT →</a>
-      <a href={`https://valoriainstitute.com/login?${loginParams.toString()}`} style={S.secondary}>I ALREADY HAVE AN ACCOUNT · SIGN IN</a>
-      <a href="https://valoriainstitute.com/valu/assessment/" style={S.secondary}>RETURN TO MY VALU JOURNEY</a>
+      <a href={siteUrl(`/login?${loginParams.toString()}`)} style={S.secondary}>I ALREADY HAVE AN ACCOUNT · SIGN IN</a>
+      <a href={siteUrl('/valu/assessment/')} style={S.secondary}>RETURN TO MY VALU JOURNEY</a>
     </Shell>;
   }
 
@@ -419,9 +461,9 @@ export default function FullVALUAssessment() {
       <div style={S.scoreCard}><div style={S.score}>{score}</div><div style={S.outOf}>/ 100</div><div style={S.designation}>{designation}</div></div>
       <p style={S.p}>Your full assessment is now attached to your Valoria professional profile. Your profile can move from <strong style={{color:T.gold}}>Basic · Incomplete</strong> to complete once the required professional profile information is finished.</p>
       {reportStatus && <p style={{...S.p,color:T.gold}}>{reportStatus}</p>}
-      {reportStatus.includes('ready') && <a href="https://valoriainstitute.com/report" style={S.button}>VIEW MY VALU REPORT →</a>}
-      <a href="https://valoriainstitute.com/profile/onboarding" style={S.button}>COMPLETE MY PROFILE →</a>
-      <a href="https://valoriainstitute.com/profile/onboarding" style={S.secondary}>OPEN PROFILE SETUP</a>
+      {reportStatus.includes('ready') && <a href={siteUrl('/report')} style={S.button}>VIEW MY VALU REPORT →</a>}
+      <a href={siteUrl('/profile/onboarding')} style={S.button}>COMPLETE MY PROFILE →</a>
+      <a href={siteUrl('/profile/onboarding')} style={S.secondary}>OPEN PROFILE SETUP</a>
     </Shell>;
   }
 
@@ -435,8 +477,30 @@ export default function FullVALUAssessment() {
       <div style={S.options}>
         {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
       </div>
-      <div style={S.footer}><span>{Object.keys(answers).length} answered</span><span>Progress is saved automatically.</span></div>
-      {current === QUESTIONS.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1)} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':'SUBMIT VALU ASSESSMENT →'}</button>}
+      <div style={S.footer}>
+        <span>{answeredCount} answered</span>
+        {saveState === 'failed'
+          ? <span style={S.footerFail} role="status">Progress could not be saved — check your connection. Your answers are kept on this device.</span>
+          : <span role="status">{saveState === 'saved' ? 'Progress saved.' : 'Progress is saved automatically.'}</span>}
+      </div>
+      {current === QUESTIONS.length - 1 && <button
+        type="button"
+        onClick={submitAssessment}
+        disabled={!canSubmit}
+        aria-disabled={!canSubmit}
+        style={{...S.button,opacity:canSubmit?1:.55,cursor:canSubmit?'pointer':'not-allowed'}}
+      >{saving?'SUBMITTING YOUR VALU INDEX…':'SUBMIT VALU ASSESSMENT →'}</button>}
+      {/* Explains the disabled state instead of leaving the participant to guess
+          why a styled button does nothing. */}
+      {current === QUESTIONS.length - 1 && !finalAnswered && (
+        <p style={S.submitHint}>Answer this final question to submit your VALU Index.</p>
+      )}
+      {current === QUESTIONS.length - 1 && finalAnswered && unansweredCount > 0 && (
+        <p style={S.submitHint}>You have {unansweredCount} unanswered {unansweredCount === 1 ? 'question' : 'questions'}. Every question is required before your VALU Index can be scored.</p>
+      )}
+      {current === QUESTIONS.length - 1 && finalAnswered && unansweredCount === 0 && !handoffToken && (
+        <p style={S.submitHint}>Your secure session has expired. Reopen the assessment from your Valoria account to submit.</p>
+      )}
       {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
       {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
     </div>
@@ -461,7 +525,9 @@ const S = {
   option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'32px 1fr',gap:12,alignItems:'center',textAlign:'left',padding:'12px 15px',border:'1px solid rgba(247,244,238,.1)',borderRadius:7,background:'#2E2E4A',color:T.parchment,fontSize:12.5,lineHeight:1.4,cursor:'pointer',minHeight:52},
   optionLetter:{width:26,height:26,borderRadius:'50%',border:'1px solid rgba(201,168,76,.3)',display:'flex',alignItems:'center',justifyContent:'center',color:T.gold,fontSize:10},
   footer:{display:'flex',justifyContent:'space-between',gap:16,color:T.faint,fontSize:10,marginTop:14},
+  footerFail:{color:'#F09595'},
   saving:{marginTop:18,color:T.gold,fontSize:12},
+  submitHint:{marginTop:10,color:T.faint,fontSize:11,lineHeight:1.6},
   error:{marginTop:18,padding:12,border:'1px solid rgba(216,90,48,.3)',background:'rgba(216,90,48,.08)',color:'#F09595',fontSize:12,borderRadius:6},
   dismiss:{float:'right',background:'transparent',border:0,color:T.parchment,cursor:'pointer'},
   button:{display:'block',textAlign:'center',textDecoration:'none',background:T.gold,color:T.dark,padding:'14px 20px',borderRadius:999,fontSize:11,fontWeight:700,letterSpacing:'.12em',marginTop:10,border:0,cursor:'pointer'},
