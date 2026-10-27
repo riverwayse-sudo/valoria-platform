@@ -34,6 +34,7 @@ function loadHandler() {
   // at — the same contract the sibling runtime suites use (see 18_...runtime).
   process.env.ALLOW_LOCAL_PRIVILEGED_WRITES = "true";
   process.env.STAGING_SUPABASE_PROJECT_REF = "testprojectref000000";
+  process.env.PRODUCTION_SUPABASE_PROJECT_REF = "prodprojectref000000";
   process.env.SUPABASE_URL = "https://testprojectref000000.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
   const path = require.resolve("../../api/submit-taster.js");

@@ -18,12 +18,13 @@
 //   1. VERCEL_ENV=production  -> the target must be the declared production
 //                                project (PRODUCTION_SUPABASE_PROJECT_REF).
 //   2. VERCEL_ENV set, other  -> the target must be the declared staging project
-//      (preview, development,   (STAGING_SUPABASE_PROJECT_REF).
-//       or anything unknown)
+//      (preview, development,   (STAGING_SUPABASE_PROJECT_REF), and the declared
+//       or anything unknown)     production project must be known and different.
 //   3. VERCEL_ENV unset/empty -> refused unless local writes are explicitly
 //                                enabled (ALLOW_LOCAL_PRIVILEGED_WRITES=true),
 //                                and then the target must still be the declared
-//                                staging project.
+//                                staging project, with production declared and
+//                                different.
 //
 // There is deliberately no bare "not on Vercel, so allow" branch. An earlier
 // version had one, and it was a hole: a deployment whose VERCEL_ENV failed to
@@ -129,12 +130,21 @@ export function decideWriteAllowed({
       reason: `refusing a privileged write from ${environmentLabel(vercelEnv)} because no staging database is declared (set STAGING_SUPABASE_PROJECT_REF to the staging project ref)`,
     }
   }
-  if (declaredProduction && declaredStaging === declaredProduction) {
-    // A non-production runtime must never target production, however it is
-    // labelled. If the staging declaration names the production project, the
-    // declaration is wrong and the write is refused rather than honoured: this is
-    // the one misconfiguration that would otherwise let a preview (or a runtime
-    // whose VERCEL_ENV is misspelled) reach production.
+  if (!declaredProduction) {
+    // A non-production runtime must prove its target is not production, and it
+    // cannot do that without knowing which project production is. Skipping the
+    // check when the production ref is absent is unsound: a staging declaration
+    // that names the production project would then be honoured, and that is
+    // exactly the misconfiguration that lets a preview (or a runtime whose
+    // VERCEL_ENV is misspelled) write to production. Fail closed instead.
+    return {
+      allowed: false,
+      reason: `refusing a privileged write from ${environmentLabel(vercelEnv)} because the production database is not declared (set PRODUCTION_SUPABASE_PROJECT_REF to the production project ref); without it a non-production runtime cannot be shown to be pointed away from production`,
+    }
+  }
+  if (declaredStaging === declaredProduction) {
+    // If the staging declaration names the production project, the declaration is
+    // wrong and the write is refused rather than honoured.
     return {
       allowed: false,
       reason: `refusing a privileged write from ${environmentLabel(vercelEnv)} because STAGING_SUPABASE_PROJECT_REF names the production project; a non-production runtime must not target production`,

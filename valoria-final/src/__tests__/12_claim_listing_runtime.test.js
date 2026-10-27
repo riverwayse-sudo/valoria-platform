@@ -33,6 +33,7 @@ const EMAIL = "participant@example.com";
 // declares the project the stubbed URL points at.
 process.env.ALLOW_LOCAL_PRIVILEGED_WRITES = "true";
 process.env.STAGING_SUPABASE_PROJECT_REF = "testprojectref000000";
+process.env.PRODUCTION_SUPABASE_PROJECT_REF = "prodprojectref000000";
 process.env.SUPABASE_URL = SUPABASE_URL;
 process.env.SUPABASE_SERVICE_ROLE_KEY = SECRET;
 

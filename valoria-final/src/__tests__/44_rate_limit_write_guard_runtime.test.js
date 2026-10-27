@@ -12,9 +12,11 @@
 "use strict";
 
 const PROJECT_REF = "testprojectref000000";
+const PRODUCTION_REF = "prodprojectref000000";
 const SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
 
 process.env.ALLOW_LOCAL_PRIVILEGED_WRITES = "true";
+process.env.PRODUCTION_SUPABASE_PROJECT_REF = PRODUCTION_REF;
 process.env.STAGING_SUPABASE_PROJECT_REF = PROJECT_REF;
 process.env.SUPABASE_URL = SUPABASE_URL;
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key-not-real";
@@ -46,7 +48,7 @@ beforeEach(() => {
     };
   };
   delete process.env.VERCEL_ENV;
-  delete process.env.PRODUCTION_SUPABASE_PROJECT_REF;
+  process.env.PRODUCTION_SUPABASE_PROJECT_REF = PRODUCTION_REF;
   process.env.ALLOW_LOCAL_PRIVILEGED_WRITES = "true";
   process.env.STAGING_SUPABASE_PROJECT_REF = PROJECT_REF;
 });

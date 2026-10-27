@@ -135,11 +135,26 @@ describe("decideWriteAllowed — VERCEL_ENV unset or empty (unidentified runtime
     const d = decideWriteAllowed({
       vercelEnv: undefined,
       supabaseUrl: prodUrl,
+      productionProjectRef: PROD_REF,
       stagingProjectRef: STAGE_REF,
       allowLocalWrites: true,
     });
     expect(d.allowed).toBe(false);
     expect(d.reason).toContain(PROD_REF);
+  });
+
+  test("DENIES the local opt-in when production is not declared", () => {
+    // Without the production ref there is no way to show the target is not
+    // production, so the write is refused even against the declared staging
+    // project. Fail closed rather than infer safety.
+    const d = decideWriteAllowed({
+      vercelEnv: undefined,
+      supabaseUrl: stageUrl,
+      stagingProjectRef: STAGE_REF,
+      allowLocalWrites: true,
+    });
+    expect(d.allowed).toBe(false);
+    expect(d.reason).toContain("production database is not declared");
   });
 
   test("DENIES an unset environment with the opt-in but no declared project", () => {
@@ -158,6 +173,7 @@ describe("decideWriteAllowed — VERCEL_ENV unset or empty (unidentified runtime
       decideWriteAllowed({
         vercelEnv: undefined,
         supabaseUrl: stageUrl,
+        productionProjectRef: PROD_REF,
         stagingProjectRef: STAGE_REF,
         allowLocalWrites: true,
       })
@@ -184,11 +200,36 @@ describe("decideWriteAllowed — preview and other non-production environments",
     const d = decideWriteAllowed({
       vercelEnv: "preview",
       supabaseUrl: prodUrl,
+      productionProjectRef: PROD_REF,
       stagingProjectRef: STAGE_REF,
     });
     expect(d.allowed).toBe(false);
     expect(d.reason).toContain(PROD_REF);
     expect(d.reason).toContain(STAGE_REF);
+  });
+
+  test("DENIES a preview whose staging ref names production, when production is undeclared", () => {
+    // The defect this closes: the equality check was skipped when the production
+    // ref was absent, so a staging declaration naming the production project was
+    // honoured. A non-production runtime must never target production, however
+    // the declarations are configured — including when they are missing.
+    const d = decideWriteAllowed({
+      vercelEnv: "preview",
+      supabaseUrl: prodUrl,
+      stagingProjectRef: PROD_REF,
+    });
+    expect(d.allowed).toBe(false);
+    expect(d.reason).toContain("production database is not declared");
+  });
+
+  test("DENIES a preview when production is undeclared, even against a plausible staging target", () => {
+    const d = decideWriteAllowed({
+      vercelEnv: "preview",
+      supabaseUrl: stageUrl,
+      stagingProjectRef: STAGE_REF,
+    });
+    expect(d.allowed).toBe(false);
+    expect(d.reason).toContain("production database is not declared");
   });
 
   test("denies a preview deployment when no staging database is declared", () => {
@@ -205,6 +246,7 @@ describe("decideWriteAllowed — preview and other non-production environments",
     const d = decideWriteAllowed({
       vercelEnv: "preview",
       supabaseUrl: "https://example.com",
+      productionProjectRef: PROD_REF,
       stagingProjectRef: STAGE_REF,
     });
     expect(d.allowed).toBe(false);
@@ -216,6 +258,7 @@ describe("decideWriteAllowed — preview and other non-production environments",
       decideWriteAllowed({
         vercelEnv: "preview",
         supabaseUrl: undefined,
+        productionProjectRef: PROD_REF,
         stagingProjectRef: STAGE_REF,
       }).allowed
     ).toBe(false);
@@ -226,6 +269,7 @@ describe("decideWriteAllowed — preview and other non-production environments",
       decideWriteAllowed({
         vercelEnv: "preview",
         supabaseUrl: stageUrl,
+        productionProjectRef: PROD_REF,
         stagingProjectRef: STAGE_REF,
       })
     ).toEqual({ allowed: true, reason: "declared staging database" });
@@ -235,10 +279,10 @@ describe("decideWriteAllowed — preview and other non-production environments",
     // A value nobody anticipated must be treated like preview, not like production.
     for (const vercelEnv of ["development", "staging", "test", "PREVIEW", "prod", "0"]) {
       expect(
-        decideWriteAllowed({ vercelEnv, supabaseUrl: prodUrl, stagingProjectRef: STAGE_REF }).allowed
+        decideWriteAllowed({ vercelEnv, supabaseUrl: prodUrl, productionProjectRef: PROD_REF, stagingProjectRef: STAGE_REF }).allowed
       ).toBe(false);
       expect(
-        decideWriteAllowed({ vercelEnv, supabaseUrl: stageUrl, stagingProjectRef: STAGE_REF }).allowed
+        decideWriteAllowed({ vercelEnv, supabaseUrl: stageUrl, productionProjectRef: PROD_REF, stagingProjectRef: STAGE_REF }).allowed
       ).toBe(true);
     }
   });
@@ -338,7 +382,7 @@ describe("a declared ref is normalised, a target never is", () => {
   test("accepts an uppercased or padded staging declaration", () => {
     for (const declared of [STAGE_REF.toUpperCase(), ` ${STAGE_REF} `]) {
       expect(
-        decideWriteAllowed({ vercelEnv: "preview", supabaseUrl: stageUrl, stagingProjectRef: declared }).allowed
+        decideWriteAllowed({ vercelEnv: "preview", supabaseUrl: stageUrl, productionProjectRef: PROD_REF, stagingProjectRef: declared }).allowed
       ).toBe(true);
     }
   });
@@ -488,11 +532,27 @@ describe("the wrapper reads the declarations from the environment", () => {
     withEnv(
       {
         SUPABASE_URL: stageUrl,
+        PRODUCTION_SUPABASE_PROJECT_REF: PROD_REF,
         STAGING_SUPABASE_PROJECT_REF: STAGE_REF,
         ALLOW_LOCAL_PRIVILEGED_WRITES: "true",
       },
       () => {
         expect(privilegedWriteAllowed().allowed).toBe(true);
+      }
+    );
+  });
+
+  test("refuses the local opt-in when production is not declared", () => {
+    // The regression: the production ref is required even off Vercel, so a
+    // staging declaration naming production cannot be honoured by omission.
+    withEnv(
+      {
+        SUPABASE_URL: stageUrl,
+        STAGING_SUPABASE_PROJECT_REF: STAGE_REF,
+        ALLOW_LOCAL_PRIVILEGED_WRITES: "true",
+      },
+      () => {
+        expect(privilegedWriteAllowed().allowed).toBe(false);
       }
     );
   });
@@ -518,6 +578,7 @@ describe("the wrapper reads the declarations from the environment", () => {
     withEnv(
       {
         VITE_SUPABASE_URL: stageUrl,
+        PRODUCTION_SUPABASE_PROJECT_REF: PROD_REF,
         STAGING_SUPABASE_PROJECT_REF: STAGE_REF,
         ALLOW_LOCAL_PRIVILEGED_WRITES: "true",
       },
