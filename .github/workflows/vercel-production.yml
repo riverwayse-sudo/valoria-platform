@@ -13,6 +13,9 @@ concurrency:
   group: valoria-production
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -26,6 +29,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Fail here, not three steps later. Without this, an unset secret reaches
+      # `vercel pull --token="$VERCEL_TOKEN"` as `--token=""`, and the CLI reports
+      # "You defined \"--token\", but it's missing a value" — which reads like a
+      # syntax problem rather than "the secret was never configured".
+      - name: Preflight — deploy credentials are configured
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error title=VERCEL_TOKEN is not configured::Production deploys cannot run. Add the VERCEL_TOKEN repository secret (Vercel → Account Settings → Tokens) via the authorised secret-management process. Do not paste the token into this file."
+            exit 1
+          fi
 
       - name: Install dependencies
         run: npm ci
