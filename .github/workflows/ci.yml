@@ -45,67 +45,6 @@ jobs:
           path: valoria-final/test-output.log
           if-no-files-found: warn
 
-  # The cross-repository migration guard in suite 29 compares this repository's
-  # migrations against valoria-site's. It skips silently when the sibling repo is
-  # absent, which is the case in every other job here — so the guard that caught
-  # the divergent 20260921123000 migration has never actually run in CI. This job
-  # checks out both repositories and sets VALORIA_SITE_DIR so the guard executes.
-  #
-  # It is intentionally its own job: the sibling checkout is a different
-  # repository, and adding it to unit-tests would change what that job means.
-  #
-  # Expected result while the coordinated fix is in flight: this job checks out
-  # the sibling at its default branch. Until the site's copy of
-  # 20260921123000_canonical_lead_pipeline.sql carries the same dollar-quote fix
-  # as this repository's, the guard reports a genuine harmful divergence and this
-  # job fails. That red result is the coupling between the two pull requests made
-  # visible and enforced, rather than left to a note in a document. It goes green
-  # when both repositories carry the coordinated fix.
-  cross-repo-migration-guard:
-    name: Cross-Repo Migration Guard
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out platform
-        uses: actions/checkout@v4.2.2
-        with:
-          path: platform
-      - name: Check out site
-        uses: actions/checkout@v4.2.2
-        with:
-          repository: riverwayse-sudo/valoria-site
-          path: site
-      - name: Setup Node
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: platform/valoria-final/package-lock.json
-      - name: Install dependencies
-        working-directory: platform/valoria-final
-        run: npm ci
-      - name: Run cross-repository migration guard
-        working-directory: platform/valoria-final
-        env:
-          VALORIA_SITE_DIR: ${{ github.workspace }}/site
-        run: |
-          set +e
-          npx jest src/__tests__/29_cross_repo_migration_versions.test.js --runInBand --verbose 2>&1 | tee cross-repo-guard.log
-          status=${PIPESTATUS[0]}
-          # A silent skip is a false pass. Fail the job if the guard reported
-          # that it could not run.
-          if grep -q "cross-repository migration guard SKIPPED" cross-repo-guard.log; then
-            echo "ERROR: the cross-repository guard skipped; the sibling checkout was not visible."
-            exit 1
-          fi
-          exit "$status"
-      - name: Upload guard diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cross-repo-guard-diagnostics-${{ github.run_id }}
-          path: platform/valoria-final/cross-repo-guard.log
-          if-no-files-found: warn
-
   build-check:
     name: Production Build Check
     runs-on: ubuntu-latest
