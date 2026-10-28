@@ -101,6 +101,7 @@ export default function FullVALUAssessment() {
   const [resumeLoading,setResumeLoading] = useState(Boolean(queryIdentity.resume));
   const [resumeError,setResumeError] = useState('');
   const [resumePopup,setResumePopup] = useState(false);
+  const [remoteRestoreComplete,setRemoteRestoreComplete] = useState(false);
   const [handoffToken,setHandoffToken] = useState('');
   const [handoffStatus,setHandoffStatus] = useState('checking');
   const [handoffError,setHandoffError] = useState('');
@@ -173,6 +174,42 @@ export default function FullVALUAssessment() {
   }, [identity.tasterId, identity.name, identity.role]);
 
   useEffect(() => {
+    if (queryIdentity.resume || handoffStatus !== 'ready' || !handoffToken || !identity.tasterId) return;
+    let cancelled = false;
+    setRemoteRestoreComplete(false);
+    fetch(API_BASE + '/api/assessment-progress', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        action:'restore',
+        handoff_token:handoffToken,
+        taster_id:identity.tasterId,
+      }),
+      cache:'no-store',
+    }).then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || 'Could not restore your saved VALU progress.');
+      if (cancelled) return;
+      const saved = data.progress;
+      if (saved && saved.status !== 'completed') {
+        setSessionId(saved.session_id);
+        setResumeToken(saved.resume_token || '');
+        setAnswers(saved.answers && typeof saved.answers === 'object' ? saved.answers : {});
+        setTimings(Array.isArray(saved.timings) ? saved.timings : []);
+        setCurrent(Math.min(Math.max(Number(saved.current_question) || 0, 0), QUESTIONS.length - 1));
+        setResumeProgress(saved);
+        setResumePopup(Object.keys(saved.answers || {}).length > 0);
+      }
+      setRemoteRestoreComplete(true);
+    }).catch(err => {
+      if (cancelled) return;
+      setResumeError(err?.message || 'Your saved VALU progress could not be restored. Please retry from your dashboard.');
+      setRemoteRestoreComplete(true);
+    });
+    return () => { cancelled = true; };
+  }, [queryIdentity.resume, handoffStatus, handoffToken, identity.tasterId]);
+
+  useEffect(() => {
     if (!queryIdentity.resume) return;
     let cancelled = false;
     loadRemoteProgress(queryIdentity.resume)
@@ -234,7 +271,7 @@ export default function FullVALUAssessment() {
   }, [resumeKey, canUse, sessionId, resumeToken, current, answers, timings, result, handoffStatus]);
 
   useEffect(() => {
-    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || Object.keys(answers).length === 0) return;
+    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || (!queryIdentity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
     const timer = window.setTimeout(() => {
       saveProgress({
         action:'save',
@@ -259,7 +296,7 @@ export default function FullVALUAssessment() {
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
 
   async function persistCheckpoint(nextAnswers, nextTimings, nextCurrent) {
-    if (!sessionId || handoffStatus !== 'ready') return;
+    if (!sessionId || handoffStatus !== 'ready' || (!queryIdentity.resume && !remoteRestoreComplete)) return;
     try {
       const data = await saveProgress({
         action:'save',
@@ -392,6 +429,8 @@ export default function FullVALUAssessment() {
   if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
 
   if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
+
+  if (handoffStatus === 'ready' && !queryIdentity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
 
   if (handoffStatus === 'checking') return <Shell><div style={S.eyebrow}>SECURE VALU JOURNEY</div><h1 style={S.h1}>Verifying your account…</h1><p style={S.p}>We are confirming that this assessment belongs to your Valoria account before you continue.</p></Shell>;
 
