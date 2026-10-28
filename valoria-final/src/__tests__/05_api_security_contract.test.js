@@ -40,7 +40,8 @@ describe("Privileged API security contracts", () => {
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     expect(progressApi).toContain('if (action === "restore")');
     expect(progressApi).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId)");
-    expect(progressApi).toContain("getProgressByTasterId(tasterId, resolvedIdentity.user_id)");
+    expect(progressApi).toContain("getProgressByTasterId(tasterId)");
+    expect(progressApi).toContain("progress.user_id !== resolvedIdentity.user_id");
     expect(progressApi).toContain('status: "in.(in_progress,abandoned)"');
     expect(component).toContain("action:'restore'");
     expect(component).toContain("setAnswers(saved.answers");
