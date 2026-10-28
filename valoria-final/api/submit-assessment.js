@@ -200,8 +200,11 @@ export default async function handler(req, res) {
     return json(res, 502, { error: 'Could not verify whether this assessment was already submitted.' });
   }
 
+  // insertRes is declared outside the try because it is read after the block
+  // closes: a const inside the block is not in scope at the `insertedRows` line.
+  let insertRes;
   try {
-    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=identity_hash,report_token`, {
+    insertRes = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?select=identity_hash,report_token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, Prefer: 'return=representation' },
       body: JSON.stringify(row),
