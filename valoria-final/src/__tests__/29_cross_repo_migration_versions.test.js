@@ -24,6 +24,11 @@
 //     skipped, not passed, when the sibling repository is unavailable — a skipped
 //     check is honest; a check that cannot see the other repository and reports
 //     success anyway is not.
+//
+// It also checks that no shared version is unparseable in either repository.
+// Byte-identity alone is not safety: two identically broken copies compare equal,
+// so a version could be recorded as harmless while neither copy can apply. That
+// is how 20260921123000 passed here on both main branches.
 
 "use strict";
 
@@ -81,6 +86,28 @@ function versionsOf(dirs) {
 
 function readAt(entry) {
   return fs.readFileSync(path.join(entry.dir, entry.file), "utf8");
+}
+
+// A dollar-quote delimiter is `$$` or `$tag$`; a bare `$` is never one. A file
+// carrying `do $` … `$;` is rejected by PostgreSQL with
+// `syntax error at or near "$"`, so it can never apply to any database and the
+// objects it defines silently never exist. Suite 28 checks this for this
+// repository's own directories, but it cannot see the sibling checkout — and
+// byte-identity does not catch it, because two *identically broken* copies
+// compare equal. That is precisely how 20260921123000 stayed invisible: both
+// main branches carried the same unparseable file, so this guard recorded the
+// version as harmless and passed.
+function stripSql(sql) {
+  return sql
+    .replace(/--[^\n]*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/'(?:[^']|'')*'/g, "''");
+}
+
+function hasTruncatedDelimiter(sql) {
+  return stripSql(sql)
+    .split("\n")
+    .some((line) => /(?:^|\s)\$[^$\w]?\s*$/.test(line) || /^\s*\$;\s*$/.test(line));
 }
 
 // Versions this repository uses for more than one file. These are date-only
@@ -180,6 +207,23 @@ describeCrossRepo("cross-repository migration versions", () => {
   test("no new harmless duplicate has appeared", () => {
     const unexpected = classify().harmless.filter((v) => !KNOWN_HARMLESS_CROSS_REPO.includes(v));
     expect(unexpected).toEqual([]);
+  });
+
+  test("no shared version is unparseable in either repository", () => {
+    // Byte-identity is not safety: two identically broken copies compare equal.
+    // A shared version whose platform or site copy cannot parse is a version
+    // whose objects do not exist, whichever copy the database ran.
+    const offenders = [];
+    for (const v of [...platform.keys()].filter((v) => site.has(v))) {
+      for (const [repo, entries] of [["platform", platform.get(v)], ["site", site.get(v)]]) {
+        for (const entry of entries) {
+          if (hasTruncatedDelimiter(readAt(entry))) {
+            offenders.push(`${v}: ${repo}/${entry.file}`);
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   test("the known-harmful list is exactly the harmful set", () => {
