@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Call sweep-unsent-reports
         run: |
-          curl -sf -X POST "https://valoria-final.vercel.app/api/sweep-unsent-reports" \
+          curl -sf -X POST "https://assessment.valoriainstitute.com/api/sweep-unsent-reports" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -o response.json -w "\nHTTP %{http_code}\n"
           cat response.json
