@@ -44,6 +44,17 @@ PR #67 before the declarations exist would take the assessment offline.
 | `SUPABASE_SERVICE_ROLE_KEY` | Preview | staging key | **Yes** |
 | `VERCEL_TOKEN` | GitHub secret | Vercel token | **Yes** |
 
+How `sbkgpisgkuhbalsxqkdr` was established: it was read from the **publicly served
+production bundle**, where it appears in client Supabase storage URLs. That is
+evidence of which project the *client* is built against. It is not the same as
+reading the Production environment variables through Vercel, which is the
+authorised confirmation step 2 in section 5 and has not been performed.
+
+The guard extracts a ref only from a hostname matching
+`^[a-z0-9]{20}\.supabase\.(co|in)$`. The production ref is exactly 20 characters,
+so it satisfies this; a staging ref must also be 20 characters or the guard will
+refuse every write to it.
+
 Rules:
 
 - A project ref is not a credential; a service-role key is. Never place a key in a
@@ -54,19 +65,32 @@ Rules:
 
 ## 4. What the guard decides
 
-Verified behaviour of the pure decision function (`lib/environment-guard.js`), from
-a decision matrix run against the PR #67 branch:
+Verified behaviour of the pure decision function (`lib/environment-guard.js` in
+PR #67, head `154dcc8`). The function was extracted from that commit and executed
+against each combination below; all eleven matched the expected outcome.
 
 | Runtime | Declarations | Decision |
 | --- | --- | --- |
-| production | production ref set and matching | **allow** |
+| production | production ref declared and matching | **allow** |
 | production | production ref unset | refuse |
 | production | production ref wrong | refuse |
 | preview | staging declared, targets staging | **allow** |
-| preview | staging declared, targets production | refuse |
+| preview | targets production | refuse |
 | preview | staging declaration names production | refuse |
 | preview | no staging declared | refuse |
-| unset | local writes not enabled | refuse |
+| preview | no production declared | refuse |
+| VERCEL_ENV unset | local writes not enabled | refuse |
+| VERCEL_ENV unset | local writes enabled, targets staging | **allow** |
+| VERCEL_ENV unset | local writes enabled, targets production | refuse |
+
+Two details worth noting, both verified in that run:
+
+- The production ref `sbkgpisgkuhbalsxqkdr` is exactly 20 characters and matches
+  the guard's URL pattern, so it is accepted as a valid ref.
+- The guard refuses a **preview** write when the production ref is undeclared,
+  even if the target looks like staging. It cannot prove the target is not
+  production without knowing which project production is. This is why the
+  production declaration must exist before the guard ships.
 
 ## 5. Activation order (the part that prevents an outage)
 
