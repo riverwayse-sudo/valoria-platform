@@ -6,7 +6,7 @@
 //
 // Requires Node 18+ (built-in fetch). Run with:  node run-report.js <identity_hash>
 
-const BASE_URL = "https://valoria-final.vercel.app";
+const BASE_URL = "https://assessment.valoriainstitute.com";
 
 const identityHash = process.argv[2];
 const force = process.argv.includes("--force");
