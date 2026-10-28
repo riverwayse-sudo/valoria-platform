@@ -18,6 +18,7 @@ export default function VALUIndexV4GateNext(){
  const [saving,setSaving]=useState(false),[error,setError]=useState(''),[submissionKey,setSubmissionKey]=useState('');
  const [progressToken,setProgressToken]=useState(()=>{try{return localStorage.getItem('valu_taster_resume_token')||''}catch{return ''}});
  const [accountCreated,setAccountCreated]=useState(false);
+ const [accountExists,setAccountExists]=useState(false);
  const timer=useRef(null);
  const q=TASTER_QUESTIONS[current]; const progress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
  const scores=useMemo(()=>result?Object.entries(result.points||{}).sort((a,b)=>b[1]-a[1]):[],[result]);
@@ -59,13 +60,24 @@ export default function VALUIndexV4GateNext(){
 
  const validSignup=!!(name.trim()&&role.trim()&&experience&&email.trim()&&password.length>=8&&password===confirm);
 
+ // Sign-in and password recovery both live on the site's /login page: the
+ // "Forgot password?" control there sends the reset link. There is no standalone
+ // recovery route (verified /forgot-password returns 404 in production), so the
+ // snapshot app points users at the one page that can restore access. The origin
+ // comes from siteUrl() so a staging participant is not sent to production.
+
  async function createAccount(e){
   e.preventDefault(); if(!validSignup||saving)return; setSaving(true); setError('');
   try{
    if(!accountCreated){
     const response=await fetch(API_BASE + '/api/create-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),password,name:name.trim(),role:role.trim()})});
     const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'We could not create your account.');
+    if(!response.ok){
+     // The server returns a stable code for an existing account. Prefer it over
+     // wording, so the guidance does not depend on the provider's error text.
+     if(data.code==='ACCOUNT_EXISTS'){setAccountExists(true);return}
+     const err=new Error(data.error||'We could not create your account.'); err.status=response.status; err.code=data.code||''; throw err;
+    }
     setAccountCreated(true);
    }
    const progressResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init',name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()})});
@@ -76,7 +88,13 @@ export default function VALUIndexV4GateNext(){
    setPhase('taster');
   }catch(err){
    const message=err?.message||'Something went wrong.';
-   setError(/already|registered|exists/i.test(message)&&!accountCreated?'An account may already exist for this email. Sign in instead, or use a different email address.':message);
+   // Distinguish what the user can act on. Only the generic signup path is
+   // rewritten; a failure after the account exists keeps its own guidance.
+   const status=Number(err?.status)||0;
+   if(!accountCreated&&status===429)setError('Too many attempts. Please wait a little while and try again.');
+   else if(!accountCreated&&(status===502||status===503||status===504||status===0))setError('We could not reach Valoria just now. Your details were not saved — please retry in a moment.');
+   else if(!accountCreated&&/already|registered|exists/i.test(message))setError('An account may already exist for this email. Sign in instead, or use a different email address.');
+   else setError(message);
   }finally{setSaving(false)}
  }
 
@@ -154,12 +172,20 @@ export default function VALUIndexV4GateNext(){
       <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
      </div>
      <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-     <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
+     <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>{setEmail(e.target.value);setAccountExists(false);setError('')}} placeholder="you@example.com" autoComplete="email"/></Field>
      <div style={S.grid}>
       <Field label="PASSWORD"><input required style={S.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Minimum 8 characters" autoComplete="new-password"/></Field>
       <Field label="CONFIRM PASSWORD"><input required style={S.input} type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="Repeat password" autoComplete="new-password"/></Field>
      </div>
-     {error&&<div style={S.error}>{error}</div>}
+     {accountExists&&<div style={S.exists} role="alert">
+      <p style={S.existsTitle}>An account already exists for <strong>{email.trim().toLowerCase()}</strong>.</p>
+      <p style={S.existsText}>Sign in to continue your saved VALU journey, or reset your password if you cannot remember it. Your existing progress and records are kept.</p>
+      <div style={S.existsActions}>
+       <a href={siteUrl('/login')} style={S.existsPrimary}>SIGN IN <span aria-hidden="true">→</span></a>
+      </div>
+      <p style={S.existsHint}>Forgot your password? Choose “Forgot password?” on the sign-in page to reset it. Still stuck, or never received a confirmation email? Contact <a href="mailto:info@valoriainstitute.com" style={{color:GOLD}}>info@valoriainstitute.com</a> and we will restore your access.</p>
+     </div>}
+     {error&&<div style={S.error} role="alert">{error}</div>}
      <button type="submit" disabled={!validSignup||saving} style={{...S.primary,opacity:(!validSignup||saving)?.5:1}}>{saving?'SAVING YOUR JOURNEY…':'START MY VALU SNAPSHOT →'}</button>
      <div style={S.saveNote}><span>✓</span> Progress is saved. You can return without starting again.</div>
      <p style={S.login}>Already have an account? <a href={siteUrl('/login')} style={{color:GOLD}}>Sign in</a></p>
@@ -244,6 +270,12 @@ const S={
  login:{fontSize:11,color:'rgba(250,250,247,.42)',textAlign:'center',margin:'17px 0 0'},
  eyebrow:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
  error:{padding:'12px 14px',border:'1px solid rgba(216,90,48,.3)',background:'rgba(216,90,48,.08)',borderRadius:8,color:'#F3A0A0',fontSize:12,lineHeight:1.5,marginBottom:12},
+ exists:{padding:'16px 16px 14px',border:'1px solid rgba(201,168,76,.35)',background:'rgba(201,168,76,.07)',borderRadius:10,marginBottom:14},
+ existsTitle:{margin:'0 0 8px',fontSize:13,lineHeight:1.5,color:PARCH,fontWeight:700},
+ existsText:{margin:'0 0 13px',fontSize:11.5,lineHeight:1.65,color:'rgba(250,250,247,.72)'},
+ existsActions:{display:'flex',flexDirection:'column',gap:9},
+ existsPrimary:{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:9,minHeight:44,boxSizing:'border-box',padding:'12px 16px',borderRadius:7,background:GOLD,color:DARK,fontWeight:900,letterSpacing:'.06em',fontSize:10,textDecoration:'none',textAlign:'center'},
+ existsHint:{margin:'12px 0 0',fontSize:10.5,lineHeight:1.6,color:'rgba(250,250,247,.5)'},
  steps:{display:'flex',justifyContent:'center',gap:28,margin:'0 0 42px',paddingBottom:18,borderBottom:'1px solid rgba(212,201,168,.16)'},
  step:{display:'flex',alignItems:'center',gap:8,fontSize:9,fontWeight:700,letterSpacing:'.14em',color:'rgba(250,250,247,.55)'},
  stepDot:{width:24,height:24,borderRadius:'50%',border:'1px solid rgba(201,168,76,.45)',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,color:PARCH},
