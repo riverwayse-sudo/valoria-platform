@@ -31,6 +31,7 @@ import {
 // Shared with api/submit-assessment.js so client and server always score
 // against the exact same question set.
 import { QUESTIONS } from "./questions.js";
+import { siteUrl } from "./siteOrigin.js";
 
 // Wrap to inject QUESTIONS (defined later in this file after question bank).
 // This keeps the scoringEngine pure (no direct import of ALL_QUESTIONS).
@@ -714,7 +715,7 @@ function CompletionJourneyModal({ open, score, onClose }) {
           ))}
         </div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          <a href="https://valoriainstitute.com/profile/edit" style={{...pillBtn("primary"),flex:1,minWidth:190,textDecoration:"none"}}>COMPLETE PROFILE →</a>
+          <a href={siteUrl('/profile/edit')} style={{...pillBtn("primary"),flex:1,minWidth:190,textDecoration:"none"}}>COMPLETE PROFILE →</a>
           <button onClick={onClose} style={{...pillBtn("ghost"),flex:1,minWidth:140}}>CONTINUE</button>
         </div>
       </div>
@@ -837,10 +838,10 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
         position:"relative", zIndex:2, display:"flex", alignItems:"center", justifyContent:"space-between",
         maxWidth: isDesktop ? 1400 : 600, margin:"0 auto", padding: isDesktop ? "24px 48px 0" : "20px 20px 0",
       }}>
-        <a href="https://valoriainstitute.com" style={{ fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.12em", color:T.gold, textDecoration:"none", fontFamily:T.font.body }}>
+        <a href={siteUrl('/')} style={{ fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.12em", color:T.gold, textDecoration:"none", fontFamily:T.font.body }}>
           VALORIA INSTITUTE
         </a>
-        <a href="https://valoriainstitute.com/login" style={{ fontSize:T.size.caption, color:T.text.muted, textDecoration:"none", fontFamily:T.font.body }}>
+        <a href={siteUrl('/login')} style={{ fontSize:T.size.caption, color:T.text.muted, textDecoration:"none", fontFamily:T.font.body }}>
           Already have a profile? Sign in →
         </a>
       </div>
@@ -1452,7 +1453,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
                 {resendLoading ? "REQUESTING A NEW EMAIL…" : "RESEND CONFIRMATION EMAIL"}
               </button>
               {resendMessage && <p role="status" style={{ fontSize:T.size.small, color:T.text.secondary, lineHeight:1.7, margin:0 }}>{resendMessage}</p>}
-              <a href="https://valoriainstitute.com/login" style={{ display:"block", textAlign:"center", padding:"14px 24px", background:"transparent", color:T.gold, fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none", border:"1px solid rgba(201,168,76,0.3)" }}>
+              <a href={siteUrl('/login')} style={{ display:"block", textAlign:"center", padding:"14px 24px", background:"transparent", color:T.gold, fontFamily:T.font.body, fontSize:T.size.caption, fontWeight:700, letterSpacing:"0.14em", borderRadius:T.radius.pill, textDecoration:"none", border:"1px solid rgba(201,168,76,0.3)" }}>
                 RETURN TO VALORIA LOGIN
               </a>
             </div>
@@ -1758,7 +1759,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
               </div>
             )}
             <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:22 }}>
-              <a href="https://valoriainstitute.com/profile/edit"
+              <a href={siteUrl('/profile/edit')}
                 style={{ display:"block", padding:"20px 28px", background:T.gold, borderRadius:T.radius.pill, textAlign:"center", cursor:"pointer", textDecoration:"none" }}
                 onMouseEnter={e=>e.currentTarget.style.background="#E2C97E"}
                 onMouseLeave={e=>e.currentTarget.style.background=T.gold}>

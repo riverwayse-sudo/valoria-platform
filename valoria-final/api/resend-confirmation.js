@@ -1,12 +1,16 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
+import { resolveSiteUrl } from "../lib/site-url.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const VALORIA_SITE_URL = "https://valoriainstitute.com";
+// Environment-specific; hardcoding production sent staging confirmations to the
+// production callback.
+const VALORIA_SITE_URL = resolveSiteUrl();
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -37,6 +41,8 @@ function confirmationEmailHtml(name, actionLink) {
 export default async function handler(req) {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Service temporarily unavailable." }, 503);
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json({ error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason }, 503);
 
   const ipLimit = await checkRateLimit(req, { namespace: "confirmation-resend-ip", limit: 10, windowSeconds: 900 });
   if (!ipLimit.allowed) return ipLimit.response;

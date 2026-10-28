@@ -42,7 +42,7 @@ begin
 end; $$;
 revoke all on function private.sync_professional_listing_status(uuid) from public,anon,authenticated; grant execute on function private.sync_professional_listing_status(uuid) to service_role;
 
-create or replace function public.evaluate_professional_readiness(p_professional_id uuid) returns jsonb language plpgsql security invoker set search_path=public,private as $$ select private.evaluate_professional_readiness(p_professional_id); $$;
+create or replace function public.evaluate_professional_readiness(p_professional_id uuid) returns jsonb language sql security invoker set search_path=public,private as $$ select private.evaluate_professional_readiness(p_professional_id); $$;
 create or replace function public.compute_professional_listing_eligibility(p_professional_id uuid) returns boolean language sql security invoker set search_path=public,private as $$ select private.compute_professional_listing_eligibility(p_professional_id); $$;
 create or replace function public.sync_professional_listing_status(p_professional_id uuid) returns jsonb language sql security invoker set search_path=public,private as $$ select private.sync_professional_listing_status(p_professional_id); $$;
 revoke all on function public.evaluate_professional_readiness(uuid) from public,anon,authenticated; grant execute on function public.evaluate_professional_readiness(uuid) to service_role;

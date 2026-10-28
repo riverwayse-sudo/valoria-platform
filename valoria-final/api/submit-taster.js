@@ -1,3 +1,4 @@
+import { privilegedWriteAllowed } from '../lib/environment-guard.js';
 import { createHash } from 'node:crypto';
 import { TASTER_QUESTIONS, computeTasterResult, EXPERIENCE_BANDS, VALU_VERSION } from '../src/valuTaster.js';
 
@@ -40,6 +41,8 @@ async function consumeRateLimit(ip) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json(res, 500, { error: 'Server misconfigured.' });
+  const __guard = privilegedWriteAllowed();
+  if (!__guard.allowed) return json(res, 503, { error: 'Write refused: this deployment is not authorised to modify this database.', detail: __guard.reason });
 
   const forwarded = req.headers['x-forwarded-for'];
   const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
@@ -77,11 +80,15 @@ export default async function handler(req, res) {
   if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'The saved contact email is invalid. Contact Valoria support.' });
   if (progress.current_question !== TASTER_QUESTIONS.length || !validAnswers(answers)) return json(res, 400, { error: 'Finish and save all snapshot answers before submitting.' });
 
-
-
-
-
   const results = computeTasterResult(answers);
+  // Must be the points object. computeTasterResult() returns
+  // { points, maxPoints, strongest, weakest }. Commit 7458831 ("Replace VALU
+  // snapshot percentages with points") renamed normalisedScores to points in
+  // valuTaster.js but did not update this handler, so `results.normalisedScores`
+  // was undefined; JSON.stringify then dropped the key and the RPC rejected the
+  // whole submission with 'cluster scores must be an object' (22023) — a 502
+  // that lost all 15 answers. Points are the canonical display and storage unit
+  // for a snapshot; do not substitute a percentage or an empty object.
   const clusterScores = results.points;
   const clusterIds = ['P', 'R', 'I', 'M', 'E'];
   if (!clusterScores || typeof clusterScores !== 'object' || clusterIds.some(id => !Number.isFinite(clusterScores[id]))) {
