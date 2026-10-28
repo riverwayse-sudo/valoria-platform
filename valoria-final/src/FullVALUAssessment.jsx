@@ -1,5 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+const API_BASE = (() => {
+  const configuredOrigin = String(import.meta.env.VITE_VALU_API_ORIGIN || '').trim().replace(/\/$/, '');
+  if (configuredOrigin) return configuredOrigin;
+
+  // Legacy page URLs still exist under valoriainstitute.com/valu/assessment.
+  // API requests must go to the assessment application's root API, not the
+  // legacy page prefix (which incorrectly produces /valu/assessment/api/*).
+  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  if (host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') {
+    return 'https://assessment.valoriainstitute.com';
+  }
+
+  // On the standalone assessment host and local/preview deployments, retain
+  // same-origin routing unless an explicit VITE_VALU_API_ORIGIN is configured.
+  return import.meta.env.BASE_URL.replace(/\/$/, '');
+})();
 
 import { QUESTIONS } from './questions.js';
 
