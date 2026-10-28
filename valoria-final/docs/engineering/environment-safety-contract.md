@@ -44,11 +44,18 @@ PR #67 before the declarations exist would take the assessment offline.
 | `SUPABASE_SERVICE_ROLE_KEY` | Preview | staging key | **Yes** |
 | `VERCEL_TOKEN` | GitHub secret | Vercel token | **Yes** |
 
-How `sbkgpisgkuhbalsxqkdr` was established: it was read from the **publicly served
-production bundle**, where it appears in client Supabase storage URLs. That is
-evidence of which project the *client* is built against. It is not the same as
-reading the Production environment variables through Vercel, which is the
-authorised confirmation step 2 in section 5 and has not been performed.
+How `sbkgpisgkuhbalsxqkdr` was established: it appears in the publicly served
+**site** (the Next.js participant-facing app), as the host of a server-rendered
+Supabase storage URL — an avatar image path returned from a database row. It does
+not appear in the platform's own client bundle, which contains no Supabase URL at
+all; the platform reaches Supabase server-side.
+
+That is evidence that the site is reading from a database whose storage lives in
+this project. It is *not* evidence that `PRODUCTION_SUPABASE_PROJECT_REF` is set in
+Vercel's Production scope — those are separate facts and must stay separate. It is
+also not a guarantee that the platform's server-side `SUPABASE_URL` names the same
+project. Both remain unconfirmed until read through authorised Vercel access,
+which is step 2 in section 5 and has not been performed.
 
 The guard extracts a ref only from a hostname matching
 `^[a-z0-9]{20}\.supabase\.(co|in)$`. The production ref is exactly 20 characters,
