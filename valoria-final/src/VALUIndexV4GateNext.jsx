@@ -199,7 +199,7 @@ export default function VALUIndexV4GateNext(){
     <a href={`https://valoriainstitute.com/journey/continue?stage=assess&taster_id=${encodeURIComponent(tasterId)}`} style={S.secondary}>Already signed in? Continue your journey</a>
    </div>
   </section>
-  <p style={S.note}>Completing the snapshot does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
+  <p style={S.note}>Completing all 15 questions is the entry point to a Basic marketplace listing. Once your account is verified and the required profile and governance checks are complete, your profile can appear at Basic level. The full 58-question assessment establishes your official VALU Index and eligibility for enhanced access.</p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
