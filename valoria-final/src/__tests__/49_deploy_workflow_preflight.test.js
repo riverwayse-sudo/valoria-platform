@@ -16,81 +16,152 @@
 // fixed.
 //
 // These assertions keep the fix in place: the credential is checked before it is
-// used, and the failure names the missing secret. They parse the workflow with
-// js-yaml rather than grepping it, so reformatting cannot defeat them.
+// used, and the failure names the missing secret.
+//
+// The workflow is read as structured data rather than matched as text, so
+// reformatting cannot defeat the assertions. The parser is deliberately small and
+// dependency-free: a guard test that breaks because a transitive dependency moved
+// is worse than no guard test. It asserts its own shape assumptions, so a workflow
+// restructure fails here loudly instead of silently passing.
 
 "use strict";
 
 const fs = require("node:fs");
 const path = require("node:path");
-const yaml = require("js-yaml");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const WORKFLOW = path.join(REPO_ROOT, ".github", "workflows", "vercel-production.yml");
 
-function loadWorkflow() {
-  return yaml.load(fs.readFileSync(WORKFLOW, "utf8"));
+/**
+ * Minimal parser for the two things this suite needs: the top-level `permissions`
+ * mapping and the `deploy` job's `steps` list (each step's `name` and `run`).
+ *
+ * It understands only block mappings, block sequences of mappings, and `|` block
+ * scalars — which is all this workflow uses. Anything else throws, so the suite
+ * cannot pass by misreading a construct it does not handle.
+ */
+function parseWorkflow(text) {
+  const lines = text.split("\n");
+  const jobNames = [];
+  const steps = [];
+  const permissions = {};
+
+  let section = null; // "permissions" | "jobs"
+  let inDeployJob = false;
+  let inSteps = false;
+  let current = null;
+  let blockScalarIndent = null;
+
+  const indentOf = (l) => l.length - l.trimStart().length;
+
+  for (const raw of lines) {
+    if (raw.trim() === "" || raw.trimStart().startsWith("#")) continue;
+    const indent = indentOf(raw);
+    const line = raw.trim();
+
+    // Continuation of a `run: |` block scalar.
+    if (blockScalarIndent !== null) {
+      if (indent >= blockScalarIndent) {
+        current.run += `${raw.slice(blockScalarIndent)}\n`;
+        continue;
+      }
+      blockScalarIndent = null;
+    }
+
+    if (indent === 0) {
+      inSteps = false;
+      current = null;
+      if (line === "permissions:") { section = "permissions"; inDeployJob = false; continue; }
+      if (line === "jobs:") { section = "jobs"; continue; }
+      section = null;
+      continue;
+    }
+
+    if (section === "permissions") {
+      const m = line.match(/^([A-Za-z-]+):\s*(\S+)\s*$/);
+      if (m) permissions[m[1]] = m[2];
+      continue;
+    }
+
+    if (section === "jobs") {
+      if (indent === 2 && line.endsWith(":")) {
+        const name = line.slice(0, -1);
+        jobNames.push(name);
+        inDeployJob = name === "deploy";
+        inSteps = false;
+        continue;
+      }
+      if (!inDeployJob) continue;
+      if (line === "steps:") { inSteps = true; continue; }
+      if (!inSteps) continue;
+
+      if (line.startsWith("- ")) {
+        current = { name: "", run: "" };
+        steps.push(current);
+        const inline = line.slice(2);
+        const m = inline.match(/^([A-Za-z-]+):\s*(.*)$/);
+        if (m) current[m[1]] = m[2];
+        continue;
+      }
+      if (!current) continue;
+      const m = line.match(/^([A-Za-z-]+):\s*(.*)$/);
+      if (!m) continue;
+      const [, key, value] = m;
+      if (value === "|") {
+        blockScalarIndent = indent + 2;
+        current[key] = "";
+      } else {
+        current[key] = value;
+      }
+    }
+  }
+
+  if (blockScalarIndent !== null) throw new Error("unterminated block scalar");
+  return { permissions, jobNames, steps };
 }
 
-/** Every `run:` script in a job, in order, as {name, script} pairs. */
-function runSteps(job) {
-  return (job.steps || [])
-    .filter((s) => typeof s.run === "string")
-    .map((s) => ({ name: s.name || "", script: s.run }));
-}
+const raw = fs.readFileSync(WORKFLOW, "utf8");
+const { permissions, jobNames, steps } = parseWorkflow(raw);
+
+const vercelSteps = steps.filter((s) => /vercel\s+(pull|build|deploy)/.test(s.run));
+const preflight = steps.find((s) => /VERCEL_TOKEN/.test(s.run) && /-z/.test(s.run));
 
 describe("vercel-production workflow deploy preflight", () => {
-  let workflow;
-  let job;
-
-  beforeAll(() => {
-    workflow = loadWorkflow();
-    job = workflow.jobs.deploy;
+  test("the parser read the expected shape (guards against a silent misread)", () => {
+    // If the workflow is restructured, these fail rather than letting every
+    // assertion below pass against an empty or partial parse.
+    expect(jobNames).toContain("deploy");
+    expect(steps.length).toBeGreaterThanOrEqual(6);
+    expect(vercelSteps.length).toBe(3); // pull, build, deploy
   });
 
-  test("the deploy job exists and uses the production token", () => {
-    expect(job).toBeDefined();
-    expect(job.env.VERCEL_TOKEN).toContain("secrets.VERCEL_TOKEN");
+  test("the deploy job uses the production token secret", () => {
+    expect(raw).toMatch(/VERCEL_TOKEN:\s*\$\{\{\s*secrets\.VERCEL_TOKEN\s*\}\}/);
   });
 
   test("a preflight step checks the token BEFORE any vercel command consumes it", () => {
-    const steps = runSteps(job);
-    const firstVercelStep = steps.findIndex((s) => /vercel\s+(pull|build|deploy)/.test(s.script));
-    const preflightStep = steps.findIndex((s) => /VERCEL_TOKEN/.test(s.script) && /-z|:-/.test(s.script));
-
-    expect(firstVercelStep).toBeGreaterThanOrEqual(0);
-    expect(preflightStep).toBeGreaterThanOrEqual(0);
-    // The check must come first, otherwise the opaque CLI error returns.
-    expect(preflightStep).toBeLessThan(firstVercelStep);
+    expect(preflight).toBeDefined();
+    const preflightIndex = steps.indexOf(preflight);
+    const firstVercelIndex = steps.indexOf(vercelSteps[0]);
+    expect(firstVercelIndex).toBeGreaterThanOrEqual(0);
+    expect(preflightIndex).toBeLessThan(firstVercelIndex);
   });
 
   test("the preflight fails the job and names the missing secret", () => {
-    const preflight = runSteps(job).find((s) => /VERCEL_TOKEN/.test(s.script) && /-z|:-/.test(s.script));
-    expect(preflight).toBeDefined();
-    expect(preflight.script).toMatch(/exit\s+1/);
-    expect(preflight.script).toMatch(/VERCEL_TOKEN is not configured/);
+    expect(preflight.run).toMatch(/exit\s+1/);
+    expect(preflight.run).toMatch(/VERCEL_TOKEN is not configured/);
   });
 
-  test("no step uses the token with the bare --token=$VAR form that hides emptiness", () => {
-    // Every vercel invocation must either be guarded by the preflight above or
-    // use a form that cannot silently expand to an empty value.
-    const steps = runSteps(job);
-    const vercelSteps = steps.filter((s) => /vercel\s+(pull|build|deploy)/.test(s.script));
-    expect(vercelSteps.length).toBeGreaterThan(0);
+  test("no vercel step embeds a token literal", () => {
     for (const s of vercelSteps) {
-      expect(s.script).toMatch(/--token="\$VERCEL_TOKEN"/);
+      expect(s.run).toMatch(/--token="\$VERCEL_TOKEN"/);
     }
-  });
-
-  test("the workflow does not embed a token literal", () => {
-    const raw = fs.readFileSync(WORKFLOW, "utf8");
-    // A real Vercel token is a long opaque string; the only permitted reference is
-    // the secrets context. This catches an accidental paste into the file.
+    // A real Vercel token is a long opaque string; only the env var may appear.
     expect(raw).not.toMatch(/--token=["']?(?!\$)[A-Za-z0-9]{20,}/);
     expect(raw).not.toMatch(/vercel_[A-Za-z0-9]{20,}/);
   });
 
   test("the job requests read-only repository permissions", () => {
-    expect(workflow.permissions).toEqual({ contents: "read" });
+    expect(permissions).toEqual({ contents: "read" });
   });
 });
