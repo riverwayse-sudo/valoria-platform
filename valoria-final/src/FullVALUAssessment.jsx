@@ -3,17 +3,19 @@ const API_BASE = (() => {
   const configuredOrigin = String(import.meta.env.VITE_VALU_API_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
 
-  // Legacy page URLs still exist under valoriainstitute.com/valu/assessment.
-  // API requests must go to the assessment application's root API, not the
-  // legacy page prefix (which incorrectly produces /valu/assessment/api/*).
+  // Serverless API routes live at the deployment root, even though Vite
+  // serves the assessment UI under the legacy /valu/assessment/ asset base.
+  // Never derive API paths from BASE_URL: that creates /valu/assessment/api/*
+  // and Vercel serves index.html with 405 for POST requests.
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
-  if (host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') {
+  if (host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com' || host === 'assessment.valoriainstitute.com') {
     return 'https://assessment.valoriainstitute.com';
   }
 
-  // On the standalone assessment host and local/preview deployments, retain
-  // same-origin routing unless an explicit VITE_VALU_API_ORIGIN is configured.
-  return import.meta.env.BASE_URL.replace(/\/$/, '');
+  // Preview deployments should call their own root-level API functions.
+  return typeof window !== 'undefined'
+    ? window.location.origin
+    : '';
 })();
 
 import { QUESTIONS } from './questions.js';
