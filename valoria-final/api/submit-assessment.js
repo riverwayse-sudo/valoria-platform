@@ -107,8 +107,34 @@ async function verifyHandoffRequest(body, res) {
   return json(res, 200, { ok: true, expires_at: handoff.exp });
 }
 
+const ALLOWED_ORIGINS = new Set([
+  'https://valoriainstitute.com',
+  'https://www.valoriainstitute.com',
+  'https://assessment.valoriainstitute.com',
+]);
+
+function applyCors(req, res) {
+  const origin = req.headers.origin;
+  res.setHeader('Vary', 'Origin');
+  if (typeof origin === 'string' && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Idempotency-Key');
+    res.setHeader('Access-Control-Max-Age', '600');
+    return true;
+  }
+  return false;
+}
+
 export default async function handler(req, res) {
+  const originAllowed = applyCors(req, res);
+  if (req.method === 'OPTIONS') {
+    if (!originAllowed) return json(res, 403, { error: 'Origin not allowed.' });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(204).end();
+  }
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+  if (!originAllowed && req.headers.origin) return json(res, 403, { error: 'Origin not allowed.' });
   if (!SERVICE_ROLE_KEY || !SUPABASE_URL) {
     console.error('submit-assessment: missing Supabase server configuration');
     return json(res, 500, { error: 'Server misconfigured.' });
