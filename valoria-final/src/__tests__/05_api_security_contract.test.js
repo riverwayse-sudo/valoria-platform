@@ -35,6 +35,20 @@ describe("Privileged API security contracts", () => {
     expect(migration).toContain("'pending_assessment_reports'");
     expect(migration).toContain("a.report_status = 'PENDING'");
   });
+  test("full VALU assessment restores saved answers by verified account-owned taster after login", () => {
+    const progressApi = readApi("assessment-progress.js");
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    expect(progressApi).toContain('if (action === "restore")');
+    expect(progressApi).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId)");
+    expect(progressApi).toContain("getProgressByTasterId(tasterId)");
+    expect(progressApi).toContain("progress.user_id !== resolvedIdentity.user_id");
+    expect(progressApi).toContain('status: "in.(in_progress,abandoned)"');
+    expect(component).toContain("action:'restore'");
+    expect(component).toContain("setAnswers(saved.answers");
+    expect(component).toContain("setCurrent(Math.min(Math.max(Number(saved.current_question)");
+    expect(component).toContain("remoteRestoreComplete");
+    expect(component).toContain("Your saved VALU progress could not be restored");
+  });
   test("all serverless API modules parse as valid Node.js source", () => {
     const apiFiles = fs.readdirSync(API_ROOT).filter((file) => file.endsWith(".js"));
     expect(apiFiles.length).toBeGreaterThan(0);

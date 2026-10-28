@@ -76,6 +76,21 @@ async function getProgressByResumeToken(token) {
   return (await res.json())?.[0] || null;
 }
 
+async function getProgressByTasterId(tasterId) {
+  // Find legacy progress by its verified snapshot first. Older sessions may
+  // predate account linking and therefore have user_id = null.
+  const params = new URLSearchParams({
+    taster_id: `eq.${tasterId}`,
+    status: "in.(in_progress,abandoned)",
+    select: "id,session_id,resume_token,taster_id,user_id,identity_hash,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
+    order: "last_activity_at.desc",
+    limit: "1",
+  });
+  const res = await supabase(`valu_assessment_progress?${params}`);
+  if (!res.ok) throw new Error("Could not retrieve the saved VALU assessment.");
+  return (await res.json())?.[0] || null;
+}
+
 async function sendReminder(row, reminderNumber) {
   if (!RESEND_API_KEY || !validEmail(row.email)) return { sent: false, reason: "email unavailable" };
 
@@ -227,6 +242,43 @@ export default async function handler(req) {
     timings,
     session_seed: sessionSeed,
   } = body;
+
+  if (action === "restore") {
+    const validTasterId = typeof tasterId === "string"
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId);
+    if (!validTasterId) return json({ error: "A valid VALU snapshot is required to restore progress." }, 400);
+    const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId);
+    if (!handoff) return json({ error: "The secure VALU handoff is missing or expired. Reopen the assessment from your Valoria account." }, 401);
+    const resolvedIdentity = await resolveTasterIdentity(tasterId);
+    if (resolvedIdentity.error) return json({ error: resolvedIdentity.error }, 409);
+    if (resolvedIdentity.user_id !== handoff.sub) return json({ error: "This secure handoff does not match the snapshot owner." }, 403);
+    try {
+      const progress = await getProgressByTasterId(tasterId);
+      if (!progress) return json({ ok: true, progress: null });
+      if (progress.user_id && progress.user_id !== resolvedIdentity.user_id) {
+        return json({ error: "This saved assessment belongs to another Valoria account." }, 403);
+      }
+      if (progress.identity_hash !== `valu_progress_${tasterId}`
+        || norm(progress.name) !== norm(resolvedIdentity.taster.name)
+        || norm(progress.role) !== norm(resolvedIdentity.taster.role)) {
+        return json({ error: "Saved progress does not match this VALU snapshot." }, 403);
+      }
+      // Safely attach a legacy unlinked session only after the snapshot owner,
+      // snapshot ID, normalized identity, and identity hash have all matched.
+      if (!progress.user_id) {
+        const claim = await supabase(`valu_assessment_progress?id=eq.${progress.id}&user_id=is.null`, {
+          method: "PATCH",
+          headers: { Prefer: "return=minimal" },
+          body: JSON.stringify({ user_id: resolvedIdentity.user_id }),
+        });
+        if (!claim.ok) throw new Error("Could not link the saved assessment to your account. Please retry.");
+        progress.user_id = resolvedIdentity.user_id;
+      }
+      return json({ ok: true, progress });
+    } catch (err) {
+      return json({ error: err.message || "Could not restore saved VALU progress." }, 502);
+    }
+  }
 
   if (!sessionId || !/^[0-9a-f-]{36}$/i.test(sessionId) || !name || !role || !Number.isInteger(currentQuestion) || !Number.isInteger(totalQuestions)) {
     return json({ error: "Invalid assessment progress payload." }, 400);
