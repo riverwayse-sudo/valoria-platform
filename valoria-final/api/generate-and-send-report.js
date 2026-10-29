@@ -1,4 +1,5 @@
 import { checkRateLimit } from "./_rateLimit.js";
+import { applyCors, handlePreflight } from "./_cors.js";
 
 // Server-side report generation + email send for the sweep workflow.
 // Public browser triggers are rate-limited; cron workers remain authenticated.
@@ -147,7 +148,10 @@ async function sendReportEmail(email, identityHash, reportText) {
 }
 
 export default async function handler(req, res) {
+  const originAllowed = applyCors(req, res);
+  if (handlePreflight(req, res)) return;
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
+  if (!originAllowed && req.headers.origin) return res.status(403).json({ ok: false, error: "Origin not allowed." });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANTHROPIC_API_KEY) return res.status(503).json({ ok: false, error: "Service unavailable" });
 
   const isAuthorizedWorker = Boolean(

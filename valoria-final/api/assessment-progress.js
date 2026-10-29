@@ -1,4 +1,5 @@
 import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
+import { withEdgeCors } from "./_cors.js";
 
 export const config = { runtime: "edge" };
 
@@ -203,7 +204,7 @@ async function runReminderSweep(req) {
   return json({ ok: true, processed: rows.length, results });
 }
 
-export default async function handler(req) {
+async function baseHandler(req) {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server configuration error" }, 500);
 
   if (req.method === "GET") {
@@ -358,3 +359,5 @@ export default async function handler(req) {
   const created = (await res.json())?.[0];
   return json({ ok: true, resume_token: created?.resume_token || null, status: payload.status });
 }
+
+export default withEdgeCors(baseHandler);
