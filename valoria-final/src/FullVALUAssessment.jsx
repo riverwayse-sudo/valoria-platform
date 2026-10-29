@@ -18,6 +18,17 @@ const API_BASE = (() => {
     : '';
 })();
 
+const SITE_BASE = (() => {
+  const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
+  if (configuredOrigin) return configuredOrigin;
+  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  if (host === 'assessment.valoriainstitute.com') return 'https://valoriainstitute.com';
+  if (host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://valoriainstitute.com';
+  // Preview deployments must be explicitly configured with their paired site
+  // origin. Never silently send a preview user into production authentication.
+  return '';
+})();
+
 import { QUESTIONS } from './questions.js';
 
 const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
@@ -443,7 +454,7 @@ export default function FullVALUAssessment() {
 
   if (resumeLoading) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>Your progress is being retrieved securely.</p></Shell>;
 
-  if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href="https://valoriainstitute.com/dashboard" style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
+  if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
   if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
 
@@ -453,16 +464,16 @@ export default function FullVALUAssessment() {
 
   if (handoffStatus !== 'ready') {
     const signupParams = new URLSearchParams({ taster_id:identity.tasterId, name:identity.name, role:identity.role, experience:identity.experience });
-    const signupUrl = `https://valoriainstitute.com/professional-signup/?${signupParams.toString()}`;
+    const signupUrl = SITE_BASE ? SITE_BASE + '/professional-signup/?' + signupParams.toString() : '';
     const loginParams = new URLSearchParams({ pending_taster_id:identity.tasterId, returnTo:'/dashboard' });
     return <Shell>
       <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
       <h1 style={S.h1}>Link your snapshot before continuing.</h1>
       <p style={S.p}>To protect your official VALU Index, sign in to a confirmed Valoria account and link this completed snapshot before taking the full assessment. Your snapshot and saved progress are preserved.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
-      <a href={signupUrl} style={S.button}>CREATE MY VALORIA ACCOUNT →</a>
-      <a href={`https://valoriainstitute.com/login?${loginParams.toString()}`} style={S.secondary}>I ALREADY HAVE AN ACCOUNT · SIGN IN</a>
-      <a href="https://valoriainstitute.com/valu/assessment/" style={S.secondary}>RETURN TO MY VALU JOURNEY</a>
+      <a href={signupUrl || undefined} style={S.button}>CREATE MY VALORIA ACCOUNT →</a>
+      <a href={SITE_BASE ? SITE_BASE + '/login?' + loginParams.toString() : undefined} style={S.secondary}>I ALREADY HAVE AN ACCOUNT · SIGN IN</a>
+      <a href={SITE_BASE ? SITE_BASE + '/valu/assessment/' : undefined} style={S.secondary}>RETURN TO MY VALU JOURNEY</a>
     </Shell>;
   }
 
@@ -475,9 +486,9 @@ export default function FullVALUAssessment() {
       <div style={S.scoreCard}><div style={S.score}>{score}</div><div style={S.outOf}>/ 100</div><div style={S.designation}>{designation}</div></div>
       <p style={S.p}>Your full assessment is now attached to your Valoria professional profile. Your profile can move from <strong style={{color:T.gold}}>Basic · Incomplete</strong> to complete once the required professional profile information is finished.</p>
       {reportStatus && <p style={{...S.p,color:T.gold}}>{reportStatus}</p>}
-      {reportStatus.includes('ready') && <a href="https://valoriainstitute.com/report" style={S.button}>VIEW MY VALU REPORT →</a>}
-      <a href="https://valoriainstitute.com/profile/onboarding" style={S.button}>COMPLETE MY PROFILE →</a>
-      <a href="https://valoriainstitute.com/profile/onboarding" style={S.secondary}>OPEN PROFILE SETUP</a>
+      {reportStatus.includes('ready') && <a href={SITE_BASE ? SITE_BASE + '/report' : undefined} style={S.button}>VIEW MY VALU REPORT →</a>}
+      <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.button}>COMPLETE MY PROFILE →</a>
+      <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.secondary}>OPEN PROFILE SETUP</a>
     </Shell>;
   }
 

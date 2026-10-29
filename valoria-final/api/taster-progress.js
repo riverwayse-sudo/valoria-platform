@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { enforceRateLimit } from './_rateLimit.js';
+import { applyCors, handlePreflight } from './_cors.js';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS } from '../src/valuTaster.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -44,7 +45,10 @@ async function getProgress(tokenHash) {
 }
 
 export default async function handler(req, res) {
+  const originAllowed = applyCors(req, res);
+  if (handlePreflight(req, res)) return;
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+  if (!originAllowed && req.headers.origin) return json(res, 403, { error: 'Origin not allowed.' });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json(res, 500, { error: 'Server misconfigured.' });
   if (!await enforceRateLimit(req, res, { namespace: 'taster-progress', limit: 180, windowSeconds: 3600 })) return;
 
@@ -88,7 +92,7 @@ export default async function handler(req, res) {
     if (!progress) return json(res, 404, { error: 'This snapshot session has expired or is no longer resumable.' });
 
     if (action === 'load') {
-      return json(res, 200, { progress: { current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null } });
+      return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null } });
     }
 
     if (action === 'save') {

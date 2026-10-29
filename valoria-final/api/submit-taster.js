@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { TASTER_QUESTIONS, computeTasterResult, EXPERIENCE_BANDS, VALU_VERSION } from '../src/valuTaster.js';
+import { applyCors, handlePreflight } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -38,7 +39,10 @@ async function consumeRateLimit(ip) {
 }
 
 export default async function handler(req, res) {
+  const originAllowed = applyCors(req, res);
+  if (handlePreflight(req, res)) return;
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+  if (!originAllowed && req.headers.origin) return json(res, 403, { error: 'Origin not allowed.' });
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json(res, 500, { error: 'Server misconfigured.' });
 
   const forwarded = req.headers['x-forwarded-for'];
