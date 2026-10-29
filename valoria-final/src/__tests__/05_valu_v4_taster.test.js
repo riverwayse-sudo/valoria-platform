@@ -69,6 +69,9 @@ describe('VALU v4 taster', () => {
     expect(gate).toContain('localStorage.setItem("pending_taster_id",payload.taster_id)');
     expect(gate).toContain('localStorage.setItem("pending_taster_name",name.trim())');
     expect(gate).toContain('localStorage.setItem("pending_taster_role",role.trim())');
+    expect(gate).toContain("const API_BASE = '';");
+    expect(gate).not.toContain('import.meta.env.BASE_URL');
+    expect(gate).toContain('postProgress({action:"load",resume_token:resumeToken})');
   });
 
 });
