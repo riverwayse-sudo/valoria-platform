@@ -6,9 +6,8 @@ import { QUESTIONS } from "./questions.js";
 
 export const VALU_VERSION = "4.1";
 
-// Nine-question taster: retain the approved first two Presence/Relationships
-// items and the first available canonical item in each remaining PRIME cluster.
-// Taster answers remain separate from the formal full-assessment scoring state.
+// Nine-question taster: these IDs match the approved v3 developer guide's
+// maximum-resonance taster list. Taster answers remain separate from formal scoring.
 const TASTER_IDS = [
   "P1b","R1a","R4a",
   "I2a","I3b",
