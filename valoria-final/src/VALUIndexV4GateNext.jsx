@@ -210,8 +210,8 @@ export default function VALUIndexV4GateNext(){
    <div style={S.nextStepTag}>YOUR NEXT STEP</div><h2 style={S.nextTitle}>Continue your VALU journey.</h2>
    <p style={S.nextText}>Create your account using the same email address you entered before the taster. We’ll attach this saved snapshot to your account, then return you to your dashboard after you confirm your email.</p>
    <div className="valu-results-actions" style={S.resultActions}>
-    <a href={`https://valoriainstitute.com/professional-signup/?taster_id=${encodeURIComponent(tasterId)}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&experience=${encodeURIComponent(experience)}`} style={S.primaryLink}>CREATE MY ACCOUNT & CONFIRM EMAIL <span aria-hidden="true">→</span></a>
-    <a href={`https://valoriainstitute.com/login?pending_taster_id=${encodeURIComponent(tasterId)}&returnTo=%2Fdashboard`} style={S.secondary}>Already have an account? Sign in and continue</a>
+    <a href={`${SITE_BASE}/professional-signup/?taster_id=${encodeURIComponent(tasterId)}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&experience=${encodeURIComponent(experience)}`} style={S.primaryLink}>CREATE MY ACCOUNT & CONFIRM EMAIL <span aria-hidden="true">→</span></a>
+    <a href={`${SITE_BASE}/login?pending_taster_id=${encodeURIComponent(tasterId)}&returnTo=%2Fdashboard`} style={S.secondary}>Already have an account? Sign in and continue</a>
    </div>
   </section>
   <p style={S.note}>Completing the snapshot does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
