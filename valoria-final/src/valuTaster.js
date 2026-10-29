@@ -1,17 +1,18 @@
-// VALU Index v4 — canonical 15-question directional snapshot.
+// VALU Index v4.1 — canonical 9-question directional taster.
 // The snapshot is directional only. Its answers NEVER enter the formal VALU score.
 // Question text/options are sourced directly from the canonical question bank.
 
 import { QUESTIONS } from "./questions.js";
 
-export const VALU_VERSION = "4.0";
+export const VALU_VERSION = "4.1";
 
+// Nine-question taster: these IDs match the approved v3 developer guide's
+// maximum-resonance taster list. Taster answers remain separate from formal scoring.
 const TASTER_IDS = [
-  "P1a","P1b","P2a",
-  "R1a","R1b","R4a",
-  "I1a","I2a","I3b",
-  "M1a","M1b","M2b",
-  "E1a","E1b","E2a",
+  "P1b","R1a","R4a",
+  "I2a","I3b",
+  "M1b","M2b",
+  "E2a","E1a",
 ];
 
 const byId = new Map(QUESTIONS.map(q => [q.id, q]));

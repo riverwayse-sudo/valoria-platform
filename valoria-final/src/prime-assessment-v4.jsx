@@ -1,5 +1,5 @@
 // PRIMEAssessment v4 compatibility entry.
-// The public UX now uses the canonical 15-question VALU snapshot only.
+// The public UX now uses the canonical 9-question VALU taster only.
 // The authoritative question bank remains server-side/canonical and is not exposed here.
 import React from "react";
 import VALUIndexV4Gate from "./VALUIndexV4Gate.jsx";
