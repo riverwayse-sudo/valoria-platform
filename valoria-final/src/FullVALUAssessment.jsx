@@ -18,6 +18,17 @@ const API_BASE = (() => {
     : '';
 })();
 
+const SITE_BASE = (() => {
+  const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
+  if (configuredOrigin) return configuredOrigin;
+  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  if (host === 'assessment.valoriainstitute.com') return 'https://valoriainstitute.com';
+  if (host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://valoriainstitute.com';
+  // Preview deployments must be explicitly configured with their paired site
+  // origin. Never silently send a preview user into production authentication.
+  return typeof window !== 'undefined' ? window.location.origin : '';
+})();
+
 import { QUESTIONS } from './questions.js';
 
 const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
@@ -453,7 +464,7 @@ export default function FullVALUAssessment() {
 
   if (handoffStatus !== 'ready') {
     const signupParams = new URLSearchParams({ taster_id:identity.tasterId, name:identity.name, role:identity.role, experience:identity.experience });
-    const signupUrl = `https://valoriainstitute.com/professional-signup/?${signupParams.toString()}`;
+    const signupUrl = `${SITE_BASE}/professional-signup/?${signupParams.toString()}`;
     const loginParams = new URLSearchParams({ pending_taster_id:identity.tasterId, returnTo:'/dashboard' });
     return <Shell>
       <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
@@ -461,8 +472,8 @@ export default function FullVALUAssessment() {
       <p style={S.p}>To protect your official VALU Index, sign in to a confirmed Valoria account and link this completed snapshot before taking the full assessment. Your snapshot and saved progress are preserved.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
       <a href={signupUrl} style={S.button}>CREATE MY VALORIA ACCOUNT →</a>
-      <a href={`https://valoriainstitute.com/login?${loginParams.toString()}`} style={S.secondary}>I ALREADY HAVE AN ACCOUNT · SIGN IN</a>
-      <a href="https://valoriainstitute.com/valu/assessment/" style={S.secondary}>RETURN TO MY VALU JOURNEY</a>
+      <a href={`${SITE_BASE}/login?${loginParams.toString()}`} style={S.secondary}>I ALREADY HAVE AN ACCOUNT · SIGN IN</a>
+      <a href={`${SITE_BASE}/valu/assessment/`} style={S.secondary}>RETURN TO MY VALU JOURNEY</a>
     </Shell>;
   }
 
