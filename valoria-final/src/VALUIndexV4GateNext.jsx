@@ -128,7 +128,7 @@ export default function VALUIndexV4GateNext(){
    <section className="valu-entry-intro" style={S.entryIntro}>
     <div style={S.homeKicker}>A PROFESSIONAL VALUE ASSESSMENT</div>
     <h1 style={S.hero}>See the value<br/><em>you bring.</em></h1>
-    <p style={S.lead}>Begin with a 15-question VALU snapshot. In about five minutes, you’ll get a first read across the five dimensions of PRIME.</p>
+    <p style={S.lead}>Begin with a 9-question VALU snapshot. In about five minutes, you’ll get a first read across the five dimensions of PRIME.</p>
     <div className="valu-dimension-list" style={S.dimensionList}>
      {[
       ['01','PRESENCE','How you show up'],
@@ -181,7 +181,7 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> SNAPSHOT COMPLETE <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your first read is <em>ready.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your 15-question snapshot is complete. This is an initial, directional view—not your official VALU Index. Your full assessment establishes your authoritative result.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your 9-question snapshot is complete. This is an initial, directional view—not your official VALU Index. Your full assessment establishes your authoritative result.</p>
   </section>
   <section aria-label="PRIME snapshot scores" style={S.scoreSection}>
    <div style={S.sectionHeading}><div style={S.eyebrow}>YOUR PRIME SNAPSHOT</div><span style={S.sectionHint}>Earned points against each dimension’s maximum</span></div>

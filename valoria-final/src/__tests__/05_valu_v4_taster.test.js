@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { computeTasterResult, TASTER_QUESTIONS, EXPERIENCE_BANDS, VALU_VERSION } from '../valuTaster.js';
 
 describe('VALU v4 taster', () => {
@@ -58,4 +60,18 @@ describe('VALU v4 taster', () => {
     computeTasterResult(answers);
     expect(JSON.stringify(answers)).toBe(before);
   });
+  test('runs the taster before account creation and carries the exact result into professional signup', () => {
+    const app = readFileSync(resolve(process.cwd(), 'src/VALUIndexV4App.jsx'), 'utf8');
+    const gate = readFileSync(resolve(process.cwd(), 'src/VALUIndexV4Gate.jsx'), 'utf8');
+    expect(app).toContain('import VALUIndexV4Gate from "./VALUIndexV4Gate.jsx"');
+    expect(app).toContain('<VALUIndexV4Gate onComplete={continueToSignup} />');
+    expect(app).toContain('https://valoriainstitute.com/professional-signup?');
+    expect(gate).toContain('localStorage.setItem("pending_taster_id",payload.taster_id)');
+    expect(gate).toContain('localStorage.setItem("pending_taster_name",name.trim())');
+    expect(gate).toContain('localStorage.setItem("pending_taster_role",role.trim())');
+    expect(gate).toContain("const API_BASE = '';");
+    expect(gate).not.toContain('import.meta.env.BASE_URL');
+    expect(gate).toContain('postProgress({action:"load",resume_token:resumeToken})');
+  });
+
 });
