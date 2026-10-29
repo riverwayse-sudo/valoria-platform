@@ -10,13 +10,10 @@ export const VALU_VERSION = "4.1";
 // items and the first available canonical item in each remaining PRIME cluster.
 // Taster answers remain separate from the formal full-assessment scoring state.
 const TASTER_IDS = [
-  "P1a","P1b",
-  "R1a","R1b",
-  "I1a",
-  "M1a",
-  "E1a",
-  "I2a",
-  "M1b",
+  "P1b","R1a","R4a",
+  "I2a","I3b",
+  "M1b","M2b",
+  "E2a","E1a",
 ];
 
 const byId = new Map(QUESTIONS.map(q => [q.id, q]));
