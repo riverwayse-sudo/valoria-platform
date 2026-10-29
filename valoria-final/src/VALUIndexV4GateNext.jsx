@@ -11,12 +11,11 @@ const COLORS={P:'#C9A84C',R:'#C9A84C',I:'#C9A84C',M:'#C9A84C',E:'#C9A84C'};
 const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS='#D4C9A8', DIM='rgba(250,250,247,.68)';
 
 export default function VALUIndexV4GateNext(){
- const [phase,setPhase]=useState('signup'),[name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState('');
- const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState('');
+ const [phase,setPhase]=useState('intro'),[name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState('');
+ const [email,setEmail]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null),[result,setResult]=useState(null),[tasterId,setTasterId]=useState('');
  const [saving,setSaving]=useState(false),[error,setError]=useState(''),[submissionKey,setSubmissionKey]=useState('');
  const [progressToken,setProgressToken]=useState(()=>{try{return localStorage.getItem('valu_taster_resume_token')||''}catch{return ''}});
- const [accountCreated,setAccountCreated]=useState(false);
  const timer=useRef(null);
  const q=TASTER_QUESTIONS[current]; const progress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
  const scores=useMemo(()=>result?Object.entries(result.points||{}).sort((a,b)=>b[1]-a[1]):[],[result]);
@@ -42,7 +41,8 @@ export default function VALUIndexV4GateNext(){
      const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:savedKey})});
      const data=await response.json().catch(()=>({}));
      if(!response.ok){setError(data.error||'Your saved snapshot is ready to submit. Please retry.');setPhase('taster');return}
-     setResult(computeTasterResult(savedAnswers));setTasterId(data.taster_id||'');
+     if(!data.taster_id)throw new Error('Your saved snapshot is missing its continuation reference. Please retry.');
+     setResult(computeTasterResult(savedAnswers));setTasterId(data.taster_id);
      try{if(data.taster_id)localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
      try{
       const completionResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:savedKey})});
@@ -56,26 +56,19 @@ export default function VALUIndexV4GateNext(){
   return ()=>{cancelled=true};
  },[]);
 
- const validSignup=!!(name.trim()&&role.trim()&&experience&&email.trim()&&password.length>=8&&password===confirm);
+ const validStart=!!(name.trim()&&role.trim()&&experience&&email.trim());
 
- async function createAccount(e){
-  e.preventDefault(); if(!validSignup||saving)return; setSaving(true); setError('');
+ async function startTaster(e){
+  e.preventDefault(); if(!validStart||saving)return; setSaving(true); setError('');
   try{
-   if(!accountCreated){
-    const response=await fetch(API_BASE + '/api/create-account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email.trim().toLowerCase(),password,name:name.trim(),role:role.trim()})});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'We could not create your account.');
-    setAccountCreated(true);
-   }
    const progressResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init',name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()})});
    const progressData=await progressResponse.json().catch(()=>({}));
-   if(!progressResponse.ok||!progressData.resume_token)throw new Error(progressData.error||'Your account was created, but the resumable snapshot could not be initialized. Submit this form again to retry without recreating your account.');
+   if(!progressResponse.ok||!progressData.resume_token)throw new Error(progressData.error||'Your snapshot could not be started. Please retry.');
    try{localStorage.setItem('valu_taster_resume_token',progressData.resume_token)}catch{}
    setProgressToken(progressData.resume_token);
    setPhase('taster');
   }catch(err){
-   const message=err?.message||'Something went wrong.';
-   setError(/already|registered|exists/i.test(message)&&!accountCreated?'An account may already exist for this email. Sign in instead, or use a different email address.':message);
+   setError(err?.message||'Your snapshot could not be started. Please retry.');
   }finally{setSaving(false)}
  }
 
@@ -109,7 +102,8 @@ export default function VALUIndexV4GateNext(){
    const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved. Please retry.');
-   setResult(computeTasterResult(next)); setTasterId(data.taster_id||'');
+   if(!data.taster_id)throw new Error('Your saved snapshot is missing its continuation reference. Please retry.');
+   setResult(computeTasterResult(next)); setTasterId(data.taster_id);
    try{if(data.taster_id)localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    const completionResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key})});
    if(completionResponse.ok){
@@ -123,12 +117,12 @@ export default function VALUIndexV4GateNext(){
 
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
- if(phase==='signup')return <Shell>
+ if(phase==='intro')return <Shell>
   <div className="valu-entry-grid" style={S.entryGrid}>
    <section className="valu-entry-intro" style={S.entryIntro}>
     <div style={S.homeKicker}>A PROFESSIONAL VALUE ASSESSMENT</div>
     <h1 style={S.hero}>See the value<br/><em>you bring.</em></h1>
-    <p style={S.lead}>Begin with a 15-question VALU snapshot. In about five minutes, you’ll get a first read across the five dimensions of PRIME.</p>
+    <p style={S.lead}>Begin with a 9-question VALU taster. In about five minutes, you’ll get a first read across the five dimensions of PRIME.</p>
     <div className="valu-dimension-list" style={S.dimensionList}>
      {[
       ['01','PRESENCE','How you show up'],
@@ -141,10 +135,10 @@ export default function VALUIndexV4GateNext(){
     
    </section>
 
-   <form className="valu-entry-form" onSubmit={createAccount} style={S.form}>
+   <form className="valu-entry-form" onSubmit={startTaster} style={S.form}>
     <div className="valu-entry-form-card" style={S.formCard}>
      <div style={S.formTop}>
-      <div><div style={S.eyebrow}>START HERE · 01 / 05</div><h2 style={S.formTitle}>Tell us about yourself.</h2></div>
+      <div><div style={S.eyebrow}>YOUR DETAILS · 01 / 03</div><h2 style={S.formTitle}>Tell us about yourself.</h2></div>
       <div style={S.formTime}>FREE<br/>~5 MIN</div>
      </div>
      
@@ -154,12 +148,9 @@ export default function VALUIndexV4GateNext(){
      </div>
      <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
      <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
-     <div style={S.grid}>
-      <Field label="PASSWORD"><input required style={S.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Minimum 8 characters" autoComplete="new-password"/></Field>
-      <Field label="CONFIRM PASSWORD"><input required style={S.input} type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="Repeat password" autoComplete="new-password"/></Field>
-     </div>
+
      {error&&<div style={S.error}>{error}</div>}
-     <button type="submit" disabled={!validSignup||saving} style={{...S.primary,opacity:(!validSignup||saving)?.5:1}}>{saving?'SAVING YOUR JOURNEY…':'START MY VALU SNAPSHOT →'}</button>
+     <button type="submit" disabled={!validStart||saving} style={{...S.primary,opacity:(!validStart||saving)?.5:1}}>{saving?'SAVING YOUR SNAPSHOT…':'START MY 9-QUESTION TASTER →'}</button>
      <div style={S.saveNote}><span>✓</span> Progress is saved. You can return without starting again.</div>
      <p style={S.login}>Already have an account? <a href="https://valoriainstitute.com/login" style={{color:GOLD}}>Sign in</a></p>
     </div>
@@ -181,7 +172,7 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> SNAPSHOT COMPLETE <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your first read is <em>ready.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your 15-question snapshot is complete. This is an initial, directional view—not your official VALU Index. Your full assessment establishes your authoritative result.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your 9-question taster is complete. This is an initial, directional view—not your official VALU Index. Your full assessment establishes your authoritative result.</p>
   </section>
   <section aria-label="PRIME snapshot scores" style={S.scoreSection}>
    <div style={S.sectionHeading}><div style={S.eyebrow}>YOUR PRIME SNAPSHOT</div><span style={S.sectionHint}>Earned points against each dimension’s maximum</span></div>
@@ -195,15 +186,15 @@ export default function VALUIndexV4GateNext(){
    <div style={S.nextStepTag}>YOUR NEXT STEP</div><h2 style={S.nextTitle}>Continue your VALU journey.</h2>
    <p style={S.nextText}>Sign in with the email you used to register to connect this snapshot to your professional journey and continue toward your full VALU Index.</p>
    <div className="valu-results-actions" style={S.resultActions}>
-    <a href={`https://valoriainstitute.com/login?pending_taster_id=${encodeURIComponent(tasterId)}`} style={S.primaryLink}>CONFIRM EMAIL & SIGN IN <span aria-hidden="true">→</span></a>
-    <a href={`https://valoriainstitute.com/journey/continue?stage=assess&taster_id=${encodeURIComponent(tasterId)}`} style={S.secondary}>Already signed in? Continue your journey</a>
+    <a href={`https://valoriainstitute.com/professional-signup/?taster_id=${encodeURIComponent(tasterId)}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&experience=${encodeURIComponent(experience)}`} style={S.primaryLink}>CREATE MY ACCOUNT & CONFIRM EMAIL <span aria-hidden="true">→</span></a>
+    <a href={`https://valoriainstitute.com/login?pending_taster_id=${encodeURIComponent(tasterId)}&returnTo=%2Fdashboard`} style={S.secondary}>Already have an account? Sign in and continue</a>
    </div>
   </section>
   <p style={S.note}>Completing the snapshot does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
-function StepBar({active}){return <div className="valu-assessment-steps" style={S.steps}>{['ACCOUNT','SNAPSHOT','NEXT'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
+function StepBar({active}){return <div className="valu-assessment-steps" style={S.steps}>{['DETAILS','SNAPSHOT','NEXT'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
 function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 const S={
