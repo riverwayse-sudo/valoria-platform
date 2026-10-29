@@ -15,6 +15,7 @@ describe("dashboard-first VALU taster journey", () => {
 
   test("sends completed snapshots to the site signup flow with the exact taster identity", () => {
     expect(source).toContain("professional-signup/?taster_id=");
+    expect(source).toContain("same email address you entered before the taster");
     expect(source).toContain("encodeURIComponent(tasterId)");
     expect(source).toContain("encodeURIComponent(name)");
     expect(source).toContain("encodeURIComponent(role)");
