@@ -37,4 +37,10 @@ describe("dashboard-first VALU taster journey", () => {
     expect(legacyGate).not.toContain("import.meta.env.BASE_URL");
   });
 
+  test("resuming an interrupted taster restores the identity needed for the signup handoff", () => {
+    const progressApi = fs.readFileSync(path.join(__dirname, "../../api/taster-progress.js"), "utf8");
+    expect(progressApi).toContain("name: progress.name, role: progress.role, experience: progress.experience, email: progress.email");
+    expect(source).toContain("setName(progress.name||'');setRole(progress.role||'');setExperience(progress.experience||'');setEmail(progress.email||'')");
+  });
+
 });

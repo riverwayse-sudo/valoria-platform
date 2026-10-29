@@ -58,6 +58,7 @@ export default function VALUIndexV4GateNext(){
    .then(async data=>{
     if(cancelled||!data)return;
     const progress=data.progress||{}, savedAnswers=progress.answers||{}, savedKey=progress.submission_key||'';
+    setName(progress.name||'');setRole(progress.role||'');setExperience(progress.experience||'');setEmail(progress.email||'');
     setAnswers(savedAnswers);setCurrent(Math.min(Number(progress.current_question)||0,TASTER_QUESTIONS.length-1));setSubmissionKey(savedKey);
     const complete=Number(progress.current_question)===TASTER_QUESTIONS.length&&Object.keys(savedAnswers).length===TASTER_QUESTIONS.length&&!!savedKey;
     if(!complete){setPhase('taster');return}
