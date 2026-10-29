@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+// API routes live at the deployment origin root; Vite's BASE_URL is only for static assets.
+const API_BASE = '';
 
 import { BRAND, SUPABASE_URL, SUPABASE_ANON_KEY } from "./assessmentLock.js";
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from "./valuTaster.js";
