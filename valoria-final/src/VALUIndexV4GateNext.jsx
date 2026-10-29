@@ -17,6 +17,16 @@ const API_BASE = (() => {
   return typeof window !== 'undefined' ? window.location.origin : '';
 })();
 
+const SITE_BASE = (() => {
+  const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
+  if (configuredOrigin) return configuredOrigin;
+  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  if (host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://valoriainstitute.com';
+  // Preview deployments must be paired with their site origin explicitly;
+  // never silently route preview authentication into production.
+  return typeof window !== 'undefined' ? window.location.origin : '';
+})();
+
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from './valuTaster.js';
 
 const CLUSTERS={P:'Presence',R:'Relationships',I:'Intelligence',M:'Mastery',E:'Enterprise'};
@@ -166,7 +176,7 @@ export default function VALUIndexV4GateNext(){
      {error&&<div style={S.error}>{error}</div>}
      <button type="submit" disabled={!validStart||saving} style={{...S.primary,opacity:(!validStart||saving)?.5:1}}>{saving?'SAVING YOUR SNAPSHOT…':'START MY 9-QUESTION TASTER →'}</button>
      <div style={S.saveNote}><span>✓</span> Progress is saved. You can return without starting again.</div>
-     <p style={S.login}>Already have an account? <a href="https://valoriainstitute.com/login" style={{color:GOLD}}>Sign in</a></p>
+     <p style={S.login}>Already have an account? <a href={`${SITE_BASE}/login`} style={{color:GOLD}}>Sign in</a></p>
     </div>
    </form>
   </div>
