@@ -4,9 +4,9 @@ This is the authoritative product/data contract for the professional discovery p
 
 ## Canonical journey
 
-15-question VALU snapshot → Account → Full VALU assessment → Professional Profile → Capability → Eligibility → Listing → Marketplace
+9-question VALU snapshot → Account → Full VALU assessment → Professional Profile → Capability → Eligibility → Listing → Marketplace
 
-The 15-question snapshot is directional only. It does not establish the authoritative marketplace VALU record.
+The 9-question snapshot is directional only. It does not establish the authoritative marketplace VALU record.
 
 ## Identity model
 
