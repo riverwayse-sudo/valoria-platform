@@ -488,7 +488,7 @@ export default function FullVALUAssessment() {
       {reportStatus && <p style={{...S.p,color:T.gold}}>{reportStatus}</p>}
       {reportStatus.includes('ready') && <a href={SITE_BASE ? SITE_BASE + '/report' : undefined} style={S.button}>VIEW MY VALU REPORT →</a>}
       <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.button}>COMPLETE MY PROFILE →</a>
-      <a href="https://valoriainstitute.com/profile/onboarding" style={S.secondary}>OPEN PROFILE SETUP</a>
+      <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.secondary}>OPEN PROFILE SETUP</a>
     </Shell>;
   }
 
