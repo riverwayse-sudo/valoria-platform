@@ -24,7 +24,7 @@ const SITE_BASE = (() => {
   if (host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://valoriainstitute.com';
   // Preview deployments must be paired with their site origin explicitly;
   // never silently route preview authentication into production.
-  return typeof window !== 'undefined' ? window.location.origin : '';
+  return '';
 })();
 
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from './valuTaster.js';
@@ -176,7 +176,7 @@ export default function VALUIndexV4GateNext(){
      {error&&<div style={S.error}>{error}</div>}
      <button type="submit" disabled={!validStart||saving} style={{...S.primary,opacity:(!validStart||saving)?.5:1}}>{saving?'SAVING YOUR SNAPSHOT…':'START MY 9-QUESTION TASTER →'}</button>
      <div style={S.saveNote}><span>✓</span> Progress is saved. You can return without starting again.</div>
-     <p style={S.login}>Already have an account? <a href={`${SITE_BASE}/login`} style={{color:GOLD}}>Sign in</a></p>
+     <p style={S.login}>Already have an account? <a href={SITE_BASE ? SITE_BASE + '/login' : undefined} style={{color:GOLD}}>Sign in</a></p>
     </div>
    </form>
   </div>
@@ -210,8 +210,8 @@ export default function VALUIndexV4GateNext(){
    <div style={S.nextStepTag}>YOUR NEXT STEP</div><h2 style={S.nextTitle}>Continue your VALU journey.</h2>
    <p style={S.nextText}>Create your account using the same email address you entered before the taster. We’ll attach this saved snapshot to your account, then return you to your dashboard after you confirm your email.</p>
    <div className="valu-results-actions" style={S.resultActions}>
-    <a href={`${SITE_BASE}/professional-signup/?taster_id=${encodeURIComponent(tasterId)}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&experience=${encodeURIComponent(experience)}`} style={S.primaryLink}>CREATE MY ACCOUNT & CONFIRM EMAIL <span aria-hidden="true">→</span></a>
-    <a href={`${SITE_BASE}/login?pending_taster_id=${encodeURIComponent(tasterId)}&returnTo=%2Fdashboard`} style={S.secondary}>Already have an account? Sign in and continue</a>
+    <a href={SITE_BASE ? SITE_BASE + '/professional-signup/?taster_id=' + encodeURIComponent(tasterId) + '&name=' + encodeURIComponent(name) + '&role=' + encodeURIComponent(role) + '&experience=' + encodeURIComponent(experience) : undefined} style={S.primaryLink}>CREATE MY ACCOUNT & CONFIRM EMAIL <span aria-hidden="true">→</span></a>
+    <a href={SITE_BASE ? SITE_BASE + '/login?pending_taster_id=' + encodeURIComponent(tasterId) + '&returnTo=%2Fdashboard' : undefined} style={S.secondary}>Already have an account? Sign in and continue</a>
    </div>
   </section>
   <p style={S.note}>Completing the snapshot does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
