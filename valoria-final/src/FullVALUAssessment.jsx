@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import VALUAssessmentJourney from './VALUAssessmentJourney.jsx';
 const API_BASE = (() => {
   const configuredOrigin = String(import.meta.env.VITE_VALU_API_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
@@ -511,7 +512,8 @@ export default function FullVALUAssessment() {
   return <Shell>
     <ResumeModal open={resumePopup} progress={resumeProgress} onContinue={()=>setResumePopup(false)} onClose={()=>setResumePopup(false)} />
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
-      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT · SESSION 2 OF 2 · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>
+      <VALUAssessmentJourney stage="continuation" currentQuestion={current + 1} />
+      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>
       <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
       <h1 style={S.question}>{question.q}</h1>
