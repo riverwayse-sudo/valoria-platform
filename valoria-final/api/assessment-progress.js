@@ -222,7 +222,8 @@ async function baseHandler(req) {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server configuration error" }, 500);
 
   if (req.method === "GET") {
-    const auth = req?.headers?.get?.("authorization") || "";
+    const rawAuth = req?.headers?.authorization ?? req?.headers?.get?.("authorization") ?? "";
+    const auth = Array.isArray(rawAuth) ? rawAuth[0] : rawAuth;
     if (CRON_SECRET && auth === `Bearer ${CRON_SECRET}` && !new URL(req.url, "https://assessment.valoriainstitute.com").searchParams.get("resume")) {
       return runReminderSweep(req);
     }
