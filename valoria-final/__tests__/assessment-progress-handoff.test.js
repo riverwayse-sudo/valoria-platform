@@ -8,7 +8,7 @@ describe('assessment progress handoff verification', () => {
     expect(source).toContain('runtime: "edge"');
     expect(source).toContain('../lib/valu-handoff-token-edge.js');
     expect(source).toContain('await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>');
-    expect((source.match(/await verifyValuHandoffTokenEdge\\(handoffToken, tasterId, reason =>/g) || []).length).toBe(2);
+    expect(source.split("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>").length - 1).toBe(2);
     expect(source).not.toContain('verifyValuHandoffToken(handoffToken, tasterId)');
     expect(source).not.toContain('node:crypto');
   });
