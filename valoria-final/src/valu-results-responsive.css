@@ -18,3 +18,14 @@
  .valu-assessment-results .valu-result-grid { grid-template-columns: 1fr !important; }
  .valu-assessment-results .valu-result-grid > :last-child:nth-child(odd) { grid-column: auto; }
 }
+/* Keep the final snapshot action in reach on short laptop and mobile viewports. */
+.valu-assessment-taster .valu-taster-submit {
+ position: sticky;
+ bottom: max(12px, env(safe-area-inset-bottom));
+ z-index: 5;
+ box-shadow: 0 8px 28px rgba(0,0,0,.38);
+}
+.valu-assessment-taster .valu-taster-submit:focus-visible {
+ outline: 2px solid #FAFAF7;
+ outline-offset: 3px;
+}
