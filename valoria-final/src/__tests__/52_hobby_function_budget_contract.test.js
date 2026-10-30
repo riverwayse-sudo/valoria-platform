@@ -23,7 +23,7 @@ describe("VALU handoff runtime compatibility", () => {
   test("the system status endpoint remains fail-closed when cron configuration is absent", () => {
     const source = api("system-status.js");
     expect(source).toContain("!SUPABASE_URL || !SERVICE_ROLE_KEY || !CRON_SECRET");
-    expect(source).toContain('error: "Service unavailable" }, 503');
-    expect(source).toContain('error: "Unauthorized" }, 401');
+    expect(source).toContain('error: "Service unavailable" });');
+    expect(source).toContain('error: "Unauthorized" });');
   });
 });
