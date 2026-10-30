@@ -10,7 +10,7 @@
  * suite runs the handler rather than grepping it.
  */
 
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { QUESTIONS } from "../questions.js";
 
 const SERVICE_ROLE = "service-role-key";
@@ -117,6 +117,71 @@ describe("Full assessment submission runtime contract", () => {
   afterEach(() => {
     delete global.fetch;
     jest.restoreAllMocks();
+  });
+
+  test("dashboard handoff exchange atomically consumes a code and rejects reuse", async () => {
+    const code = "c".repeat(43);
+    const codeHash = createHash("sha256").update(code).digest("hex");
+    const linkId = "44444444-4444-4444-8444-444444444444";
+    let consumed = false;
+    let consumeWrites = 0;
+    global.fetch = async (url, options = {}) => {
+      if (url.includes("rpc/consume_rate_limit")) return jsonResponse(200, { allowed: true });
+      if (url.includes("/rest/v1/valoria_reentry_links")) {
+        if (options.method === "PATCH") {
+          consumeWrites += 1;
+          if (consumed) return jsonResponse(200, []);
+          consumed = true;
+          return jsonResponse(200, [{ id: linkId, used_at: new Date().toISOString() }]);
+        }
+        if (consumed) return jsonResponse(200, []);
+        expect(url).toContain(`token=eq.${codeHash}`);
+        expect(url).toContain("entry_point=eq.dashboard_assessment");
+        return jsonResponse(200, [{
+          id: linkId,
+          user_id: USER_ID,
+          source_id: TASTER_ID,
+          expires_at: new Date(Date.now() + 30000).toISOString(),
+        }]);
+      }
+      if (url.includes("/rest/v1/taster_sessions")) {
+        return jsonResponse(200, [{
+          id: TASTER_ID,
+          user_id: USER_ID,
+          name: "Temitayo Adeyemi",
+          role: "Programme Manager",
+          experience: "9-15",
+          completed_at: "2026-10-25T09:00:00.000Z",
+        }]);
+      }
+      if (url.includes("/auth/v1/admin/users/")) {
+        return jsonResponse(200, { id: USER_ID, email: "temitayo@example.com", email_confirmed_at: "2026-10-25T09:00:00.000Z" });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    };
+
+    const handler = loadHandler();
+    const request = {
+      method: "POST",
+      headers: { "x-forwarded-for": "203.0.113.10" },
+      socket: {},
+      body: { action: "exchange-dashboard-handoff", handoff_code: code },
+    };
+    const first = makeRes();
+    await handler(request, first);
+    expect(first.statusCode).toBe(200);
+    expect(first.body.ok).toBe(true);
+    expect(first.body.identity.taster_id).toBe(TASTER_ID);
+    const [encoded] = first.body.session_token.split(".");
+    const claims = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    expect(claims.typ).toBe("assessment_session");
+    expect(claims.sub).toBe(USER_ID);
+    expect(claims.taster_id).toBe(TASTER_ID);
+
+    const second = makeRes();
+    await handler(request, second);
+    expect(second.statusCode).toBe(401);
+    expect(consumeWrites).toBe(1);
   });
 
   test("a first-time full-assessment submission persists and returns a report token", async () => {
