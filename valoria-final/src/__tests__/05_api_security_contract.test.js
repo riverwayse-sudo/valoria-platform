@@ -206,7 +206,8 @@ describe("Assessment integrity contracts", () => {
     expect(source).not.toContain("verifyValuHandoffToken(handoffToken, tasterId)");
     expect(source).toContain("taster.user_id !== handoff.sub");
     expect(source).toContain("handoff_token: handoffToken");
-    expect(link).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
+    expect(link).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
+    expect(link).toContain("../lib/valu-handoff-token-edge.js");
     expect(link).toContain("taster.user_id !== handoff.sub");
     expect(link).toContain("!user.email_confirmed_at");
     expect(verifier).toContain("timingSafeEqual");
