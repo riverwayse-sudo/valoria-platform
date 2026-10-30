@@ -28,7 +28,7 @@ async function countAssessments(headers, params) {
   // Prefer: count=exact returns the total in Content-Range even when the
   // response is limited to one row. Do not use response.length as the count.
   const contentRange = response.headers.get("content-range") || "";
-  const match = contentRange.match(/\\/([0-9]+|\\*)$/);
+  const match = contentRange.match(/\/([0-9]+|\*)$/);
   if (match && match[1] !== "*") return Number(match[1]);
 
   // Fail closed rather than reporting a misleading backlog count.
