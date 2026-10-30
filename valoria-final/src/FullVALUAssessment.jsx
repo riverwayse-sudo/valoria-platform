@@ -42,15 +42,6 @@ import {
 const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
 const CLUSTER_NAMES = { P:'Presence', R:'Relationships', I:'Intelligence', M:'Mastery', E:'Enterprise' };
 
-function readHandoffToken() {
-  try {
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    return params.get('handoff_token') || '';
-  } catch {
-    return '';
-  }
-}
-
 function parseQuery() {
   const p = new URLSearchParams(window.location.search);
   let resume = p.get('resume') || '';
