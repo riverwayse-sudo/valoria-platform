@@ -187,6 +187,20 @@ describe("session 2 presents the remaining questions and restores progress", () 
     expect(source).toContain("nextAnswers = { ...answers, [position]: optionIndex }");
   });
 
+
+  test("the post-question-nine bridge clearly previews account setup, email confirmation, and Question 10", () => {
+    const source = gateSource();
+    expect(source).toContain("What happens next");
+    expect(source).toContain("02 · YOU ARE HERE");
+    expect(source).toContain("Create your account");
+    expect(source).toContain("set your password and confirm your email");
+    expect(source).toContain("03 · UP NEXT");
+    expect(source).toContain("Continue at Question 10");
+    expect(source).toContain("remaining 49 questions");
+    expect(source).toContain("ACCOUNT SETUP · STEP 2 OF 3");
+    expect(source).toContain("SAVE MY DETAILS & CONTINUE");
+  });
+
 describe("three-stage experience presentation", () => {
   test("opening, account bridge, and completion share one progress component", () => {
     const progress = readSource("VALUAssessmentJourney.jsx");
