@@ -51,23 +51,19 @@ function readHandoffToken() {
   }
 }
 
-function parseQuery() {
-  const p = new URLSearchParams(window.location.search);
-  let resume = p.get('resume') || '';
+function readHandoffCode() {
   try {
-    const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    resume = resume || fragment.get('resume_token') || '';
-  } catch {}
-  // Legacy query values remain readable for existing links during migration.
-  // New handoffs carry identity only inside the signed URL fragment and resolve
-  // it from the server after token verification.
-  return {
-    tasterId:p.get('taster_id') || '',
-    name:p.get('name') || '',
-    role:p.get('role') || '',
-    experience:p.get('experience') || '',
-    resume,
-  };
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    return params.get('handoff_code') || '';
+  } catch {
+    return '';
+  }
+}
+
+function parseQuery() {
+  // Identity and resume credentials are never accepted from public query
+  // parameters. The dashboard handoff exchange supplies verified identity.
+  return { tasterId:'', name:'', role:'', experience:'', resume:'' };
 }
 
 function makeSessionId() {
@@ -181,78 +177,82 @@ export default function FullVALUAssessment() {
   }, []);
 
   useEffect(() => {
-    let fromHash = '';
-    let fragmentResume = '';
+    let handoffCode = '';
+    let legacyToken = '';
     try {
       const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-      fromHash = readHandoffToken();
-      fragmentResume = fragment.get('resume_token') || '';
-      if (fromHash || fragmentResume) {
+      handoffCode = fragment.get('handoff_code') || '';
+      legacyToken = fragment.get('handoff_token') || '';
+      if (handoffCode || legacyToken || fragment.has('resume_token')) {
         window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
       }
     } catch {}
 
-    const storageKey = identity.tasterId ? `valu-handoff-token:${identity.tasterId}` : '';
-    let token = fromHash;
-    if (!token && storageKey) {
-      try { token = window.sessionStorage.getItem(storageKey) || ''; } catch {}
+    let token = legacyToken;
+    if (!handoffCode && !token) {
+      try {
+        const saved = JSON.parse(window.sessionStorage.getItem('valu-handoff-session') || 'null');
+        token = typeof saved?.token === 'string' ? saved.token : '';
+      } catch {}
     }
-    if (!token) {
+    if (!handoffCode && !token) {
       setHandoffToken('');
-      setHandoffError('');
+      setHandoffError('Open your saved assessment from your Valoria dashboard.');
       setHandoffStatus('account_required');
       return;
     }
 
-    if (identity.tasterId && verifiedHandoffRef.current === `${identity.tasterId}:${token}`) {
+    if (!handoffCode && identity.tasterId && verifiedHandoffRef.current === `${identity.tasterId}:${token}`) {
       setHandoffToken(token);
       setHandoffStatus('ready');
       return;
     }
 
-    setHandoffToken(token);
     setHandoffStatus('checking');
     setHandoffError('');
     let cancelled = false;
+    const action = handoffCode ? 'exchange-dashboard-handoff' : 'verify-handoff';
     fetch(API_BASE + '/api/submit-assessment', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        action:'verify-handoff',
-        handoff_token:token,
-        ...(identity.tasterId ? { taster_id:identity.tasterId } : {}),
-        ...(identity.name ? { name:identity.name } : {}),
-        ...(identity.role ? { role:identity.role } : {}),
-      }),
+      body:JSON.stringify(handoffCode
+        ? { action, handoff_code:handoffCode }
+        : { action, handoff_token:token }),
       cache:'no-store',
     }).then(async response => {
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.ok || !data.identity?.taster_id) {
-        throw new Error(data.error || 'The secure assessment link could not be verified.');
+        throw new Error(data.error || 'The secure dashboard handoff could not be verified.');
+      }
+      const sessionToken = handoffCode ? data.session_token : token;
+      if (typeof sessionToken !== 'string' || !sessionToken) {
+        throw new Error('The assessment session could not be established. Return to your dashboard and try again.');
       }
       const verifiedIdentity = {
         tasterId:data.identity.taster_id,
         name:data.identity.name || '',
         role:data.identity.role || '',
         experience:data.identity.experience || '',
-        resume:fragmentResume || queryIdentity.resume || '',
+        resume:'',
       };
-      if (identity.tasterId && identity.tasterId !== verifiedIdentity.tasterId) {
-        throw new Error('This secure handoff does not match the selected VALU snapshot.');
-      }
-      try { window.sessionStorage.setItem(`valu-handoff-token:${verifiedIdentity.tasterId}`, token); } catch {}
-      verifiedHandoffRef.current = `${verifiedIdentity.tasterId}:${token}`;
+      try {
+        window.sessionStorage.setItem('valu-handoff-session', JSON.stringify({
+          token:sessionToken,
+          identity:verifiedIdentity,
+          savedAt:new Date().toISOString(),
+        }));
+      } catch {}
+      verifiedHandoffRef.current = `${verifiedIdentity.tasterId}:${sessionToken}`;
       if (!cancelled) {
+        setHandoffToken(sessionToken);
         if (!identity.tasterId) setIdentity(verifiedIdentity);
         setHandoffStatus('ready');
       }
     }).catch(error => {
       if (cancelled) return;
-      if (storageKey) {
-        try { window.sessionStorage.removeItem(storageKey); } catch {}
-      }
+      try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
       setHandoffToken('');
-      setHandoffError(error?.message || 'This secure link has expired. Reopen the assessment from your Valoria account.');
+      setHandoffError(error?.message || 'This assessment session is no longer valid. Reopen it from your Valoria dashboard.');
       setHandoffStatus('account_required');
     });
     return () => { cancelled = true; };
@@ -409,7 +409,7 @@ export default function FullVALUAssessment() {
       if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
-        try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
+        try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
         setHandoffToken('');
         setHandoffStatus('account_required');
         setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
