@@ -19,6 +19,7 @@ function count(report, key) {
 const ALERT_METRICS = [
   ["completed_assessments_missing_taster_id", "completed assessments missing a snapshot link"],
   ["pending_assessment_reports", "completed assessments awaiting report generation"],
+  ["pending_report_emails", "completed assessments with saved reports awaiting email delivery"],
   ["failed_assessment_reports", "completed assessments whose report generation failed"],
   ["missing_taster_link_assessments_without_review", "missing-link assessments without a review entry"],
   ["completed_assessment_taster_owner_conflicts", "assessment/snapshot owner or identity conflicts"],
@@ -48,6 +49,25 @@ async function supabase(path, options = {}) {
     },
     cache: "no-store",
   });
+}
+
+async function countPendingReportEmails() {
+  const params = new URLSearchParams({
+    completed_at: "not.is.null",
+    report_status: "eq.EMAIL_PENDING",
+    ai_report: "not.is.null",
+    report_email_sent_at: "is.null",
+    select: "id",
+    limit: "1",
+  });
+  const response = await supabase("valu_assessments?" + params.toString(), {
+    headers: { Prefer: "count=exact" },
+  });
+  if (!response.ok) throw new Error("Pending report email count could not be loaded");
+  const contentRange = response.headers.get("content-range") || "";
+  const match = contentRange.match(/\/(\d+|\*)$/);
+  if (!match || match[1] === "*") throw new Error("Pending report email count unavailable");
+  return Number(match[1]);
 }
 
 export default async function handler(req, res) {
@@ -85,6 +105,7 @@ export default async function handler(req, res) {
     if (!healthRes.ok) throw new Error("Reconciliation health report could not be loaded");
     const health = await healthRes.json();
     if (!health || typeof health !== "object" || Array.isArray(health)) throw new Error("Invalid reconciliation health report");
+    health.pending_report_emails = await countPendingReportEmails();
 
     const alerts = ALERT_METRICS
       .map(([key, description]) => ({ key, description, count: count(health, key) }))
