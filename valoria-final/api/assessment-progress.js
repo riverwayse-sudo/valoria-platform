@@ -9,7 +9,19 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
-const DASHBOARD_URL = "https://valoriainstitute.com/login?returnTo=%2Fdashboard";
+function getDashboardUrl() {
+  const configured = String(process.env.VITE_VALU_SITE_ORIGIN || '').trim()
+  const origin = configured || (process.env.VERCEL_ENV === 'production' ? 'https://valoriainstitute.com' : '')
+  if (!origin) return null
+  try {
+    const url = new URL(origin)
+    if (!['http:', 'https:'].includes(url.protocol)) return null
+    if (process.env.VERCEL_ENV === 'preview' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(url.hostname)) return null
+    return new URL('/login?returnTo=%2Fdashboard', url.origin).toString()
+  } catch {
+    return null
+  }
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -96,7 +108,8 @@ async function getProgressByTasterId(tasterId) {
 async function sendReminder(row, reminderNumber) {
   if (!RESEND_API_KEY || !validEmail(row.email)) return { sent: false, reason: "email unavailable" };
 
-  const dashboardUrl = DASHBOARD_URL;
+  const dashboardUrl = getDashboardUrl();
+  if (!dashboardUrl) return false;
   const remaining = Math.max(0, row.total_questions - row.current_question);
   const subject = reminderNumber === 1
     ? "Your VALU assessment is waiting for you"
