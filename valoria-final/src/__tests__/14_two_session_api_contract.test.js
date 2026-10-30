@@ -63,6 +63,12 @@ describe("assessment-progress seeds the opening nine for session 2", () => {
     expect(block).toContain("seeded_answers");
     expect(block).toContain("progress: null");
   });
+
+  test("legacy saved progress is merged with verified opening answers without overwriting later answers", () => {
+    expect(api).toContain("const openingAnswers = seedAnswersFromOpening(resolvedIdentity.taster.taster_answers || {})");
+    expect(api).toContain("const savedAnswers = progress.answers && typeof progress.answers === \"object\" ? progress.answers : {}");
+    expect(api).toContain("progress.answers = { ...openingAnswers, ...savedAnswers }");
+  });
 });
 
 describe("submit-assessment accepts a two-session timing subset", () => {
