@@ -79,18 +79,36 @@ function existingResults(assessment) {
     skillScores: assessment.skill_scores || {},
   };
 }
-async function verifyHandoffRequest(body, res) {
-  const tasterId = body?.taster_id;
-  if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
-    return json(res, 400, { ok: false, error: 'A valid snapshot reference is required.' });
+function tasterIdFromSignedTokenCandidate(token) {
+  if (typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2 || !parts[0]) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    const value = payload?.taster_id;
+    return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+      ? value : null;
+  } catch {
+    return null;
   }
-  const handoff = await verifyValuHandoffTokenEdge(body?.handoff_token, tasterId, reason => {
+}
+
+async function verifyHandoffRequest(body, res) {
+  // The signed token is the only identity-bearing handoff value. Its payload
+  // supplies an untrusted lookup key that is authenticated before data is returned.
+  const token = body?.handoff_token;
+  const tasterId = tasterIdFromSignedTokenCandidate(token);
+  if (!tasterId) return json(res, 401, { ok: false, error: 'The secure assessment handoff is missing or invalid.' });
+  if (body?.taster_id && body.taster_id !== tasterId) {
+    return json(res, 403, { ok: false, error: 'The secure handoff does not match the requested snapshot.' });
+  }
+  const handoff = await verifyValuHandoffTokenEdge(token, tasterId, reason => {
     console.warn('[submit-assessment] handoff rejected', { action: 'verify-handoff', reason });
   });
   if (!handoff) return json(res, 401, { ok: false, error: 'The secure assessment handoff is missing or expired.' });
 
   const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
-  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role,completed_at', limit: '1' });
+  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role,experience,completed_at', limit: '1' });
   const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${params}`, { headers });
   if (!tasterRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the VALU snapshot.' });
   const taster = (await tasterRes.json())?.[0];
@@ -98,7 +116,8 @@ async function verifyHandoffRequest(body, res) {
   if (!taster.completed_at) return json(res, 409, { ok: false, error: 'Complete your VALU snapshot first.' });
   if (taster.user_id !== handoff.sub) return json(res, 403, { ok: false, error: 'This handoff does not match the snapshot owner.' });
   const normalise = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  if (normalise(taster.name) !== normalise(body?.name) || normalise(taster.role) !== normalise(body?.role)) {
+  if ((body?.name && normalise(taster.name) !== normalise(body.name))
+    || (body?.role && normalise(taster.role) !== normalise(body.role))) {
     return json(res, 403, { ok: false, error: 'The assessment identity does not match the saved snapshot.' });
   }
 
@@ -106,7 +125,11 @@ async function verifyHandoffRequest(body, res) {
   if (!userRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the Valoria account.' });
   const user = await userRes.json();
   if (!user.email_confirmed_at) return json(res, 403, { ok: false, error: 'Confirm your Valoria account email before continuing.' });
-  return json(res, 200, { ok: true, expires_at: handoff.exp });
+  return json(res, 200, {
+    ok: true,
+    expires_at: handoff.exp,
+    identity: { taster_id: taster.id, name: taster.name || '', role: taster.role || '', experience: taster.experience || '' },
+  });
 }
 
 const ALLOWED_ORIGINS = new Set([
