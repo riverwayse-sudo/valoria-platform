@@ -243,7 +243,7 @@ export default function FullVALUAssessment() {
   }, [identity.tasterId, identity.name, identity.role]);
 
   useEffect(() => {
-    if (queryIdentity.resume || handoffStatus !== 'ready' || !handoffToken || !identity.tasterId) return;
+    if (identity.resume || handoffStatus !== 'ready' || !handoffToken || !identity.tasterId) return;
     let cancelled = false;
     setRemoteRestoreComplete(false);
     fetch(API_BASE + '/api/assessment-progress', {
@@ -283,19 +283,20 @@ export default function FullVALUAssessment() {
       setRemoteRestoreComplete(true);
     });
     return () => { cancelled = true; };
-  }, [queryIdentity.resume, handoffStatus, handoffToken, identity.tasterId]);
+  }, [identity.resume, handoffStatus, handoffToken, identity.tasterId]);
 
   useEffect(() => {
-    if (!queryIdentity.resume) return;
+    if (!identity.resume) return;
     let cancelled = false;
-    loadRemoteProgress(queryIdentity.resume)
+    setResumeLoading(true);
+    loadRemoteProgress(identity.resume)
       .then(saved => {
         if (cancelled) return;
         const restored = {
-          tasterId: saved.taster_id || queryIdentity.tasterId,
+          tasterId: saved.taster_id || identity.tasterId,
           name: saved.name,
           role: saved.role,
-          experience: saved.experience || queryIdentity.experience || '',
+          experience: saved.experience || identity.experience || '',
           resume: '',
         };
         setIdentity(restored);
@@ -314,10 +315,10 @@ export default function FullVALUAssessment() {
         setResumeLoading(false);
       });
     return () => { cancelled = true; };
-  }, [queryIdentity.resume]);
+  }, [identity.resume]);
 
   useEffect(() => {
-    if (queryIdentity.resume || !canUse) return;
+    if (identity.resume || !canUse) return;
     let saved = null;
     try { saved = JSON.parse(window.localStorage.getItem(resumeKey) || 'null'); } catch {}
     const localSessionId = saved?.sessionId || makeSessionId();
@@ -329,7 +330,7 @@ export default function FullVALUAssessment() {
       if (Number.isInteger(saved.current) && saved.current >= 0 && saved.current < ASSESSMENT_ORDER.length) setCurrent(saved.current);
     }
     setStartedAt(Date.now());
-  }, [resumeKey, canUse, queryIdentity.resume]);
+  }, [resumeKey, canUse, identity.resume]);
 
   useEffect(() => {
     if (!canUse || !sessionId || result || handoffStatus !== 'ready') return;
@@ -347,7 +348,7 @@ export default function FullVALUAssessment() {
   }, [resumeKey, canUse, sessionId, resumeToken, current, answers, timings, result, handoffStatus]);
 
   useEffect(() => {
-    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || (!queryIdentity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
+    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
     const timer = window.setTimeout(() => {
       saveProgress({
         action:'save',
