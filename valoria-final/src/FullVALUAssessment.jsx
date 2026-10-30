@@ -150,6 +150,7 @@ export default function FullVALUAssessment() {
   const [handoffStatus,setHandoffStatus] = useState('checking');
   const [handoffError,setHandoffError] = useState('');
   const mountedRef = useRef(true);
+  const verifiedHandoffRef = useRef('');
 
   const resumeKey = useMemo(
     () => `valoria-valu-resume:${identity.tasterId}:${identity.name}:${identity.role}:${identity.experience}`,
@@ -187,6 +188,13 @@ export default function FullVALUAssessment() {
       return;
     }
 
+    const verificationKey = `${identity.tasterId || 'pending'}:${token}`;
+    if (identity.tasterId && verifiedHandoffRef.current === `${identity.tasterId}:${token}`) {
+      setHandoffToken(token);
+      setHandoffStatus('ready');
+      return;
+    }
+
     setHandoffToken(token);
     setHandoffStatus('checking');
     setHandoffError('');
@@ -218,6 +226,7 @@ export default function FullVALUAssessment() {
         throw new Error('This secure handoff does not match the selected VALU snapshot.');
       }
       try { window.sessionStorage.setItem(`valu-handoff-token:${verifiedIdentity.tasterId}`, token); } catch {}
+      verifiedHandoffRef.current = `${verifiedIdentity.tasterId}:${token}`;
       if (!cancelled) {
         if (!identity.tasterId) setIdentity(verifiedIdentity);
         setHandoffStatus('ready');
