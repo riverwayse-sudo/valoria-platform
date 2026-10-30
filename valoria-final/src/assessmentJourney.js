@@ -1,8 +1,9 @@
 // assessmentJourney.js — the canonical two-session shape of the ONE VALU assessment.
 //
-// There is a single 58-question assessment. It is completed in two sessions:
-//   Session 1 (questions 1–9)  — the approved nine-question opening set.
-//   Session 2 (questions 10–58) — the remaining 49 questions.
+// There is a single 58-question assessment with one intentional account-confirmation bridge:
+//   Opening (questions 1–9)   — the approved nine-question opening set.
+//   Bridge                    — account creation and email confirmation.
+//   Completion (questions 10–58) — the remaining 49 questions.
 //
 // The approved nine are a curated subset of the same canonical bank, chosen to
 // span all five PRIME clusters. They are NOT a separate assessment: every answer
