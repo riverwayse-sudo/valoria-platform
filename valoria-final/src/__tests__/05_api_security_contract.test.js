@@ -245,6 +245,9 @@ describe("Assessment integrity contracts", () => {
   test("full assessment UI verifies the signed handoff before showing questions or submitting", () => {
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     expect(component).toContain("readHandoffCode");
+    expect(component).toContain("return { tasterId:'', name:'', role:'', experience:'', resume:'' }");
+    expect(component).toContain("fragment.has('handoff_token')");
+    expect(component).not.toContain("fragment.get('handoff_token')");
     expect(component).toContain("const action = handoffCode ? 'exchange-dashboard-handoff' : 'verify-handoff'");
     expect(component).toContain("handoffStatus !== 'ready'");
     expect(component).toContain("handoff_token:handoffToken");
