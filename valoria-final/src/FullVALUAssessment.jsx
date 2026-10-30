@@ -297,7 +297,7 @@ export default function FullVALUAssessment() {
           name: saved.name,
           role: saved.role,
           experience: saved.experience || identity.experience || '',
-          resume: '',
+          resume: identity.resume,
         };
         setIdentity(restored);
         setSessionId(saved.session_id);
@@ -373,7 +373,7 @@ export default function FullVALUAssessment() {
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
 
   async function persistCheckpoint(nextAnswers, nextTimings, nextCurrent) {
-    if (!sessionId || handoffStatus !== 'ready' || (!queryIdentity.resume && !remoteRestoreComplete)) return;
+    if (!sessionId || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete)) return;
     try {
       const data = await saveProgress({
         action:'save',
