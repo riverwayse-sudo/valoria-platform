@@ -4,8 +4,8 @@ const path = require("path");
 const { pathToFileURL } = require("node:url");
 
 // The site signs the full-assessment handoff token with node:crypto HMAC-SHA256;
-// the assessment platform verifies it with WebCrypto in the edge runtime. If the
-// two ever disagree on payload shape, audience or TTL, the participant sees
+// the assessment platform verifies it in both its Edge and canonical Node runtimes. If the
+// two ever disagree on payload shape, audience, signature or TTL, the participant sees
 // "secure link expired" and cannot continue. This exercises the real platform
 // verifier against a token built exactly the way the site builds it.
 const SECRET = "test-only-service-role-secret-for-handoff-interop";
@@ -22,6 +22,7 @@ function signToken(payload, secret = SECRET) {
 
 describe("VALU full-assessment handoff token interoperability", () => {
   let verifyValuHandoffTokenEdge;
+  let verifyValuHandoffToken;
   const now = Math.floor(Date.now() / 1000);
   const tasterId = "3f0a1c2e-5b6d-4e7f-8a9b-0c1d2e3f4a5b";
   const payload = {
@@ -38,6 +39,8 @@ describe("VALU full-assessment handoff token interoperability", () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = SECRET;
     const moduleUrl = pathToFileURL(path.join(__dirname, "../../lib/valu-handoff-token-edge.js")).href;
     ({ verifyValuHandoffTokenEdge } = await import(moduleUrl));
+    const nodeModuleUrl = pathToFileURL(path.join(__dirname, "../../lib/valu-handoff-token.js")).href;
+    ({ verifyValuHandoffToken } = await import(nodeModuleUrl));
   });
 
   test("the platform verifier accepts a token signed the way the site signs it", async () => {
@@ -46,6 +49,26 @@ describe("VALU full-assessment handoff token interoperability", () => {
     expect(verified.sub).toBe(payload.sub);
     expect(verified.taster_id).toBe(tasterId);
     expect(verified.aud).toBe("valu-full-assessment");
+  });
+
+  test("the canonical Node verifier accepts the same site-signed token", () => {
+    const verified = verifyValuHandoffToken(signToken(payload), tasterId);
+    expect(verified).not.toBeNull();
+    expect(verified.sub).toBe(payload.sub);
+    expect(verified.taster_id).toBe(tasterId);
+    expect(verified.aud).toBe("valu-full-assessment");
+  });
+
+  test("the canonical Node verifier rejects expired, mismatched, and tampered tokens", () => {
+    const expired = { ...payload, iat: now - 8 * 60 * 60, exp: now - 60 };
+    const other = "00000000-0000-4000-8000-000000000000";
+    const token = signToken(payload);
+    const [encoded, signature] = token.split(".");
+    expect(verifyValuHandoffToken(signToken(expired), tasterId)).toBeNull();
+    expect(verifyValuHandoffToken(token, other)).toBeNull();
+    expect(verifyValuHandoffToken(`${encoded}.${signature.slice(0, -2)}xx`, tasterId)).toBeNull();
+    expect(verifyValuHandoffToken(signToken(payload, "wrong-secret"), tasterId)).toBeNull();
+    expect(verifyValuHandoffToken("not-a-token", tasterId)).toBeNull();
   });
 
   test("an expired token is rejected", async () => {
