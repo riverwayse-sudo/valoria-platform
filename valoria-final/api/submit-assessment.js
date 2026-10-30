@@ -7,6 +7,7 @@ import { computeResults } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
 import { computeFingerprint } from '../src/lockEngine.js';
 import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -79,10 +80,124 @@ function existingResults(assessment) {
     skillScores: assessment.skill_scores || {},
   };
 }
+function tasterIdFromSignedTokenCandidate(token) {
+  if (typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2 || !parts[0]) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    const value = payload?.taster_id;
+    return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+      ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function createAssessmentSessionToken(userId, tasterId, nowSeconds = Math.floor(Date.now() / 1000)) {
+  const payload = {
+    v: 1,
+    typ: 'assessment_session',
+    aud: 'valu-full-assessment',
+    sub: userId,
+    taster_id: tasterId,
+    iat: nowSeconds,
+    exp: nowSeconds + 4 * 60 * 60,
+    jti: randomBytes(16).toString('base64url'),
+  };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = createHmac('sha256', SERVICE_ROLE_KEY).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
+}
+
+async function exchangeDashboardHandoff(body, res) {
+  const code = body?.handoff_code;
+  if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{40,50}$/.test(code)) {
+    return json(res, 401, { ok: false, error: 'The dashboard handoff is missing or invalid.' });
+  }
+  const tokenHash = createHash('sha256').update(code).digest('hex');
+  const now = new Date().toISOString();
+  const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
+  const lookup = new URLSearchParams({
+    token: `eq.${tokenHash}`,
+    entry_point: 'eq.dashboard_assessment',
+    target_stage: 'eq.assess',
+    used_at: 'is.null',
+    expires_at: `gt.${now}`,
+    select: 'id,user_id,source_id,expires_at',
+    limit: '1',
+  });
+  const linkResponse = await fetch(`${SUPABASE_URL}/rest/v1/valoria_reentry_links?${lookup}`, { headers, cache: 'no-store' });
+  if (!linkResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify dashboard access. Please return to your dashboard.' });
+  const link = (await linkResponse.json())?.[0];
+  if (!link?.user_id || !link?.source_id) return json(res, 401, { ok: false, error: 'This dashboard handoff has expired or has already been used.' });
+
+  const validUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!validUuid.test(link.source_id)) return json(res, 401, { ok: false, error: 'The dashboard handoff is invalid.' });
+
+  const tasterParams = new URLSearchParams({
+    id: `eq.${link.source_id}`,
+    select: 'id,user_id,name,role,experience,completed_at',
+    limit: '1',
+  });
+  const tasterResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, { headers, cache: 'no-store' });
+  if (!tasterResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your saved VALU snapshot.' });
+  const taster = (await tasterResponse.json())?.[0];
+  if (!taster?.completed_at || taster.user_id !== link.user_id) {
+    return json(res, 403, { ok: false, error: 'This snapshot is not linked to the dashboard account.' });
+  }
+
+  const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${link.user_id}`, { headers, cache: 'no-store' });
+  if (!userResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your Valoria account.' });
+  const user = await userResponse.json();
+  if (!user.email_confirmed_at) return json(res, 403, { ok: false, error: 'Confirm your Valoria account email before continuing.' });
+
+  const existingAssessmentParams = new URLSearchParams({
+    or: `(user_id.eq.${link.user_id},taster_id.eq.${taster.id})`,
+    completed_at: 'not.is.null',
+    select: 'id',
+    limit: '1',
+  });
+  const existingAssessmentResponse = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${existingAssessmentParams}`, { headers, cache: 'no-store' });
+  if (!existingAssessmentResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your VALU assessment status.' });
+  if ((await existingAssessmentResponse.json())?.length) {
+    return json(res, 409, { ok: false, error: 'Your full VALU assessment is already complete. Return to your dashboard to view your results.' });
+  }
+
+  // Atomic compare-and-set: exactly one request can consume this handoff code.
+  const consumeParams = new URLSearchParams({
+    id: `eq.${link.id}`,
+    used_at: 'is.null',
+    expires_at: `gt.${now}`,
+  });
+  const consumeResponse = await fetch(`${SUPABASE_URL}/rest/v1/valoria_reentry_links?${consumeParams}`, {
+    method: 'PATCH',
+    headers: { ...headers, Prefer: 'return=representation' },
+    body: JSON.stringify({ used_at: now }),
+    cache: 'no-store',
+  });
+  if (!consumeResponse.ok) return json(res, 502, { ok: false, error: 'Could not securely activate this assessment session.' });
+  const consumed = await consumeResponse.json();
+  if (!Array.isArray(consumed) || consumed.length !== 1) {
+    return json(res, 409, { ok: false, error: 'This dashboard handoff has already been used. Return to your dashboard to open a new session.' });
+  }
+
+  const sessionToken = createAssessmentSessionToken(link.user_id, taster.id);
+  return json(res, 200, {
+    ok: true,
+    session_token: sessionToken,
+    identity: { taster_id: taster.id, name: taster.name || '', role: taster.role || '', experience: taster.experience || '' },
+  });
+}
+
 async function verifyHandoffRequest(body, res) {
-  const tasterId = body?.taster_id;
-  if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
-    return json(res, 400, { ok: false, error: 'A valid snapshot reference is required.' });
+  // The signed token is the only identity-bearing handoff value. Its payload
+  // supplies an untrusted lookup key that is authenticated before data is returned.
+  const token = body?.handoff_token;
+  const tasterId = tasterIdFromSignedTokenCandidate(token);
+  if (!tasterId) return json(res, 401, { ok: false, error: 'The secure assessment handoff is missing or invalid.' });
+  if (body?.taster_id && body.taster_id !== tasterId) {
+    return json(res, 403, { ok: false, error: 'The secure handoff does not match the requested snapshot.' });
   }
   const handoff = await verifyValuHandoffTokenEdge(body?.handoff_token, tasterId, reason => {
     console.warn('[submit-assessment] handoff rejected', { action: 'verify-handoff', reason });
@@ -90,7 +205,7 @@ async function verifyHandoffRequest(body, res) {
   if (!handoff) return json(res, 401, { ok: false, error: 'The secure assessment handoff is missing or expired.' });
 
   const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
-  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role,completed_at', limit: '1' });
+  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role,experience,completed_at', limit: '1' });
   const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${params}`, { headers });
   if (!tasterRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the VALU snapshot.' });
   const taster = (await tasterRes.json())?.[0];
@@ -98,7 +213,8 @@ async function verifyHandoffRequest(body, res) {
   if (!taster.completed_at) return json(res, 409, { ok: false, error: 'Complete your VALU snapshot first.' });
   if (taster.user_id !== handoff.sub) return json(res, 403, { ok: false, error: 'This handoff does not match the snapshot owner.' });
   const normalise = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  if (normalise(taster.name) !== normalise(body?.name) || normalise(taster.role) !== normalise(body?.role)) {
+  if ((body?.name && normalise(taster.name) !== normalise(body.name))
+    || (body?.role && normalise(taster.role) !== normalise(body.role))) {
     return json(res, 403, { ok: false, error: 'The assessment identity does not match the saved snapshot.' });
   }
 
@@ -106,7 +222,11 @@ async function verifyHandoffRequest(body, res) {
   if (!userRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the Valoria account.' });
   const user = await userRes.json();
   if (!user.email_confirmed_at) return json(res, 403, { ok: false, error: 'Confirm your Valoria account email before continuing.' });
-  return json(res, 200, { ok: true, expires_at: handoff.exp });
+  return json(res, 200, {
+    ok: true,
+    expires_at: handoff.exp,
+    identity: { taster_id: taster.id, name: taster.name || '', role: taster.role || '', experience: taster.experience || '' },
+  });
 }
 
 const ALLOWED_ORIGINS = new Set([
@@ -156,6 +276,14 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {};
+  if (body.action === 'exchange-dashboard-handoff') {
+    try {
+      return await exchangeDashboardHandoff(body, res);
+    } catch (error) {
+      console.error('submit-assessment: dashboard handoff exchange failed', error?.message || error);
+      return json(res, 503, { ok: false, error: 'Secure assessment access is temporarily unavailable. Return to your dashboard and try again.' });
+    }
+  }
   if (body.action === 'verify-handoff') return verifyHandoffRequest(body, res);
   const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId, handoff_token: handoffToken } = body;
   if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {

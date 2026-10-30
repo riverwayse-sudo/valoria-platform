@@ -16,6 +16,7 @@ export function verifyValuHandoffToken(token, expectedTasterId) {
     const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'))
     const now = Math.floor(Date.now() / 1000)
     if (payload?.v !== 1
+      || payload?.typ !== 'assessment_session'
       || payload?.aud !== AUDIENCE
       || typeof payload?.sub !== 'string'
       || !payload.sub

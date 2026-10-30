@@ -9,7 +9,19 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
-const APP_URL = "https://valoriainstitute.com/journey/continue?stage=assess";
+function getDashboardUrl() {
+  const configured = String(process.env.VALU_SITE_ORIGIN || '').trim()
+  const origin = configured || (process.env.VERCEL_ENV === 'production' ? 'https://valoriainstitute.com' : '')
+  if (!origin) return null
+  try {
+    const url = new URL(origin)
+    if (!['http:', 'https:'].includes(url.protocol)) return null
+    if (process.env.VERCEL_ENV === 'preview' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(url.hostname)) return null
+    return new URL('/login?returnTo=%2Fdashboard', url.origin).toString()
+  } catch {
+    return null
+  }
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -96,7 +108,8 @@ async function getProgressByTasterId(tasterId) {
 async function sendReminder(row, reminderNumber) {
   if (!RESEND_API_KEY || !validEmail(row.email)) return { sent: false, reason: "email unavailable" };
 
-  const resumeUrl = APP_URL + '&taster_id=' + encodeURIComponent(row.taster_id || '') + '&resume=' + encodeURIComponent(row.resume_token);
+  const dashboardUrl = getDashboardUrl();
+  if (!dashboardUrl) return false;
   const remaining = Math.max(0, row.total_questions - row.current_question);
   const subject = reminderNumber === 1
     ? "Your VALU assessment is waiting for you"
@@ -114,8 +127,8 @@ async function sendReminder(row, reminderNumber) {
       <div style="font-size:26px;margin-top:8px">${row.current_question} / ${row.total_questions} questions</div>
       <div style="color:rgba(247,244,238,.55);font-size:13px;margin-top:6px">${remaining} remaining</div>
     </div>
-    <a href="${resumeUrl}" style="display:inline-block;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-weight:700;letter-spacing:.1em;font-size:12px;padding:16px 24px;border-radius:999px">CONTINUE MY VALU ASSESSMENT →</a>
-    <p style="color:rgba(247,244,238,.35);font-size:11px;line-height:1.7;margin-top:34px">Your progress is retained as part of your Valoria journey. If you have already completed the assessment, no further action is required.</p>
+    <a href="${dashboardUrl}" style="display:inline-block;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-weight:700;letter-spacing:.1em;font-size:12px;padding:16px 24px;border-radius:999px">RETURN TO MY VALORIA DASHBOARD →</a>
+    <p style="color:rgba(247,244,238,.35);font-size:11px;line-height:1.7;margin-top:34px">Your progress is retained as part of your Valoria journey. Sign in to your account to see the next step. If you have already completed the assessment, no further action is required.</p>
   </div></body></html>`;
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -134,14 +147,14 @@ async function sendReminder(row, reminderNumber) {
 
 async function createNotification(row) {
   if (!row.user_id) return;
-  const body = "Your VALU assessment is still in progress. Your answers are saved — continue from where you stopped.";
+  const body = "Your VALU assessment is still in progress. Sign in to your Valoria dashboard to see your progress and continue securely.";
   const payload = {
     user_id: row.user_id,
     type: "assessment_abandoned",
     title: "Your VALU assessment is waiting",
     body,
-    action_label: "Continue assessment",
-    action_url: '/journey/continue?stage=assess&taster_id=' + encodeURIComponent(row.taster_id || '') + '&resume=' + encodeURIComponent(row.resume_token),
+    action_label: "Open dashboard",
+    action_url: '/dashboard',
   };
   await supabase("notifications?on_conflict=user_id,type,title", {
     method: "POST",
@@ -209,19 +222,12 @@ async function baseHandler(req) {
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server configuration error" }, 500);
 
   if (req.method === "GET") {
-    const auth = req?.headers?.get?.("authorization") || "";
-    if (CRON_SECRET && auth === `Bearer ${CRON_SECRET}` && !new URL(req.url).searchParams.get("resume")) {
+    const rawAuth = req?.headers?.authorization ?? req?.headers?.get?.("authorization") ?? "";
+    const auth = Array.isArray(rawAuth) ? rawAuth[0] : rawAuth;
+    if (CRON_SECRET && auth === `Bearer ${CRON_SECRET}` && !new URL(req.url, "https://assessment.valoriainstitute.com").searchParams.get("resume")) {
       return runReminderSweep(req);
     }
-    const token = new URL(req.url).searchParams.get("resume");
-    if (!token || !/^[0-9a-f-]{36}$/i.test(token)) return json({ error: "Invalid resume token." }, 400);
-    try {
-      const row = await getProgressByResumeToken(token);
-      if (!row || row.status === "completed") return json({ error: "This assessment session is no longer resumable." }, 404);
-      return json({ ok: true, progress: row });
-    } catch (err) {
-      return json({ error: err.message }, 502);
-    }
+    return json({ error: "Saved assessment progress can only be restored after a verified dashboard handoff." }, 401);
   }
 
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);

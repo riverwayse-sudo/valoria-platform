@@ -42,6 +42,7 @@ export async function verifyValuHandoffTokenEdge(token, expectedTasterId, onFail
     const payload = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[0])));
     const now = Math.floor(Date.now() / 1000);
     if (payload?.v !== 1) return reject('token_version_invalid');
+    if (payload?.typ !== 'assessment_session') return reject('token_type_invalid');
     if (payload?.aud !== AUDIENCE) return reject('token_audience_invalid');
     if (typeof payload?.sub !== 'string' || !payload.sub) return reject('token_subject_invalid');
     if (payload?.taster_id !== expectedTasterId) return reject('snapshot_mismatch');

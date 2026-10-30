@@ -42,24 +42,19 @@ import {
 const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
 const CLUSTER_NAMES = { P:'Presence', R:'Relationships', I:'Intelligence', M:'Mastery', E:'Enterprise' };
 
-function readHandoffToken() {
+function readHandoffCode() {
   try {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    return params.get('handoff_token') || '';
+    return params.get('handoff_code') || '';
   } catch {
     return '';
   }
 }
 
 function parseQuery() {
-  const p = new URLSearchParams(window.location.search);
-  return {
-    tasterId:p.get('taster_id') || '',
-    name:p.get('name') || '',
-    role:p.get('role') || '',
-    experience:p.get('experience') || '',
-    resume:p.get('resume') || '',
-  };
+  // Identity and resume credentials are never accepted from public query
+  // parameters. The dashboard handoff exchange supplies verified identity.
+  return { tasterId:'', name:'', role:'', experience:'', resume:'' };
 }
 
 function makeSessionId() {
@@ -142,6 +137,7 @@ export default function FullVALUAssessment() {
   const [handoffStatus,setHandoffStatus] = useState('checking');
   const [handoffError,setHandoffError] = useState('');
   const mountedRef = useRef(true);
+  const verifiedHandoffRef = useRef('');
 
   const resumeKey = useMemo(
     () => `valoria-valu-resume:${identity.tasterId}:${identity.name}:${identity.role}:${identity.experience}`,
@@ -155,63 +151,104 @@ export default function FullVALUAssessment() {
 
   useEffect(() => () => { mountedRef.current = false; }, []);
 
+  // Strip legacy identity/resume query parameters from the visible URL as soon
+  // as the client hydrates. New links never include these values, but this
+  // protects participants opening older bookmarked or emailed assessment URLs.
   useEffect(() => {
-    if (!identity.tasterId || !identity.name || !identity.role) {
-      setHandoffStatus('account_required');
-      return;
-    }
-
-    const storageKey = `valu-handoff-token:${identity.tasterId}`;
-    let fromHash = '';
     try {
-      fromHash = readHandoffToken();
-      if (fromHash) {
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-        window.sessionStorage.setItem(storageKey, fromHash);
+      const params = new URLSearchParams(window.location.search);
+      const cleanParams = new URLSearchParams();
+      if (params.get('full') === '1') cleanParams.set('full', '1');
+      const cleanSearch = cleanParams.toString();
+      const nextUrl = window.location.pathname + (cleanSearch ? `?${cleanSearch}` : '') + window.location.hash;
+      if (nextUrl !== window.location.pathname + window.location.search + window.location.hash) {
+        window.history.replaceState({}, document.title, nextUrl);
       }
     } catch {}
-    let token = fromHash;
-    if (!token) {
-      try { token = window.sessionStorage.getItem(storageKey) || ''; } catch {}
+  }, []);
+
+  useEffect(() => {
+    let handoffCode = '';
+    try {
+      const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      handoffCode = fragment.get('handoff_code') || '';
+      if (handoffCode || fragment.has('handoff_token') || fragment.has('resume_token')) {
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+      }
+    } catch {}
+
+    let token = '';
+    if (!handoffCode) {
+      try {
+        const saved = JSON.parse(window.sessionStorage.getItem('valu-handoff-session') || 'null');
+        token = typeof saved?.token === 'string' ? saved.token : '';
+      } catch {}
     }
-    if (!token) {
+    if (!handoffCode && !token) {
       setHandoffToken('');
-      setHandoffError('');
+      setHandoffError('Open your saved assessment from your Valoria dashboard.');
       setHandoffStatus('account_required');
       return;
     }
 
-    setHandoffToken(token);
+    if (!handoffCode && identity.tasterId && verifiedHandoffRef.current === `${identity.tasterId}:${token}`) {
+      setHandoffToken(token);
+      setHandoffStatus('ready');
+      return;
+    }
+
     setHandoffStatus('checking');
     setHandoffError('');
     let cancelled = false;
+    const action = handoffCode ? 'exchange-dashboard-handoff' : 'verify-handoff';
     fetch(API_BASE + '/api/submit-assessment', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        action:'verify-handoff',
-        handoff_token:token,
-        taster_id:identity.tasterId,
-        name:identity.name,
-        role:identity.role,
-      }),
+      body:JSON.stringify(handoffCode
+        ? { action, handoff_code:handoffCode }
+        : { action, handoff_token:token }),
       cache:'no-store',
     }).then(async response => {
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.ok) throw new Error(data.error || 'The secure assessment link could not be verified.');
-      if (!cancelled) setHandoffStatus('ready');
+      if (!response.ok || !data.ok || !data.identity?.taster_id) {
+        throw new Error(data.error || 'The secure dashboard handoff could not be verified.');
+      }
+      const sessionToken = handoffCode ? data.session_token : token;
+      if (typeof sessionToken !== 'string' || !sessionToken) {
+        throw new Error('The assessment session could not be established. Return to your dashboard and try again.');
+      }
+      const verifiedIdentity = {
+        tasterId:data.identity.taster_id,
+        name:data.identity.name || '',
+        role:data.identity.role || '',
+        experience:data.identity.experience || '',
+        resume:'',
+      };
+      try {
+        window.sessionStorage.setItem('valu-handoff-session', JSON.stringify({
+          token:sessionToken,
+          identity:verifiedIdentity,
+          savedAt:new Date().toISOString(),
+        }));
+      } catch {}
+      verifiedHandoffRef.current = `${verifiedIdentity.tasterId}:${sessionToken}`;
+      if (!cancelled) {
+        setHandoffToken(sessionToken);
+        if (!identity.tasterId) setIdentity(verifiedIdentity);
+        setHandoffStatus('ready');
+      }
     }).catch(error => {
       if (cancelled) return;
-      try { window.sessionStorage.removeItem(storageKey); } catch {}
+      try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
       setHandoffToken('');
-      setHandoffError(error?.message || 'This secure link has expired. Reopen the assessment from your Valoria account.');
+      setHandoffError(error?.message || 'This assessment session is no longer valid. Reopen it from your Valoria dashboard.');
       setHandoffStatus('account_required');
     });
     return () => { cancelled = true; };
   }, [identity.tasterId, identity.name, identity.role]);
 
   useEffect(() => {
-    if (queryIdentity.resume || handoffStatus !== 'ready' || !handoffToken || !identity.tasterId) return;
+    if (identity.resume || handoffStatus !== 'ready' || !handoffToken || !identity.tasterId) return;
     let cancelled = false;
     setRemoteRestoreComplete(false);
     fetch(API_BASE + '/api/assessment-progress', {
@@ -251,20 +288,21 @@ export default function FullVALUAssessment() {
       setRemoteRestoreComplete(true);
     });
     return () => { cancelled = true; };
-  }, [queryIdentity.resume, handoffStatus, handoffToken, identity.tasterId]);
+  }, [identity.resume, handoffStatus, handoffToken, identity.tasterId]);
 
   useEffect(() => {
-    if (!queryIdentity.resume) return;
+    if (!identity.resume) return;
     let cancelled = false;
-    loadRemoteProgress(queryIdentity.resume)
+    setResumeLoading(true);
+    loadRemoteProgress(identity.resume)
       .then(saved => {
         if (cancelled) return;
         const restored = {
-          tasterId: saved.taster_id || queryIdentity.tasterId,
+          tasterId: saved.taster_id || identity.tasterId,
           name: saved.name,
           role: saved.role,
-          experience: saved.experience || queryIdentity.experience || '',
-          resume: '',
+          experience: saved.experience || identity.experience || '',
+          resume: identity.resume,
         };
         setIdentity(restored);
         setSessionId(saved.session_id);
@@ -282,10 +320,10 @@ export default function FullVALUAssessment() {
         setResumeLoading(false);
       });
     return () => { cancelled = true; };
-  }, [queryIdentity.resume]);
+  }, [identity.resume]);
 
   useEffect(() => {
-    if (queryIdentity.resume || !canUse) return;
+    if (identity.resume || !canUse) return;
     let saved = null;
     try { saved = JSON.parse(window.localStorage.getItem(resumeKey) || 'null'); } catch {}
     const localSessionId = saved?.sessionId || makeSessionId();
@@ -297,7 +335,7 @@ export default function FullVALUAssessment() {
       if (Number.isInteger(saved.current) && saved.current >= 0 && saved.current < ASSESSMENT_ORDER.length) setCurrent(saved.current);
     }
     setStartedAt(Date.now());
-  }, [resumeKey, canUse, queryIdentity.resume]);
+  }, [resumeKey, canUse, identity.resume]);
 
   useEffect(() => {
     if (!canUse || !sessionId || result || handoffStatus !== 'ready') return;
@@ -315,7 +353,7 @@ export default function FullVALUAssessment() {
   }, [resumeKey, canUse, sessionId, resumeToken, current, answers, timings, result, handoffStatus]);
 
   useEffect(() => {
-    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || (!queryIdentity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
+    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
     const timer = window.setTimeout(() => {
       saveProgress({
         action:'save',
@@ -340,7 +378,7 @@ export default function FullVALUAssessment() {
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
 
   async function persistCheckpoint(nextAnswers, nextTimings, nextCurrent) {
-    if (!sessionId || handoffStatus !== 'ready' || (!queryIdentity.resume && !remoteRestoreComplete)) return;
+    if (!sessionId || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete)) return;
     try {
       const data = await saveProgress({
         action:'save',
@@ -360,7 +398,7 @@ export default function FullVALUAssessment() {
       if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
-        try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
+        try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
         setHandoffToken('');
         setHandoffStatus('account_required');
         setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
@@ -454,11 +492,11 @@ export default function FullVALUAssessment() {
       }
 
       try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}
-      try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
+      try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
       setResult(scoreData.results);
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
-        try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
+        try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
         setHandoffToken('');
         setHandoffStatus('account_required');
         setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
@@ -473,24 +511,19 @@ export default function FullVALUAssessment() {
 
   if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
-  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
+  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href={SITE_BASE ? SITE_BASE + '/login?returnTo=%2Fdashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
-  if (handoffStatus === 'ready' && !queryIdentity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
+  if (handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
 
   if (handoffStatus === 'checking') return <Shell><div style={S.eyebrow}>SECURE VALU JOURNEY</div><h1 style={S.h1}>Verifying your account…</h1><p style={S.p}>We are confirming that this assessment belongs to your Valoria account before you continue.</p></Shell>;
 
   if (handoffStatus !== 'ready') {
-    const signupParams = new URLSearchParams({ taster_id:identity.tasterId, name:identity.name, role:identity.role, experience:identity.experience });
-    const signupUrl = SITE_BASE ? SITE_BASE + '/professional-signup/?' + signupParams.toString() : '';
-    const loginParams = new URLSearchParams({ pending_taster_id:identity.tasterId, returnTo:'/dashboard' });
     return <Shell>
       <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
-      <h1 style={S.h1}>Link your snapshot before continuing.</h1>
-      <p style={S.p}>To protect your official VALU Index, sign in to a confirmed Valoria account and link this completed snapshot before taking the full assessment. Your snapshot and saved progress are preserved.</p>
+      <h1 style={S.h1}>Return to your Valoria dashboard.</h1>
+      <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved snapshot and answers remain attached to your account. Sign in to your dashboard and choose Continue Assessment to open a fresh secure session.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
-      <a href={signupUrl || undefined} style={S.button}>CREATE MY VALORIA ACCOUNT →</a>
-      <a href={SITE_BASE ? SITE_BASE + '/login?' + loginParams.toString() : undefined} style={S.secondary}>I ALREADY HAVE AN ACCOUNT · SIGN IN</a>
-      <a href={SITE_BASE ? SITE_BASE + '/valu/assessment/' : undefined} style={S.secondary}>RETURN TO MY VALU JOURNEY</a>
+      <a href={SITE_BASE ? SITE_BASE + '/login?returnTo=%2Fdashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
     </Shell>;
   }
 

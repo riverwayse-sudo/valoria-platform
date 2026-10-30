@@ -188,7 +188,7 @@ describe("Assessment integrity contracts", () => {
   test("full assessment submission requires a completed, account-owned, email-confirmed snapshot", () => {
     const source = readApi("submit-assessment.js");
     expect(source).toContain("valid snapshot reference is required");
-    expect(source).toContain("select: 'id,user_id,name,role,completed_at'");
+    expect(source).toContain("select: 'id,user_id,name,role,experience,completed_at'");
     expect(source).toContain("if (!taster.completed_at)");
     expect(source).toContain("if (!taster.user_id)");
     expect(source).toContain("if (!user.email_confirmed_at)");
@@ -225,14 +225,41 @@ describe("Assessment integrity contracts", () => {
     expect(source).toContain("existing.user_id !== resolvedUserId");
   });
 
+  test("dashboard handoff codes are short-lived, hashed, and atomically consumed before session issuance", () => {
+    const submit = readApi("submit-assessment.js");
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    expect(submit).toContain("action === 'exchange-dashboard-handoff'");
+    expect(submit).toContain("createHash('sha256')");
+    expect(submit).toContain("entry_point: 'eq.dashboard_assessment'");
+    expect(submit).toContain("used_at: 'is.null'");
+    expect(submit).toContain("method: 'PATCH'");
+    expect(submit).toContain("Prefer: 'return=representation'");
+    expect(submit).toContain("createAssessmentSessionToken");
+    expect(submit).toContain("typ: 'assessment_session'");
+    expect(fs.readFileSync(path.join(__dirname, "../../lib/valu-handoff-token-edge.js"), "utf8")).toContain("token_type_invalid");
+    expect(component).toContain("fragment.get('handoff_code')");
+    expect(component).toContain("exchange-dashboard-handoff");
+    expect(component).toContain("valu-handoff-session");
+  });
+
   test("full assessment UI verifies the signed handoff before showing questions or submitting", () => {
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
-    expect(component).toContain("readHandoffToken");
-    expect(component).toContain("action:'verify-handoff'");
+    expect(component).toContain("readHandoffCode");
+    expect(component).toContain("return { tasterId:'', name:'', role:'', experience:'', resume:'' }");
+    expect(component).toContain("fragment.has('handoff_token')");
+    expect(component).not.toContain("fragment.get('handoff_token')");
+    expect(component).toContain("const action = handoffCode ? 'exchange-dashboard-handoff' : 'verify-handoff'");
     expect(component).toContain("handoffStatus !== 'ready'");
     expect(component).toContain("handoff_token:handoffToken");
-    expect(component).toContain("professional-signup");
     expect(component).toContain("sessionStorage.removeItem");
+    expect(component).toContain("fragment.get('handoff_code')");
+    expect(component).toContain("Strip legacy identity/resume query parameters from the visible URL");
+    expect(component).toContain("cleanParams.set('full', '1')");
+    expect(component).toContain("resume:''");
+    expect(component).toContain("loadRemoteProgress(identity.resume)");
+    expect(component).toContain("if (identity.resume || handoffStatus !== 'ready'");
+    expect(component).toContain("resume:''");
+    expect(component).toContain("handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete");
   });
 
   test("full assessment progress writes and reminders require verified account-owned snapshots", () => {
@@ -248,11 +275,15 @@ describe("Assessment integrity contracts", () => {
     expect(source).toContain('../lib/valu-handoff-token-edge.js');
   });
 
-  test("progress resume links return through the signed assessment continuation", () => {
+  test("assessment reminders and in-app notifications return participants to the dashboard", () => {
     const source = readApi("assessment-progress.js");
-    expect(source).toContain("https://valoriainstitute.com/journey/continue?stage=assess");
-    expect(source).not.toContain("https://valoriainstitute.com/valu/assessment/?full=1");
-    expect(source).toContain("handoff_token: handoffToken");
+    expect(source).toContain("getDashboardUrl");
+    expect(source).toContain("process.env.VERCEL_ENV === 'production'");
+    expect(source).toContain("return false;");
+    expect(source).toContain("RETURN TO MY VALORIA DASHBOARD");
+    expect(source).toContain("action_url: '/dashboard'");
+    expect(source).not.toContain("/journey/continue?stage=assess&taster_id=");
+    expect(source).toContain("Saved assessment progress can only be restored after a verified dashboard handoff.");
   });
 
   test("submission cannot overwrite an existing identity assessment", () => {

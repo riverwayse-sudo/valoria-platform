@@ -27,6 +27,7 @@ describe("VALU full-assessment handoff token interoperability", () => {
   const tasterId = "3f0a1c2e-5b6d-4e7f-8a9b-0c1d2e3f4a5b";
   const payload = {
     v: 1,
+    typ: "assessment_session",
     aud: "valu-full-assessment",
     sub: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
     taster_id: tasterId,
@@ -43,7 +44,7 @@ describe("VALU full-assessment handoff token interoperability", () => {
     ({ verifyValuHandoffToken } = await import(nodeModuleUrl));
   });
 
-  test("the platform verifier accepts a token signed the way the site signs it", async () => {
+  test("the platform verifier accepts a platform-issued session token signed with Node HMAC", async () => {
     const verified = await verifyValuHandoffTokenEdge(signToken(payload), tasterId);
     expect(verified).not.toBeNull();
     expect(verified.sub).toBe(payload.sub);
@@ -51,7 +52,7 @@ describe("VALU full-assessment handoff token interoperability", () => {
     expect(verified.aud).toBe("valu-full-assessment");
   });
 
-  test("the canonical Node verifier accepts the same site-signed token", () => {
+  test("the canonical Node verifier accepts the same signed session token", () => {
     const verified = verifyValuHandoffToken(signToken(payload), tasterId);
     expect(verified).not.toBeNull();
     expect(verified.sub).toBe(payload.sub);

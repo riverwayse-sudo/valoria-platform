@@ -23,7 +23,7 @@ const REPORT_TOKEN = "33333333-3333-4333-8333-333333333333";
 function handoffToken(sub, tasterId) {
   const now = Math.floor(Date.now() / 1000);
   const body = Buffer.from(JSON.stringify({
-    v: 1, aud: "valu-full-assessment", sub, taster_id: tasterId,
+    v: 1, typ: "assessment_session", aud: "valu-full-assessment", sub, taster_id: tasterId,
     iat: now, exp: now + 3600, jti: "j".repeat(24),
   })).toString("base64url");
   const sig = createHmac("sha256", SERVICE_ROLE).update(body).digest().toString("base64url");
