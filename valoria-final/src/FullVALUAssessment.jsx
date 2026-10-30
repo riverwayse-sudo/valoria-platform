@@ -503,7 +503,7 @@ export default function FullVALUAssessment() {
       }
 
       try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}
-      try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
+      try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
       setResult(scoreData.results);
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
@@ -522,24 +522,19 @@ export default function FullVALUAssessment() {
 
   if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
-  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href="/valu/assessment/" style={S.button}>RETURN TO VALU →</a></Shell>;
+  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href={SITE_BASE ? SITE_BASE + '/login?returnTo=%2Fdashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
   if (handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
 
   if (handoffStatus === 'checking') return <Shell><div style={S.eyebrow}>SECURE VALU JOURNEY</div><h1 style={S.h1}>Verifying your account…</h1><p style={S.p}>We are confirming that this assessment belongs to your Valoria account before you continue.</p></Shell>;
 
   if (handoffStatus !== 'ready') {
-    const signupParams = new URLSearchParams({ taster_id:identity.tasterId, name:identity.name, role:identity.role, experience:identity.experience });
-    const signupUrl = SITE_BASE ? SITE_BASE + '/professional-signup/?' + signupParams.toString() : '';
-    const loginParams = new URLSearchParams({ pending_taster_id:identity.tasterId, returnTo:'/dashboard' });
     return <Shell>
       <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
-      <h1 style={S.h1}>Link your snapshot before continuing.</h1>
-      <p style={S.p}>To protect your official VALU Index, sign in to a confirmed Valoria account and link this completed snapshot before taking the full assessment. Your snapshot and saved progress are preserved.</p>
+      <h1 style={S.h1}>Return to your Valoria dashboard.</h1>
+      <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved snapshot and answers remain attached to your account. Sign in to your dashboard and choose Continue Assessment to open a fresh secure session.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
-      <a href={signupUrl || undefined} style={S.button}>CREATE MY VALORIA ACCOUNT →</a>
-      <a href={SITE_BASE ? SITE_BASE + '/login?' + loginParams.toString() : undefined} style={S.secondary}>I ALREADY HAVE AN ACCOUNT · SIGN IN</a>
-      <a href={SITE_BASE ? SITE_BASE + '/valu/assessment/' : undefined} style={S.secondary}>RETURN TO MY VALU JOURNEY</a>
+      <a href={SITE_BASE ? SITE_BASE + '/login?returnTo=%2Fdashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
     </Shell>;
   }
 
