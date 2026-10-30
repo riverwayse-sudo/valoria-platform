@@ -1,5 +1,6 @@
 import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
 import { withEdgeCors } from "./_cors.js";
+import { seedAnswersFromOpening } from "../src/assessmentJourney.js";
 
 export const config = { runtime: "edge" };
 
@@ -41,7 +42,7 @@ async function supabase(path, options = {}) {
 
 async function resolveTasterIdentity(tasterId) {
   if (!tasterId) return { error: "A completed snapshot reference is required." };
-  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: "id,user_id,name,role,completed_at", limit: "1" });
+  const params = new URLSearchParams({ id: `eq.${tasterId}`, select: "id,user_id,name,role,completed_at,taster_answers", limit: "1" });
   const tasterRes = await supabase(`taster_sessions?${params}`);
   if (!tasterRes.ok) return { error: "Could not verify the VALU snapshot." };
   const taster = (await tasterRes.json())?.[0];
@@ -255,7 +256,13 @@ async function baseHandler(req) {
     if (resolvedIdentity.user_id !== handoff.sub) return json({ error: "This secure handoff does not match the snapshot owner." }, 403);
     try {
       const progress = await getProgressByTasterId(tasterId);
-      if (!progress) return json({ ok: true, progress: null });
+      if (!progress) {
+        // No second-session progress yet: hand the client the opening nine answers
+        // already seeded against their canonical bank positions so the participant
+        // continues at the first unanswered question instead of repeating them.
+        const seeded = seedAnswersFromOpening(resolvedIdentity.taster.taster_answers || {});
+        return json({ ok: true, progress: null, seeded_answers: seeded });
+      }
       if (progress.user_id && progress.user_id !== resolvedIdentity.user_id) {
         return json({ error: "This saved assessment belongs to another Valoria account." }, 403);
       }

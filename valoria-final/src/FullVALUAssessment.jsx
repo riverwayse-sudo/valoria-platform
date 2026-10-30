@@ -30,6 +30,13 @@ const SITE_BASE = (() => {
 })();
 
 import { QUESTIONS } from './questions.js';
+import {
+  ASSESSMENT_ORDER,
+  OPENING_SESSION_LENGTH,
+  TOTAL_QUESTIONS,
+  seedAnswersFromOpening,
+  nextPlaceToAnswer,
+} from './assessmentJourney.js';
 
 const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
 const CLUSTER_NAMES = { P:'Presence', R:'Relationships', I:'Intelligence', M:'Mastery', E:'Enterprise' };
@@ -140,8 +147,9 @@ export default function FullVALUAssessment() {
     [identity.tasterId, identity.name, identity.role, identity.experience]
   );
 
-  const question = QUESTIONS[current];
-  const progress = Math.round(((current + 1) / QUESTIONS.length) * 100);
+  const question = QUESTIONS[ASSESSMENT_ORDER[current]];
+  const answeredTotal = Object.keys(answers).length;
+  const progress = Math.round((answeredTotal / TOTAL_QUESTIONS) * 100);
   const canUse = Boolean(identity.tasterId && identity.name && identity.role && identity.experience);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
@@ -224,9 +232,16 @@ export default function FullVALUAssessment() {
         setResumeToken(saved.resume_token || '');
         setAnswers(saved.answers && typeof saved.answers === 'object' ? saved.answers : {});
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
-        setCurrent(Math.min(Math.max(Number(saved.current_question) || 0, 0), QUESTIONS.length - 1));
+        setCurrent(Math.min(Math.max(Number(saved.current_question) || 0, 0), ASSESSMENT_ORDER.length - 1));
         setResumeProgress(saved);
         setResumePopup(Object.keys(saved.answers || {}).length > 0);
+      } else if (!saved && data.seeded_answers) {
+        // First visit to session 2: seed the saved opening nine and land on the
+        // first question they have not answered, never back at Question 1.
+        const seeded = data.seeded_answers || {};
+        setAnswers(seeded);
+        const nextPlace = nextPlaceToAnswer(seeded, 1) ?? ASSESSMENT_ORDER.length;
+        setCurrent(Math.max(0, nextPlace - 1));
       }
       setRemoteRestoreComplete(true);
     }).catch(err => {
@@ -255,7 +270,7 @@ export default function FullVALUAssessment() {
         setResumeToken(saved.resume_token);
         setAnswers(saved.answers || {});
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
-        setCurrent(Math.min(Math.max(saved.current_question || 0, 0), QUESTIONS.length - 1));
+        setCurrent(Math.min(Math.max(saved.current_question || 0, 0), ASSESSMENT_ORDER.length - 1));
         setResumeProgress(saved);
         setResumePopup(true);
         setResumeLoading(false);
@@ -278,7 +293,7 @@ export default function FullVALUAssessment() {
     if (saved && !saved.completed) {
       if (saved.answers && typeof saved.answers === 'object') setAnswers(saved.answers);
       if (Array.isArray(saved.timings)) setTimings(saved.timings);
-      if (Number.isInteger(saved.current) && saved.current >= 0 && saved.current < QUESTIONS.length) setCurrent(saved.current);
+      if (Number.isInteger(saved.current) && saved.current >= 0 && saved.current < ASSESSMENT_ORDER.length) setCurrent(saved.current);
     }
     setStartedAt(Date.now());
   }, [resumeKey, canUse, queryIdentity.resume]);
@@ -312,7 +327,7 @@ export default function FullVALUAssessment() {
         role:identity.role,
         experience:identity.experience,
         current_question:current,
-        total_questions:QUESTIONS.length,
+        total_questions:TOTAL_QUESTIONS,
         answers,
         timings,
         session_seed:0,
@@ -336,7 +351,7 @@ export default function FullVALUAssessment() {
         name:identity.name,
         role:identity.role,
         current_question:nextCurrent,
-        total_questions:QUESTIONS.length,
+        total_questions:TOTAL_QUESTIONS,
         answers:nextAnswers,
         timings:nextTimings,
         session_seed:0,
@@ -354,31 +369,32 @@ export default function FullVALUAssessment() {
 
   async function choose(optionIndex) {
     if (saving || result || handoffStatus !== 'ready') return;
+    const position = ASSESSMENT_ORDER[current];
     const elapsed = Math.max(250, Date.now() - startedAt);
-    const alreadyAnswered = Object.prototype.hasOwnProperty.call(answers, current);
-    const nextAnswers = { ...answers, [current]: optionIndex };
+    const alreadyAnswered = Object.prototype.hasOwnProperty.call(answers, position);
+    const nextAnswers = { ...answers, [position]: optionIndex };
     const nextTimings = alreadyAnswered ? timings : [...timings, elapsed];
     setAnswers(nextAnswers);
     setTimings(nextTimings);
 
-    if (current < QUESTIONS.length - 1) {
-      const nextCurrent = current + 1;
-      setCurrent(nextCurrent);
+    if (current < ASSESSMENT_ORDER.length - 1) {
+      const nextCurrent = nextPlaceToAnswer(nextAnswers, current + 2) ?? current + 1;
+      setCurrent(nextCurrent - 1);
       setStartedAt(Date.now());
-      await persistCheckpoint(nextAnswers, nextTimings, nextCurrent);
+      await persistCheckpoint(nextAnswers, nextTimings, nextCurrent - 1);
       return;
     }
 
     setError('');
-    await persistCheckpoint(nextAnswers, nextTimings, QUESTIONS.length - 1);
+    await persistCheckpoint(nextAnswers, nextTimings, ASSESSMENT_ORDER.length - 1);
   }
 
   async function submitAssessment() {
-    if (saving || result || handoffStatus !== 'ready' || !handoffToken || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1)) return;
+    if (saving || result || handoffStatus !== 'ready' || !handoffToken || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])) return;
     setSaving(true);
     setError('');
     try {
-      await persistCheckpoint(answers, timings, QUESTIONS.length);
+      await persistCheckpoint(answers, timings, ASSESSMENT_ORDER.length);
       const scoreRes = await fetch(API_BASE + '/api/submit-assessment', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -406,8 +422,8 @@ export default function FullVALUAssessment() {
         name:identity.name,
         role:identity.role,
         experience:identity.experience,
-        current_question:QUESTIONS.length,
-        total_questions:QUESTIONS.length,
+        current_question:ASSESSMENT_ORDER.length,
+        total_questions:TOTAL_QUESTIONS,
         answers,
         timings,
         session_seed:0,
@@ -495,7 +511,7 @@ export default function FullVALUAssessment() {
   return <Shell>
     <ResumeModal open={resumePopup} progress={resumeProgress} onContinue={()=>setResumePopup(false)} onClose={()=>setResumePopup(false)} />
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
-      <div style={S.top}><div style={S.eyebrow}>FULL VALU · {current + 1} / {QUESTIONS.length}</div><div style={S.progressText}>{progress}%</div></div>
+      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT · SESSION 2 OF 2 · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>
       <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
       <h1 style={S.question}>{question.q}</h1>
@@ -503,7 +519,7 @@ export default function FullVALUAssessment() {
         {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
       </div>
       <div style={S.footer}><span>{Object.keys(answers).length} answered</span><span>Progress is saved automatically.</span></div>
-      {current === QUESTIONS.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1)} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, QUESTIONS.length - 1))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':'SUBMIT VALU ASSESSMENT →'}</button>}
+      {current === ASSESSMENT_ORDER.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1]))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':'SUBMIT VALU ASSESSMENT →'}</button>}
       {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
       {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
     </div>

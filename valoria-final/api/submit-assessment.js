@@ -165,7 +165,10 @@ export default async function handler(req, res) {
   if (typeof role !== 'string' || !role.trim() || role.trim().length > MAX_ROLE_LENGTH) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   if (!EXPERIENCE_BANDS.has(experience)) return json(res, 400, { error: 'Select a valid experience band.' });
   if (!validateAnswers(answers)) return json(res, 400, { error: 'Assessment answers are incomplete or invalid.' });
-  if (!Array.isArray(timings) || timings.length !== MAX_TIMINGS_LENGTH || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json(res, 400, { error: 'Invalid assessment timings.' });
+  // Timings are integrity diagnostics only — they never enter the score. A
+  // two-session completion legitimately carries fewer than 58 timings (the
+  // opening nine are answered in session 1), so accept any non-empty subset.
+  if (!Array.isArray(timings) || timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json(res, 400, { error: 'Invalid assessment timings.' });
   if (!validateShuffleMap(shuffleMap) || Object.keys(shuffleMap).length > MAX_SHUFFLE_KEYS) return json(res, 400, { error: 'Invalid assessment presentation mapping.' });
 
   let results;

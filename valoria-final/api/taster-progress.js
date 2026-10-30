@@ -54,42 +54,57 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
   const action = body.action;
-  if (!['init', 'load', 'save', 'complete'].includes(action)) return json(res, 400, { error: 'Unsupported progress action.' });
+  if (!['init', 'load', 'save', 'identify', 'complete'].includes(action)) return json(res, 400, { error: 'Unsupported progress action.' });
 
+  // Anonymous direct entry: the participant reaches Question 1 before any account
+  // or identity is required, so init establishes a resumable session with no
+  // personal details. Identity is attached later at the session break.
   if (action === 'init') {
-    const name = typeof body.name === 'string' ? body.name.trim() : '';
-    const role = typeof body.role === 'string' ? body.role.trim() : '';
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const experience = body.experience;
-    if (!name || name.length > 200 || !role || role.length > 160 || !validEmail(email)
-      || !EXPERIENCE_BANDS.some(item => item.id === experience)) {
-      return json(res, 400, { error: 'Provide a valid name, role, email, and experience band before saving snapshot progress.' });
-    }
     const resumeToken = randomBytes(32).toString('base64url');
     const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress`, {
       method: 'POST',
       headers: { ...headers(), Prefer: 'return=representation' },
       body: JSON.stringify({
-        resume_token_hash: hashToken(resumeToken), name, role, experience, email,
+        resume_token_hash: hashToken(resumeToken), name: null, role: null, experience: null, email: null,
         current_question: 0, answers: {}, status: 'in_progress',
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       }),
     });
     if (!response.ok) {
       console.error('taster-progress: init failed', response.status);
-      return json(res, 502, { error: 'We could not establish a resumable snapshot session. Please retry.' });
+      return json(res, 502, { error: 'We could not establish a resumable session. Please retry.' });
     }
     const row = (await response.json())?.[0];
-    if (!row?.id) return json(res, 502, { error: 'The resumable snapshot session could not be confirmed.' });
+    if (!row?.id) return json(res, 502, { error: 'The resumable session could not be confirmed.' });
     return json(res, 200, { resume_token: resumeToken, progress: { current_question: 0, answers: {}, submission_key: null } });
   }
 
-  if (!validToken(body.resume_token)) return json(res, 401, { error: 'This snapshot resume link is invalid. Start a new session or contact Valoria support.' });
+  if (!validToken(body.resume_token)) return json(res, 401, { error: 'This resume link is invalid. Start a new session or contact Valoria support.' });
   const tokenHash = hashToken(body.resume_token);
 
   try {
     const progress = await getProgress(tokenHash);
-    if (!progress) return json(res, 404, { error: 'This snapshot session has expired or is no longer resumable.' });
+    if (!progress) return json(res, 404, { error: 'This session has expired or is no longer resumable.' });
+
+    // Attach the account identity captured at the session break. This is a
+    // metadata update only; it never resets saved answers or progress.
+    if (action === 'identify') {
+      const name = typeof body.name === 'string' ? body.name.trim() : '';
+      const role = typeof body.role === 'string' ? body.role.trim() : '';
+      const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+      const experience = body.experience;
+      if (!name || name.length > 200 || !role || role.length > 160 || !validEmail(email)
+        || !EXPERIENCE_BANDS.some(item => item.id === experience)) {
+        return json(res, 400, { error: 'Provide a valid name, role, email, and experience band to continue.' });
+      }
+      const params = new URLSearchParams({ id: `eq.${progress.id}`, status: 'eq.in_progress', select: 'id' });
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, {
+        method: 'PATCH', headers: { ...headers(), Prefer: 'return=representation' },
+        body: JSON.stringify({ name, role, experience, email, updated_at: new Date().toISOString() }),
+      });
+      if (!response.ok || !(await response.json())?.[0]?.id) return json(res, 409, { error: 'This session is no longer editable. Please start again.' });
+      return json(res, 200, { identified: true });
+    }
 
     if (action === 'load') {
       return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null } });
