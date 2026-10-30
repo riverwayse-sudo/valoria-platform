@@ -200,7 +200,10 @@ describe("Assessment integrity contracts", () => {
     const source = readApi("submit-assessment.js");
     const link = readApi("link-assessment-to-taster.js");
     const verifier = fs.readFileSync(path.join(__dirname, "../../lib/valu-handoff-token.js"), "utf8");
-    expect(source).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
+    expect(source).toContain("await verifyValuHandoffTokenEdge(body?.handoff_token, tasterId, reason =>");
+    expect(source).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
+    expect(source).toContain("../lib/valu-handoff-token-edge.js");
+    expect(source).not.toContain("verifyValuHandoffToken(handoffToken, tasterId)");
     expect(source).toContain("taster.user_id !== handoff.sub");
     expect(source).toContain("handoff_token: handoffToken");
     expect(link).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
