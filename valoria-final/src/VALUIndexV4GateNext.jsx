@@ -172,7 +172,7 @@ export default function VALUIndexV4GateNext(){
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
    const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your first session could not be saved. Please retry.');
+   if(!response.ok)throw new Error(data.error||'Your opening nine could not be saved. Please retry.');
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
    setTasterId(data.taster_id);
    try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
@@ -191,19 +191,19 @@ export default function VALUIndexV4GateNext(){
  if(phase==='break')return <Shell>
   <VALUAssessmentJourney stage="bridge" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> FIRST SESSION COMPLETE <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
-   <h1 className="valu-results-title" style={S.h1}>Your first session is <em>complete.</em></h1>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> OPENING NINE SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <h1 className="valu-results-title" style={S.h1}>Your opening nine are <em>saved.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>Your responses have been saved. Create your account to continue your VALU assessment and complete your professional profile.</p>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
    <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
-    <div style={S.resultRow}><div style={S.dimensionCode}>SESSION 1</div><h2 style={S.scoreName}>Completed</h2><strong style={S.scoreValue}>{OPENING_SESSION_LENGTH}<small style={S.scoreOutOf}>/{TOTAL_QUESTIONS} questions</small></strong></div>
-    <div style={S.resultRow}><div style={S.dimensionCode}>SESSION 2</div><h2 style={S.scoreName}>Ready after confirmation</h2><strong style={S.scoreValue}>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH}<small style={S.scoreOutOf}> questions remaining</small></strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>OPENING 9</div><h2 style={S.scoreName}>Completed</h2><strong style={S.scoreValue}>{OPENING_SESSION_LENGTH}<small style={S.scoreOutOf}>/{TOTAL_QUESTIONS} questions</small></strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>REMAINING 49</div><h2 style={S.scoreName}>Ready to continue</h2><strong style={S.scoreValue}>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH}<small style={S.scoreOutOf}> questions remaining</small></strong></div>
    </div>
   </section>
   <form onSubmit={createAccount} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>CREATE YOUR ACCOUNT</div><h2 style={S.formTitle}>Continue your VALU assessment.</h2></div><div style={S.formTime}>SESSION 2<br/>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH} LEFT</div></div>
-   <p style={S.formIntro}>Use the same email you will confirm. We will attach your saved first session to your account, then return you to your dashboard to continue.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>CREATE YOUR ACCOUNT</div><h2 style={S.formTitle}>Continue your VALU assessment.</h2></div><div style={S.formTime}>COMPLETION<br/>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH} LEFT</div></div>
+   <p style={S.formIntro}>Use the same email you will confirm. We will attach your saved opening nine to your account, then return you to your dashboard to continue.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
@@ -212,7 +212,7 @@ export default function VALUIndexV4GateNext(){
    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
    {error&&<div style={S.error}>{error}</div>}
    <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'CREATE MY ACCOUNT & CONTINUE →'}</button>
-   <div style={S.saveNote}><span>✓</span> Your first nine responses are saved.</div>
+   <div style={S.saveNote}><span>✓</span> Your opening nine answers are saved.</div>
   </form>
   <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
@@ -224,7 +224,7 @@ export default function VALUIndexV4GateNext(){
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
   {error&&<div style={S.error}>{error}</div>}
-  <p style={S.note}>{OPENING_SESSION_LENGTH} of {TOTAL_QUESTIONS} questions in this first session · Progress is saved automatically.</p>
+  <p style={S.note}>{OPENING_SESSION_LENGTH} of {TOTAL_QUESTIONS} questions in this opening nine · Progress is saved automatically.</p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
