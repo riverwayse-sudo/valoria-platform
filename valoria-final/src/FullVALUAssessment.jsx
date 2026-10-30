@@ -188,7 +188,6 @@ export default function FullVALUAssessment() {
       return;
     }
 
-    const verificationKey = `${identity.tasterId || 'pending'}:${token}`;
     if (identity.tasterId && verifiedHandoffRef.current === `${identity.tasterId}:${token}`) {
       setHandoffToken(token);
       setHandoffStatus('ready');
