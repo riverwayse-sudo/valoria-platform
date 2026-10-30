@@ -7,11 +7,21 @@ function decodeBase64Url(value) {
   return Uint8Array.from(binary, char => char.charCodeAt(0));
 }
 
-export async function verifyValuHandoffTokenEdge(token, expectedTasterId) {
+export async function verifyValuHandoffTokenEdge(token, expectedTasterId, onFailure) {
+  const reject = reason => {
+    try {
+      if (typeof onFailure === 'function') onFailure(reason);
+    } catch {}
+    return null;
+  };
+
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret || typeof token !== 'string' || !expectedTasterId) return null;
+  if (!secret) return reject('verifier_secret_unavailable');
+  if (typeof token !== 'string' || !token) return reject('token_missing');
+  if (!expectedTasterId) return reject('snapshot_reference_missing');
+
   const parts = token.split('.');
-  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return reject('token_malformed');
 
   try {
     const key = await globalThis.crypto.subtle.importKey(
@@ -27,24 +37,21 @@ export async function verifyValuHandoffTokenEdge(token, expectedTasterId) {
       decodeBase64Url(parts[1]),
       new TextEncoder().encode(parts[0])
     );
-    if (!valid) return null;
+    if (!valid) return reject('signature_invalid');
 
     const payload = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[0])));
     const now = Math.floor(Date.now() / 1000);
-    if (payload?.v !== 1
-      || payload?.aud !== AUDIENCE
-      || typeof payload?.sub !== 'string'
-      || !payload.sub
-      || payload?.taster_id !== expectedTasterId
-      || !Number.isInteger(payload?.iat)
-      || !Number.isInteger(payload?.exp)
-      || payload.iat > now + 60
-      || payload.exp <= now
-      || payload.exp - payload.iat > 4 * 60 * 60
-      || typeof payload?.jti !== 'string'
-      || payload.jti.length < 16) return null;
+    if (payload?.v !== 1) return reject('token_version_invalid');
+    if (payload?.aud !== AUDIENCE) return reject('token_audience_invalid');
+    if (typeof payload?.sub !== 'string' || !payload.sub) return reject('token_subject_invalid');
+    if (payload?.taster_id !== expectedTasterId) return reject('snapshot_mismatch');
+    if (!Number.isInteger(payload?.iat) || !Number.isInteger(payload?.exp)) return reject('token_timestamps_invalid');
+    if (payload.iat > now + 60) return reject('token_issued_in_future');
+    if (payload.exp <= now) return reject('token_expired');
+    if (payload.exp - payload.iat > 4 * 60 * 60) return reject('token_ttl_invalid');
+    if (typeof payload?.jti !== 'string' || payload.jti.length < 16) return reject('token_id_invalid');
     return payload;
   } catch {
-    return null;
+    return reject('token_decode_or_crypto_error');
   }
 }

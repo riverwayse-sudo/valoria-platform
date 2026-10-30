@@ -39,7 +39,7 @@ describe("Privileged API security contracts", () => {
     const progressApi = readApi("assessment-progress.js");
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     expect(progressApi).toContain('if (action === "restore")');
-    expect(progressApi).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId)");
+    expect(progressApi).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
     expect(progressApi).toContain("getProgressByTasterId(tasterId)");
     expect(progressApi).toContain("progress.user_id !== resolvedIdentity.user_id");
     expect(progressApi).toContain('status: "in.(in_progress,abandoned)"');
@@ -200,10 +200,14 @@ describe("Assessment integrity contracts", () => {
     const source = readApi("submit-assessment.js");
     const link = readApi("link-assessment-to-taster.js");
     const verifier = fs.readFileSync(path.join(__dirname, "../../lib/valu-handoff-token.js"), "utf8");
-    expect(source).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
+    expect(source).toContain("await verifyValuHandoffTokenEdge(body?.handoff_token, tasterId, reason =>");
+    expect(source).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
+    expect(source).toContain("../lib/valu-handoff-token-edge.js");
+    expect(source).not.toContain("verifyValuHandoffToken(handoffToken, tasterId)");
     expect(source).toContain("taster.user_id !== handoff.sub");
     expect(source).toContain("handoff_token: handoffToken");
-    expect(link).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
+    expect(link).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
+    expect(link).toContain("../lib/valu-handoff-token-edge.js");
     expect(link).toContain("taster.user_id !== handoff.sub");
     expect(link).toContain("!user.email_confirmed_at");
     expect(verifier).toContain("timingSafeEqual");
@@ -233,15 +237,15 @@ describe("Assessment integrity contracts", () => {
 
   test("full assessment progress writes and reminders require verified account-owned snapshots", () => {
     const source = readApi("assessment-progress.js");
-    const edgeVerifier = fs.readFileSync(path.join(__dirname, "../../lib/valu-handoff-token-edge.js"), "utf8");
-    expect(source).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId)");
+    expect(source).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
     expect(source).toContain("resolvedIdentity.user_id !== handoff.sub");
     expect(source).toContain("verified account-owned snapshot required");
     expect(source).toContain("snapshot/account identity did not verify");
     expect(source).toContain("Could not verify the saved progress session");
     expect(source).not.toContain("getProgressBySession(sessionId).catch(() => null)");
     expect(source).not.toContain("const resolvedUserId = userId ||");
-    expect(edgeVerifier).toContain("crypto.subtle.verify");
+    expect(source).toContain('runtime: "edge"');
+    expect(source).toContain('../lib/valu-handoff-token-edge.js');
   });
 
   test("progress resume links return through the signed assessment continuation", () => {

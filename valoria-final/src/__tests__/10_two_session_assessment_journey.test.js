@@ -32,7 +32,7 @@ const readSource = relative => fs.readFileSync(path.join(__dirname, "..", relati
 const gateSource = () => readSource("VALUIndexV4GateNext.jsx");
 const fullSource = () => readSource("FullVALUAssessment.jsx");
 
-describe("one assessment delivered in two sessions", () => {
+describe("one continuous VALU assessment with an account-confirmation bridge", () => {
   test("the canonical assessment is exactly 58 questions", () => {
     expect(QUESTIONS.length).toBe(58);
     expect(TOTAL_QUESTIONS).toBe(58);
@@ -96,7 +96,8 @@ describe("session 1 presents questions directly, with no account gate", () => {
   test("the gate starts at Question 1 without an intro details form", () => {
     const source = gateSource();
     expect(source).toContain("Question {placeInAssessment} of {TOTAL_QUESTIONS}");
-    expect(source).toContain("SESSION 1 OF 2");
+    expect(source).toContain('VALUAssessmentJourney stage="opening"');
+    expect(source).not.toContain("SESSION 1 OF 2");
     // The old pre-assessment details form is gone; identity is captured at the break.
     expect(source).not.toContain("YOUR DETAILS · 01 / 03");
     expect(source).not.toContain("Tell us about yourself.");
@@ -119,7 +120,7 @@ describe("session 1 presents questions directly, with no account gate", () => {
     const sessionIndex = source.indexOf('mode="taster"');
     expect(breakIndex).toBeGreaterThan(-1);
     expect(sessionIndex).toBeGreaterThan(-1);
-    expect(source).toContain("CREATE MY ACCOUNT & CONTINUE");
+    expect(source).toContain("SAVE MY DETAILS & CONTINUE");
     expect(source).toContain("action:'identify'");
   });
 
@@ -163,7 +164,8 @@ describe("session 2 presents the remaining questions and restores progress", () 
   test("the full assessment renders questions in the two-session completion order", () => {
     const source = fullSource();
     expect(source).toContain("QUESTIONS[ASSESSMENT_ORDER[current]]");
-    expect(source).toContain("SESSION 2 OF 2");
+    expect(source).toContain('VALUAssessmentJourney stage="continuation"');
+    expect(source).not.toContain("SESSION 2 OF 2");
   });
 
   test("session 2 seeds the saved opening nine and lands on the first unanswered question", () => {
@@ -184,4 +186,33 @@ describe("session 2 presents the remaining questions and restores progress", () 
     expect(source).toContain("const position = ASSESSMENT_ORDER[current]");
     expect(source).toContain("nextAnswers = { ...answers, [position]: optionIndex }");
   });
+
+
+  test("the post-question-nine bridge clearly previews account setup, email confirmation, and Question 10", () => {
+    const source = gateSource();
+    expect(source).toContain("What happens next");
+    expect(source).toContain("02 · YOU ARE HERE");
+    expect(source).toContain("Create your account");
+    expect(source).toContain("set your password and confirm your email");
+    expect(source).toContain("03 · UP NEXT");
+    expect(source).toContain("Continue at Question 10");
+    expect(source).toContain("remaining 49 questions");
+    expect(source).toContain("ACCOUNT SETUP · STEP 2 OF 3");
+    expect(source).toContain("SAVE MY DETAILS & CONTINUE");
+  });
+
+describe("three-stage experience presentation", () => {
+  test("opening, account bridge, and completion share one progress component", () => {
+    const progress = readSource("VALUAssessmentJourney.jsx");
+    expect(gateSource()).toContain('VALUAssessmentJourney stage="opening"');
+    expect(gateSource()).toContain('VALUAssessmentJourney stage="bridge"');
+    expect(fullSource()).toContain('VALUAssessmentJourney stage="continuation"');
+    expect(progress).toContain("Questions 1–9");
+    expect(progress).toContain("Save & confirm");
+    expect(progress).toContain("Questions 10–58");
+    expect(gateSource()).not.toContain("SESSION 1 OF 2");
+    expect(fullSource()).not.toContain("SESSION 2 OF 2");
+  });
+});
+
 });
