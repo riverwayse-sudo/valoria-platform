@@ -53,12 +53,20 @@ function readHandoffToken() {
 
 function parseQuery() {
   const p = new URLSearchParams(window.location.search);
+  let resume = p.get('resume') || '';
+  try {
+    const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    resume = resume || fragment.get('resume_token') || '';
+  } catch {}
+  // Legacy query values remain readable for existing links during migration.
+  // New handoffs carry identity only inside the signed URL fragment and resolve
+  // it from the server after token verification.
   return {
     tasterId:p.get('taster_id') || '',
     name:p.get('name') || '',
     role:p.get('role') || '',
     experience:p.get('experience') || '',
-    resume:p.get('resume') || '',
+    resume,
   };
 }
 
@@ -156,22 +164,20 @@ export default function FullVALUAssessment() {
   useEffect(() => () => { mountedRef.current = false; }, []);
 
   useEffect(() => {
-    if (!identity.tasterId || !identity.name || !identity.role) {
-      setHandoffStatus('account_required');
-      return;
-    }
-
-    const storageKey = `valu-handoff-token:${identity.tasterId}`;
     let fromHash = '';
+    let fragmentResume = '';
     try {
-      fromHash = readHandoffToken();
-      if (fromHash) {
+      const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      fromHash = fragment.get('handoff_token') || '';
+      fragmentResume = fragment.get('resume_token') || '';
+      if (fromHash || fragmentResume) {
         window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-        window.sessionStorage.setItem(storageKey, fromHash);
       }
     } catch {}
+
+    const storageKey = identity.tasterId ? `valu-handoff-token:${identity.tasterId}` : '';
     let token = fromHash;
-    if (!token) {
+    if (!token && storageKey) {
       try { token = window.sessionStorage.getItem(storageKey) || ''; } catch {}
     }
     if (!token) {
@@ -191,18 +197,36 @@ export default function FullVALUAssessment() {
       body:JSON.stringify({
         action:'verify-handoff',
         handoff_token:token,
-        taster_id:identity.tasterId,
-        name:identity.name,
-        role:identity.role,
+        ...(identity.tasterId ? { taster_id:identity.tasterId } : {}),
+        ...(identity.name ? { name:identity.name } : {}),
+        ...(identity.role ? { role:identity.role } : {}),
       }),
       cache:'no-store',
     }).then(async response => {
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data.ok) throw new Error(data.error || 'The secure assessment link could not be verified.');
-      if (!cancelled) setHandoffStatus('ready');
+      if (!response.ok || !data.ok || !data.identity?.taster_id) {
+        throw new Error(data.error || 'The secure assessment link could not be verified.');
+      }
+      const verifiedIdentity = {
+        tasterId:data.identity.taster_id,
+        name:data.identity.name || '',
+        role:data.identity.role || '',
+        experience:data.identity.experience || '',
+        resume:fragmentResume || queryIdentity.resume || '',
+      };
+      if (identity.tasterId && identity.tasterId !== verifiedIdentity.tasterId) {
+        throw new Error('This secure handoff does not match the selected VALU snapshot.');
+      }
+      try { window.sessionStorage.setItem(`valu-handoff-token:${verifiedIdentity.tasterId}`, token); } catch {}
+      if (!cancelled) {
+        if (!identity.tasterId) setIdentity(verifiedIdentity);
+        setHandoffStatus('ready');
+      }
     }).catch(error => {
       if (cancelled) return;
-      try { window.sessionStorage.removeItem(storageKey); } catch {}
+      if (storageKey) {
+        try { window.sessionStorage.removeItem(storageKey); } catch {}
+      }
       setHandoffToken('');
       setHandoffError(error?.message || 'This secure link has expired. Reopen the assessment from your Valoria account.');
       setHandoffStatus('account_required');
