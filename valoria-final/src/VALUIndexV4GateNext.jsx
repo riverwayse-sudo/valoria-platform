@@ -27,225 +27,228 @@ const SITE_BASE = (() => {
   return '';
 })();
 
-import { EXPERIENCE_BANDS, TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from './valuTaster.js';
+import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from './valuTaster.js';
+import { OPENING_SESSION_LENGTH, TOTAL_QUESTIONS } from './assessmentJourney.js';
 
 const CLUSTERS={P:'Presence',R:'Relationships',I:'Intelligence',M:'Mastery',E:'Enterprise'};
-const DIMENSION_MEANINGS={P:'How you lead with impact.',R:'How you build trusted connections.',I:'How you think and solve problems.',M:'How you develop and deliver.',E:'How you create opportunity and value.'};
 const COLORS={P:'#C9A84C',R:'#C9A84C',I:'#C9A84C',M:'#C9A84C',E:'#C9A84C'};
 const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS='#D4C9A8', DIM='rgba(250,250,247,.68)';
 
+const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
+
+// Session 1 of the single 58-question VALU assessment.
+//
+// The participant arrives straight at Question 1 — no introductory page and no
+// account requirement. They answer the approved opening nine, the responses are
+// persisted, and only then are they asked to create an account at the natural
+// break. This component never scores or displays a VALU Index; the nine answers
+// are the first nine of the 58 and are scored later with the rest.
 export default function VALUIndexV4GateNext(){
- const [phase,setPhase]=useState('intro'),[name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState('');
- const [email,setEmail]=useState('');
- const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null),[result,setResult]=useState(null),[tasterId,setTasterId]=useState('');
- const [saving,setSaving]=useState(false),[error,setError]=useState(''),[submissionKey,setSubmissionKey]=useState('');
- const [progressToken,setProgressToken]=useState(()=>{try{return localStorage.getItem('valu_taster_resume_token')||''}catch{return ''}});
+ const [phase,setPhase]=useState('loading');
+ const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
+ const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
+ const [saving,setSaving]=useState(false),[error,setError]=useState('');
+ const [progressToken,setProgressToken]=useState('');
+ const [submissionKey,setSubmissionKey]=useState('');
+ const [tasterId,setTasterId]=useState('');
+ const startedRef=useRef(false);
  const timer=useRef(null);
- const q=TASTER_QUESTIONS[current]; const progress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
- const scores=useMemo(()=>result?Object.entries(result.points||{}).sort((a,b)=>b[1]-a[1]):[],[result]);
+
+ const q=TASTER_QUESTIONS[current];
+ const sessionProgress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
+ const placeInAssessment=current+1;
+
+ useEffect(()=>()=>{timer.current&&clearTimeout(timer.current)},[]);
+
+ async function postProgress(body){
+  const response=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(payload.error||'Your progress could not be saved.');
+  return payload;
+ }
+
+ // Direct entry: restore a resumable session, or begin one anonymously.
  useEffect(()=>{
-  if(!progressToken)return;
+  if(startedRef.current)return;
+  startedRef.current=true;
   let cancelled=false;
-  fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load',resume_token:progressToken})})
-   .then(async response=>{
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok){
-     if(response.status===401||response.status===404){try{localStorage.removeItem('valu_taster_resume_token')}catch{};setProgressToken('');return null}
-     throw new Error(data.error||'Saved progress is temporarily unavailable');
+  async function begin(){
+   // A participant who already completed the opening session and has a pending
+   // assessment reference must not start a second, duplicate session. Send them
+   // to the authenticated continuation instead.
+   let pending='';
+   try{pending=localStorage.getItem('pending_taster_id')||''}catch{}
+   if(pending){
+    window.location.assign((SITE_BASE?SITE_BASE:'')+'/journey/continue?stage=assess&taster_id='+encodeURIComponent(pending));
+    return;
+   }
+   let stored='';
+   try{stored=localStorage.getItem(RESUME_TOKEN_KEY)||''}catch{}
+   try{
+    if(stored){
+     const loaded=await postProgress({action:'load',resume_token:stored});
+     if(cancelled)return;
+     const p=loaded.progress||{};
+     setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
+     const savedAnswers=p.answers&&typeof p.answers==='object'?p.answers:{};
+     setAnswers(savedAnswers);
+     setSubmissionKey(p.submission_key||'');
+     setProgressToken(stored);
+     const answeredCount=Object.keys(savedAnswers).length;
+     const complete=Number(p.current_question)===TASTER_QUESTIONS.length&&answeredCount===TASTER_QUESTIONS.length&&!!p.submission_key;
+     if(complete){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
+     setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
+     setPhase('session1');
+     return;
     }
-    return data;
-   })
-   .then(async data=>{
-    if(cancelled||!data)return;
-    const progress=data.progress||{}, savedAnswers=progress.answers||{}, savedKey=progress.submission_key||'';
-    setName(progress.name||'');setRole(progress.role||'');setExperience(progress.experience||'');setEmail(progress.email||'');
-    setAnswers(savedAnswers);setCurrent(Math.min(Number(progress.current_question)||0,TASTER_QUESTIONS.length-1));setSubmissionKey(savedKey);
-    const complete=Number(progress.current_question)===TASTER_QUESTIONS.length&&Object.keys(savedAnswers).length===TASTER_QUESTIONS.length&&!!savedKey;
-    if(!complete){setPhase('taster');return}
-    try{
-     const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:savedKey})});
-     const data=await response.json().catch(()=>({}));
-     if(!response.ok){setError(data.error||'Your saved snapshot is ready to submit. Please retry.');setPhase('taster');return}
-     if(!data.taster_id)throw new Error('Your saved snapshot is missing its continuation reference. Please retry.');
-     setResult(computeTasterResult(savedAnswers));setTasterId(data.taster_id);
-     try{if(data.taster_id)localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
-     try{
-      const completionResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:savedKey})});
-      const completion=await completionResponse.json().catch(()=>({}));
-      if(completionResponse.ok&&completion.completed){try{localStorage.removeItem('valu_taster_resume_token')}catch{};setProgressToken('')}
-     }catch{}
-     setPhase('results');
-    }catch{setError('Your saved snapshot could not be submitted yet. Please retry.');setPhase('taster')}
-   })
-   .catch(()=>{if(cancelled)return;setError('We could not restore your saved snapshot right now. Refresh this page to retry; your saved progress has been retained.')});
+   }catch{
+    // A stale or expired resume token must not block entry: discard it and
+    // start a fresh anonymous session below.
+    try{localStorage.removeItem(RESUME_TOKEN_KEY)}catch{}
+   }
+   try{
+    const created=await postProgress({action:'init'});
+    if(cancelled)return;
+    if(!created.resume_token)throw new Error('Your assessment could not be started. Please retry.');
+    try{localStorage.setItem(RESUME_TOKEN_KEY,created.resume_token)}catch{}
+    setProgressToken(created.resume_token);
+    setPhase('session1');
+   }catch(err){
+    if(cancelled)return;
+    setError(err?.message||'We could not start your assessment. Please refresh to retry.');
+    setPhase('session1');
+   }
+  }
+  begin();
   return ()=>{cancelled=true};
  },[]);
 
- const validStart=!!(name.trim()&&role.trim()&&experience&&email.trim());
-
- async function startTaster(e){
-  e.preventDefault(); if(!validStart||saving)return; setSaving(true); setError('');
-  try{
-   const progressResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'init',name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()})});
-   const progressData=await progressResponse.json().catch(()=>({}));
-   if(!progressResponse.ok||!progressData.resume_token)throw new Error(progressData.error||'Your snapshot could not be started. Please retry.');
-   try{localStorage.setItem('valu_taster_resume_token',progressData.resume_token)}catch{}
-   setProgressToken(progressData.resume_token);
-   setPhase('taster');
-  }catch(err){
-   setError(err?.message||'Your snapshot could not be started. Please retry.');
-  }finally{setSaving(false)}
- }
-
  async function answer(index){
-  const next={...answers,[current]:index}; setAnswers(next); setError('');
-  if(current<TASTER_QUESTIONS.length-1){
-   try{
-    const response=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',resume_token:progressToken,answers:next,current_question:current+1})});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'Your answer could not be saved.');
-    setCurrent(v=>v+1);
-   }catch(err){setError(err?.message||'Your answer could not be saved. Please retry before continuing.')}
-   finally{setSelected(null)}
-   return;
-  }
-  setSelected(null);
- }
-
- async function submitSnapshot(){
-  if(saving||!Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1))return;
+  const next={...answers,[current]:index};
+  setAnswers(next);
   setSaving(true);
   setError('');
   try{
-   const next=answers;
-   const key=submissionKey||(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'');
-   if(!key)throw new Error('Your browser could not create a secure submission reference. Refresh the page and try again.');
-   setSubmissionKey(key);
-   const progressResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',resume_token:progressToken,answers:next,current_question:TASTER_QUESTIONS.length,submission_key:key})});
-   const progressData=await progressResponse.json().catch(()=>({}));
-   if(!progressResponse.ok)throw new Error(progressData.error||'Your final answer could not be saved. Please retry.');
-   const response=await fetch(API_BASE + '/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved. Please retry.');
-   if(!data.taster_id)throw new Error('Your saved snapshot is missing its continuation reference. Please retry.');
-   setResult(computeTasterResult(next)); setTasterId(data.taster_id);
-   try{if(data.taster_id)localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
-   const completionResponse=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key})});
-   if(completionResponse.ok){
-    const completion=await completionResponse.json().catch(()=>({}));
-    if(completion.completed){try{localStorage.removeItem('valu_taster_resume_token')}catch{};setProgressToken('')}
+   const isLast=current===TASTER_QUESTIONS.length-1;
+   const response=await postProgress({
+    action:'save',
+    resume_token:progressToken,
+    answers:next,
+    current_question:isLast?TASTER_QUESTIONS.length:current+1,
+    ...(isLast&&submissionKey?{submission_key:submissionKey}:{}),
+   });
+   if(response.submission_key&&!submissionKey)setSubmissionKey(response.submission_key);
+   if(isLast){
+    // The break screen must not appear until all nine responses are persisted.
+    setPhase('break');
+    return;
    }
-   setPhase('results');
-  }catch(err){setError(err?.message||'Something went wrong. Please try again.')}
-  finally{setSaving(false);setSelected(null)}
+   setCurrent(v=>v+1);
+  }catch(err){
+   setError(err?.message||'Your answer could not be saved. Please retry before continuing.');
+  }finally{
+   setSaving(false);
+   setSelected(null);
+  }
  }
 
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
- if(phase==='intro')return <Shell>
-  <div className="valu-entry-grid" style={S.entryGrid}>
-   <section className="valu-entry-intro" style={S.entryIntro}>
-    <div style={S.homeKicker}>A PROFESSIONAL VALUE ASSESSMENT</div>
-    <h1 style={S.hero}>See the value<br/><em>you bring.</em></h1>
-    <p style={S.lead}>Begin with a 9-question VALU taster. In about five minutes, you’ll get a first read across the five dimensions of PRIME.</p>
-    <div className="valu-dimension-list" style={S.dimensionList}>
-     {[
-      ['01','PRESENCE','How you show up'],
-      ['02','RELATIONSHIPS','How you create trust'],
-      ['03','INTELLIGENCE','How you think'],
-      ['04','MASTERY','How you apply capability'],
-      ['05','ENTERPRISE','How you create value'],
-     ].map(([n,t,d])=><div key={t} style={S.dimension}><span>{n}</span><div style={S.dimensionCopy}><b style={S.dimensionTitle}>{t}</b><small style={S.dimensionDescription}>{d}</small></div></div>)}
-    </div>
-    
-   </section>
+ const identityValid=!!(name.trim()&&role.trim()&&experience&&email.trim());
 
-   <form className="valu-entry-form" onSubmit={startTaster} style={S.form}>
-    <div className="valu-entry-form-card" style={S.formCard}>
-     <div style={S.formTop}>
-      <div><div style={S.eyebrow}>YOUR DETAILS · 01 / 03</div><h2 style={S.formTitle}>Tell us about yourself.</h2></div>
-      <div style={S.formTime}>FREE<br/>~5 MIN</div>
-     </div>
-     
-     <div className="valu-entry-form-grid" style={S.grid}>
-      <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
-      <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
-     </div>
-     <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-     <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
+ async function createAccount(e){
+  e.preventDefault();
+  if(!identityValid||saving)return;
+  setSaving(true);
+  setError('');
+  try{
+   // Attach the account identity to the saved session, then persist the snapshot.
+   await postProgress({action:'identify',resume_token:progressToken,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
+   const key=submissionKey||(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'');
+   if(!key)throw new Error('Your browser could not create a secure submission reference. Refresh the page and try again.');
+   setSubmissionKey(key);
+   const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:TASTER_QUESTIONS.length,submission_key:key});
+   if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
+   const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok)throw new Error(data.error||'Your first session could not be saved. Please retry.');
+   if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
+   setTasterId(data.taster_id);
+   try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
+   await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key}).catch(()=>{});
+   try{localStorage.removeItem(RESUME_TOKEN_KEY)}catch{}
+   const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
+   window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
+  }catch(err){
+   setError(err?.message||'Your account could not be created yet. Your saved responses are intact — please retry.');
+   setSaving(false);
+  }
+ }
 
-     {error&&<div style={S.error}>{error}</div>}
-     <button type="submit" disabled={!validStart||saving} style={{...S.primary,opacity:(!validStart||saving)?.5:1}}>{saving?'SAVING YOUR SNAPSHOT…':'START MY 9-QUESTION TASTER →'}</button>
-     <div style={S.saveNote}><span>✓</span> Progress is saved. You can return without starting again.</div>
-     <p style={S.login}>Already have an account? <a href={SITE_BASE ? SITE_BASE + '/login' : undefined} style={{color:GOLD}}>Sign in</a></p>
-    </div>
-   </form>
-  </div>
- </Shell>
- if(phase==='taster')return <Shell mode="taster">
+ if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU ASSESSMENT</div><h1 style={S.h1}>Preparing your assessment…</h1><p style={S.p}>We are getting Question 1 ready.</p></Shell>;
+
+ if(phase==='break')return <Shell>
   <StepBar active={2}/>
-  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU SNAPSHOT · PRIME</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>{current+1} / {TASTER_QUESTIONS.length}</div></div>
-  <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${progress}%`,background:COLORS[q.cluster]}}/></div>
-  <h1 className="valu-taster-question" style={S.question}>{q.q}</h1><div className="valu-taster-insight" style={S.insight}>{q.tasterInsight}</div>
-  <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
-  {current===TASTER_QUESTIONS.length-1&&(selected!==null||Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1))&&<button type="button" disabled={saving||!Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1)} onClick={submitSnapshot} style={{...S.primary,marginTop:18,opacity:(saving||!Object.prototype.hasOwnProperty.call(answers,TASTER_QUESTIONS.length-1))?.6:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR SNAPSHOT…':'SUBMIT MY VALU SNAPSHOT →'}</button>}
-  {error&&<div style={S.error}>{error}</div>}<p style={S.note}>Your answers are saved as a directional snapshot. They do not become the official VALU Index score.</p>
- </Shell>;
-
- return <Shell mode="results">
-  <StepBar active={3}/>
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> SNAPSHOT COMPLETE <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
-   <h1 className="valu-results-title" style={S.h1}>Your first read is <em>ready.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your 9-question taster is complete. This is an initial, directional view—not your official VALU Index. Your full assessment establishes your authoritative result.</p>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> FIRST SESSION COMPLETE <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <h1 className="valu-results-title" style={S.h1}>Your first session is <em>complete.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your responses have been saved. Create your account to continue your VALU assessment and complete your professional profile.</p>
   </section>
-  <section aria-label="PRIME snapshot scores" style={S.scoreSection}>
-   <div style={S.sectionHeading}><div style={S.eyebrow}>YOUR PRIME SNAPSHOT</div><span style={S.sectionHint}>Earned points against each dimension’s maximum</span></div>
-   <div className="valu-result-grid" style={S.resultGrid}>{scores.map(([id,value])=><div key={id} style={{...S.resultRow,...(id===result?.strongest?.id?S.resultRowStrong:{})}}><div style={S.dimensionCode}>{id} <span style={S.dimensionCodeDivider}>·</span> PRIME DIMENSION</div><h2 style={S.scoreName}>{CLUSTERS[id]}</h2><p style={S.dimensionMeaning}>{DIMENSION_MEANINGS[id]}</p><strong style={S.scoreValue}>{value}<small style={S.scoreOutOf}>/{result?.maxPoints?.[id] ?? 0} points</small></strong><div style={S.scoreTrack}><span style={{...S.scoreBar,width:`${(result?.maxPoints?.[id]||0)>0?Math.max(0,Math.min(100,(Number(value)||0)/(result.maxPoints[id])*100)):0}%`}}/></div>{id===result?.strongest?.id&&<span style={S.scoreBadge}>STRONGEST SIGNAL</span>}</div>)}</div>
-  </section>
-  <section className="valu-results-insight" style={S.highlight}>
-   <div style={S.insightLabel}>YOUR STRONGEST SIGNAL</div><div style={S.signal}>{result?.strongest?.name||CLUSTERS[result?.strongest?.id]||'Your strongest dimension'}</div>
-   <p style={S.insightText}>Your snapshot points to a relative strength in this dimension. The full VALU assessment explores all five PRIME dimensions in greater depth.</p>
-  </section>
-  <section className="valu-results-next" style={S.next}>
-   <div style={S.nextStepTag}>YOUR NEXT STEP</div><h2 style={S.nextTitle}>Continue your VALU journey.</h2>
-   <p style={S.nextText}>Create your account using the same email address you entered before the taster. We’ll attach this saved snapshot to your account, then return you to your dashboard after you confirm your email.</p>
-   <div className="valu-results-actions" style={S.resultActions}>
-    <a href={SITE_BASE ? SITE_BASE + '/professional-signup/?taster_id=' + encodeURIComponent(tasterId) + '&name=' + encodeURIComponent(name) + '&role=' + encodeURIComponent(role) + '&experience=' + encodeURIComponent(experience) : undefined} style={S.primaryLink}>CREATE MY ACCOUNT & CONFIRM EMAIL <span aria-hidden="true">→</span></a>
-    <a href={SITE_BASE ? SITE_BASE + '/login?pending_taster_id=' + encodeURIComponent(tasterId) + '&returnTo=%2Fdashboard' : undefined} style={S.secondary}>Already have an account? Sign in and continue</a>
+  <section aria-label="Assessment progress" style={S.scoreSection}>
+   <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
+    <div style={S.resultRow}><div style={S.dimensionCode}>SESSION 1</div><h2 style={S.scoreName}>Completed</h2><strong style={S.scoreValue}>{OPENING_SESSION_LENGTH}<small style={S.scoreOutOf}>/{TOTAL_QUESTIONS} questions</small></strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>SESSION 2</div><h2 style={S.scoreName}>Ready after confirmation</h2><strong style={S.scoreValue}>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH}<small style={S.scoreOutOf}> questions remaining</small></strong></div>
    </div>
   </section>
-  <p style={S.note}>Completing the snapshot does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
+  <form onSubmit={createAccount} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
+   <div style={S.formTop}><div><div style={S.eyebrow}>CREATE YOUR ACCOUNT</div><h2 style={S.formTitle}>Continue your VALU assessment.</h2></div><div style={S.formTime}>SESSION 2<br/>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH} LEFT</div></div>
+   <p style={S.formIntro}>Use the same email you will confirm. We will attach your saved first session to your account, then return you to your dashboard to continue.</p>
+   <div className="valu-entry-form-grid" style={S.grid}>
+    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
+    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
+   </div>
+   <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
+   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
+   {error&&<div style={S.error}>{error}</div>}
+   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'CREATE MY ACCOUNT & CONTINUE →'}</button>
+   <div style={S.saveNote}><span>✓</span> Your first nine responses are saved.</div>
+  </form>
+  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
+ </Shell>;
+
+ return <Shell mode="taster">
+  <StepBar active={1}/>
+  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU ASSESSMENT · SESSION 1 OF 2</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>Question {placeInAssessment} of {TOTAL_QUESTIONS}</div></div>
+  <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
+  <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
+  <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
+  {error&&<div style={S.error}>{error}</div>}
+  <p style={S.note}>{OPENING_SESSION_LENGTH} of {TOTAL_QUESTIONS} questions in this first session · Progress is saved automatically.</p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
-function StepBar({active}){return <div className="valu-assessment-steps" style={S.steps}>{['DETAILS','SNAPSHOT','NEXT'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
+function StepBar({active}){return <div className="valu-assessment-steps" style={S.steps}>{['ASSESSMENT','ACCOUNT','CONTINUE'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
 function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 const S={
  page:{minHeight:'calc(100dvh - 65px)',height:'auto',background:DARK,color:PARCH,padding:'28px 32px 34px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
  shell:{width:'100%',maxWidth:1160,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:'auto'},
- topBrand:{display:'flex',alignItems:'center',justifyContent:'space-between',paddingBottom:14,borderBottom:'1px solid rgba(212,201,168,.13)',marginBottom:24,flex:'0 0 auto'},
- brandMark:{fontSize:15,fontWeight:900,letterSpacing:'.08em',color:PARCH},
- brandVersion:{fontSize:8,fontWeight:800,letterSpacing:'.16em',color:'rgba(212,201,168,.55)'},
- brand:{fontSize:8,fontWeight:700,letterSpacing:'.16em',color:GOLD,textAlign:'center'},
- entryGrid:{display:'grid',gridTemplateColumns:'minmax(0,1.05fr) minmax(420px,.95fr)',gap:'clamp(42px,5vw,68px)',alignItems:'center',flex:'1 1 auto',minHeight:0},
- entryIntro:{paddingTop:0,maxWidth:600,minWidth:0},
- homeKicker:{fontSize:9,fontWeight:800,letterSpacing:'.18em',color:GOLD,marginBottom:18},
- hero:{fontSize:'clamp(44px,4.6vw,62px)',fontWeight:500,lineHeight:1.0,letterSpacing:'-.045em',margin:'0 0 16px'},
- lead:{fontSize:14,lineHeight:1.55,color:'rgba(250,250,247,.66)',maxWidth:560,margin:'0 0 22px'},
- dimensionList:{borderTop:'1px solid rgba(212,201,168,.15)'},
- dimension:{display:'grid',gridTemplateColumns:'42px 1fr',gap:16,alignItems:'start',padding:'11px 0',borderBottom:'1px solid rgba(212,201,168,.1)'},
- dimensionCopy:{display:'flex',flexDirection:'column',gap:4,minWidth:0,paddingTop:1},
- dimensionTitle:{display:'block',fontSize:11.5,fontWeight:800,lineHeight:1.2,letterSpacing:'.05em',marginBottom:0},
- dimensionDescription:{display:'block',fontSize:10.5,lineHeight:1.35,color:'rgba(250,250,247,.5)',marginTop:0},
- dimensionSpan:{fontSize:8},
- pathNote:{display:'flex',gap:14,alignItems:'flex-start',marginTop:16,paddingTop:14,borderTop:'1px solid rgba(201,168,76,.2)'},
- pathCopy:{display:'flex',flexDirection:'column',gap:5,minWidth:0,paddingTop:1},
- pathTitle:{display:'block',fontSize:11.5,fontWeight:800,lineHeight:1.25,letterSpacing:'.025em',marginBottom:0},
- pathDescription:{display:'block',fontSize:10.5,lineHeight:1.4,color:'rgba(250,250,247,.5)',marginTop:0},
- pathLineGold:{width:3,height:36,background:GOLD,flex:'0 0 auto',borderRadius:3},
- form:{display:'block',maxWidth:520,margin:'0 auto',width:'100%'},
+ eyebrow:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
+ error:{padding:'12px 14px',border:'1px solid rgba(216,90,48,.3)',background:'rgba(216,90,48,.08)',borderRadius:8,color:'#F3A0A0',fontSize:12,lineHeight:1.5,marginBottom:12},
+ steps:{display:'flex',justifyContent:'center',gap:28,margin:'0 0 42px',paddingBottom:18,borderBottom:'1px solid rgba(212,201,168,.16)'},
+ step:{display:'flex',alignItems:'center',gap:8,fontSize:9,fontWeight:700,letterSpacing:'.14em',color:'rgba(250,250,247,.55)'},
+ stepDot:{width:24,height:24,borderRadius:'50%',border:'1px solid rgba(201,168,76,.45)',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,color:PARCH},
+ top:{display:'flex',justifyContent:'space-between',alignItems:'flex-end'},
+ cluster:{fontSize:11,color:'rgba(250,250,247,.5)',marginTop:5},
+ counter:{fontSize:11,color:'rgba(250,250,247,.45)'},
+ progress:{height:4,background:'rgba(250,250,247,.08)',margin:'14px 0 34px',borderRadius:99,overflow:'hidden'},
+ fill:{height:'100%',borderRadius:99},
+ question:{fontSize:'clamp(28px,4.5vw,44px)',fontWeight:500,lineHeight:1.16,letterSpacing:'-.025em',margin:'0 0 26px'},
+ options:{display:'grid',gap:10},
+ option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'34px 1fr',alignItems:'center',gap:14,textAlign:'left',padding:'17px 18px',border:'1px solid',borderRadius:9,color:PARCH,fontSize:14,lineHeight:1.55,cursor:'pointer',fontFamily:'inherit',transition:'border-color .18s,background .18s'},
+ optionLetter:{width:30,height:30,border:'1px solid rgba(201,168,76,.42)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:GOLD,fontSize:11,fontWeight:700},
+ h1:{fontSize:'clamp(40px,7vw,64px)',fontWeight:500,lineHeight:1.04,letterSpacing:'-.035em',margin:'0 0 14px'},
+ p:{fontSize:13,lineHeight:1.75,color:DIM},
  formCard:{padding:'24px 28px',background:'rgba(46,46,74,.72)',border:'1px solid rgba(212,201,168,.2)',borderRadius:14,boxShadow:'0 20px 60px rgba(0,0,0,.22)'},
  formTop:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:18,paddingBottom:18,borderBottom:'1px solid rgba(212,201,168,.14)'},
  formTime:{fontSize:8,fontWeight:900,lineHeight:1.7,letterSpacing:'.13em',textAlign:'right',color:BRASS},
@@ -256,59 +259,17 @@ const S={
  input:{width:'100%',boxSizing:'border-box',padding:'10px 12px',background:'#23233A',border:'1px solid rgba(212,201,168,.2)',borderRadius:7,color:PARCH,fontSize:12.5,fontFamily:'inherit',outline:'none',minHeight:40},
  primary:{width:'100%',padding:'13px 18px',border:0,borderRadius:7,background:GOLD,color:DARK,fontWeight:900,letterSpacing:'.1em',fontSize:9.5,cursor:'pointer',fontFamily:'inherit',marginTop:3,minHeight:44},
  saveNote:{display:'flex',justifyContent:'center',gap:7,alignItems:'center',fontSize:9.5,color:'rgba(250,250,247,.42)',marginTop:13},
- login:{fontSize:11,color:'rgba(250,250,247,.42)',textAlign:'center',margin:'17px 0 0'},
- eyebrow:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
- error:{padding:'12px 14px',border:'1px solid rgba(216,90,48,.3)',background:'rgba(216,90,48,.08)',borderRadius:8,color:'#F3A0A0',fontSize:12,lineHeight:1.5,marginBottom:12},
- steps:{display:'flex',justifyContent:'center',gap:28,margin:'0 0 42px',paddingBottom:18,borderBottom:'1px solid rgba(212,201,168,.16)'},
- step:{display:'flex',alignItems:'center',gap:8,fontSize:9,fontWeight:700,letterSpacing:'.14em',color:'rgba(250,250,247,.55)'},
- stepDot:{width:24,height:24,borderRadius:'50%',border:'1px solid rgba(201,168,76,.45)',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,color:PARCH},
- valueStrip:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:18,maxWidth:760,margin:'18px auto 0',padding:'18px',background:SURFACE,border:'1px solid rgba(212,201,168,.16)',borderRadius:10},
- journeyContext:{maxWidth:760,margin:'16px auto 0'},
- top:{display:'flex',justifyContent:'space-between',alignItems:'flex-end'},
- cluster:{fontSize:11,color:'rgba(250,250,247,.5)',marginTop:5},
- counter:{fontSize:11,color:'rgba(250,250,247,.45)'},
- progress:{height:4,background:'rgba(250,250,247,.08)',margin:'14px 0 34px',borderRadius:99,overflow:'hidden'},
- fill:{height:'100%',borderRadius:99},
- insight:{fontSize:11,fontWeight:600,color:BRASS,marginBottom:12,letterSpacing:'.04em'},
- question:{fontSize:'clamp(28px,4.5vw,44px)',fontWeight:500,lineHeight:1.16,letterSpacing:'-.025em',margin:'0 0 26px'},
- options:{display:'grid',gap:10},
- option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'34px 1fr',alignItems:'center',gap:14,textAlign:'left',padding:'17px 18px',border:'1px solid',borderRadius:9,color:PARCH,fontSize:14,lineHeight:1.55,cursor:'pointer',fontFamily:'inherit',transition:'border-color .18s,background .18s'},
- optionLetter:{width:30,height:30,border:'1px solid rgba(201,168,76,.42)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:GOLD,fontSize:11,fontWeight:700},
- h1:{fontSize:'clamp(40px,7vw,64px)',fontWeight:500,lineHeight:1.04,letterSpacing:'-.035em',margin:'0 0 14px'},
- p:{fontSize:13,lineHeight:1.75,color:DIM},
  resultsHeader:{maxWidth:790,margin:'0 auto',width:'100%'},
  resultsEyebrow:{display:'flex',alignItems:'center',gap:9,fontSize:9,fontWeight:800,letterSpacing:'.13em',color:BRASS,flexWrap:'wrap'},
  statusDot:{width:7,height:7,borderRadius:'50%',background:'#91B79A',display:'inline-block'},
  statusDivider:{opacity:.45},
  resultsIntro:{fontSize:14,lineHeight:1.75,color:DIM,maxWidth:690,margin:'0 0 24px'},
  scoreSection:{maxWidth:900,width:'100%',margin:'0 auto'},
- sectionHeading:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginBottom:12},
- sectionHint:{fontSize:10,color:'rgba(250,250,247,.5)'},
  resultGrid:{display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:10,margin:'0 0 18px'},
- resultRow:{position:'relative',minWidth:0,minHeight:225,padding:'18px 15px 15px',border:'1px solid rgba(212,201,168,.16)',background:SURFACE,borderRadius:10,textAlign:'left',fontSize:11,display:'flex',flexDirection:'column',gap:10,overflow:'hidden'},
- resultRowStrong:{borderColor:'rgba(201,168,76,.7)',background:'linear-gradient(160deg,rgba(201,168,76,.12),#2E2E4A 65%)'},
+ resultRow:{position:'relative',minWidth:0,padding:'18px 15px 15px',border:'1px solid rgba(212,201,168,.16)',background:SURFACE,borderRadius:10,textAlign:'left',fontSize:11,display:'flex',flexDirection:'column',gap:10,overflow:'hidden'},
  dimensionCode:{fontSize:8,fontWeight:900,letterSpacing:'.14em',lineHeight:1.4,color:GOLD,marginBottom:1},
- dimensionCodeDivider:{color:BRASS,padding:'0 3px'},
  scoreName:{fontSize:16,fontWeight:800,lineHeight:1.3,letterSpacing:'-.02em',color:PARCH,overflowWrap:'anywhere',margin:0},
- dimensionMeaning:{fontSize:10.5,fontWeight:500,lineHeight:1.6,color:DIM,margin:'-5px 0 8px',minHeight:50},
  scoreValue:{fontSize:27,fontWeight:700,lineHeight:1.1,letterSpacing:'-.04em',color:PARCH,marginTop:'auto'},
  scoreOutOf:{fontSize:10,fontWeight:500,letterSpacing:0,color:'rgba(250,250,247,.42)',marginLeft:3},
- scoreTrack:{height:3,background:'rgba(250,250,247,.1)',borderRadius:9,overflow:'hidden',width:'100%'},
- scoreBar:{display:'block',height:'100%',background:GOLD,borderRadius:9},
- scoreBadge:{fontSize:7,fontWeight:800,letterSpacing:'.07em',lineHeight:1.4,color:GOLD,minHeight:20},
- highlight:{maxWidth:900,boxSizing:'border-box',width:'100%',margin:'0 auto 14px',padding:'22px 24px',border:'1px solid rgba(201,168,76,.32)',borderRadius:12,background:'linear-gradient(110deg,rgba(201,168,76,.09),#2E2E4A 65%)'},
- insightLabel:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
- signal:{fontSize:27,fontWeight:600,letterSpacing:'-.025em',marginTop:8,color:PARCH},
- insightText:{fontSize:12,lineHeight:1.65,color:DIM,margin:'8px 0 0',maxWidth:690},
- next:{maxWidth:900,boxSizing:'border-box',width:'100%',margin:'0 auto',padding:'22px 24px',border:'1px solid rgba(201,168,76,.3)',borderRadius:12,background:'rgba(201,168,76,.045)'},
- nextStepTag:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
- nextTitle:{fontSize:'clamp(22px,3vw,28px)',fontWeight:600,letterSpacing:'-.025em',margin:'8px 0'},
- nextText:{fontSize:12,lineHeight:1.7,color:DIM,maxWidth:700,margin:'0 0 16px'},
- resultActions:{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'},
- primaryLink:{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:10,minHeight:46,boxSizing:'border-box',padding:'13px 18px',borderRadius:7,background:GOLD,color:DARK,fontWeight:900,letterSpacing:'.06em',fontSize:10,textDecoration:'none',textAlign:'center'},
- secondary:{display:'inline-flex',alignItems:'center',justifyContent:'center',minHeight:44,padding:'10px 0',color:BRASS,fontSize:11,fontWeight:700,textDecoration:'none',lineHeight:1.5},
  note:{fontSize:10,lineHeight:1.65,color:'rgba(250,250,247,.48)',maxWidth:900,margin:'14px auto 0',width:'100%'}
 };
-
-
-// Production deployment sync: latest VALU entry layout.
