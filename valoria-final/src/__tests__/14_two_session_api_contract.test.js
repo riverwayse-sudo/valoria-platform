@@ -31,6 +31,23 @@ describe("taster-progress supports anonymous entry and a late identity step", ()
   test("the action allow-list includes identify", () => {
     expect(api).toContain("['init', 'load', 'save', 'identify', 'complete']");
   });
+
+  test("identity columns are nullable so anonymous init can create the row", () => {
+    const migrations = path.join(__dirname, "../../supabase/migrations");
+    const files = fs.readdirSync(migrations).filter(n => n.endsWith(".sql")).sort();
+    const relax = files.filter(n => {
+      const sql = fs.readFileSync(path.join(migrations, n), "utf8");
+      return sql.includes("ALTER TABLE public.taster_progress") && /DROP NOT NULL/.test(sql);
+    });
+    // Without this, init's NULL identity insert fails the NOT NULL constraint and
+    // repeats "We could not establish a resumable session" for every participant.
+    expect(relax.length).toBeGreaterThan(0);
+    const sql = fs.readFileSync(path.join(migrations, relax[relax.length - 1]), "utf8");
+    for (const col of ["name", "role", "experience", "email"]) {
+      expect(sql).toMatch(new RegExp(`ALTER COLUMN ${col} DROP NOT NULL`, "i"));
+    }
+    expect(relax[relax.length - 1]).toBe("20261030120000_relax_taster_progress_identity_nullable.sql");
+  });
 });
 
 describe("assessment-progress seeds the opening nine for session 2", () => {
