@@ -164,6 +164,22 @@ export default function FullVALUAssessment() {
 
   useEffect(() => () => { mountedRef.current = false; }, []);
 
+  // Strip legacy identity/resume query parameters from the visible URL as soon
+  // as the client hydrates. New links never include these values, but this
+  // protects participants opening older bookmarked or emailed assessment URLs.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const cleanParams = new URLSearchParams();
+      if (params.get('full') === '1') cleanParams.set('full', '1');
+      const cleanSearch = cleanParams.toString();
+      const nextUrl = window.location.pathname + (cleanSearch ? `?${cleanSearch}` : '') + window.location.hash;
+      if (nextUrl !== window.location.pathname + window.location.search + window.location.hash) {
+        window.history.replaceState({}, document.title, nextUrl);
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     let fromHash = '';
     let fragmentResume = '';
