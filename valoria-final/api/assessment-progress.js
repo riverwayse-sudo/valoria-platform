@@ -1,8 +1,8 @@
-import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
+import { verifyValuHandoffToken } from "../lib/valu-handoff-token.js";
 import { withEdgeCors } from "./_cors.js";
 import { seedAnswersFromOpening } from "../src/assessmentJourney.js";
 
-export const config = { runtime: "edge" };
+export const config = { runtime: "nodejs" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -249,7 +249,7 @@ async function baseHandler(req) {
     const validTasterId = typeof tasterId === "string"
       && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId);
     if (!validTasterId) return json({ error: "A valid VALU snapshot is required to restore progress." }, 400);
-    const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId);
+    const handoff = await verifyValuHandoffToken(handoffToken, tasterId);
     if (!handoff) return json({ error: "The secure VALU handoff is missing or expired. Reopen the assessment from your Valoria account." }, 401);
     const resolvedIdentity = await resolveTasterIdentity(tasterId);
     if (resolvedIdentity.error) return json({ error: resolvedIdentity.error }, 409);
@@ -299,7 +299,7 @@ async function baseHandler(req) {
     return json({ error: "A valid completed VALU snapshot is required." }, 400);
   }
   if (identityHash !== `valu_progress_${tasterId}`) return json({ error: "Assessment identity does not match the verified snapshot." }, 403);
-  const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId);
+  const handoff = await verifyValuHandoffToken(handoffToken, tasterId);
   if (!handoff) return json({ error: "The secure VALU handoff is missing or expired. Reopen the assessment from your Valoria account." }, 401);
 
   const resolvedIdentity = await resolveTasterIdentity(tasterId);
