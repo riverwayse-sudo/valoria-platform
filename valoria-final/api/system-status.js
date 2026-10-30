@@ -2,27 +2,30 @@
 //
 // Internal health check + backlog visibility for the sweep-unsent-reports job.
 // This endpoint exposes operational counts and therefore must never be public.
-// Keep this lightweight monitor on Edge so the participant-facing Node APIs
-// remain within Vercel Hobby's 12-serverless-function deployment limit.
-export const config = { runtime: "edge" };
+export const config = {
+  runtime: "nodejs",
+  maxDuration: 20,
+};
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    },
-  });
+function unauthorized(res) {
+  return res.status(401).json({ ok: false, error: "Unauthorized" });
+}
+
+function configured(res) {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !CRON_SECRET) {
+    res.status(503).json({ ok: false, error: "Service unavailable" });
+    return false;
+  }
+  return true;
 }
 
 async function countAssessments(headers, params) {
   const url = `${SUPABASE_URL}/rest/v1/valu_assessments?${params}`;
-  const response = await fetch(url, { headers, cache: "no-store" });
+  const response = await fetch(url, { headers });
   if (!response.ok) throw new Error("Supabase request failed");
 
   // Prefer: count=exact returns the total in Content-Range even when the
@@ -35,16 +38,14 @@ async function countAssessments(headers, params) {
   throw new Error("Backlog count unavailable");
 }
 
-export default async function handler(req) {
-  if (req.method !== "GET") return json({ ok: false, error: "Method not allowed" }, 405);
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !CRON_SECRET) {
-    return json({ ok: false, error: "Service unavailable" }, 503);
-  }
+export default async function handler(req, res) {
+  if (req.method !== "GET") return res.status(405).json({ ok: false, error: "Method not allowed" });
+  if (!configured(res)) return;
 
-  const authorization = req.headers.get("authorization") || "";
+  const authorization = req.headers.authorization || "";
   const expected = `Bearer ${CRON_SECRET}`;
   if (authorization.length !== expected.length || authorization !== expected) {
-    return json({ ok: false, error: "Unauthorized" }, 401);
+    return unauthorized(res);
   }
 
   const headers = {
@@ -82,7 +83,8 @@ export default async function handler(req) {
     const totalBacklog = unsentConfirmations + unsentReports + unreportedCompletions;
     const isHealthy = totalBacklog === 0;
 
-    return json({
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(200).json({
       ok: isHealthy,
       backlog: {
         unsentConfirmations,
@@ -91,9 +93,10 @@ export default async function handler(req) {
         total: totalBacklog,
       },
       checkedAt: new Date().toISOString(),
-    }, 200);
+    });
   } catch (err) {
-    console.error("[system-status] FAILED:", err?.message || "unknown error");
-    return json({ ok: false, error: "Status check failed", checkedAt: new Date().toISOString() }, 504);
+    console.error("[system-status] FAILED:", err.message);
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(504).json({ ok: false, error: "Status check failed", checkedAt: new Date().toISOString() });
   }
 }
