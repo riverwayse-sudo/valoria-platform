@@ -507,7 +507,7 @@ export default function FullVALUAssessment() {
       setResult(scoreData.results);
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
-        try { window.sessionStorage.removeItem(`valu-handoff-token:${identity.tasterId}`); } catch {}
+        try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
         setHandoffToken('');
         setHandoffStatus('account_required');
         setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
