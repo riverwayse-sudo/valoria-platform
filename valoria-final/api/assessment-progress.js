@@ -1,8 +1,8 @@
-import { verifyValuHandoffToken } from "../lib/valu-handoff-token.js";
+import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
 import { withEdgeCors } from "./_cors.js";
 import { seedAnswersFromOpening } from "../src/assessmentJourney.js";
 
-export const config = { runtime: "nodejs" };
+export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -249,7 +249,7 @@ async function baseHandler(req) {
     const validTasterId = typeof tasterId === "string"
       && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId);
     if (!validTasterId) return json({ error: "A valid VALU snapshot is required to restore progress." }, 400);
-    const handoff = await verifyValuHandoffToken(handoffToken, tasterId);
+    const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId);
     if (!handoff) return json({ error: "The secure VALU handoff is missing or expired. Reopen the assessment from your Valoria account." }, 401);
     const resolvedIdentity = await resolveTasterIdentity(tasterId);
     if (resolvedIdentity.error) return json({ error: resolvedIdentity.error }, 409);
