@@ -152,6 +152,18 @@ async function exchangeDashboardHandoff(body, res) {
   const user = await userResponse.json();
   if (!user.email_confirmed_at) return json(res, 403, { ok: false, error: 'Confirm your Valoria account email before continuing.' });
 
+  const existingAssessmentParams = new URLSearchParams({
+    or: `(user_id.eq.${link.user_id},taster_id.eq.${taster.id})`,
+    completed_at: 'not.is.null',
+    select: 'id',
+    limit: '1',
+  });
+  const existingAssessmentResponse = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${existingAssessmentParams}`, { headers, cache: 'no-store' });
+  if (!existingAssessmentResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your VALU assessment status.' });
+  if ((await existingAssessmentResponse.json())?.length) {
+    return json(res, 409, { ok: false, error: 'Your full VALU assessment is already complete. Return to your dashboard to view your results.' });
+  }
+
   // Atomic compare-and-set: exactly one request can consume this handoff code.
   const consumeParams = new URLSearchParams({
     id: `eq.${link.id}`,
