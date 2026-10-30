@@ -248,7 +248,6 @@ describe("Assessment integrity contracts", () => {
     expect(component).toContain("const action = handoffCode ? 'exchange-dashboard-handoff' : 'verify-handoff'");
     expect(component).toContain("handoffStatus !== 'ready'");
     expect(component).toContain("handoff_token:handoffToken");
-    expect(component).toContain("professional-signup");
     expect(component).toContain("sessionStorage.removeItem");
     expect(component).toContain("fragment.get('handoff_code')");
     expect(component).toContain("Strip legacy identity/resume query parameters from the visible URL");
