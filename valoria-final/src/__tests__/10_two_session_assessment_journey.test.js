@@ -186,4 +186,19 @@ describe("session 2 presents the remaining questions and restores progress", () 
     expect(source).toContain("const position = ASSESSMENT_ORDER[current]");
     expect(source).toContain("nextAnswers = { ...answers, [position]: optionIndex }");
   });
+
+describe("three-stage experience presentation", () => {
+  test("opening, account bridge, and completion share one progress component", () => {
+    const progress = readSource("VALUAssessmentJourney.jsx");
+    expect(gateSource()).toContain('VALUAssessmentJourney stage="opening"');
+    expect(gateSource()).toContain('VALUAssessmentJourney stage="bridge"');
+    expect(fullSource()).toContain('VALUAssessmentJourney stage="continuation"');
+    expect(progress).toContain("Questions 1–9");
+    expect(progress).toContain("Save & confirm");
+    expect(progress).toContain("Questions 10–58");
+    expect(gateSource()).not.toContain("SESSION 1 OF 2");
+    expect(fullSource()).not.toContain("SESSION 2 OF 2");
+  });
+});
+
 });
