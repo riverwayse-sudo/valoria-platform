@@ -238,6 +238,7 @@ describe("Assessment integrity contracts", () => {
     expect(component).toContain("loadRemoteProgress(identity.resume)");
     expect(component).toContain("if (identity.resume || handoffStatus !== 'ready'");
     expect(component).toContain("resume: identity.resume");
+    expect(component).toContain("handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete");
   });
 
   test("full assessment progress writes and reminders require verified account-owned snapshots", () => {
