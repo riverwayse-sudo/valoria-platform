@@ -235,6 +235,8 @@ describe("Assessment integrity contracts", () => {
     expect(submit).toContain("method: 'PATCH'");
     expect(submit).toContain("Prefer: 'return=representation'");
     expect(submit).toContain("createAssessmentSessionToken");
+    expect(submit).toContain("typ: 'assessment_session'");
+    expect(fs.readFileSync(path.join(__dirname, "../../lib/valu-handoff-token-edge.js"), "utf8")).toContain("token_type_invalid");
     expect(component).toContain("fragment.get('handoff_code')");
     expect(component).toContain("exchange-dashboard-handoff");
     expect(component).toContain("valu-handoff-session");
@@ -242,7 +244,7 @@ describe("Assessment integrity contracts", () => {
 
   test("full assessment UI verifies the signed handoff before showing questions or submitting", () => {
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
-    expect(component).toContain("readHandoffToken");
+    expect(component).toContain("readHandoffCode");
     expect(component).toContain("const action = handoffCode ? 'exchange-dashboard-handoff' : 'verify-handoff'");
     expect(component).toContain("handoffStatus !== 'ready'");
     expect(component).toContain("handoff_token:handoffToken");
