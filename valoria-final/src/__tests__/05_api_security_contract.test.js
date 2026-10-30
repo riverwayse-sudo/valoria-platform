@@ -234,6 +234,8 @@ describe("Assessment integrity contracts", () => {
     expect(component).toContain("professional-signup");
     expect(component).toContain("sessionStorage.removeItem");
     expect(component).toContain("fragment.get('resume_token')");
+    expect(component).toContain("Strip legacy identity/resume query parameters from the visible URL");
+    expect(component).toContain("cleanParams.set('full', '1')");
     expect(component).toContain("resume:fragmentResume || queryIdentity.resume");
     expect(component).toContain("loadRemoteProgress(identity.resume)");
     expect(component).toContain("if (identity.resume || handoffStatus !== 'ready'");
