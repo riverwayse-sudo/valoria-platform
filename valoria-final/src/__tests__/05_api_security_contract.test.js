@@ -233,6 +233,11 @@ describe("Assessment integrity contracts", () => {
     expect(component).toContain("handoff_token:handoffToken");
     expect(component).toContain("professional-signup");
     expect(component).toContain("sessionStorage.removeItem");
+    expect(component).toContain("fragment.get('resume_token')");
+    expect(component).toContain("resume:fragmentResume || queryIdentity.resume");
+    expect(component).toContain("loadRemoteProgress(identity.resume)");
+    expect(component).toContain("if (identity.resume || handoffStatus !== 'ready'");
+    expect(component).toContain("resume: identity.resume");
   });
 
   test("full assessment progress writes and reminders require verified account-owned snapshots", () => {
