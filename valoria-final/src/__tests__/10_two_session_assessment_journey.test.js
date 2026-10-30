@@ -120,7 +120,7 @@ describe("session 1 presents questions directly, with no account gate", () => {
     const sessionIndex = source.indexOf('mode="taster"');
     expect(breakIndex).toBeGreaterThan(-1);
     expect(sessionIndex).toBeGreaterThan(-1);
-    expect(source).toContain("CREATE MY ACCOUNT & CONTINUE");
+    expect(source).toContain("SAVE MY DETAILS & CONTINUE");
     expect(source).toContain("action:'identify'");
   });
 
