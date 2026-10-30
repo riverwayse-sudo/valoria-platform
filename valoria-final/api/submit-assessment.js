@@ -102,7 +102,7 @@ async function verifyHandoffRequest(body, res) {
   if (body?.taster_id && body.taster_id !== tasterId) {
     return json(res, 403, { ok: false, error: 'The secure handoff does not match the requested snapshot.' });
   }
-  const handoff = await verifyValuHandoffTokenEdge(token, tasterId, reason => {
+  const handoff = await verifyValuHandoffTokenEdge(body?.handoff_token, tasterId, reason => {
     console.warn('[submit-assessment] handoff rejected', { action: 'verify-handoff', reason });
   });
   if (!handoff) return json(res, 401, { ok: false, error: 'The secure assessment handoff is missing or expired.' });
