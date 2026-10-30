@@ -223,7 +223,7 @@ async function baseHandler(req) {
 
   if (req.method === "GET") {
     const auth = req?.headers?.get?.("authorization") || "";
-    if (CRON_SECRET && auth === `Bearer ${CRON_SECRET}` && !new URL(req.url).searchParams.get("resume")) {
+    if (CRON_SECRET && auth === `Bearer ${CRON_SECRET}` && !new URL(req.url, "https://assessment.valoriainstitute.com").searchParams.get("resume")) {
       return runReminderSweep(req);
     }
     return json({ error: "Saved assessment progress can only be restored after a verified dashboard handoff." }, 401);
