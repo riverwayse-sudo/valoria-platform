@@ -7,6 +7,7 @@ import { computeResults } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
 import { computeFingerprint } from '../src/lockEngine.js';
 import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -91,6 +92,89 @@ function tasterIdFromSignedTokenCandidate(token) {
   } catch {
     return null;
   }
+}
+
+function createAssessmentSessionToken(userId, tasterId, nowSeconds = Math.floor(Date.now() / 1000)) {
+  const payload = {
+    v: 1,
+    aud: 'valu-full-assessment',
+    sub: userId,
+    taster_id: tasterId,
+    iat: nowSeconds,
+    exp: nowSeconds + 4 * 60 * 60,
+    jti: randomBytes(16).toString('base64url'),
+  };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = createHmac('sha256', SERVICE_ROLE_KEY).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
+}
+
+async function exchangeDashboardHandoff(body, res) {
+  const code = body?.handoff_code;
+  if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{40,50}$/.test(code)) {
+    return json(res, 401, { ok: false, error: 'The dashboard handoff is missing or invalid.' });
+  }
+  const tokenHash = createHash('sha256').update(code).digest('hex');
+  const now = new Date().toISOString();
+  const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
+  const lookup = new URLSearchParams({
+    token: `eq.${tokenHash}`,
+    entry_point: 'eq.dashboard_assessment',
+    target_stage: 'eq.assess',
+    used_at: 'is.null',
+    expires_at: `gt.${now}`,
+    select: 'id,user_id,source_id,expires_at',
+    limit: '1',
+  });
+  const linkResponse = await fetch(`${SUPABASE_URL}/rest/v1/valoria_reentry_links?${lookup}`, { headers, cache: 'no-store' });
+  if (!linkResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify dashboard access. Please return to your dashboard.' });
+  const link = (await linkResponse.json())?.[0];
+  if (!link?.user_id || !link?.source_id) return json(res, 401, { ok: false, error: 'This dashboard handoff has expired or has already been used.' });
+
+  const validUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!validUuid.test(link.source_id)) return json(res, 401, { ok: false, error: 'The dashboard handoff is invalid.' });
+
+  const tasterParams = new URLSearchParams({
+    id: `eq.${link.source_id}`,
+    select: 'id,user_id,name,role,experience,completed_at',
+    limit: '1',
+  });
+  const tasterResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, { headers, cache: 'no-store' });
+  if (!tasterResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your saved VALU snapshot.' });
+  const taster = (await tasterResponse.json())?.[0];
+  if (!taster?.completed_at || taster.user_id !== link.user_id) {
+    return json(res, 403, { ok: false, error: 'This snapshot is not linked to the dashboard account.' });
+  }
+
+  const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${link.user_id}`, { headers, cache: 'no-store' });
+  if (!userResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your Valoria account.' });
+  const user = await userResponse.json();
+  if (!user.email_confirmed_at) return json(res, 403, { ok: false, error: 'Confirm your Valoria account email before continuing.' });
+
+  // Atomic compare-and-set: exactly one request can consume this handoff code.
+  const consumeParams = new URLSearchParams({
+    id: `eq.${link.id}`,
+    used_at: 'is.null',
+    expires_at: `gt.${now}`,
+  });
+  const consumeResponse = await fetch(`${SUPABASE_URL}/rest/v1/valoria_reentry_links?${consumeParams}`, {
+    method: 'PATCH',
+    headers: { ...headers, Prefer: 'return=representation' },
+    body: JSON.stringify({ used_at: now }),
+    cache: 'no-store',
+  });
+  if (!consumeResponse.ok) return json(res, 502, { ok: false, error: 'Could not securely activate this assessment session.' });
+  const consumed = await consumeResponse.json();
+  if (!Array.isArray(consumed) || consumed.length !== 1) {
+    return json(res, 409, { ok: false, error: 'This dashboard handoff has already been used. Return to your dashboard to open a new session.' });
+  }
+
+  const sessionToken = createAssessmentSessionToken(link.user_id, taster.id);
+  return json(res, 200, {
+    ok: true,
+    session_token: sessionToken,
+    identity: { taster_id: taster.id, name: taster.name || '', role: taster.role || '', experience: taster.experience || '' },
+  });
 }
 
 async function verifyHandoffRequest(body, res) {
@@ -179,6 +263,7 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {};
+  if (body.action === 'exchange-dashboard-handoff') return exchangeDashboardHandoff(body, res);
   if (body.action === 'verify-handoff') return verifyHandoffRequest(body, res);
   const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId, handoff_token: handoffToken } = body;
   if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
