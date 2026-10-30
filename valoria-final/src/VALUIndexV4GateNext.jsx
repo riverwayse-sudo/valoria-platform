@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './valu-results-responsive.css';
+import VALUAssessmentJourney from './VALUAssessmentJourney.jsx';
 
 const API_BASE = (() => {
   const configuredOrigin = String(import.meta.env.VITE_VALU_API_ORIGIN || '').trim().replace(/\/$/, '');
@@ -188,7 +189,7 @@ export default function VALUIndexV4GateNext(){
  if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU ASSESSMENT</div><h1 style={S.h1}>Preparing your assessment…</h1><p style={S.p}>We are getting Question 1 ready.</p></Shell>;
 
  if(phase==='break')return <Shell>
-  <StepBar active={2}/>
+  <VALUAssessmentJourney stage="bridge" />
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> FIRST SESSION COMPLETE <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your first session is <em>complete.</em></h1>
@@ -217,8 +218,8 @@ export default function VALUIndexV4GateNext(){
  </Shell>;
 
  return <Shell mode="taster">
-  <StepBar active={1}/>
-  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU ASSESSMENT · SESSION 1 OF 2</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>Question {placeInAssessment} of {TOTAL_QUESTIONS}</div></div>
+  <VALUAssessmentJourney stage="opening" currentQuestion={placeInAssessment} />
+  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU ASSESSMENT</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>Question {placeInAssessment} of {TOTAL_QUESTIONS}</div></div>
   <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
@@ -227,7 +228,7 @@ export default function VALUIndexV4GateNext(){
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
-function StepBar({active}){return <div className="valu-assessment-steps" style={S.steps}>{['ASSESSMENT','ACCOUNT','CONTINUE'].map((x,i)=><div key={x} style={{...S.step,opacity:i+1<=active?1:.35}}><span style={{...S.stepDot,background:i+1<=active?GOLD:'transparent'}}>{i+1}</span>{x}</div>)}</div>}
+function StepBar({active}){return null}
 function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 const S={
