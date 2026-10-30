@@ -10,7 +10,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
 function getDashboardUrl() {
-  const configured = String(process.env.VITE_VALU_SITE_ORIGIN || '').trim()
+  const configured = String(process.env.VALU_SITE_ORIGIN || '').trim()
   const origin = configured || (process.env.VERCEL_ENV === 'production' ? 'https://valoriainstitute.com' : '')
   if (!origin) return null
   try {
