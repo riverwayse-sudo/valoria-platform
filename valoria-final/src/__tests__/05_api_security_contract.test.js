@@ -277,7 +277,9 @@ describe("Assessment integrity contracts", () => {
 
   test("assessment reminders and in-app notifications return participants to the dashboard", () => {
     const source = readApi("assessment-progress.js");
-    expect(source).toContain("DASHBOARD_URL");
+    expect(source).toContain("getDashboardUrl");
+    expect(source).toContain("process.env.VERCEL_ENV === 'production'");
+    expect(source).toContain("return false;");
     expect(source).toContain("RETURN TO MY VALORIA DASHBOARD");
     expect(source).toContain("action_url: '/dashboard'");
     expect(source).not.toContain("/journey/continue?stage=assess&taster_id=");
