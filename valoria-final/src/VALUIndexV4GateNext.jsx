@@ -193,7 +193,24 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> OPENING NINE SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your opening nine are <em>saved.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your responses have been saved. Create your account to continue your VALU assessment and complete your professional profile.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your first nine responses are safely saved. This is the account bridge in your one VALU assessment — not a separate test and not the end of your journey.</p>
+  </section>
+  <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
+   <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your opening nine</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your answers are saved and will carry into the full assessment.</p>
+   </div>
+   <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · YOU ARE HERE</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Create your account</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Add your details now. You’ll set your password and confirm your email in the next step.</p>
+   </div>
+   <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue at Question 10</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, return signed in to your dashboard, and complete the remaining 49 questions.</p>
+   </div>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
    <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
@@ -202,8 +219,8 @@ export default function VALUIndexV4GateNext(){
    </div>
   </section>
   <form onSubmit={createAccount} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>CREATE YOUR ACCOUNT</div><h2 style={S.formTitle}>Continue your VALU assessment.</h2></div><div style={S.formTime}>COMPLETION<br/>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH} LEFT</div></div>
-   <p style={S.formIntro}>Use the same email you will confirm. We will attach your saved opening nine to your account, then return you to your dashboard to continue.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>ACCOUNT SETUP · STEP 2 OF 3</div><h2 style={S.formTitle}>Let’s keep your progress connected.</h2></div><div style={S.formTime}>COMPLETION<br/>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH} LEFT</div></div>
+   <p style={S.formIntro}>Use an email address you can access. We’ll connect your saved opening nine to your account, then guide you through password setup and email confirmation before returning you to your dashboard.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
@@ -211,7 +228,7 @@ export default function VALUIndexV4GateNext(){
    <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
    {error&&<div style={S.error}>{error}</div>}
-   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'CREATE MY ACCOUNT & CONTINUE →'}</button>
+   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'SAVE MY DETAILS & CONTINUE →'}</button>
    <div style={S.saveNote}><span>✓</span> Your opening nine answers are saved.</div>
   </form>
   <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
