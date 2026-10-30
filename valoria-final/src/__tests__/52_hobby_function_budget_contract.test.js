@@ -4,12 +4,12 @@ const path = require("node:path");
 const api = name => fs.readFileSync(path.join(process.cwd(), "api", name), "utf8");
 
 describe("Vercel Hobby function budget and VALU handoff runtime", () => {
-  test("assessment progress uses the canonical Node HMAC verifier", () => {
+  test("assessment progress stays Edge-compatible and verifies HMAC with Web Crypto", () => {
     const source = api("assessment-progress.js");
-    expect(source).toContain('runtime: "nodejs"');
-    expect(source).toContain('../lib/valu-handoff-token.js');
-    expect(source).toContain("verifyValuHandoffToken(handoffToken, tasterId)");
-    expect(source).not.toContain("valu-handoff-token-edge");
+    expect(source).toContain('runtime: "edge"');
+    expect(source).toContain('../lib/valu-handoff-token-edge.js');
+    expect(source).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId)");
+    expect(source).not.toContain("node:crypto");
   });
 
   test("lightweight system status remains Edge to offset the participant API Node function", () => {
