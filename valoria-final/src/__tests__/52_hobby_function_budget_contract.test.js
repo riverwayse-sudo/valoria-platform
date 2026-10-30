@@ -8,7 +8,8 @@ describe("VALU handoff runtime compatibility", () => {
     const source = api("assessment-progress.js");
     expect(source).toContain('runtime: "edge"');
     expect(source).toContain('../lib/valu-handoff-token-edge.js');
-    expect(source).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId)");
+    expect(source).toContain("verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
+    expect(source).not.toContain("verifyValuHandoffToken(handoffToken, tasterId)");
     expect(source).not.toContain("node:crypto");
   });
 
