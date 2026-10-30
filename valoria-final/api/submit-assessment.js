@@ -276,7 +276,14 @@ export default async function handler(req, res) {
   }
 
   const body = req.body || {};
-  if (body.action === 'exchange-dashboard-handoff') return exchangeDashboardHandoff(body, res);
+  if (body.action === 'exchange-dashboard-handoff') {
+    try {
+      return await exchangeDashboardHandoff(body, res);
+    } catch (error) {
+      console.error('submit-assessment: dashboard handoff exchange failed', error?.message || error);
+      return json(res, 503, { ok: false, error: 'Secure assessment access is temporarily unavailable. Return to your dashboard and try again.' });
+    }
+  }
   if (body.action === 'verify-handoff') return verifyHandoffRequest(body, res);
   const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId, handoff_token: handoffToken } = body;
   if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
