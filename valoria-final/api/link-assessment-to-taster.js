@@ -1,4 +1,4 @@
-import { verifyValuHandoffToken } from '../lib/valu-handoff-token.js';
+import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -16,7 +16,9 @@ export default async function handler(req, res) {
   if (typeof tasterId !== 'string' || !tasterId || typeof identityHash !== 'string' || !/^fp_[a-z0-9]{1,128}$/i.test(identityHash)) {
     return json(res, 400, { error: 'Valid taster_id and identity_hash are required.' });
   }
-  const handoff = verifyValuHandoffToken(handoffToken, tasterId);
+  const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason => {
+    console.warn('[link-assessment-to-taster] handoff rejected', { reason });
+  });
   if (!handoff) return json(res, 401, { error: 'Your secure VALU handoff is missing or expired. Reopen the assessment from your Valoria account.' });
 
   const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
