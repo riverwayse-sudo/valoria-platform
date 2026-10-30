@@ -42,15 +42,6 @@ import {
 const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
 const CLUSTER_NAMES = { P:'Presence', R:'Relationships', I:'Intelligence', M:'Mastery', E:'Enterprise' };
 
-function readHandoffToken() {
-  try {
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    return params.get('handoff_token') || '';
-  } catch {
-    return '';
-  }
-}
-
 function readHandoffCode() {
   try {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
@@ -178,18 +169,16 @@ export default function FullVALUAssessment() {
 
   useEffect(() => {
     let handoffCode = '';
-    let legacyToken = '';
     try {
       const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       handoffCode = fragment.get('handoff_code') || '';
-      legacyToken = fragment.get('handoff_token') || '';
-      if (handoffCode || legacyToken || fragment.has('resume_token')) {
+      if (handoffCode || fragment.has('handoff_token') || fragment.has('resume_token')) {
         window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
       }
     } catch {}
 
-    let token = legacyToken;
-    if (!handoffCode && !token) {
+    let token = '';
+    if (!handoffCode) {
       try {
         const saved = JSON.parse(window.sessionStorage.getItem('valu-handoff-session') || 'null');
         token = typeof saved?.token === 'string' ? saved.token : '';
