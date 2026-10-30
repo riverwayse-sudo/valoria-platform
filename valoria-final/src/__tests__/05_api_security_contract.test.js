@@ -39,7 +39,7 @@ describe("Privileged API security contracts", () => {
     const progressApi = readApi("assessment-progress.js");
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     expect(progressApi).toContain('if (action === "restore")');
-    expect(progressApi).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId)");
+    expect(progressApi).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
     expect(progressApi).toContain("getProgressByTasterId(tasterId)");
     expect(progressApi).toContain("progress.user_id !== resolvedIdentity.user_id");
     expect(progressApi).toContain('status: "in.(in_progress,abandoned)"');
@@ -233,7 +233,7 @@ describe("Assessment integrity contracts", () => {
 
   test("full assessment progress writes and reminders require verified account-owned snapshots", () => {
     const source = readApi("assessment-progress.js");
-    expect(source).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId)");
+    expect(source).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
     expect(source).toContain("resolvedIdentity.user_id !== handoff.sub");
     expect(source).toContain("verified account-owned snapshot required");
     expect(source).toContain("snapshot/account identity did not verify");
