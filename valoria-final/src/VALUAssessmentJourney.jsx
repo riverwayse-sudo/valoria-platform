@@ -3,7 +3,7 @@ import React from 'react';
 const STEPS = [
   { key: 'opening', title: 'Opening', detail: 'Questions 1–9' },
   { key: 'bridge', title: 'Account', detail: 'Save & confirm' },
-  { key: 'continuation', title: 'Complete', detail: 'Questions 10–58' },
+  { key: 'continuation', title: 'Continue', detail: 'Questions 10–58' },
 ];
 
 export default function VALUAssessmentJourney({ stage = 'opening', currentQuestion }) {
