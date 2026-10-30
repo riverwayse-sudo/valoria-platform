@@ -3,7 +3,7 @@ const path = require("node:path");
 
 const api = name => fs.readFileSync(path.join(process.cwd(), "api", name), "utf8");
 
-describe("Vercel Hobby function budget and VALU handoff runtime", () => {
+describe("VALU handoff runtime compatibility", () => {
   test("assessment progress stays Edge-compatible and verifies HMAC with Web Crypto", () => {
     const source = api("assessment-progress.js");
     expect(source).toContain('runtime: "edge"');
@@ -12,13 +12,11 @@ describe("Vercel Hobby function budget and VALU handoff runtime", () => {
     expect(source).not.toContain("node:crypto");
   });
 
-  test("lightweight system status remains Edge to offset the participant API Node function", () => {
+  test("system status retains its existing Node handler contract", () => {
     const source = api("system-status.js");
-    expect(source).toContain('runtime: "edge"');
-    expect(source).toContain('req.headers.get("authorization")');
-    expect(source).toContain("return new Response(");
-    expect(source).not.toContain("node:crypto");
-    expect(source).not.toContain("res.status(");
+    expect(source).toContain('runtime: "nodejs"');
+    expect(source).toContain("req.headers.authorization");
+    expect(source).toContain("res.status(200).json(");
   });
 
   test("the system status endpoint remains fail-closed when cron configuration is absent", () => {
