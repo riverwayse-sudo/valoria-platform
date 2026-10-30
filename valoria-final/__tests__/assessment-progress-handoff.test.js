@@ -7,7 +7,9 @@ describe('assessment progress handoff verification', () => {
   test('restore and save use the Edge Web Crypto verifier with the shared site token contract', () => {
     expect(source).toContain('runtime: "edge"');
     expect(source).toContain('../lib/valu-handoff-token-edge.js');
-    expect(source).toContain('await verifyValuHandoffTokenEdge(handoffToken, tasterId)');
+    expect(source).toContain('await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>');
+    expect((source.match(/await verifyValuHandoffTokenEdge\\(handoffToken, tasterId, reason =>/g) || []).length).toBe(2);
+    expect(source).not.toContain('verifyValuHandoffToken(handoffToken, tasterId)');
     expect(source).not.toContain('node:crypto');
   });
 
