@@ -97,6 +97,7 @@ function tasterIdFromSignedTokenCandidate(token) {
 function createAssessmentSessionToken(userId, tasterId, nowSeconds = Math.floor(Date.now() / 1000)) {
   const payload = {
     v: 1,
+    typ: 'assessment_session',
     aud: 'valu-full-assessment',
     sub: userId,
     taster_id: tasterId,
