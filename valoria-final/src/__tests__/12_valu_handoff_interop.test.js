@@ -92,6 +92,21 @@ describe("VALU full-assessment handoff token interoperability", () => {
     expect(await verifyValuHandoffTokenEdge(signToken(payload, "wrong-secret"), tasterId)).toBeNull();
   });
 
+  test("safe diagnostic callbacks identify missing, expired, and invalid signatures without exposing token data", async () => {
+    let reason = null;
+    expect(await verifyValuHandoffTokenEdge("", tasterId, value => { reason = value; })).toBeNull();
+    expect(reason).toBe("token_missing");
+
+    const expired = { ...payload, iat: now - 8 * 60 * 60, exp: now - 60 };
+    reason = null;
+    expect(await verifyValuHandoffTokenEdge(signToken(expired), tasterId, value => { reason = value; })).toBeNull();
+    expect(reason).toBe("token_expired");
+
+    reason = null;
+    expect(await verifyValuHandoffTokenEdge(signToken(payload, "wrong-secret"), tasterId, value => { reason = value; })).toBeNull();
+    expect(reason).toBe("signature_invalid");
+  });
+
   test("a malformed token is rejected without throwing", async () => {
     expect(await verifyValuHandoffTokenEdge("not-a-token", tasterId)).toBeNull();
     expect(await verifyValuHandoffTokenEdge("", tasterId)).toBeNull();
