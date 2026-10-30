@@ -22,6 +22,7 @@ function handoffToken(sub, tasterId) {
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     v: 1,
+    typ: "assessment_session",
     aud: "valu-full-assessment",
     sub,
     taster_id: tasterId,
