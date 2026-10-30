@@ -157,6 +157,7 @@ describe("Full assessment submission runtime contract", () => {
       if (url.includes("/auth/v1/admin/users/")) {
         return jsonResponse(200, { id: USER_ID, email: "temitayo@example.com", email_confirmed_at: "2026-10-25T09:00:00.000Z" });
       }
+      if (url.includes("/rest/v1/valu_assessments")) return jsonResponse(200, []);
       throw new Error(`unexpected fetch: ${url}`);
     };
 
