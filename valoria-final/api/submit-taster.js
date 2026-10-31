@@ -2,8 +2,10 @@ import { createHash } from 'node:crypto';
 import { TASTER_QUESTIONS, computeTasterResult, EXPERIENCE_BANDS, VALU_VERSION } from '../src/valuTaster.js';
 import { applyCors, handlePreflight } from './_cors.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { getValoriaSupabaseConfig } from "../lib/valoria-supabase-runtime-config.js";
+const SUPABASE_CONFIG = getValoriaSupabaseConfig();
+const SUPABASE_URL = SUPABASE_CONFIG?.url || "";
+const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || "";
 const RATE_LIMIT = 30;
 const RATE_WINDOW_SECONDS = 60 * 60;
 
