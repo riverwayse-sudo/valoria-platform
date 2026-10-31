@@ -18,6 +18,8 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4.2.2
       - name: Setup Node
@@ -32,6 +34,7 @@ jobs:
         run: |
           node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.devDependencies.vite='6.4.5'; p.devDependencies['@vitejs/plugin-react']='4.3.4'; fs.writeFileSync('package.json', JSON.stringify(p,null,2));"
           npm install --package-lock-only --ignore-scripts
+          npm update --package-lock-only --ignore-scripts baseline-browser-mapping brace-expansion browserslist js-yaml nanoid source-map-js postcss esbuild
       - name: Upload patched Vite candidate
         if: always()
         uses: actions/upload-artifact@v4
@@ -41,6 +44,8 @@ jobs:
             valoria-final/package.json
             valoria-final/package-lock.json
           if-no-files-found: warn
+      - name: Install patched dependency lock
+        run: npm ci
       - name: Generate dependency audit report
         run: |
           npm audit --json > npm-audit.json || true
@@ -61,6 +66,18 @@ jobs:
           exit "$status"
         env:
           CI: true
+      - name: Commit patched dependency manifests to this PR branch
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/assessment-handoff-token-verification-v2'
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "fix: patch vulnerable platform dependencies"
+            git push origin "HEAD:${BRANCH}"
+          fi
       - name: Upload unit-test diagnostics
         if: always()
         uses: actions/upload-artifact@v4
