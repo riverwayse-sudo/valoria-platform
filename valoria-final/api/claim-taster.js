@@ -1,6 +1,8 @@
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import { getValoriaSupabaseConfig } from "../lib/valoria-supabase-runtime-config.js";
+const SUPABASE_CONFIG = getValoriaSupabaseConfig();
+const SUPABASE_URL = SUPABASE_CONFIG?.url || "";
+const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || "";
+const ANON_KEY = SUPABASE_CONFIG?.anonKey || "";
 
 function json(res, status, data) {
   res.status(status).setHeader('Cache-Control', 'no-store');
