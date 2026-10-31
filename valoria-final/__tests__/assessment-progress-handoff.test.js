@@ -98,8 +98,28 @@ describe('assessment progress handoff verification', () => {
 });
 
 describe('assessment progress restore runtime contract', () => {
+  const secret = 'unit-test-only-handoff-secret';
+  const tasterId = randomUUID();
   const originalUrl = process.env.SUPABASE_URL;
   const originalVercelEnv = process.env.VERCEL_ENV;
+  const originalServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  function makeToken() {
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      v: 1,
+      typ: 'assessment_session',
+      aud: 'valu-full-assessment',
+      sub: 'user-test-123',
+      taster_id: tasterId,
+      iat: now,
+      exp: now + 60 * 60,
+      jti: 'runtime-restore-token-id-123456',
+    };
+    const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    const signature = createHmac('sha256', secret).update(encoded).digest('base64url');
+    return encoded + '.' + signature;
+  }
 
   function loadHandler() {
     process.env.VERCEL_ENV = 'development';
@@ -122,6 +142,8 @@ describe('assessment progress restore runtime contract', () => {
     else process.env.SUPABASE_URL = originalUrl;
     if (originalVercelEnv === undefined) delete process.env.VERCEL_ENV;
     else process.env.VERCEL_ENV = originalVercelEnv;
+    if (originalServiceRole === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceRole;
   });
 
   test('restores saved answers and position only after the signed account-owned snapshot is verified', async () => {
