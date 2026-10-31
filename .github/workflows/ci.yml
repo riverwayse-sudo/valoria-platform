@@ -66,6 +66,11 @@ jobs:
           exit "$status"
         env:
           CI: true
+      - name: Build with patched dependencies
+        run: npm run build
+        env:
+          CI: true
+          NEXT_TELEMETRY_DISABLED: 1
       - name: Commit patched dependency manifests to this PR branch
         if: github.event_name == 'pull_request' && github.head_ref == 'fix/assessment-handoff-token-verification-v2'
         env:
