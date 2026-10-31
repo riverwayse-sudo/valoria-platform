@@ -13,7 +13,10 @@ export function getValoriaSupabaseConfig(env = process.env) {
     try {
       const previewOrigin = new URL(url).origin;
       const publicOrigin = new URL(publicUrl).origin;
-      if (previewOrigin !== publicOrigin) return null;
+      const productionOrigin = env.VALU_PRODUCTION_SUPABASE_URL
+        ? new URL(String(env.VALU_PRODUCTION_SUPABASE_URL).trim()).origin
+        : null;
+      if (previewOrigin !== publicOrigin || (productionOrigin && previewOrigin === productionOrigin)) return null;
       return { url: previewOrigin, serviceRoleKey };
     } catch {
       return null;
