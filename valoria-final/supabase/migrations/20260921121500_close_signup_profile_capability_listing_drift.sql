@@ -18,7 +18,7 @@ grant execute on function private.valu_assessment_is_current(uuid) to service_ro
 
 create or replace function public.enforce_valu_profile_lifecycle()
 returns trigger language plpgsql security definer set search_path = public, private
-as $
+as $$
 declare complete boolean;
 begin
   if tg_op = 'INSERT' and coalesce(new.listing_status,'pending') = 'pending' then new.listing_status := 'unlisted'; end if;
@@ -37,7 +37,7 @@ begin
   new.profile_complete := coalesce(complete,false);
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists trg_enforce_valu_profile_lifecycle on public.professional_profiles;
 create trigger trg_enforce_valu_profile_lifecycle
@@ -146,7 +146,7 @@ grant execute on function private.sync_professional_capability(uuid,text) to ser
 
 create or replace function private.evaluate_professional_readiness(p_professional_id uuid)
 returns jsonb language plpgsql security definer set search_path = public, private
-as $
+as $$
 declare
   missing jsonb := '[]'::jsonb;
   profile_ok boolean := false;
@@ -202,7 +202,7 @@ begin
     'missing',missing
   );
 end;
-$;
+$$;
 revoke all on function private.evaluate_professional_readiness(uuid) from public, anon, authenticated;
 grant execute on function private.evaluate_professional_readiness(uuid) to service_role;
 
