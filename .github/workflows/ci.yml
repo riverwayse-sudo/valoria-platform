@@ -18,8 +18,6 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4.2.2
       - name: Setup Node
@@ -29,22 +27,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: valoria-final/package-lock.json
       - name: Install dependencies
-        run: npm ci
-      - name: Generate patched Vite lock candidate
-        run: |
-          node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.devDependencies.vite='6.4.5'; p.devDependencies['@vitejs/plugin-react']='4.3.4'; fs.writeFileSync('package.json', JSON.stringify(p,null,2));"
-          npm install --package-lock-only --ignore-scripts
-          npm update --package-lock-only --ignore-scripts baseline-browser-mapping brace-expansion browserslist js-yaml nanoid source-map-js postcss esbuild
-      - name: Upload patched Vite candidate
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: platform-vite-patch-${{ github.run_id }}
-          path: |
-            valoria-final/package.json
-            valoria-final/package-lock.json
-          if-no-files-found: warn
-      - name: Install patched dependency lock
         run: npm ci
       - name: Generate dependency audit report
         run: |
@@ -71,24 +53,6 @@ jobs:
         env:
           CI: true
           NEXT_TELEMETRY_DISABLED: 1
-      - name: Commit patched dependency manifests to this PR branch
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/assessment-handoff-token-verification-v2'
-        env:
-          BRANCH: ${{ github.head_ref }}
-        run: |
-          cp package.json /tmp/valoria-platform-package.json
-          cp package-lock.json /tmp/valoria-platform-package-lock.json
-          git fetch origin "+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}"
-          git checkout -f -B "${BRANCH}" "refs/remotes/origin/${BRANCH}"
-          cp /tmp/valoria-platform-package.json package.json
-          cp /tmp/valoria-platform-package-lock.json package-lock.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          if ! git diff --cached --quiet; then
-            git commit -m "fix: patch vulnerable platform dependencies"
-            git push origin "HEAD:${BRANCH}"
-          fi
       - name: Upload unit-test diagnostics
         if: always()
         uses: actions/upload-artifact@v4
