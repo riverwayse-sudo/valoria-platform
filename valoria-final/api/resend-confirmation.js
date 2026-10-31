@@ -2,9 +2,11 @@ export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+import { getValoriaSupabaseConfig } from "../lib/valoria-supabase-runtime-config.js";
+const SUPABASE_CONFIG = getValoriaSupabaseConfig();
+const SUPABASE_URL = SUPABASE_CONFIG?.url || "";
+const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || "";
+const SUPABASE_ANON_KEY = SUPABASE_CONFIG?.anonKey || '';
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const VALORIA_SITE_URL = "https://valoriainstitute.com";
 
