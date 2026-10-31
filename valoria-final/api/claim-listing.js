@@ -40,7 +40,7 @@ export default async function handler(req) {
   try {
     const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: {
-        apikey: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || SERVICE_ROLE_KEY,
+        apikey: SUPABASE_CONFIG?.anonKey || SERVICE_ROLE_KEY,
         Authorization: `Bearer ${accessToken}`,
       },
     });
