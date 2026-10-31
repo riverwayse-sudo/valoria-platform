@@ -17,7 +17,7 @@ export function getValoriaSupabaseConfig(env = process.env) {
         ? new URL(String(env.VALU_PRODUCTION_SUPABASE_URL).trim()).origin
         : null;
       if (previewOrigin !== publicOrigin || (productionOrigin && previewOrigin === productionOrigin)) return null;
-      return { url: previewOrigin, serviceRoleKey };
+      return { url: previewOrigin, serviceRoleKey, anonKey };
     } catch {
       return null;
     }
@@ -25,9 +25,10 @@ export function getValoriaSupabaseConfig(env = process.env) {
 
   const url = String(env.SUPABASE_URL || env.VITE_SUPABASE_URL || '').trim();
   const serviceRoleKey = String(env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const anonKey = String(env.SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KEY || '').trim();
   if (!url || !serviceRoleKey) return null;
   try {
-    return { url: new URL(url).origin, serviceRoleKey };
+    return { url: new URL(url).origin, serviceRoleKey, anonKey };
   } catch {
     return null;
   }
