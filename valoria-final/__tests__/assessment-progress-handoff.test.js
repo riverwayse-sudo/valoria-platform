@@ -69,6 +69,27 @@ describe('assessment progress handoff verification', () => {
     expect(failure).toHaveBeenCalledWith('token_encoding_invalid');
   });
 
+  test('rejects non-zero unused base64url bits instead of accepting alternate encodings', async () => {
+    const failure = jest.fn();
+    const verified = await verifyValuHandoffTokenEdge('Zh.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', tasterId, failure);
+    expect(verified).toBeNull();
+    expect(failure).toHaveBeenCalledWith('token_encoding_invalid');
+  });
+
+  test.each([
+    [{ v: 2 }, 'token_version_invalid'],
+    [{ typ: 'other' }, 'token_type_invalid'],
+    [{ aud: 'other' }, 'token_audience_invalid'],
+    [{ taster_id: randomUUID() }, 'snapshot_mismatch'],
+    [{ exp: Math.floor(Date.now() / 1000) - 1 }, 'token_expired'],
+    [{ iat: Math.floor(Date.now() / 1000) + 120 }, 'token_issued_in_future'],
+  ])('rejects invalid signed claims: %j', async (overrides, reason) => {
+    const failure = jest.fn();
+    const verified = await verifyValuHandoffTokenEdge(makeToken(overrides), tasterId, failure);
+    expect(verified).toBeNull();
+    expect(failure).toHaveBeenCalledWith(reason);
+  });
+
   test('restore retains snapshot ownership and identity checks after token verification', () => {
     expect(source).toContain('resolvedIdentity.user_id !== handoff.sub');
     expect(source).toContain('resolveTasterIdentity(tasterId)');
