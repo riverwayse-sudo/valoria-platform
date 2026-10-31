@@ -1,3 +1,5 @@
+import { getValoriaSupabaseConfig } from './valoria-supabase-runtime-config.js';
+
 const AUDIENCE = 'valu-full-assessment';
 const BASE64URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
@@ -37,7 +39,9 @@ export async function verifyValuHandoffTokenEdge(token, expectedTasterId, onFail
     return null;
   };
 
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Verify with the same environment-selected key used by the token issuer and
+  // Supabase API client. Preview must never fall back to the production secret.
+  const secret = getValoriaSupabaseConfig()?.serviceRoleKey;
   if (!secret) return reject('verifier_secret_unavailable');
   if (typeof token !== 'string' || !token) return reject('token_missing');
   if (!expectedTasterId) return reject('snapshot_reference_missing');
