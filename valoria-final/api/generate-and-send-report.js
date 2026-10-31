@@ -5,8 +5,10 @@ import { applyCors, handlePreflight } from "./_cors.js";
 // Public browser triggers are rate-limited; cron workers remain authenticated.
 export const config = { runtime: "nodejs", maxDuration: 60 };
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { getValoriaSupabaseConfig } from "../lib/valoria-supabase-runtime-config.js";
+const SUPABASE_CONFIG = getValoriaSupabaseConfig();
+const SUPABASE_URL = SUPABASE_CONFIG?.url || "";
+const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || "";
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 const REQUEST_TIMEOUT_MS = 15000;
