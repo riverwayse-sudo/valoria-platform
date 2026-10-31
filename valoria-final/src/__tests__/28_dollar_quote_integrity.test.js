@@ -26,6 +26,22 @@ describe("dollar-quote integrity across platform migration directories", () => {
     expect(files.length).toBeGreaterThan(0);
   });
 
+  test("duplicate migration versions across the two directories must be byte-identical", () => {
+    const byVersion = new Map();
+    const collisions = [];
+    for (const { dir, file } of files) {
+      const version = file.match(/^([0-9]{14})_/);
+      if (!version) continue;
+      const content = fs.readFileSync(path.join(dir, file), "utf8");
+      if (byVersion.has(version[1]) && byVersion.get(version[1]).content !== content) {
+        collisions.push(version[1]);
+      } else {
+        byVersion.set(version[1], { dir, file, content });
+      }
+    }
+    expect(collisions).toEqual([]);
+  });
+
   test("no migration contains a truncated dollar-quote delimiter", () => {
     const offenders = [];
     for (const { dir, file } of files) {
