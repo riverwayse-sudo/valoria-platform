@@ -14,6 +14,18 @@ describe('Valoria Supabase runtime environment isolation', () => {
     });
   });
 
+  test('Cloudflare Pages production branch uses production credentials', () => {
+    expect(getValoriaSupabaseConfig({
+      CF_PAGES: '1',
+      CF_PAGES_BRANCH: 'main',
+      SUPABASE_URL: 'https://prod-project.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'production-service-role',
+    })).toEqual({
+      url: 'https://prod-project.supabase.co',
+      serviceRoleKey: 'production-service-role',
+    });
+  });
+
   test('Vercel preview refuses to fall back to production credentials', () => {
     expect(getValoriaSupabaseConfig({
       ...production,
