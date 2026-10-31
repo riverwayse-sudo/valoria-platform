@@ -7,10 +7,12 @@ import { computeResults } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
 import { computeFingerprint } from '../src/lockEngine.js';
 import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
+import { getValoriaSupabaseConfig } from '../lib/valoria-supabase-runtime-config.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_CONFIG = getValoriaSupabaseConfig();
+const SUPABASE_URL = SUPABASE_CONFIG?.url || '';
+const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || '';
 const MAX_NAME_LENGTH = 200;
 const MAX_ROLE_LENGTH = 160;
 const MAX_TIMINGS_LENGTH = QUESTIONS.length;

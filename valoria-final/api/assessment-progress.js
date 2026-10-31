@@ -1,11 +1,13 @@
 import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
+import { getValoriaSupabaseConfig } from "../lib/valoria-supabase-runtime-config.js";
 import { withEdgeCors } from "./_cors.js";
 import { seedAnswersFromOpening } from "../src/assessmentJourney.js";
 
 export const config = { runtime: "edge" };
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_CONFIG = getValoriaSupabaseConfig();
+const SUPABASE_URL = SUPABASE_CONFIG?.url || '';
+const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || '';
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
