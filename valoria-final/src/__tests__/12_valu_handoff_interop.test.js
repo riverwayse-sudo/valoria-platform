@@ -23,6 +23,8 @@ function signToken(payload, secret = SECRET) {
 describe("VALU full-assessment handoff token interoperability", () => {
   let verifyValuHandoffTokenEdge;
   let verifyValuHandoffToken;
+  const originalSupabaseUrl = process.env.SUPABASE_URL;
+  const originalServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const now = Math.floor(Date.now() / 1000);
   const tasterId = "3f0a1c2e-5b6d-4e7f-8a9b-0c1d2e3f4a5b";
   const payload = {
@@ -37,11 +39,19 @@ describe("VALU full-assessment handoff token interoperability", () => {
   };
 
   beforeAll(async () => {
+    process.env.SUPABASE_URL = 'https://handoff-interop-test.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY = SECRET;
     const moduleUrl = pathToFileURL(path.join(__dirname, "../../lib/valu-handoff-token-edge.js")).href;
     ({ verifyValuHandoffTokenEdge } = await import(moduleUrl));
     const nodeModuleUrl = pathToFileURL(path.join(__dirname, "../../lib/valu-handoff-token.js")).href;
     ({ verifyValuHandoffToken } = await import(nodeModuleUrl));
+  });
+
+  afterAll(() => {
+    if (originalSupabaseUrl === undefined) delete process.env.SUPABASE_URL;
+    else process.env.SUPABASE_URL = originalSupabaseUrl;
+    if (originalServiceRoleKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceRoleKey;
   });
 
   test("the platform verifier accepts a platform-issued session token signed with Node HMAC", async () => {
