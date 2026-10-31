@@ -72,6 +72,13 @@ drop policy if exists meta_lead_events_admin_select on public.meta_lead_events;
 create policy meta_lead_events_admin_select on public.meta_lead_events
 for select to authenticated using ((select public.is_valoria_admin()));
 
+-- Supabase no longer exposes newly created public tables through the Data API by default.
+-- Grant only the roles used by the service worker and administrator console; RLS remains enabled.
+grant all on table public.lead_captures to service_role;
+grant select on table public.lead_captures to authenticated;
+grant all on table public.meta_lead_events to service_role;
+grant select on table public.meta_lead_events to authenticated;
+
 create or replace function private.capture_waitlist_lead()
 returns trigger language plpgsql security definer set search_path=public,private as $$
 begin
