@@ -237,22 +237,5 @@ create trigger trg_capability_readiness_refresh
 after insert or update or delete on public.professional_capabilities
 for each row execute function private.request_professional_readiness_refresh();
 
--- Repair known data quality drift that is directly inferable from the same profile record.
-update public.professional_profiles
-set current_job_title=headline
-where id='2982e8e9-379f-4f62-9a50-c58b83aea01b'
-  and current_job_title is null
-  and headline is not null;
-
-update public.professional_readiness_refresh_queue
-set next_attempt_at=now(), processed_at=null, last_error=null;
-
-do $$
-declare r record;
-begin
-  for r in select id from public.professional_profiles order by id loop
-    perform private.sync_profile_capability_paths_for_reconcile(r.id);
-    perform private.sync_professional_listing_status(r.id);
-  end loop;
-end
-$$;
+-- Existing participant backfills are intentionally excluded from this schema migration.
+-- Reconciliation must be separately reviewed and approved after a read-only impact report.
