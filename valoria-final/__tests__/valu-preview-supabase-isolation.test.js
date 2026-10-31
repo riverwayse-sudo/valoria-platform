@@ -24,6 +24,7 @@ describe('Valoria Supabase runtime environment isolation', () => {
     })).toEqual({
       url: 'https://prod-project.supabase.co',
       serviceRoleKey: 'production-service-role',
+      anonKey: '',
     });
   });
 
