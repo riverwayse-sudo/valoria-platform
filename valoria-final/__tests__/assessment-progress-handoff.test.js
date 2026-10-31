@@ -96,3 +96,139 @@ describe('assessment progress handoff verification', () => {
     expect(source).toContain('progress.identity_hash !== `valu_progress_${tasterId}`');
   });
 });
+
+describe('assessment progress restore runtime contract', () => {
+  const originalUrl = process.env.SUPABASE_URL;
+  const originalVercelEnv = process.env.VERCEL_ENV;
+
+  function loadHandler() {
+    process.env.VERCEL_ENV = 'development';
+    process.env.SUPABASE_URL = 'https://preview-test.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = secret;
+    const modulePath = require.resolve('../api/assessment-progress.js');
+    delete require.cache[modulePath];
+    return require('../api/assessment-progress.js').default;
+  }
+
+  function response(data, status = 200) {
+    return { ok: status >= 200 && status < 300, status, json: async () => data };
+  }
+
+  afterEach(() => {
+    delete global.fetch;
+    const modulePath = require.resolve('../api/assessment-progress.js');
+    delete require.cache[modulePath];
+    if (originalUrl === undefined) delete process.env.SUPABASE_URL;
+    else process.env.SUPABASE_URL = originalUrl;
+    if (originalVercelEnv === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = originalVercelEnv;
+  });
+
+  test('restores saved answers and position only after the signed account-owned snapshot is verified', async () => {
+    const saved = {
+      id: 'progress-row-1',
+      session_id: '44444444-4444-4444-8444-444444444444',
+      resume_token: 'resume-token-test',
+      taster_id: tasterId,
+      user_id: 'user-test-123',
+      identity_hash: `valu_progress_${tasterId}`,
+      name: 'Test Participant',
+      role: 'Programme Manager',
+      experience: '9-15',
+      email: 'participant@example.com',
+      current_question: 14,
+      total_questions: 58,
+      answers: { 0: 2, 1: 1, 2: 0, 9: 3, 10: 2 },
+      timings: [100, 200, 300],
+      session_seed: 42,
+      status: 'in_progress',
+      last_activity_at: new Date().toISOString(),
+    };
+    global.fetch = async url => {
+      if (String(url).includes('/rest/v1/taster_sessions')) {
+        return response([{
+          id: tasterId,
+          user_id: 'user-test-123',
+          name: 'Test Participant',
+          role: 'Programme Manager',
+          experience: '9-15',
+          completed_at: new Date().toISOString(),
+          taster_answers: {},
+        }]);
+      }
+      if (String(url).includes('/auth/v1/admin/users/')) {
+        return response({ id: 'user-test-123', email: 'participant@example.com', email_confirmed_at: new Date().toISOString() });
+      }
+      if (String(url).includes('/rest/v1/valu_assessment_progress')) return response([saved]);
+      throw new Error(`unexpected fetch: ${url}`);
+    };
+
+    const handler = loadHandler();
+    const request = new Request('https://assessment.example.test/api/assessment-progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'restore',
+        handoff_token: makeToken(),
+        taster_id: tasterId,
+      }),
+    });
+    const result = await handler(request);
+    const body = await result.json();
+
+    expect(result.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.progress).toMatchObject({
+      session_id: saved.session_id,
+      resume_token: saved.resume_token,
+      current_question: 14,
+      total_questions: 58,
+      answers: saved.answers,
+      timings: saved.timings,
+      user_id: 'user-test-123',
+    });
+  });
+
+  test('first continuation seeds the saved opening answers into canonical bank positions', async () => {
+    const openingAnswers = { 0: 1, 1: 2, 2: 0, 3: 1, 4: 2, 5: 0, 6: 1, 7: 2, 8: 0 };
+    global.fetch = async url => {
+      if (String(url).includes('/rest/v1/taster_sessions')) {
+        return response([{
+          id: tasterId,
+          user_id: 'user-test-123',
+          name: 'Test Participant',
+          role: 'Programme Manager',
+          experience: '9-15',
+          completed_at: new Date().toISOString(),
+          taster_answers: openingAnswers,
+        }]);
+      }
+      if (String(url).includes('/auth/v1/admin/users/')) {
+        return response({ id: 'user-test-123', email: 'participant@example.com', email_confirmed_at: new Date().toISOString() });
+      }
+      if (String(url).includes('/rest/v1/valu_assessment_progress')) return response([]);
+      throw new Error(`unexpected fetch: ${url}`);
+    };
+
+    const handler = loadHandler();
+    const request = new Request('https://assessment.example.test/api/assessment-progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'restore',
+        handoff_token: makeToken(),
+        taster_id: tasterId,
+      }),
+    });
+    const result = await handler(request);
+    const body = await result.json();
+    const { OPENING_POSITIONS } = await import('../src/assessmentJourney.js');
+    const expected = Object.fromEntries(OPENING_POSITIONS.map((position, index) => [position, openingAnswers[index]]));
+
+    expect(result.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.progress).toBeNull();
+    expect(body.seeded_answers).toEqual(expected);
+    expect(Object.keys(body.seeded_answers)).toHaveLength(9);
+  });
+});
