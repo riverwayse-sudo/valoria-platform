@@ -3,8 +3,10 @@ import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS } from '../src/valuTaster.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { getValoriaSupabaseConfig } from "../lib/valoria-supabase-runtime-config.js";
+const SUPABASE_CONFIG = getValoriaSupabaseConfig();
+const SUPABASE_URL = SUPABASE_CONFIG?.url || "";
+const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || "";
 
 function json(res, status, data) {
   res.status(status).setHeader('Cache-Control', 'no-store');
