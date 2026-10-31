@@ -59,6 +59,18 @@ describe('Valoria Supabase runtime environment isolation', () => {
     });
   });
 
+  test('preview refuses an explicitly configured production project even when all preview keys match', () => {
+    expect(getValoriaSupabaseConfig({
+      VERCEL_ENV: 'preview',
+      VALU_PRODUCTION_SUPABASE_URL: 'https://prod-project.supabase.co',
+      VITE_SUPABASE_URL: 'https://prod-project.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'production-anon',
+      VALU_PREVIEW_SUPABASE_URL: 'https://prod-project.supabase.co',
+      VALU_PREVIEW_SUPABASE_ANON_KEY: 'production-anon',
+      VALU_PREVIEW_SUPABASE_SERVICE_ROLE_KEY: 'production-service-role',
+    })).toBeNull();
+  });
+
   test.each([
     { VITE_SUPABASE_URL: 'https://production.supabase.co' },
     { VALU_PREVIEW_SUPABASE_ANON_KEY: 'wrong-anon' },
