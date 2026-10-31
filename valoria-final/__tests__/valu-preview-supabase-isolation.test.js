@@ -11,6 +11,7 @@ describe('Valoria Supabase runtime environment isolation', () => {
     expect(getValoriaSupabaseConfig(production)).toEqual({
       url: 'https://prod-project.supabase.co',
       serviceRoleKey: 'production-service-role',
+      anonKey: '',
     });
   });
 
@@ -56,6 +57,7 @@ describe('Valoria Supabase runtime environment isolation', () => {
     })).toEqual({
       url: 'https://preview-project.supabase.co',
       serviceRoleKey: 'preview-service-role',
+      anonKey: 'preview-anon',
     });
   });
 
