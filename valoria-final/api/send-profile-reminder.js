@@ -2,8 +2,10 @@
 // Internal scheduled job: remind completed VALU users who have not finished
 // their professional profile. This endpoint is never a browser capability.
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { getValoriaSupabaseConfig } from "../lib/valoria-supabase-runtime-config.js";
+const SUPABASE_CONFIG = getValoriaSupabaseConfig();
+const SUPABASE_URL = SUPABASE_CONFIG?.url || "";
+const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || "";
 const CRON_SECRET = process.env.CRON_SECRET;
 const BREVO_KEY = process.env.BREVO_API_KEY;
 const VALORIA_SITE_URL = process.env.VALORIA_SITE_URL || 'https://valoriainstitute.com';
