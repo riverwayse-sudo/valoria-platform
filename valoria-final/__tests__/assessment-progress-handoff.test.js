@@ -6,6 +6,7 @@ import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
 describe('assessment progress handoff verification', () => {
   const source = fs.readFileSync(path.join(process.cwd(), 'api/assessment-progress.js'), 'utf8');
   const originalSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const originalSupabaseUrl = process.env.SUPABASE_URL;
   const originalVercelEnv = process.env.VERCEL_ENV;
   const originalPreviewUrl = process.env.VALU_PREVIEW_SUPABASE_URL;
   const originalPreviewAnon = process.env.VALU_PREVIEW_SUPABASE_ANON_KEY;
@@ -35,12 +36,15 @@ describe('assessment progress handoff verification', () => {
 
   beforeEach(() => {
     process.env.VERCEL_ENV = 'development';
+    process.env.SUPABASE_URL = 'https://unit-test-project.supabase.co';
     process.env.SUPABASE_SERVICE_ROLE_KEY = secret;
   });
 
   afterAll(() => {
     if (originalSecret === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     else process.env.SUPABASE_SERVICE_ROLE_KEY = originalSecret;
+    if (originalSupabaseUrl === undefined) delete process.env.SUPABASE_URL;
+    else process.env.SUPABASE_URL = originalSupabaseUrl;
     if (originalVercelEnv === undefined) delete process.env.VERCEL_ENV;
     else process.env.VERCEL_ENV = originalVercelEnv;
     if (originalPreviewUrl === undefined) delete process.env.VALU_PREVIEW_SUPABASE_URL;
