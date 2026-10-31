@@ -6,6 +6,12 @@ import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
 describe('assessment progress handoff verification', () => {
   const source = fs.readFileSync(path.join(process.cwd(), 'api/assessment-progress.js'), 'utf8');
   const originalSecret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const originalVercelEnv = process.env.VERCEL_ENV;
+  const originalPreviewUrl = process.env.VALU_PREVIEW_SUPABASE_URL;
+  const originalPreviewAnon = process.env.VALU_PREVIEW_SUPABASE_ANON_KEY;
+  const originalPreviewService = process.env.VALU_PREVIEW_SUPABASE_SERVICE_ROLE_KEY;
+  const originalPublicUrl = process.env.VITE_SUPABASE_URL;
+  const originalPublicAnon = process.env.VITE_SUPABASE_ANON_KEY;
   const secret = 'unit-test-only-handoff-secret';
   const tasterId = randomUUID();
 
@@ -28,12 +34,25 @@ describe('assessment progress handoff verification', () => {
   }
 
   beforeEach(() => {
+    process.env.VERCEL_ENV = 'development';
     process.env.SUPABASE_SERVICE_ROLE_KEY = secret;
   });
 
   afterAll(() => {
     if (originalSecret === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     else process.env.SUPABASE_SERVICE_ROLE_KEY = originalSecret;
+    if (originalVercelEnv === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = originalVercelEnv;
+    if (originalPreviewUrl === undefined) delete process.env.VALU_PREVIEW_SUPABASE_URL;
+    else process.env.VALU_PREVIEW_SUPABASE_URL = originalPreviewUrl;
+    if (originalPreviewAnon === undefined) delete process.env.VALU_PREVIEW_SUPABASE_ANON_KEY;
+    else process.env.VALU_PREVIEW_SUPABASE_ANON_KEY = originalPreviewAnon;
+    if (originalPreviewService === undefined) delete process.env.VALU_PREVIEW_SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.VALU_PREVIEW_SUPABASE_SERVICE_ROLE_KEY = originalPreviewService;
+    if (originalPublicUrl === undefined) delete process.env.VITE_SUPABASE_URL;
+    else process.env.VITE_SUPABASE_URL = originalPublicUrl;
+    if (originalPublicAnon === undefined) delete process.env.VITE_SUPABASE_ANON_KEY;
+    else process.env.VITE_SUPABASE_ANON_KEY = originalPublicAnon;
   });
 
   test('restore and save use the Edge Web Crypto verifier with the shared site token contract', () => {
@@ -51,6 +70,19 @@ describe('assessment progress handoff verification', () => {
       taster_id: tasterId,
       aud: 'valu-full-assessment',
     });
+  });
+
+  test('uses the isolated Preview service-role key rather than the production key', async () => {
+    process.env.VERCEL_ENV = 'preview';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'production-service-role-secret';
+    process.env.VITE_SUPABASE_URL = 'https://preview-project.supabase.co';
+    process.env.VITE_SUPABASE_ANON_KEY = 'preview-anon-key';
+    process.env.VALU_PREVIEW_SUPABASE_URL = 'https://preview-project.supabase.co';
+    process.env.VALU_PREVIEW_SUPABASE_ANON_KEY = 'preview-anon-key';
+    process.env.VALU_PREVIEW_SUPABASE_SERVICE_ROLE_KEY = secret;
+
+    const verified = await verifyValuHandoffTokenEdge(makeToken(), tasterId);
+    expect(verified).toMatchObject({ sub: 'user-test-123', taster_id: tasterId });
   });
 
   test('rejects a token signed with a different secret', async () => {
