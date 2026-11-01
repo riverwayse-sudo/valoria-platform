@@ -74,18 +74,19 @@ This is a logical view. Do not create a separate service for every box. Keep dom
 
 ## 4. Canonical user journey and state
 
-1. User completes a 9-question directional taster.
-2. User creates an account and confirms email.
-3. Confirmation establishes a valid session and returns the user to the dashboard without another sign-in.
-4. The dashboard reads canonical journey state and directs the user to the next priority action.
-5. The user can complete/update a professional profile without losing assessment progress.
-6. The user completes the 58-question full assessment. The UI must not invent how the 9-question taster relates to the 58-question version; use the authoritative version/configuration.
-7. Answers are persisted incrementally and resume at the next unanswered question.
+1. Visitor chooses **Create account** or **Sign in** from the site entry surface. Signup/sign-in should be a concise modal or entry experience, not a complicated pre-assessment funnel.
+2. New users create an account, confirm email and return to the dashboard with a valid session; no second sign-in is required. Existing users sign in and resume their saved journey.
+3. Dashboard reads canonical journey state and directs the user to one clear next action, prioritising assessment continuation.
+4. The authenticated user starts or resumes the 9-question directional taster. It is introductory and does not establish the official VALU Index.
+5. Taster progress and identity association persist; users can resume without losing answers.
+6. The user proceeds to the 58-question full assessment according to the authoritative, versioned assessment configuration. The UI must not guess whether the 9-question taster is included in that count.
+7. Answers persist incrementally and resume at the next unanswered question.
 8. Submission is idempotent and yields one canonical assessment result.
 9. SCO computes official VALU Index and PRIME points from the canonical submission.
-10. Profile summaries/capabilities are derived from authoritative report/assessment data.
-11. MKT evaluates eligibility and listing as separate decisions. Completing an assessment does not require a minimum score; a 35-point rule, where applicable, is an eligibility rule and must not block completion.
-12. One professional identity can expose Talent, Speaker and Facilitator capabilities under the same profile, subject to the current listing policy.
+10. Profile setup is a distinct workflow; it must not reset or block assessment progress. Dashboard prioritises assessment until complete.
+11. Profile summaries/capabilities are derived from authoritative report/assessment data.
+12. MKT evaluates eligibility and listing as separate decisions. Completing an assessment does not require a minimum score; a 35-point rule, where applicable, is an eligibility rule and must not block completion.
+13. One professional identity can expose Talent, Speaker and Facilitator capabilities under the same profile, subject to the current listing policy.
 
 ### State dimensions must remain separate
 
