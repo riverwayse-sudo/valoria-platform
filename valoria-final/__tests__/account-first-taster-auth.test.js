@@ -7,6 +7,8 @@ describe('account-first professional taster handoff', () => {
     expect(source).toContain("sessionStorage.getItem('valoria-assessment-auth')")
     expect(source).toContain("authBridge.user?.display_name")
     expect(source).toContain("authBridge.user?.email")
+    expect(source).toContain('setAuthenticatedAccount(true)')
+    expect(source).toContain('readOnly aria-readonly="true"')
     expect(source).toContain("Authorization:'Bearer '+authBridge.access_token")
     expect(source).toContain("fetch('/api/link-taster'")
     expect(source).toContain("window.location.assign('/dashboard?welcome=profile')")
