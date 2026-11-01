@@ -131,7 +131,10 @@ export default {
     if (!url.pathname.startsWith("/api/")) {
       if (url.pathname === "/valu/assessment" || url.pathname === "/valu/assessment/") {
         const assetUrl = new URL("/index.html", url.origin);
-        return addSecurityHeaders(await env.ASSETS.fetch(new Request(assetUrl, request)));
+        const indexResponse = await env.ASSETS.fetch(new Request(assetUrl, request));
+        const headers = new Headers(indexResponse.headers);
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+        return addSecurityHeaders(new Response(indexResponse.body, { status: indexResponse.status, headers }));
       }
       if (url.pathname.startsWith("/valu/assessment/")) {
         const assetPath = url.pathname.replace(/^\/valu\/assessment/, "") || "/";
@@ -139,7 +142,10 @@ export default {
         const assetResponse = await env.ASSETS.fetch(new Request(assetUrl, request));
         if (assetResponse.status !== 404) return addSecurityHeaders(assetResponse);
         const indexResponse = await env.ASSETS.fetch(new Request(new URL("/index.html", url.origin), request));
-        return addSecurityHeaders(indexResponse.status === 200 ? indexResponse : assetResponse);
+        if (indexResponse.status !== 200) return addSecurityHeaders(assetResponse);
+        const headers = new Headers(indexResponse.headers);
+        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+        return addSecurityHeaders(new Response(indexResponse.body, { status: indexResponse.status, headers }));
       }
       return addSecurityHeaders(new Response("Not found", { status: 404 }));
     }
