@@ -121,11 +121,35 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error "$WORKER_URL/valu/assessment/" -o assessment.html
-          grep -q '/valu/assessment/assets/' assessment.html
+
+          html_status="$(curl --silent --show-error --output assessment.html --write-out "%{http_code}" "$WORKER_URL/valu/assessment/")"
+          if [ "$html_status" != "200" ]; then
+            echo "::error::Assessment HTML route returned HTTP $html_status"
+            head -c 1200 assessment.html || true
+            exit 1
+          fi
+
+          if ! grep -q '/valu/assessment/assets/' assessment.html; then
+            echo "::error::Assessment HTML did not reference the expected /valu/assessment/assets/ base path"
+            head -c 2000 assessment.html
+            exit 1
+          fi
           asset_path="$(grep -Eo '/valu/assessment/assets/[^" ]+\.(js|css)' assessment.html | head -n 1)"
-          test -n "$asset_path"
-          curl --fail --silent --show-error "$WORKER_URL$asset_path" -o /dev/null
-          curl --fail --silent --show-error "$WORKER_URL/api/system-status" \
-            --header "Authorization: Bearer $CRON_SECRET" -o system-status.json
-          node -e "const r=require('./system-status.json'); if(!('backlog' in r)) process.exit(1); console.log('Worker health endpoint responded; backlog total:', r.backlog.total)"
+          if [ -z "$asset_path" ]; then
+            echo "::error::No JavaScript or CSS asset path was found in the assessment HTML"
+            exit 1
+          fi
+          asset_status="$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" "$WORKER_URL$asset_path")"
+          if [ "$asset_status" != "200" ]; then
+            echo "::error::Assessment asset $asset_path returned HTTP $asset_status"
+            exit 1
+          fi
+          echo "Assessment HTML and asset route returned HTTP 200."
+
+          health_status="$(curl --silent --show-error --output system-status.json --write-out "%{http_code}" "$WORKER_URL/api/system-status" --header "Authorization: Bearer $CRON_SECRET")"
+          if [ "$health_status" != "200" ]; then
+            echo "::error::Protected system-status endpoint returned HTTP $health_status"
+            cat system-status.json || true
+            exit 1
+          fi
+          node -e "const r=require('./system-status.json'); if(!('backlog' in r)) { console.error('Missing backlog object'); process.exit(1); } console.log('Protected Worker health endpoint responded; backlog total:', r.backlog.total)"
