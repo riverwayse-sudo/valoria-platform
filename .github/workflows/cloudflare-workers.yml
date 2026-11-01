@@ -7,6 +7,14 @@ on:
     paths:
       - "valoria-final/**"
       - ".github/workflows/cloudflare-workers.yml"
+      - ".github/workflows/cloudflare-assessment.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: valoria-assessment-cloudflare-deploy
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -21,33 +29,69 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: valoria-final/package-lock.json
-      - name: Install dependencies
-        run: npm install
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run platform tests
+        run: npm test -- --runInBand
+        env:
+          CI: "true"
+
       - name: Build assessment frontend
         run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-      - name: Deploy Worker
-        run: npx --yes wrangler@4.68.0 deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      - name: Configure Worker secrets
+
+      - name: Validate deployment credentials
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          for key in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ANON_KEY CRON_SECRET; do
+            if [ -z "${!key:-}" ]; then
+              echo "::error::Missing required GitHub Actions secret: $key"
+              exit 1
+            fi
+          done
+          test -f dist/index.html
+          test -f worker.js
+          test -f wrangler.jsonc
+
+      - name: Configure Cloudflare Worker secrets
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           VALU_SITE_ORIGIN: ${{ secrets.VALU_SITE_ORIGIN }}
+          SITE_ORIGIN: ${{ secrets.SITE_ORIGIN || secrets.VALU_SITE_ORIGIN }}
+          VALORIA_SITE_URL: ${{ secrets.VALORIA_SITE_URL || secrets.VALU_SITE_ORIGIN }}
           VALU_PRODUCTION_SUPABASE_URL: ${{ secrets.VALU_PRODUCTION_SUPABASE_URL }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
         run: |
           set -euo pipefail
-          for key in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY RESEND_API_KEY ANTHROPIC_API_KEY CRON_SECRET VALU_SITE_ORIGIN VALU_PRODUCTION_SUPABASE_URL; do
+          for key in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_ANON_KEY RESEND_API_KEY ANTHROPIC_API_KEY CRON_SECRET VALU_SITE_ORIGIN SITE_ORIGIN VALORIA_SITE_URL VALU_PRODUCTION_SUPABASE_URL BREVO_API_KEY; do
             value="${!key:-}"
-            if [ -n "$value" ]; then printf '%s' "$value" | npx --yes wrangler@4.68.0 secret put "$key" --name valoria-assessment; fi
+            if [ -n "$value" ]; then
+              printf '%s' "$value" | npx --yes wrangler@4.68.0 secret put "$key" --name valoria-assessment
+            fi
           done
+
+      - name: Deploy Worker and static assets
+        run: npx --yes wrangler@4.68.0 deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
