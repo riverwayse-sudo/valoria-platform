@@ -75,6 +75,17 @@ export default function VALUIndexV4GateNext(){
   startedRef.current=true;
   let cancelled=false;
   async function begin(){
+   // A professional who has already created a Valoria account enters the
+   // opening nine with a short-lived, same-origin auth handoff. Reuse their
+   // verified identity and never ask them to create a second account.
+   try {
+    const authBridge=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null');
+    if(authBridge?.access_token){
+     setAuthenticatedAccount(true);
+     if(authBridge.user?.display_name)setName(authBridge.user.display_name);
+     if(authBridge.user?.email)setEmail(authBridge.user.email);
+    }
+   } catch {}
    // A participant who already completed the opening session and has a pending
    // assessment reference must not start a second, duplicate session. Send them
    // to the authenticated continuation instead.
@@ -109,18 +120,7 @@ export default function VALUIndexV4GateNext(){
     try{localStorage.removeItem(RESUME_TOKEN_KEY)}catch{}
    }
    try{
-    // A professional who has already created a Valoria account enters the
-   // opening nine with a short-lived, same-origin auth handoff. Reuse their
-   // verified identity and never ask them to create a second account.
-   try {
-    const authBridge=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null');
-    if(authBridge?.access_token){
-     setAuthenticatedAccount(true);
-     if(authBridge.user?.display_name)setName(authBridge.user.display_name);
-     if(authBridge.user?.email)setEmail(authBridge.user.email);
-    }
-   } catch {}
-   const created=await postProgress({action:'init'});
+    const created=await postProgress({action:'init'});
     if(cancelled)return;
     if(!created.resume_token)throw new Error('Your assessment could not be started. Please retry.');
     try{localStorage.setItem(RESUME_TOKEN_KEY,created.resume_token)}catch{}
