@@ -44,8 +44,11 @@ describe("Privileged API security contracts", () => {
     expect(progressApi).toContain("progress.user_id !== resolvedIdentity.user_id");
     expect(progressApi).toContain('status: "in.(in_progress,abandoned)"');
     expect(component).toContain("action:'restore'");
-    expect(component).toContain("setAnswers(saved.answers");
-    expect(component).toContain("setCurrent(Math.min(Math.max(Number(saved.current_question)");
+    expect(component).toContain("const restoredAnswers = saved.answers && typeof saved.answers === 'object' ? saved.answers : {}");
+    expect(component).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
+    expect(component).toContain("The authenticated server restore is the source of truth");
+    expect(component).not.toContain("setAnswers(saved.answers)");
+    expect(component).not.toContain("setCurrent(Math.min(Math.max(Number(saved.current_question)");
     expect(component).toContain("remoteRestoreComplete");
     expect(component).toContain("Your saved VALU progress could not be restored");
   });
