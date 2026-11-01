@@ -7,7 +7,30 @@ const SUPABASE_CONFIG = getValoriaSupabaseConfig();
 const SUPABASE_URL = SUPABASE_CONFIG?.url || "";
 const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const VALORIA_SITE_URL = "https://valoriainstitute.com";
+function resolveValoriaSiteUrl() {
+  const configuredOrigin = process.env.VALU_SITE_ORIGIN?.trim();
+  if (!configuredOrigin) {
+    // Preview must never send confirmation links to the production account.
+    return process.env.VERCEL_ENV === "preview" ? "" : "https://valoriainstitute.com";
+  }
+
+  try {
+    const parsed = new URL(configuredOrigin);
+    if (
+      parsed.protocol !== "https:" ||
+      parsed.username ||
+      parsed.password ||
+      parsed.pathname !== "/" ||
+      parsed.search ||
+      parsed.hash
+    ) return "";
+    return parsed.origin;
+  } catch {
+    return "";
+  }
+}
+
+const VALORIA_SITE_URL = resolveValoriaSiteUrl();
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -88,6 +111,7 @@ function confirmationEmailHtml(name, actionLink) {
 
 export default async function handler(req) {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (!VALORIA_SITE_URL) return json({ error: "Account confirmation origin is not configured." }, 500);
   const ipLimit = await checkRateLimit(req, { namespace: "account-create-ip", limit: 5, windowSeconds: 3600 });
   if (!ipLimit.allowed) return ipLimit.response;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server misconfigured." }, 500);
