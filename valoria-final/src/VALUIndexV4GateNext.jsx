@@ -49,6 +49,7 @@ export default function VALUIndexV4GateNext(){
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
+ const [authenticatedAccount,setAuthenticatedAccount]=useState(false);
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
  const [tasterId,setTasterId]=useState('');
@@ -114,6 +115,7 @@ export default function VALUIndexV4GateNext(){
    try {
     const authBridge=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null');
     if(authBridge?.access_token){
+     setAuthenticatedAccount(true);
      if(authBridge.user?.display_name)setName(authBridge.user.display_name);
      if(authBridge.user?.email)setEmail(authBridge.user.email);
     }
@@ -250,7 +252,7 @@ export default function VALUIndexV4GateNext(){
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
    </div>
    <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
+   {authenticatedAccount ? <Field label="ACCOUNT EMAIL"><input required readOnly aria-readonly="true" style={{...S.input,opacity:.72,cursor:"not-allowed"}} type="email" value={email} autoComplete="email"/></Field> : <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>}
    {error&&<div style={S.error}>{error}</div>}
    <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'SAVE MY DETAILS & CONTINUE →'}</button>
    <div style={S.saveNote}><span>✓</span> Your opening nine answers are saved.</div>
