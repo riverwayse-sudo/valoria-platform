@@ -78,12 +78,13 @@ export default function VALUIndexV4GateNext(){
    // A professional who has already created a Valoria account enters the
    // opening nine with a short-lived, same-origin auth handoff. Reuse their
    // verified identity and never ask them to create a second account.
+   let accountAuth=null;
    try {
-    const authBridge=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null');
-    if(authBridge?.access_token){
+    accountAuth=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null');
+    if(accountAuth?.access_token){
      setAuthenticatedAccount(true);
-     if(authBridge.user?.display_name)setName(authBridge.user.display_name);
-     if(authBridge.user?.email)setEmail(authBridge.user.email);
+     if(accountAuth.user?.display_name)setName(accountAuth.user.display_name);
+     if(accountAuth.user?.email)setEmail(accountAuth.user.email);
     }
    } catch {}
    // A participant who already completed the opening session and has a pending
@@ -92,6 +93,24 @@ export default function VALUIndexV4GateNext(){
    let pending='';
    try{pending=localStorage.getItem('pending_taster_id')||''}catch{}
    if(pending){
+    if(accountAuth?.access_token){
+     try{
+      const linkResponse=await fetch('/api/link-taster',{
+       method:'POST',
+       headers:{'Content-Type':'application/json',Authorization:'Bearer '+accountAuth.access_token},
+       body:JSON.stringify({taster_id:pending,name:accountAuth.user?.display_name||undefined}),
+      });
+      const linkData=await linkResponse.json().catch(()=>({}));
+      if(!linkResponse.ok)throw new Error(linkData.error||'Your saved VALU opening could not be linked to this account.');
+      localStorage.removeItem('pending_taster_id');
+      try{sessionStorage.removeItem('valoria-assessment-auth')}catch{}
+      window.location.assign('/dashboard?welcome=profile');
+     }catch(error){
+      setError(error?.message||'Your saved VALU opening could not be connected. Please return to your dashboard and try again.');
+      setPhase('session1');
+     }
+     return;
+    }
     window.location.assign((SITE_BASE?SITE_BASE:'')+'/journey/continue?stage=assess&taster_id='+encodeURIComponent(pending));
     return;
    }
