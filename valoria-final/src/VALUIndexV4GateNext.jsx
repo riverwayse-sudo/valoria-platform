@@ -108,7 +108,17 @@ export default function VALUIndexV4GateNext(){
     try{localStorage.removeItem(RESUME_TOKEN_KEY)}catch{}
    }
    try{
-    const created=await postProgress({action:'init'});
+    // A professional who has already created a Valoria account enters the
+   // opening nine with a short-lived, same-origin auth handoff. Reuse their
+   // verified identity and never ask them to create a second account.
+   try {
+    const authBridge=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null');
+    if(authBridge?.access_token){
+     if(authBridge.user?.display_name)setName(authBridge.user.display_name);
+     if(authBridge.user?.email)setEmail(authBridge.user.email);
+    }
+   } catch {}
+   const created=await postProgress({action:'init'});
     if(cancelled)return;
     if(!created.resume_token)throw new Error('Your assessment could not be started. Please retry.');
     try{localStorage.setItem(RESUME_TOKEN_KEY,created.resume_token)}catch{}
@@ -178,6 +188,20 @@ export default function VALUIndexV4GateNext(){
    try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key}).catch(()=>{});
    try{localStorage.removeItem(RESUME_TOKEN_KEY)}catch{}
+   let authBridge=null;
+   try{authBridge=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null')}catch{}
+   if(authBridge?.access_token){
+    const linkResponse=await fetch('/api/link-taster',{
+     method:'POST',
+     headers:{'Content-Type':'application/json',Authorization:'Bearer '+authBridge.access_token},
+     body:JSON.stringify({taster_id:data.taster_id,name:name.trim(),role:role.trim()}),
+    });
+    const linkData=await linkResponse.json().catch(()=>({}));
+    if(!linkResponse.ok)throw new Error(linkData.error||'Your saved opening nine could not be linked to your Valoria account. Your responses remain saved.');
+    try{sessionStorage.removeItem('valoria-assessment-auth')}catch{}
+    window.location.assign('/dashboard?welcome=profile');
+    return;
+   }
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
   }catch(err){
