@@ -174,6 +174,15 @@ describe("session 2 presents the remaining questions and restores progress", () 
     expect(source).toContain("nextPlaceToAnswer(seeded, 1)");
   });
 
+  test("returning participants resume directly at the next unanswered question", () => {
+    const source = fullSource();
+    expect(source).not.toContain("ResumeModal");
+    expect(source).not.toContain("resumePopup");
+    expect(source).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
+    expect(source).toContain("The authenticated server restore is the source of truth");
+    expect(source).not.toContain("setAnswers(saved.answers)");
+  });
+
   test("the assessment-progress API seeds the opening nine from the stored snapshot", () => {
     const api = fs.readFileSync(path.join(__dirname, "../../api/assessment-progress.js"), "utf8");
     expect(api).toContain("taster_answers");
