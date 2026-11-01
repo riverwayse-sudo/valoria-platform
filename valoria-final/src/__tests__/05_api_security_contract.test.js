@@ -52,6 +52,14 @@ describe("Privileged API security contracts", () => {
     expect(component).toContain("remoteRestoreComplete");
     expect(component).toContain("Your saved VALU progress could not be restored");
   });
+  test("assessment Worker serves its dedicated-host root and SPA deep links while preserving API routing", () => {
+    const worker = fs.readFileSync(path.join(__dirname, "../../worker.js"), "utf8");
+    expect(worker).toContain("url.pathname === \"/\"");
+    expect(worker).toContain("url.pathname.startsWith(\"/valu/assessment/\")");
+    expect(worker).toContain('new URL("/index.html", url.origin)');
+    expect(worker).toContain('if (!url.pathname.startsWith("/api/"))');
+  });
+
   test("all serverless API modules parse as valid Node.js source", () => {
     const apiFiles = fs.readdirSync(API_ROOT).filter((file) => file.endsWith(".js"));
     expect(apiFiles.length).toBeGreaterThan(0);
