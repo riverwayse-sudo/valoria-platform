@@ -7,7 +7,7 @@ import generateAndSendReport from "./api/generate-and-send-report.js";
 import getAssessmentData from "./api/get-assessment-data.js";
 import linkAssessmentToTaster from "./api/link-assessment-to-taster.js";
 import notifications from "./api/notifications.js";
-import processReadinessQueue from "./api/process-readiness-queue.js";
+import { GET as processReadinessQueue } from "./api/process-readiness-queue.js";
 import reconciliationHealth from "./api/reconciliation-health.js";
 import report from "./api/report.js";
 import resendConfirmation from "./api/resend-confirmation.js";
@@ -80,6 +80,16 @@ function createVercelResponse() {
   return response;
 }
 
+function addSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("X-Frame-Options", "DENY");
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
 async function invoke(handler, request) {
   if (handler.length <= 1) {
     const result = await handler(request);
@@ -117,30 +127,31 @@ async function invoke(handler, request) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/logo.png") return Response.redirect("https://valoriainstitute.com/logo.png", 308);
     if (!url.pathname.startsWith("/api/")) {
       if (url.pathname === "/valu/assessment" || url.pathname === "/valu/assessment/") {
         const assetUrl = new URL("/index.html", url.origin);
-        return env.ASSETS.fetch(new Request(assetUrl, request));
+        return addSecurityHeaders(await env.ASSETS.fetch(new Request(assetUrl, request)));
       }
       if (url.pathname.startsWith("/valu/assessment/")) {
         const assetPath = url.pathname.replace(/^\/valu\/assessment/, "") || "/";
         const assetUrl = new URL(assetPath, url.origin);
         const assetResponse = await env.ASSETS.fetch(new Request(assetUrl, request));
-        if (assetResponse.status !== 404) return assetResponse;
+        if (assetResponse.status !== 404) return addSecurityHeaders(assetResponse);
         const indexResponse = await env.ASSETS.fetch(new Request(new URL("/index.html", url.origin), request));
-        return indexResponse.status === 200 ? indexResponse : assetResponse;
+        return addSecurityHeaders(indexResponse.status === 200 ? indexResponse : assetResponse);
       }
-      return new Response("Not found", { status: 404 });
+      return addSecurityHeaders(new Response("Not found", { status: 404 }));
     }
 
     const name = url.pathname.slice(5).replace(/\/$/, "");
     const handler = routes[name];
     if (!handler) return Response.json({ error: "Not found" }, { status: 404 });
     try {
-      return await invoke(handler, request);
+      return addSecurityHeaders(await invoke(handler, request));
     } catch (error) {
       console.error("Valoria API worker failure", name, error?.name || "Error");
-      return Response.json({ error: "The service is temporarily unavailable." }, { status: 500, headers: { "Cache-Control": "no-store" } });
+      return addSecurityHeaders(Response.json({ error: "The service is temporarily unavailable." }, { status: 500, headers: { "Cache-Control": "no-store" } }));
     }
   },
 
