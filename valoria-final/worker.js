@@ -129,25 +129,24 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/logo.png") return Response.redirect("https://valoriainstitute.com/logo.png", 308);
     if (!url.pathname.startsWith("/api/")) {
-      if (url.pathname === "/valu/assessment" || url.pathname === "/valu/assessment/") {
-        const assetUrl = new URL("/index.html", url.origin);
-        const indexResponse = await env.ASSETS.fetch(new Request(assetUrl, request));
-        const headers = new Headers(indexResponse.headers);
-        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
-        return addSecurityHeaders(new Response(indexResponse.body, { status: indexResponse.status, headers }));
-      }
-      if (url.pathname.startsWith("/valu/assessment/")) {
-        const assetPath = url.pathname.replace(/^\/valu\/assessment/, "") || "/";
-        const assetUrl = new URL(assetPath, url.origin);
-        const assetResponse = await env.ASSETS.fetch(new Request(assetUrl, request));
+      // The assessment has two supported entry shapes:
+      // - its dedicated host at https://assessment.valoriainstitute.com/
+      // - the main site's proxied /valu/assessment route.
+      // Vite emits assets beneath /valu/assessment/assets, while React Router
+      // may request other client-side paths (for example /2). Serve real assets
+      // when present and fall back to index.html for the SPA entry/deep links.
+      const assetPath = url.pathname.startsWith("/valu/assessment/")
+        ? url.pathname.replace(/^\/valu\/assessment/, "") || "/"
+        : (url.pathname === "/valu/assessment" || url.pathname === "/" ? null : url.pathname);
+      if (assetPath) {
+        const assetResponse = await env.ASSETS.fetch(new Request(new URL(assetPath, url.origin), request));
         if (assetResponse.status !== 404) return addSecurityHeaders(assetResponse);
-        const indexResponse = await env.ASSETS.fetch(new Request(new URL("/index.html", url.origin), request));
-        if (indexResponse.status !== 200) return addSecurityHeaders(assetResponse);
-        const headers = new Headers(indexResponse.headers);
-        headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
-        return addSecurityHeaders(new Response(indexResponse.body, { status: indexResponse.status, headers }));
       }
-      return addSecurityHeaders(new Response("Not found", { status: 404 }));
+      const indexResponse = await env.ASSETS.fetch(new Request(new URL("/index.html", url.origin), request));
+      if (indexResponse.status !== 200) return addSecurityHeaders(indexResponse);
+      const headers = new Headers(indexResponse.headers);
+      headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+      return addSecurityHeaders(new Response(indexResponse.body, { status: indexResponse.status, headers }));
     }
 
     const name = url.pathname.slice(5).replace(/\/$/, "");
