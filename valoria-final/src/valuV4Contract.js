@@ -15,10 +15,10 @@ export const CLUSTERS = Object.freeze([
 
 // Merit bands are score-based credentials. They are never paid subscription tiers.
 export const DESIGNATIONS = Object.freeze([
-  Object.freeze({ min: 90, name: "Elite", stars: "✦✦✦", color: "#C9A84C", bg: "#C9A84C" }),
-  Object.freeze({ min: 75, name: "Distinguished", stars: "✦✦", color: "#C9A84C", bg: "#1A1A2E" }),
-  Object.freeze({ min: 55, name: "Proficient", stars: "✦", color: "#2E2E4A", bg: "#EDE8DC" }),
-  Object.freeze({ min: 35, name: "Standard", stars: "", color: "#2E2E4A", bg: "#F7F4EE" }),
+  Object.freeze({ min: 80, name: "Force to Align With", stars: "✦✦", color: "#C9A84C", bg: "#1A1A2E" }),
+  Object.freeze({ min: 65, name: "Emerging Force", stars: "", color: "#C9A84C", bg: "#2E2E4A" }),
+  Object.freeze({ min: 50, name: "Developing Professional", stars: "", color: "#C9A84C", bg: "#2E2E4A" }),
+  Object.freeze({ min: 35, name: "Building Foundations", stars: "", color: "#C9A84C", bg: "#2E2E4A" }),
 ]);
 
 // Development pathways are separate from merit credentials.
@@ -30,7 +30,9 @@ export const PATHWAYS = Object.freeze([
 ]);
 
 export function getDesignation(score) {
-  return DESIGNATIONS.find(d => score >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1];
+  const points = Number(score);
+  if (!Number.isFinite(points) || points < MARKETPLACE_SCORE_THRESHOLD || points > MAX_SCORE) return null;
+  return DESIGNATIONS.find(d => points >= d.min) || null;
 }
 
 export function getPathway(score) {
