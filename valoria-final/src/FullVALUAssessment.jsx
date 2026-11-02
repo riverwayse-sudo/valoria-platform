@@ -512,10 +512,9 @@ export default function FullVALUAssessment() {
 
   if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
-  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
-
-  if (handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
-
+  // The initial identity is intentionally empty until the dashboard handoff
+  // is exchanged. Render verification first; otherwise the empty-identity
+  // guard masks the real handoff response and falsely reports "unavailable".
   if (handoffStatus === 'checking') return <Shell><div style={S.eyebrow}>SECURE VALU JOURNEY</div><h1 style={S.h1}>Verifying your account…</h1><p style={S.p}>We are confirming that this assessment belongs to your Valoria account before you continue.</p></Shell>;
 
   if (handoffStatus !== 'ready') {
@@ -527,6 +526,10 @@ export default function FullVALUAssessment() {
       <a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
     </Shell>;
   }
+
+  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>The secure dashboard handoff was verified, but the saved assessment identity is incomplete. Return to your dashboard and contact Valoria support if this continues.</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
+
+  if (!identity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
 
   if (result) {
     const score = result.valuIndex ?? result.total_score ?? result.score;

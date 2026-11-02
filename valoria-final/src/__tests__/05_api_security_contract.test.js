@@ -260,7 +260,10 @@ describe("Assessment integrity contracts", () => {
     expect(component).toContain("loadRemoteProgress(identity.resume)");
     expect(component).toContain("if (identity.resume || handoffStatus !== 'ready'");
     expect(component).toContain("resume:''");
-    expect(component).toContain("handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete");
+    expect(component).toContain("if (handoffStatus === 'checking')");
+    expect(component).toContain("if (handoffStatus !== 'ready')");
+    expect(component).toContain("if (!identity.resume && !remoteRestoreComplete)");
+    expect(component.indexOf("if (handoffStatus !== 'ready')")).toBeLessThan(component.indexOf("if (!canUse)"));
     expect(component).toContain("const canUse = Boolean(identity.tasterId && identity.name && identity.role);");
     expect(component).toContain("Confirm your experience band.");
     expect(component).toContain("valu-site-origin");
