@@ -40,11 +40,11 @@ const LEGACY_RESUME_TOKENS_KEY = 'valu_taster_legacy_resume_tokens';
 
 // Session 1 of the single 58-question VALU assessment.
 //
-// The participant arrives straight at Question 1 — no introductory page and no
-// account requirement. They answer the approved opening nine, the responses are
-// persisted, and only then are they asked to create an account at the natural
-// break. This component never scores or displays a VALU Index; the nine answers
-// are the first nine of the 58 and are scored later with the rest.
+// The participant arrives from the authenticated same-origin start route.
+// They answer the approved opening nine, the responses are persisted, and the
+// existing account is linked to the completed taster before returning to the
+// dashboard. This component never scores or displays a VALU Index; the nine
+// answers are the first nine of the 58 and are scored later with the rest.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
