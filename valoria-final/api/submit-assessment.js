@@ -233,6 +233,7 @@ const ALLOWED_ORIGINS = new Set([
   'https://valoriainstitute.com',
   'https://www.valoriainstitute.com',
   'https://assessment.valoriainstitute.com',
+  'https://valoria-assessment.riverwayse.workers.dev',
 ]);
 
 function applyCors(req, res) {
