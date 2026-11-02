@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import worker from "../worker.js";
+process.env.VALU_PREVIEW_SITE_ORIGIN = "https://site-preview.example";
+process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN = "https://assessment-preview.example";
+const { default: worker } = await import("../worker.js");
 
 function makeEnv() {
   const seen = [];
@@ -52,12 +54,27 @@ test("unknown API paths return JSON 404 and never fall through to the SPA", asyn
   assert.deepEqual(env.seen, []);
 });
 
-test("assessment API preflight carries the approved site origin", async () => {
+test("assessment API preflight allows the production site and exact preview origins", async () => {
+  const env = makeEnv();
+  for (const origin of [
+    "https://www.valoriainstitute.com",
+    "https://site-preview.example",
+    "https://assessment-preview.example",
+  ]) {
+    const response = await worker.fetch(new Request("https://assessment.example/api/taster-progress", {
+      method: "OPTIONS",
+      headers: { Origin: origin },
+    }), env);
+    assert.equal(response.status, 204, origin);
+    assert.equal(response.headers.get("access-control-allow-origin"), origin);
+  }
+});
+
+test("assessment API preflight rejects unconfigured preview origins", async () => {
   const env = makeEnv();
   const response = await worker.fetch(new Request("https://assessment.example/api/taster-progress", {
     method: "OPTIONS",
-    headers: { Origin: "https://www.valoriainstitute.com" },
+    headers: { Origin: "https://untrusted-preview.example" },
   }), env);
-  assert.equal(response.status, 204);
-  assert.equal(response.headers.get("access-control-allow-origin"), "https://www.valoriainstitute.com");
+  assert.equal(response.status, 403);
 });
