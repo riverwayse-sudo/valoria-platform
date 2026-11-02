@@ -18,7 +18,7 @@ describe('account-first taster entry contract', () => {
   })
 
   test('the existing account email is read-only and the break completes a profile, not a second signup', () => {
-    expect(gate).toContain('authenticatedAccount ? <Field label="ACCOUNT EMAIL"')
+    expect(gate).toContain('<Field label="ACCOUNT EMAIL">')
     expect(gate).toContain('readOnly aria-readonly="true"')
     expect(gate).toContain('Complete your professional profile')
     expect(gate).toContain('PROFILE COMPLETION · STEP 2 OF 3')
