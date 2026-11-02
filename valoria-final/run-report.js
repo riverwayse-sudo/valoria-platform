@@ -20,7 +20,7 @@ function buildPrompt({ name, role, total_score, cluster_scores, skill_scores, de
   const skillLines = Object.entries(skill_scores || {})
     .filter(([s]) => s !== "Validity")
     .sort(([, a], [, b]) => b - a)
-    .map(([s, sc]) => `  - ${s}: ${sc}/100`)
+    .map(([s, sc]) => `  - ${s}: ${sc} points`)
     .join("\n");
 
   return `You are writing a personalised professional development report for ${name}, a ${role} who completed the VALU Index assessment.
