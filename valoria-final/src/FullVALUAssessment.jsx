@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import VALUAssessmentJourney from './VALUAssessmentJourney.jsx';
 const API_BASE = (() => {
+  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  // The assessment UI and API are served by the same Worker. Prefer its own
+  // origin on workers.dev so assessment POSTs do not depend on cross-origin
+  // preflight to the custom domain.
+  if (host === 'valoria-assessment.riverwayse.workers.dev') return window.location.origin;
+
   const configuredOrigin = String(import.meta.env.VITE_VALU_API_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
 
@@ -8,7 +14,6 @@ const API_BASE = (() => {
   // serves the assessment UI under the legacy /valu/assessment/ asset base.
   // Never derive API paths from BASE_URL: that creates /valu/assessment/api/*
   // and Vercel serves index.html with 405 for POST requests.
-  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
   if (host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com' || host === 'assessment.valoriainstitute.com') {
     return 'https://assessment.valoriainstitute.com';
   }
