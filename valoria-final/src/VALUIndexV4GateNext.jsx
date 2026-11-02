@@ -204,7 +204,8 @@ export default function VALUIndexV4GateNext(){
   try{
    const oldToken=progressToken||localStorage.getItem(RESUME_TOKEN_KEY)||'';
    if(oldToken){
-    const stored=JSON.parse(localStorage.getItem(LEGACY_RESUME_TOKENS_KEY)||'[]');
+    let stored=[];
+    try{stored=JSON.parse(localStorage.getItem(LEGACY_RESUME_TOKENS_KEY)||'[]')}catch{}
     const archived=Array.isArray(stored)?stored:[];
     if(!archived.includes(oldToken))archived.push(oldToken);
     localStorage.setItem(LEGACY_RESUME_TOKENS_KEY,JSON.stringify(archived));
