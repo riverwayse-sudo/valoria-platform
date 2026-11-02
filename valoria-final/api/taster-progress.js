@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
-import { EXPERIENCE_BANDS, TASTER_QUESTIONS } from '../src/valuTaster.js';
+import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
 
 import { getValoriaSupabaseConfig } from "../lib/valoria-supabase-runtime-config.js";
 const SUPABASE_CONFIG = getValoriaSupabaseConfig();
@@ -38,7 +38,7 @@ async function getProgress(tokenHash) {
     resume_token_hash: `eq.${tokenHash}`,
     status: 'eq.in_progress',
     expires_at: `gt.${new Date().toISOString()}`,
-    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at',
+    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,taster_version,total_questions',
     limit: '1',
   });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, { headers: headers() });
@@ -69,6 +69,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         resume_token_hash: hashToken(resumeToken), name: null, role: null, experience: null, email: null,
         current_question: 0, answers: {}, status: 'in_progress',
+        taster_version: VALU_VERSION, total_questions: TASTER_QUESTIONS.length,
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       }),
     });
@@ -78,7 +79,7 @@ export default async function handler(req, res) {
     }
     const row = (await response.json())?.[0];
     if (!row?.id) return json(res, 502, { error: 'The resumable session could not be confirmed.' });
-    return json(res, 200, { resume_token: resumeToken, progress: { current_question: 0, answers: {}, submission_key: null } });
+    return json(res, 200, { resume_token: resumeToken, taster_version: VALU_VERSION, total_questions: TASTER_QUESTIONS.length, progress: { current_question: 0, answers: {}, submission_key: null, taster_version: VALU_VERSION, total_questions: TASTER_QUESTIONS.length } });
   }
 
   if (!validToken(body.resume_token)) return json(res, 401, { error: 'This resume link is invalid. Start a new session or contact Valoria support.' });
@@ -87,6 +88,10 @@ export default async function handler(req, res) {
   try {
     const progress = await getProgress(tokenHash);
     if (!progress) return json(res, 404, { error: 'This session has expired or is no longer resumable.' });
+
+    if (action !== 'load' && (progress.taster_version !== VALU_VERSION || Number(progress.total_questions) !== TASTER_QUESTIONS.length)) {
+      return json(res, 409, { code: 'LEGACY_TASTER_VERSION', error: 'This saved session belongs to an earlier taster version. Your previous responses are preserved; start the current opening to continue.' });
+    }
 
     // Attach the account identity captured at the session break. This is a
     // metadata update only; it never resets saved answers or progress.
@@ -109,7 +114,7 @@ export default async function handler(req, res) {
     }
 
     if (action === 'load') {
-      return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null } });
+      return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null, taster_version: progress.taster_version, total_questions: Number(progress.total_questions) } });
     }
 
     if (action === 'save') {
