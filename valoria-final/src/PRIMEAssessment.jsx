@@ -486,7 +486,7 @@ function Radar({ scores, size = 200 }) {
   const angle = i => (Math.PI*2*i/n) - Math.PI/2;
   const pt = (i, frac) => ({ x: cx + r*frac*Math.cos(angle(i)), y: cy + r*frac*Math.sin(angle(i)) });
   const gridPoly = frac => CLUSTERS_UI.map((_,i) => { const p=pt(i,frac); return `${p.x},${p.y}`; }).join(" ");
-  const dataPts = CLUSTERS_UI.map((c,i) => pt(i, (scores[c.id]||0)points));
+  const dataPts = CLUSTERS_UI.map((c,i) => pt(i, (scores[c.id]||0)/100));
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{overflow:"visible",display:"block"}}>
       {[0.25,0.5,0.75,1].map(f =>
@@ -665,7 +665,7 @@ function buildReportPrompt(scoreProfile) {
   const primaryProgramme    = PRIME_PROGRAMMES[primaryProgrammeKey];
   const clusterSkillDetail = CLUSTERS_UI.map(c => {
     const skills = sortedSkills.filter(([s]) => SKILL_CLUSTER[s] === c.id);
-    return `${c.name} (${clusterScores[c.id]}points):\n` + skills.map(([s,sc]) => `  - ${s}: ${sc}points`).join("\n");
+    return `${c.name} (${clusterScores[c.id]} points):\n` + skills.map(([s,sc]) => `  - ${s}: ${sc} points`).join("\n");
   }).join("\n\n");
   return `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index assessment.
 YOUR WRITING RULES:
@@ -678,20 +678,20 @@ YOUR WRITING RULES:
 7. Do not praise them for completing the assessment.
 8. Speak directly to them as "you."
 THEIR SCORE DATA:
-VALU Index: ${valuIndex}points — ${desig.name}
+VALU Index: ${valuIndex} points — ${desig.name}
 Listed on platform: ${listed ? "Yes" : "No — needs score of 35+"}
-Future-Ready score: ${futureReadyScore}points
+Future-Ready score: ${futureReadyScore} points
 SKILL SCORES:\n${clusterSkillDetail}
-THEIR STRONGEST SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc}points)`).join(", ")}
-THEIR WEAKEST SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc}points)`).join(", ")}
-PRIMARY GAP SKILL: ${primaryGapSkill} (${skillScores?.[primaryGapSkill]}points)
-SECONDARY GAP SKILL: ${secondaryGapSkill} (${skillScores?.[secondaryGapSkill]}points)
+THEIR STRONGEST SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
+THEIR WEAKEST SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
+PRIMARY GAP SKILL: ${primaryGapSkill} (${skillScores?.[primaryGapSkill]} points)
+SECONDARY GAP SKILL: ${secondaryGapSkill} (${skillScores?.[secondaryGapSkill]} points)
 RECOMMENDED PROGRAMME: ${primaryProgramme.name} (${primaryProgramme.duration}, ${primaryProgramme.price})
 IMMEDIATE WEEKLY ACTION for ${primaryGapSkill}: "${SKILL_ACTIONS[primaryGapSkill] || "Start by naming the exact gap in your own words."}"
-${!listed ? `IMPORTANT: ${name} scored ${valuIndex}points which is below the 35-point listing minimum. The PRIME Sprint is the direct path to getting listed.` : ""}
+${!listed ? `IMPORTANT: ${name} scored ${valuIndex} points which is below the 35-point listing minimum. The PRIME Sprint is the direct path to getting listed.` : ""}
 WRITE THE REPORT IN THESE EXACT SECTIONS:
 ---
-## YOUR SCORE: ${valuIndex}points — ${desig.name.toUpperCase()}
+## YOUR SCORE: ${valuIndex} points — ${desig.name.toUpperCase()}
 ## WHAT YOU ARE GOOD AT
 ## WHERE YOU ARE LOSING GROUND
 ## WHAT THIS COSTS YOU IN THE NEXT 12 MONTHS
