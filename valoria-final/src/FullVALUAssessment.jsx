@@ -50,6 +50,13 @@ import {
 
 const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
 const CLUSTER_NAMES = { P:'Presence', R:'Relationships', I:'Intelligence', M:'Mastery', E:'Enterprise' };
+const EXPERIENCE_OPTIONS = [
+  { value:'0-3', label:'0–3 years' },
+  { value:'4-8', label:'4–8 years' },
+  { value:'9-15', label:'9–15 years' },
+  { value:'15+', label:'15+ years' },
+];
+const isValidExperience = value => EXPERIENCE_OPTIONS.some(option => option.value === value);
 
 function readHandoffCode() {
   try {
@@ -128,7 +135,11 @@ export default function FullVALUAssessment() {
   const question = QUESTIONS[ASSESSMENT_ORDER[current]];
   const answeredTotal = Object.keys(answers).length;
   const progress = Math.round((answeredTotal / TOTAL_QUESTIONS) * 100);
-  const canUse = Boolean(identity.tasterId && identity.name && identity.role && identity.experience);
+  // Experience is assessment metadata, not an authentication prerequisite.
+  // Legacy snapshots may omit it or use an older label; let the participant
+  // confirm a supported band instead of blocking the assessment shell.
+  const canUse = Boolean(identity.tasterId && identity.name && identity.role);
+  const hasValidExperience = isValidExperience(identity.experience);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
 
@@ -246,6 +257,9 @@ export default function FullVALUAssessment() {
       if (!response.ok || !data.ok) throw new Error(data.error || 'Could not restore your saved VALU progress.');
       if (cancelled) return;
       const saved = data.progress;
+      if (saved && !isValidExperience(identity.experience) && isValidExperience(saved.experience)) {
+        setIdentity(previous => ({ ...previous, experience:saved.experience }));
+      }
       if (saved && saved.status !== 'completed') {
         setSessionId(saved.session_id);
         setResumeToken(saved.resume_token || '');
@@ -500,7 +514,7 @@ export default function FullVALUAssessment() {
       <h1 style={S.h1}>Return to your Valoria dashboard.</h1>
       <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved snapshot and answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
-      <a href={SITE_BASE ? SITE_BASE + '/login?returnTo=%2Fdashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
+      <a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
     </Shell>;
   }
 
@@ -517,6 +531,18 @@ export default function FullVALUAssessment() {
       {reportStatus.includes('ready') && <a href={SITE_BASE ? SITE_BASE + '/report' : undefined} style={S.button}>VIEW MY VALU REPORT →</a>}
       <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.button}>COMPLETE MY PROFILE →</a>
       <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.secondary}>OPEN PROFILE SETUP</a>
+    </Shell>;
+  }
+
+  if (!hasValidExperience) {
+    return <Shell>
+      <div style={S.eyebrow}>VALU ASSESSMENT · ONE DETAIL</div>
+      <h1 style={S.h1}>Confirm your experience band.</h1>
+      <p style={S.p}>We need a current experience band to complete your assessment record. Choose the range that best reflects your total professional experience. This does not change your saved VALU snapshot or its answers.</p>
+      <div style={S.options}>
+        {EXPERIENCE_OPTIONS.map(option => <button key={option.value} type="button" onClick={() => setIdentity(previous => ({ ...previous, experience:option.value }))} style={S.option}><span style={S.optionLetter}>→</span><span>{option.label}</span></button>)}
+      </div>
+      <a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.secondary}>RETURN TO DASHBOARD</a>
     </Shell>;
   }
 
