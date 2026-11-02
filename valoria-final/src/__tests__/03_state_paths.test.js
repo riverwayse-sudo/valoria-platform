@@ -250,7 +250,7 @@ describe("View Previous path (locked user)", () => {
     const profile = simulateDBResult({ valuIndex: 68 });
     // Simulates: onBegin({ previousProfile: profile })
     expect(profile.results.valuIndex).toBe(68);
-    expect(profile.results.desig.name).toBe("Proficient");
+    expect(profile.results.desig.name).toBe("Emerging Force");
   });
 
   test("view previous result has aiReport field (may be null)", () => {
