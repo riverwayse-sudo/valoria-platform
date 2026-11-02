@@ -50,7 +50,6 @@ export default function VALUIndexV4GateNext(){
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
- const [authenticatedAccount,setAuthenticatedAccount]=useState(false);
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
  const [tasterId,setTasterId]=useState('');
@@ -83,7 +82,6 @@ export default function VALUIndexV4GateNext(){
    try{
     accountAuth=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null');
     if(accountAuth?.access_token){
-     setAuthenticatedAccount(true);
      if(accountAuth.user?.display_name)setName(accountAuth.user.display_name);
      if(accountAuth.user?.email)setEmail(accountAuth.user.email);
     }
