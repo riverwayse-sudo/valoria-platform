@@ -263,6 +263,7 @@ describe("Assessment integrity contracts", () => {
     expect(component).toContain("handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete");
     expect(component).toContain("const canUse = Boolean(identity.tasterId && identity.name && identity.role);");
     expect(component).toContain("Confirm your experience band.");
+    expect(component).toContain("experience:identity.experience,");
     expect(component).toContain("setIdentity(previous => ({ ...previous, experience:option.value }))");
   });
 
