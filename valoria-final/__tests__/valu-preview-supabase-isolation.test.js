@@ -58,6 +58,17 @@ describe('Valoria Supabase runtime environment isolation', () => {
     })).toBeNull();
   });
 
+  test('Cloudflare Worker Preview marker overrides a production runtime label', () => {
+    expect(getValoriaSupabaseConfig({
+      ...production,
+      VERCEL_ENV: 'production',
+      VALU_PREVIEW: '1',
+      VITE_SUPABASE_URL: 'https://prod-project.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'production-anon',
+      VALU_PRODUCTION_SUPABASE_URL: 'https://prod-project.supabase.co',
+    })).toBeNull();
+  });
+
   test('Cloudflare Worker Preview accepts only matching isolated preview credentials', () => {
     expect(getValoriaSupabaseConfig({
       VALU_PREVIEW: '1',
