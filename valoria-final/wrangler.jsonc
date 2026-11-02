@@ -22,9 +22,7 @@
   "previews": {
     "vars": {
       "SUPABASE_URL": "https://sbkgpisgkuhbalsxqkdr.supabase.co",
-      "VALU_PRODUCTION_SUPABASE_URL": "https://sbkgpisgkuhbalsxqkdr.supabase.co",
-      "SITE_ORIGIN": "https://www.valoriainstitute.com",
-      "VALU_SITE_ORIGIN": "https://www.valoriainstitute.com"
+      "VALU_PRODUCTION_SUPABASE_URL": "https://sbkgpisgkuhbalsxqkdr.supabase.co"
     }
   }
 }
