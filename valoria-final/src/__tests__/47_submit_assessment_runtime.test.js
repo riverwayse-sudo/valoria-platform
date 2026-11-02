@@ -128,8 +128,12 @@ describe("Full assessment submission runtime contract", () => {
     const linkId = "44444444-4444-4444-8444-444444444444";
     let consumed = false;
     let consumeWrites = 0;
+    let rateLimitCalls = 0;
     global.fetch = async (url, options = {}) => {
-      if (url.includes("rpc/consume_rate_limit")) return jsonResponse(200, { allowed: true });
+      if (url.includes("rpc/consume_rate_limit")) {
+        rateLimitCalls += 1;
+        return jsonResponse(200, { allowed: true });
+      }
       if (url.includes("/rest/v1/valoria_reentry_links")) {
         if (options.method === "PATCH") {
           consumeWrites += 1;
@@ -186,6 +190,9 @@ describe("Full assessment submission runtime contract", () => {
     await handler(request, second);
     expect(second.statusCode).toBe(401);
     expect(consumeWrites).toBe(1);
+    // One-time, short-lived dashboard codes do not depend on the shared
+    // submission limiter being available.
+    expect(rateLimitCalls).toBe(0);
   });
 
   test("a first-time full-assessment submission persists and returns a report token", async () => {
