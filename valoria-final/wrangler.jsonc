@@ -13,6 +13,5 @@
     "crons": ["0 2 * * *", "0 3 * * *"]
   },
   "observability": { "enabled": true },
-  // Preview deployments intentionally receive no production secrets or bindings.
   "previews": {}
 }
