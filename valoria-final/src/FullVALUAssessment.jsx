@@ -20,7 +20,16 @@ const API_BASE = (() => {
 })();
 
 const SITE_BASE = (() => {
-  const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
+  // Preserve the exact dashboard origin that issued the handoff. Supabase
+  // browser sessions are origin-scoped; www and apex must not be mixed.
+  if (typeof window !== 'undefined') {
+    try {
+      const requested = new URLSearchParams(window.location.search).get('site_origin');
+      const parsed = new URL(requested || '');
+      if (parsed.protocol === 'https:' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(parsed.hostname)) return parsed.origin;
+    } catch {}
+  }
+  const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\\/$/, '');
   if (configuredOrigin) return configuredOrigin;
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
   if (host === 'assessment.valoriainstitute.com') return 'https://valoriainstitute.com';
