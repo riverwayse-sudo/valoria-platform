@@ -107,3 +107,22 @@ test("full assessment preflight rejects an untrusted Worker origin", async () =>
   }), env);
   assert.equal(response.status, 403);
 });
+
+
+test("the direct remaining-assessment URL resolves to the same authenticated assessment shell", async () => {
+  const env = makeEnv();
+  const response = await worker.fetch(
+    new Request("https://assessment.example/remaining?full=1&site_origin=https%3A%2F%2Fvaloriainstitute.com#handoff_code=one-time"),
+    env,
+  );
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "/index.html");
+  assert.deepEqual(env.seen, [{ pathname: "/index.html", method: "GET" }]);
+});
+
+test("the remaining-assessment route supports a trailing slash", async () => {
+  const env = makeEnv();
+  const response = await worker.fetch(new Request("https://assessment.example/remaining/"), env);
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "/index.html");
+});
