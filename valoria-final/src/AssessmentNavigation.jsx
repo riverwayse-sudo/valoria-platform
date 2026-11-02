@@ -13,7 +13,8 @@ function getSiteUrl() {
 }
 const LOGO_URL = 'https://valoriainstitute.com/logo.png';
 
-export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {\n  const siteUrl = getSiteUrl();
+export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {
+  const siteUrl = getSiteUrl();
   return (
     <header style={styles.header} aria-label="Assessment navigation">
       <div className="assessment-nav-inner" style={styles.inner}>
