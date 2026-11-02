@@ -16,7 +16,7 @@ describe("account confirmation origin isolation", () => {
   });
 
   test("Preview fails closed instead of sending confirmation links to production", () => {
-    expect(source).toContain('process.env.VERCEL_ENV === "preview" ? "" : "https://valoriainstitute.com"');
+    expect(source).toContain('process.env.VERCEL_ENV === "preview" ? "" : "https://www.valoriainstitute.com"');
     expect(source).toContain("if (!VALORIA_SITE_URL) return json({ error: \"Account confirmation origin is not configured.\" }, 500)");
   });
 
