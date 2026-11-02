@@ -3,8 +3,8 @@
 // Two-session VALU journey contract.
 //
 // There is ONE 58-question assessment, completed in two sessions:
-//   Session 1 — the approved opening nine (direct entry, no account required).
-//   Session 2 — the remaining 49 questions (after account confirmation).
+//   Session 1 — the approved opening nine after account confirmation and sign-in.
+//   Session 2 — the remaining 49 questions after professional profile completion.
 //
 // These tests pin the shape of that journey so it cannot silently regress into
 // the previous "taster is a separate product, then start a second assessment"
@@ -32,7 +32,7 @@ const readSource = relative => fs.readFileSync(path.join(__dirname, "..", relati
 const gateSource = () => readSource("VALUIndexV4GateNext.jsx");
 const fullSource = () => readSource("FullVALUAssessment.jsx");
 
-describe("one continuous VALU assessment with an account-confirmation bridge", () => {
+describe("one continuous VALU assessment with an account-first profile bridge", () => {
   test("the canonical assessment is exactly 58 questions", () => {
     expect(QUESTIONS.length).toBe(58);
     expect(TOTAL_QUESTIONS).toBe(58);
@@ -116,22 +116,26 @@ describe("session 1 presents the opening nine after account authentication", () 
     expect(answerBody).toContain("setPhase('break')");
   });
 
-  test("the account is requested after the break, not before the questions", () => {
+  test("the account is authenticated before the opening and profile details are completed after the break", () => {
     const source = gateSource();
     const breakIndex = source.indexOf("phase==='break'");
     const sessionIndex = source.indexOf('mode="taster"');
     expect(breakIndex).toBeGreaterThan(-1);
     expect(sessionIndex).toBeGreaterThan(-1);
-    expect(source).toContain("SAVE MY DETAILS & CONTINUE");
+    expect(source).toContain("sessionStorage.getItem('valoria-assessment-auth')");
+    expect(source).toContain("Complete your professional profile");
+    expect(source).toContain("PROFILE COMPLETION · STEP 2 OF 3");
+    expect(source).toContain("SAVE MY PROFILE & CONTINUE");
     expect(source).toContain("action:'identify'");
   });
 
-  test("creating the account carries the exact session reference to signup", () => {
+  test("the completed taster links to the existing account and returns to the dashboard", () => {
     const source = gateSource();
-    expect(source).toContain("professional-signup/?");
-    expect(source).toContain("taster_id:data.taster_id");
-    expect(source).toContain("new URLSearchParams({taster_id:data.taster_id");
+    expect(source).toContain("fetch('/api/link-taster'");
+    expect(source).toContain("Authorization:'Bearer '+authBridge.access_token");
+    expect(source).toContain("window.location.assign('/dashboard?welcome=profile')");
     expect(source).toContain("localStorage.setItem('pending_taster_id',data.taster_id)");
+    expect(source).not.toContain("professional-signup/?");
   });
 
   test("the session 1 gate never scores or displays a VALU Index", () => {
@@ -201,17 +205,19 @@ describe("session 2 presents the remaining questions and restores progress", () 
   });
 
 
-  test("the post-question-nine bridge clearly previews account setup, email confirmation, and Question 10", () => {
+  test("the post-question-nine bridge clearly previews profile completion and Question 10", () => {
     const source = gateSource();
     expect(source).toContain("What happens next");
     expect(source).toContain("02 · YOU ARE HERE");
-    expect(source).toContain("Create your account");
-    expect(source).toContain("set your password and confirm your email");
+    expect(source).toContain("Complete your professional profile");
+    expect(source).toContain("Your Valoria account is already confirmed");
     expect(source).toContain("03 · UP NEXT");
     expect(source).toContain("Continue at Question 10");
     expect(source).toContain("remaining 49 questions");
-    expect(source).toContain("ACCOUNT SETUP · STEP 2 OF 3");
-    expect(source).toContain("SAVE MY DETAILS & CONTINUE");
+    expect(source).toContain("PROFILE COMPLETION · STEP 2 OF 3");
+    expect(source).toContain("SAVE MY PROFILE & CONTINUE");
+    expect(source).not.toContain("Create your account");
+    expect(source).not.toContain("set your password and confirm your email");
   });
 
 describe("three-stage experience presentation", () => {
@@ -221,7 +227,7 @@ describe("three-stage experience presentation", () => {
     expect(gateSource()).toContain('VALUAssessmentJourney stage="bridge"');
     expect(fullSource()).toContain('VALUAssessmentJourney stage="continuation"');
     expect(progress).toContain("Questions 1–9");
-    expect(progress).toContain("Save & confirm");
+    expect(progress).toContain("Complete profile");
     expect(progress).toContain("Questions 10–58");
     expect(gateSource()).not.toContain("SESSION 1 OF 2");
     expect(fullSource()).not.toContain("SESSION 2 OF 2");
