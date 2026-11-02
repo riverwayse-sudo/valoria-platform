@@ -53,7 +53,7 @@ function applyCors(req, res) {
 function handlePreflight(req, res) {
   if (req.method !== 'OPTIONS') return false;
   res.setHeader('Cache-Control', 'no-store');
-  if (req.headers?.origin !== undefined && res.getHeader('Access-Control-Allow-Origin') === undefined) {
+  if (req.headers?.origin && !res.getHeader('Access-Control-Allow-Origin')) {
     res.status(403).json({ error: 'Origin not allowed.' });
     return true;
   }
