@@ -6,10 +6,28 @@
 // cross-origin and require an explicit preflight response. Without it the
 // browser blocks every taster request with a CORS error even though the handler
 // itself would have succeeded.
+function configuredHttpsOrigin(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+// Preview origins are exact Worker Preview URLs configured in the preview
+// environment. Never wildcard *.workers.dev or accept caller-provided origins.
+const previewOrigins = [
+  typeof process !== 'undefined' ? process.env.VALU_PREVIEW_SITE_ORIGIN : null,
+  typeof process !== 'undefined' ? process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN : null,
+].map(configuredHttpsOrigin).filter(Boolean);
+
 const ALLOWED_ORIGINS = new Set([
   'https://valoriainstitute.com',
   'https://www.valoriainstitute.com',
   'https://assessment.valoriainstitute.com',
+  ...previewOrigins,
 ]);
 
 function isAllowedOrigin(origin) {
