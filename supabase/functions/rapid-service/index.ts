@@ -19,7 +19,7 @@ function deriveTier(score: number | null): string {
   return "Assessment Follow-up";
 }
 
-function getNextSteps(score: number | null, designation: string): string {
+function getNextSteps(score: number | null): string {
   if (score === null) {
     return `
       <li>Complete your VALU Index assessment to receive your official points score.</li>
@@ -92,7 +92,7 @@ function buildEmailHtml(params: {
 }): string {
   const { firstName, score, tier, dimensions } = params;
   const scoreDisplay = score !== null ? `${score}` : "—";
-  const nextSteps = getNextSteps(score, tier);
+  const nextSteps = getNextSteps(score);
 
   const DIMENSION_LABELS: Record<string, string> = {
     presence: "Presence",
@@ -219,7 +219,7 @@ serve(async (req: Request) => {
   let { tier = null } = body;
   if (!email) { return new Response(JSON.stringify({ error: "email is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }); }
   const firstName = first_name || "Professional";
-  const resolvedTier = tier || deriveTier(score ?? null);
+  const resolvedTier = deriveTier(score ?? null);
   const htmlContent = buildEmailHtml({ firstName, email, score: score ?? null, tier: resolvedTier, dimensions: dimensions ?? null });
   const textContent = buildEmailText({ firstName, score: score ?? null, tier: resolvedTier });
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
