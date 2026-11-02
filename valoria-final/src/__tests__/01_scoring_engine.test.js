@@ -163,40 +163,31 @@ describe("computeWeightedIndex", () => {
 // ── SECTION 3: getDesignation ─────────────────────────────────────────────
 describe("getDesignation", () => {
   const cases = [
-    [100, "Elite"],
-    [90,  "Elite"],
-    [89,  "Distinguished"],
-    [75,  "Distinguished"],
-    [74,  "Proficient"],
-    [55,  "Proficient"],
-    [54,  "Standard"],
-    [35,  "Standard"],
-    [34,  "Standard"],
-    [0,   "Standard"],
+    [100, "Force to Align With"],
+    [90, "Force to Align With"],
+    [89, "Force to Align With"],
+    [80, "Force to Align With"],
+    [79, "Emerging Force"],
+    [65, "Emerging Force"],
+    [64, "Developing Professional"],
+    [50, "Developing Professional"],
+    [49, "Building Foundations"],
+    [35, "Building Foundations"],
   ];
 
-  test.each(cases)("score %i → %s", (score, expectedName) => {
+  test.each(cases)("score %i points → %s", (score, expectedName) => {
     expect(getDesignation(score).name).toBe(expectedName);
   });
 
-  test("designation boundary at 90 is Elite; 89 is Distinguished", () => {
-    expect(getDesignation(90).name).toBe("Elite");
-    expect(getDesignation(89).name).toBe("Distinguished");
-    expect(getDesignation(75).name).toBe("Distinguished");
-    expect(getDesignation(74).name).toBe("Proficient");
-    expect(getDesignation(55).name).toBe("Proficient");
-    expect(getDesignation(54).name).toBe("Standard");
+  test("scores below the 35-point eligibility threshold have no merit designation", () => {
+    expect(getDesignation(34)).toBeNull();
+    expect(getDesignation(0)).toBeNull();
   });
 
-  test("boundary at exactly 35 is Standard not Standard", () => {
-    expect(getDesignation(35).name).toBe("Standard");
-    expect(getDesignation(34).name).toBe("Standard");
-  });
-
-  test("returns object with min property", () => {
-    const d = getDesignation(72);
-    expect(d).toHaveProperty("min");
-    expect(d).toHaveProperty("name");
+  test("returns a designation object with its minimum points boundary", () => {
+    const designation = getDesignation(72);
+    expect(designation).toHaveProperty("min", 65);
+    expect(designation).toHaveProperty("name", "Emerging Force");
   });
 });
 
