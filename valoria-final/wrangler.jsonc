@@ -16,7 +16,9 @@
   "previews": {
     "vars": {
       "VALU_PREVIEW": "1",
-      "VALU_PRODUCTION_SUPABASE_URL": "https://sbkgpisgkuhbalsxqkdr.supabase.co"
+      "CF_WORKERS_PREVIEW": "1",
+      "VITE_SUPABASE_URL": "https://preview-disabled.invalid",
+      "VITE_SUPABASE_ANON_KEY": "preview-disabled"
     }
   }
 }
