@@ -130,7 +130,7 @@ THEIR SCORE DATA:
 VALU Index: ${valuIndex} points — ${designation}
 SKILL SCORES: ${Object.entries(clusterScores || {}).map(([k,v]) => `${k}: ${v} points`).join(", ")}
 TOP SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
-BOTTOM SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc}/100)`).join(", ")}
+BOTTOM SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
 WRITE THE REPORT IN THESE EXACT SECTIONS:
 ---
 ## YOUR SCORE: ${valuIndex} points — ${designation.toUpperCase()}
