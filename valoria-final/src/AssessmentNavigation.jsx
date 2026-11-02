@@ -1,22 +1,32 @@
 import React from 'react';
 
 const T = { parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.28)', dark:'#1A1A2E' };
-const SITE_URL = 'https://valoriainstitute.com';
+function getSiteUrl() {
+  if (typeof window !== 'undefined') {
+    try {
+      const requested = new URLSearchParams(window.location.search).get('site_origin');
+      const parsed = new URL(requested || '');
+      if (parsed.protocol === 'https:' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(parsed.hostname)) return parsed.origin;
+    } catch {}
+  }
+  return 'https://valoriainstitute.com';
+}
 const LOGO_URL = 'https://valoriainstitute.com/logo.png';
 
 export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {
+  const siteUrl = getSiteUrl();
   return (
     <header style={styles.header} aria-label="Assessment navigation">
       <div className="assessment-nav-inner" style={styles.inner}>
-        <a href={`${SITE_URL}/`} style={styles.brand} aria-label="Return to Valoria Institute homepage">
+        <a href={`${siteUrl}/`} style={styles.brand} aria-label="Return to Valoria Institute homepage">
           <img src={LOGO_URL} alt="Valoria Institute" className="assessment-nav-logo" style={styles.logo} />
         </a>
         <div className="assessment-nav-center" style={styles.center} aria-live="polite">
           <span style={styles.label}>{label}</span>
           {progress != null && <span style={styles.progress}>{progress}%</span>}
         </div>
-        <a className="assessment-nav-exit" href={`${SITE_URL}/valu`} style={styles.exit} aria-label="Exit assessment and return to Valoria">
-          <span>RETURN TO VALORIA</span><span aria-hidden="true">↗</span>
+        <a className="assessment-nav-exit" href={`${siteUrl}/dashboard`} style={styles.exit} aria-label="Return to your Valoria dashboard">
+          <span>RETURN TO DASHBOARD</span><span aria-hidden="true">↗</span>
         </a>
       </div>
     </header>
