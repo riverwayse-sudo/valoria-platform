@@ -715,7 +715,7 @@ function CompletionJourneyModal({ open, score, onClose }) {
         <div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:".18em", marginBottom:10, fontFamily:T.font.label }}>VALU JOURNEY · NEXT STAGE</div>
         <h2 style={{ fontSize:28, lineHeight:1.2, fontWeight:500, color:T.parchment, margin:"0 0 12px", fontFamily:T.font.display }}>Your assessment is complete.</h2>
         <p style={{ fontSize:14, lineHeight:1.8, color:T.text.secondary, margin:"0 0 22px", fontFamily:T.font.body }}>
-          Your VALU Index of <strong style={{color:T.gold}}>{score}points</strong> has been recorded and your professional marketplace placement has been initiated.
+          Your VALU Index of <strong style={{color:T.gold}}>{score} points</strong> has been recorded and your professional marketplace placement has been initiated.
         </p>
         <div style={{ display:"grid", gap:10, marginBottom:24 }}>
           {[
@@ -1403,7 +1403,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
       <div style={{ maxWidth:720, margin:"0 auto", padding:"32px 24px 80px" }}>
         {saveError && (
           <div style={{ marginBottom:16, padding:"12px 16px", background:"rgba(216,90,48,0.08)", border:"1px solid rgba(216,90,48,0.3)", borderRadius:T.radius.chip, fontSize:T.size.small, color:T.coral, fontFamily:T.font.body }}>
-            Score could not be saved: {saveError}. Contact info@valoriainstitute.com with your result ({valuIndex}points).
+            Score could not be saved: {saveError}. Contact info@valoriainstitute.com with your result ({valuIndex} points).
           </div>
         )}
         <div style={{ marginBottom:24, padding:"24px", background:"rgba(22,22,36,0.6)", border:"1px solid rgba(201,168,76,0.1)", borderRadius:T.radius.card }}>
@@ -1461,7 +1461,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
               A confirmation link has been sent to <strong style={{color:T.parchment}}>{signupEmail}</strong>.
             </p>
             <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:"0 0 24px", fontFamily:T.font.body }}>
-              Your VALU Index of <strong style={{color:T.gold}}>{valuIndex}points</strong> has been saved. Confirm your email first; your account will then return to Valoria so you can continue your journey without signing in again. Marketplace visibility remains off until the required checks are complete.
+              Your VALU Index of <strong style={{color:T.gold}}>{valuIndex} points</strong> has been saved. Confirm your email first; your account will then return to Valoria so you can continue your journey without signing in again. Marketplace visibility remains off until the required checks are complete.
             </p>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               <button type="button" onClick={handleResendConfirmation} disabled={resendLoading} style={{ ...pillBtn(resendLoading ? "disabled" : "primary"), width:"100%" }}>
@@ -1736,7 +1736,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
               {reportError || "An error occurred. Your score has been saved."}
             </p>
             <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>
-              Your VALU Index is <strong style={{color:T.gold}}>{valuIndex}points</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact info@valoriainstitute.com for your full report.
+              Your VALU Index is <strong style={{color:T.gold}}>{valuIndex} points</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact info@valoriainstitute.com for your full report.
             </p>
             <button onClick={generateAIReport} style={{...pillBtn("gold-ghost"), marginTop:16, padding:"11px 24px", fontSize:T.size.caption}}>
               TRY AGAIN
