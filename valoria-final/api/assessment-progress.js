@@ -1,6 +1,7 @@
 import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
 import { withEdgeCors } from "./_cors.js";
 import { seedAnswersFromOpening } from "../src/assessmentJourney.js";
+import { getValoriaDashboardUrl } from "../lib/valoria-dashboard-origin.js";
 
 export const config = { runtime: "edge" };
 
@@ -10,17 +11,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
 
 function getDashboardUrl() {
-  const configured = String(process.env.VALU_SITE_ORIGIN || '').trim()
-  const origin = configured || (process.env.VERCEL_ENV === 'production' ? 'https://valoriainstitute.com' : '')
-  if (!origin) return null
-  try {
-    const url = new URL(origin)
-    if (!['http:', 'https:'].includes(url.protocol)) return null
-    if (process.env.VERCEL_ENV === 'preview' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(url.hostname)) return null
-    return new URL('/login?returnTo=%2Fdashboard', url.origin).toString()
-  } catch {
-    return null
-  }
+  return getValoriaDashboardUrl(process.env)
 }
 
 function json(data, status = 200) {
