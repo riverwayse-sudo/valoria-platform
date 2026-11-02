@@ -13,5 +13,10 @@
     "crons": ["0 2 * * *", "0 3 * * *"]
   },
   "observability": { "enabled": true },
-  "previews": {}
+  "previews": {
+    "vars": {
+      "VALU_PREVIEW": "1",
+      "VALU_PRODUCTION_SUPABASE_URL": "https://sbkgpisgkuhbalsxqkdr.supabase.co"
+    }
+  }
 }
