@@ -11,48 +11,54 @@ const CORS_HEADERS = {
 };
 
 function deriveTier(score: number | null): string {
-  if (score === null || score === undefined) return "Assessed";
-  if (score >= 85) return "Platinum";
-  if (score >= 70) return "Gold";
-  if (score >= 55) return "Silver";
-  return "Bronze";
+  if (score === null || score === undefined) return "Assessment Follow-up";
+  if (score >= 80) return "Force to Align With";
+  if (score >= 65) return "Emerging Force";
+  if (score >= 50) return "Developing Professional";
+  if (score >= 35) return "Building Foundations";
+  return "Assessment Follow-up";
 }
 
-function getNextSteps(score: number | null, tier: string): string {
+function getNextSteps(score: number | null, designation: string): string {
   if (score === null) {
     return `
-      <li>Complete your VALU Index assessment to receive your full score and tier badge.</li>
-      <li>Once assessed, your verified profile will become searchable on ATB Connect.</li>
-      <li>Explore the PRIME Framework to understand how Valoria measures professional worth.</li>
+      <li>Complete your VALU Index assessment to receive your official points score.</li>
+      <li>Return to your dashboard to continue your professional profile.</li>
+      <li>Marketplace visibility follows the full assessment, profile and capability eligibility checks.</li>
     `;
   }
-  if (score >= 85) {
+  if (score >= 80) {
     return `
-      <li><strong>Apply for the Platinum Marketplace</strong> — your profile is eligible for featured placement on ATB Connect.</li>
-      <li><strong>Become a Speaker</strong> — your score qualifies you for the ATB Spotlight bureau. <a href="https://valoriainstitute.com/speakers" style="color:#C9A84C;">Apply here</a>.</li>
-      <li><strong>Commission as a Facilitator</strong> — explore Valoria Develop opportunities for elite practitioners.</li>
-      <li>Share your VALU badge on LinkedIn to signal your verified standard to the market.</li>
+      <li>Your merit designation is <strong>Force to Align With</strong>. Complete your professional profile and capability details.</li>
+      <li>Marketplace visibility is subject to the Institute's profile, assessment and capability eligibility checks.</li>
+      <li>Use your PRIME dimension results to identify where to sustain and extend your professional strength.</li>
     `;
   }
-  if (score >= 70) {
+  if (score >= 65) {
     return `
-      <li><strong>Activate your ATB Connect profile</strong> — Gold-tier professionals are visible to vetted employers and clients.</li>
-      <li><strong>Strengthen your weaker dimensions</strong> — review your detailed breakdown and explore targeted PRIME Programmes.</li>
-      <li>Consider the <a href="https://valoriainstitute.com/prime" style="color:#C9A84C;">PRIME Framework</a> deep-dive to push into Platinum tier.</li>
+      <li>Your merit designation is <strong>Emerging Force</strong>. Strengthen the evidence behind your professional capabilities.</li>
+      <li>Complete your professional profile and selected capability details for eligibility review.</li>
+      <li>Use your PRIME results to identify the next development priority.</li>
     `;
   }
-  if (score >= 55) {
+  if (score >= 50) {
     return `
-      <li><strong>Your profile is live on ATB Connect</strong> at Silver tier — start receiving curated opportunities.</li>
-      <li><strong>Close your dimension gaps</strong> — focus on the areas scoring below 60 in your breakdown below.</li>
-      <li>Join a <a href="https://valoriainstitute.com/programmes" style="color:#C9A84C;">PRIME Programme cohort</a> to accelerate your progress.</li>
+      <li>Your merit designation is <strong>Developing Professional</strong>. Identify the dimensions where focused development will matter most.</li>
+      <li>Complete your professional profile and capability details before marketplace eligibility can be assessed.</li>
+      <li>Explore PRIME-aligned development opportunities that address your priority areas.</li>
+    `;
+  }
+  if (score >= 35) {
+    return `
+      <li>Your merit designation is <strong>Building Foundations</strong>. Review your PRIME dimension results and select a development priority.</li>
+      <li>Complete your professional profile and capability details. A score of 35 points is only one marketplace eligibility condition.</li>
+      <li>Marketplace listing is confirmed only after all required checks are satisfied.</li>
     `;
   }
   return `
-    <li><strong>Your assessment is complete</strong> — well done for taking the first step.</li>
-    <li><strong>Explore PRIME Programmes</strong> designed to close skill and presence gaps at every level.</li>
-    <li>Re-assessment is available after 90 days of development. Use the time intentionally.</li>
-    <li>Read your dimension breakdown carefully — it tells you exactly where to focus first.</li>
+    <li>Your assessment is recorded. Your current score does not meet the 35-point marketplace score threshold.</li>
+    <li>Review your PRIME dimension results and choose a focused development priority.</li>
+    <li>Continue developing your professional evidence before your next assessment.</li>
   `;
 }
 
@@ -144,10 +150,10 @@ function buildEmailHtml(params: {
                   <td style="padding:28px 32px; text-align:center; border-right:1px solid rgba(201,168,76,0.15); width:50%;">
                     <p style="margin:0 0 4px; font-size:10px; font-weight:700; color:#C9A84C; letter-spacing:2px; text-transform:uppercase;">VALU Score</p>
                     <p style="margin:0; font-size:52px; font-weight:800; color:#F7F4EE; line-height:1;">${scoreDisplay}</p>
-                    <p style="margin:4px 0 0; font-size:11px; color:rgba(247,244,238,0.35);">out of 100</p>
+                    <p style="margin:4px 0 0; font-size:11px; color:rgba(247,244,238,0.35);">points</p>
                   </td>
                   <td style="padding:28px 32px; text-align:center; width:50%;">
-                    <p style="margin:0 0 4px; font-size:10px; font-weight:700; color:#C9A84C; letter-spacing:2px; text-transform:uppercase;">Tier</p>
+                    <p style="margin:0 0 4px; font-size:10px; font-weight:700; color:#C9A84C; letter-spacing:2px; text-transform:uppercase;">Merit designation</p>
                     <p style="margin:0; font-size:28px; font-weight:800; color:#C9A84C; line-height:1;">${tier}</p>
                     <p style="margin:4px 0 0; font-size:11px; color:rgba(247,244,238,0.35);">Valoria Standard</p>
                   </td>
@@ -187,7 +193,7 @@ function buildEmailText(params: { firstName: string; score: number | null; tier:
   return [
     `Hi ${firstName},`,
     "",
-    score !== null ? `Your VALU Index results are in.\n\nScore: ${score}/100  |  Tier: ${tier}` : "Welcome to Valoria Institute. Complete your VALU Index to receive your verified score.",
+    score !== null ? `Your VALU Index results are in.\n\nScore: ${score} points  |  Merit designation: ${tier}` : "Welcome to Valoria Institute. Complete your VALU Index to receive your verified score.",
     "",
     "View your profile: https://valoriainstitute.com/profile",
     "",
@@ -223,7 +229,7 @@ serve(async (req: Request) => {
     console.error("RESEND_API_KEY not set");
     return new Response(JSON.stringify({ error: "Email service not configured" }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
   }
-  const subject = score !== null ? `Your VALU Index results — ${resolvedTier} tier (${score}/100)` : "Welcome to Valoria Institute — complete your VALU assessment";
+  const subject = score !== null ? `Your VALU Index results — ${resolvedTier} tier (${score} points)` : "Welcome to Valoria Institute — complete your VALU assessment";
   const resendResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
