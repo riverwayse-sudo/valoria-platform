@@ -1,5 +1,5 @@
 export function getValoriaSupabaseConfig(env = process.env) {
-  const isPreview = env.VALU_PREVIEW === '1' || env.VERCEL_ENV === 'preview'
+  const isPreview = env.VALU_PREVIEW === '1' || env.CF_WORKERS_PREVIEW === '1' || env.VERCEL_ENV === 'preview'
     || (env.CF_PAGES === '1' && env.CF_PAGES_BRANCH !== 'main');
 
   if (isPreview) {
