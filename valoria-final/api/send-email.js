@@ -10,6 +10,15 @@ function escapeHtml(str) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
+function getCanonicalDesignation(score) {
+  const points = Number(score);
+  if (!Number.isFinite(points) || points < 35 || points > 100) return "Assessment Follow-up";
+  if (points >= 80) return "Force to Align With";
+  if (points >= 65) return "Emerging Force";
+  if (points >= 50) return "Developing Professional";
+  return "Building Foundations";
+}
+
 async function getStoredAssessment(identityHash) {
   if (!identityHash || !SUPABASE_URL || !SERVICE_ROLE_KEY) return null;
   try {
@@ -40,10 +49,11 @@ export default async function handler(req) {
 
   const stored = await getStoredAssessment(identity_hash);
   if (!stored) return new Response(JSON.stringify({ error: "No completed assessment found for this request." }), { status: 403 });
+  const designation = getCanonicalDesignation(stored.total_score);
 
   const rawReport = reportText && reportText.trim()
     ? reportText
-    : `Your VALU Index is ${stored.total_score}/100 — ${stored.designation}. Your full AI report will follow shortly.`;
+    : `Your VALU Index is ${stored.total_score} points — ${designation}. Your full AI report will follow shortly.`;
 
   const reportHtml = rawReport.split("\n").map(line => {
     if (line.startsWith("## ")) return `<h2 style="font-size:18px;color:#C9A84C;margin:24px 0 8px;font-family:Georgia,serif;">${escapeHtml(line.slice(3))}</h2>`;
@@ -58,16 +68,16 @@ export default async function handler(req) {
       <div style="text-align:center;margin-bottom:40px;"><img src="https://valoriainstitute.com/valoria-original.png?v=20260922-4" alt="Valoria Institute" style="height:40px;"></div>
       <h1 style="font-size:28px;font-weight:300;color:#F7F4EE;margin-bottom:8px;">Welcome, ${escapeHtml(stored.name)}.</h1>
       <p style="font-size:15px;color:rgba(247,244,238,0.5);margin-bottom:32px;">Your VALU Index assessment is complete. Here is your full AI report.</p>
-      <div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:24px;margin-bottom:32px;text-align:center;"><div style="font-size:52px;font-weight:700;color:#C9A84C;line-height:1;">${escapeHtml(stored.total_score)}</div><div style="font-size:11px;color:rgba(247,244,238,0.4);letter-spacing:0.12em;margin-top:6px;">VALU INDEX · OUT OF 100</div><div style="font-size:15px;color:#F7F4EE;margin-top:8px;font-weight:600;">${escapeHtml(stored.designation)}</div><div style="font-size:12px;color:rgba(247,244,238,0.3);margin-top:4px;">${escapeHtml(stored.role)}</div></div>
+      <div style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:24px;margin-bottom:32px;text-align:center;"><div style="font-size:52px;font-weight:700;color:#C9A84C;line-height:1;">${escapeHtml(stored.total_score)}</div><div style="font-size:11px;color:rgba(247,244,238,0.4);letter-spacing:0.12em;margin-top:6px;">VALU INDEX · POINTS</div><div style="font-size:15px;color:#F7F4EE;margin-top:8px;font-weight:600;">${escapeHtml(designation)}</div><div style="font-size:12px;color:rgba(247,244,238,0.3);margin-top:4px;">${escapeHtml(stored.role)}</div></div>
       <div style="background:#1A1A2E;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:28px;margin-bottom:32px;">${reportHtml}</div>
-      <div style="text-align:center;margin-bottom:40px;"><a href="https://valoriainstitute.com/profile/edit" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">COMPLETE YOUR PROFILE &rarr;</a></div>
+      <div style="text-align:center;margin-bottom:40px;"><a href="https://valoriainstitute.com/dashboard" style="display:inline-block;padding:16px 36px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:0.16em;border-radius:9999px;">RETURN TO YOUR DASHBOARD &rarr;</a></div>
       <p style="font-size:11px;color:rgba(247,244,238,0.2);text-align:center;border-top:1px solid rgba(255,255,255,0.06);padding-top:24px;">Valoria Institute &middot; Africa's Professional Capability Index<br>Questions? info@valoriainstitute.com</p>
     </div></body></html>`;
 
   const resendRes = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
-    body: JSON.stringify({ from: "Valoria Institute <hello@valoriainstitute.com>", to: email, subject: `Your VALU Index Report — ${stored.total_score}/100 · ${stored.designation}`, html }),
+    body: JSON.stringify({ from: "Valoria Institute <hello@valoriainstitute.com>", to: email, subject: `Your VALU Index Report — ${stored.total_score} points · ${designation}`, html }),
   });
 
   if (!resendRes.ok) return new Response(JSON.stringify({ error: "Email delivery failed." }), { status: 502 });
