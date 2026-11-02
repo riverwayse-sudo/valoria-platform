@@ -533,7 +533,7 @@ export default function FullVALUAssessment() {
     return <Shell>
       <div style={S.eyebrow}>OFFICIAL VALU INDEX</div>
       <h1 style={S.h1}>Your official standard is set.</h1>
-      <div style={S.scoreCard}><div style={S.score}>{score}</div><div style={S.outOf}>/ 100</div><div style={S.designation}>{designation}</div></div>
+      <div style={S.scoreCard}><div style={S.score}>{score}</div><div style={S.outOf}>points</div><div style={S.designation}>{designation}</div></div>
       <p style={S.p}>Your full assessment is now attached to your Valoria professional profile. Your profile can move from <strong style={{color:T.gold}}>Basic · Incomplete</strong> to complete once the required professional profile information is finished.</p>
       {reportStatus && <p style={{...S.p,color:T.gold}}>{reportStatus}</p>}
       {reportStatus.includes('ready') && <a href={SITE_BASE ? SITE_BASE + '/report' : undefined} style={S.button}>VIEW MY VALU REPORT →</a>}

@@ -1,3 +1,5 @@
+// DEPRECATED LEGACY COMPONENT — the active assessment is VALUIndexV4App.jsx.
+// Retained only for backwards compatibility; do not route new users here.
 // PRIMEAssessment.jsx — v2.3
 // Changes from v2.2:
 //  - BREAKING: computeResults, seededShuffle, CLUSTERS, DESIGNATIONS, SKILL_MAX_RAW
@@ -21,7 +23,7 @@ import {
 // ── CANONICAL SCORING IMPORTS — do not redefine these anywhere ────────────
 import {
   CLUSTERS,
-  DESIGNATIONS,
+  getDesignation,
   SKILL_MAX_RAW,
   seededShuffle,
   computeResults as _computeResults,
@@ -32,11 +34,25 @@ import {
 // against the exact same question set.
 import { QUESTIONS } from "./questions.js";
 
+const FOLLOW_UP_DESIGNATION = {
+  min: 0,
+  name: "Assessment Follow-up",
+  stars: "",
+  color: "#2E2E4A",
+  bg: "#1A1A2E",
+  desc: "Your current score is below the merit designation threshold. Review your PRIME results and continue developing your evidence.",
+};
+
+function resolveDesignation(points) {
+  return getDesignation(points) || FOLLOW_UP_DESIGNATION;
+}
+
 // Wrap to inject QUESTIONS (defined later in this file after question bank).
 // This keeps the scoringEngine pure (no direct import of ALL_QUESTIONS).
 // Called identically by both client and any future server/DB function.
 function computeResults(answers, timings, shuffleMap) {
-  return _computeResults(answers, timings, shuffleMap, QUESTIONS);
+  const result = _computeResults(answers, timings, shuffleMap, QUESTIONS);
+  return { ...result, desig: resolveDesignation(result.valuIndex) };
 }
 
 // ── FONT INJECTION — once at module level ─────────────────────────────────
@@ -369,7 +385,7 @@ async function fetchAssessmentByEmail(email) {
       name: row.name, role: row.role,
       results: {
         valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
-        desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
+        desig: resolveDesignation(valuIndex),
         futureReadyScore: Math.round(CLUSTERS_UI.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS_UI.length),
         strongest: sorted[0], weakest: sorted[sorted.length - 1],
         consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
@@ -405,7 +421,7 @@ async function fetchAssessmentByFingerprint(fingerprint) {
       aiReport: row.ai_report || null,
       results: {
         valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
-        desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
+        desig: resolveDesignation(valuIndex),
         futureReadyScore: Math.round(CLUSTERS_UI.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS_UI.length),
         strongest: sorted[0], weakest: sorted[sorted.length - 1],
         consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
@@ -436,7 +452,7 @@ async function fetchAssessmentByFingerprintServer(fingerprint) {
       aiReport: row.ai_report || null,
       results: {
         valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
-        desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
+        desig: resolveDesignation(valuIndex),
         futureReadyScore: Math.round(CLUSTERS_UI.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS_UI.length),
         strongest: sorted[0], weakest: sorted[sorted.length - 1],
         consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
@@ -520,7 +536,7 @@ function ClusterStrip({ clusterScores, skillScores, compact = false }) {
                 fontFamily: T.font.body,
               }}>{c.id}</div>
               <span style={{ fontSize:T.size.small, color:c.color, fontWeight:600, fontFamily:T.font.body }}>{clusterScores[c.id]}</span>
-              <span style={{ fontSize:T.size.caption, color:T.text.ghost, fontFamily:T.font.body }}>/100</span>
+              <span style={{ fontSize:T.size.caption, color:T.text.ghost, fontFamily:T.font.body }}>points</span>
             </div>
             {weakestSkill && !compact && (
               <div style={{ fontSize:T.size.caption, color:T.text.muted, lineHeight:1.4, fontFamily:T.font.body }}>
@@ -573,7 +589,7 @@ function ScoreHeader({ name, role, valuIndex, clusterScores, skillScores, desig,
           <div style={{ display:"flex", alignItems:"center", gap:20 }}>
             <div style={{ textAlign:"right" }}>
               <div style={{ fontFamily:T.font.display, fontSize:T.size.display, fontWeight:300, color:T.gold, lineHeight:1 }}>{valuIndex}</div>
-              <div style={{ fontSize:T.size.micro, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>OUT OF 100</div>
+              <div style={{ fontSize:T.size.micro, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>POINTS</div>
             </div>
             <Radar scores={clusterScores} size={100} />
           </div>
@@ -649,7 +665,7 @@ function buildReportPrompt(scoreProfile) {
   const primaryProgramme    = PRIME_PROGRAMMES[primaryProgrammeKey];
   const clusterSkillDetail = CLUSTERS_UI.map(c => {
     const skills = sortedSkills.filter(([s]) => SKILL_CLUSTER[s] === c.id);
-    return `${c.name} (${clusterScores[c.id]}/100):\n` + skills.map(([s,sc]) => `  - ${s}: ${sc}/100`).join("\n");
+    return `${c.name} (${clusterScores[c.id]} points):\n` + skills.map(([s,sc]) => `  - ${s}: ${sc} points`).join("\n");
   }).join("\n\n");
   return `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index assessment.
 YOUR WRITING RULES:
@@ -662,20 +678,20 @@ YOUR WRITING RULES:
 7. Do not praise them for completing the assessment.
 8. Speak directly to them as "you."
 THEIR SCORE DATA:
-VALU Index: ${valuIndex}/100 — ${desig.name}
+VALU Index: ${valuIndex} points — ${desig.name}
 Listed on platform: ${listed ? "Yes" : "No — needs score of 35+"}
-Future-Ready score: ${futureReadyScore}/100
+Future-Ready score: ${futureReadyScore} points
 SKILL SCORES:\n${clusterSkillDetail}
-THEIR STRONGEST SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc}/100)`).join(", ")}
-THEIR WEAKEST SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc}/100)`).join(", ")}
-PRIMARY GAP SKILL: ${primaryGapSkill} (${skillScores?.[primaryGapSkill]}/100)
-SECONDARY GAP SKILL: ${secondaryGapSkill} (${skillScores?.[secondaryGapSkill]}/100)
+THEIR STRONGEST SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
+THEIR WEAKEST SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
+PRIMARY GAP SKILL: ${primaryGapSkill} (${skillScores?.[primaryGapSkill]} points)
+SECONDARY GAP SKILL: ${secondaryGapSkill} (${skillScores?.[secondaryGapSkill]} points)
 RECOMMENDED PROGRAMME: ${primaryProgramme.name} (${primaryProgramme.duration}, ${primaryProgramme.price})
 IMMEDIATE WEEKLY ACTION for ${primaryGapSkill}: "${SKILL_ACTIONS[primaryGapSkill] || "Start by naming the exact gap in your own words."}"
-${!listed ? `IMPORTANT: ${name} scored ${valuIndex}/100 which is below the 35-point listing minimum. The PRIME Sprint is the direct path to getting listed.` : ""}
+${!listed ? `IMPORTANT: ${name} scored ${valuIndex} points which is below the 35-point listing minimum. The PRIME Sprint is the direct path to getting listed.` : ""}
 WRITE THE REPORT IN THESE EXACT SECTIONS:
 ---
-## YOUR SCORE: ${valuIndex}/100 — ${desig.name.toUpperCase()}
+## YOUR SCORE: ${valuIndex} points — ${desig.name.toUpperCase()}
 ## WHAT YOU ARE GOOD AT
 ## WHERE YOU ARE LOSING GROUND
 ## WHAT THIS COSTS YOU IN THE NEXT 12 MONTHS
@@ -699,7 +715,7 @@ function CompletionJourneyModal({ open, score, onClose }) {
         <div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:".18em", marginBottom:10, fontFamily:T.font.label }}>VALU JOURNEY · NEXT STAGE</div>
         <h2 style={{ fontSize:28, lineHeight:1.2, fontWeight:500, color:T.parchment, margin:"0 0 12px", fontFamily:T.font.display }}>Your assessment is complete.</h2>
         <p style={{ fontSize:14, lineHeight:1.8, color:T.text.secondary, margin:"0 0 22px", fontFamily:T.font.body }}>
-          Your VALU Index of <strong style={{color:T.gold}}>{score}/100</strong> has been recorded and your professional marketplace placement has been initiated.
+          Your VALU Index of <strong style={{color:T.gold}}>{score} points</strong> has been recorded and your professional marketplace placement has been initiated.
         </p>
         <div style={{ display:"grid", gap:10, marginBottom:24 }}>
           {[
@@ -1387,7 +1403,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
       <div style={{ maxWidth:720, margin:"0 auto", padding:"32px 24px 80px" }}>
         {saveError && (
           <div style={{ marginBottom:16, padding:"12px 16px", background:"rgba(216,90,48,0.08)", border:"1px solid rgba(216,90,48,0.3)", borderRadius:T.radius.chip, fontSize:T.size.small, color:T.coral, fontFamily:T.font.body }}>
-            Score could not be saved: {saveError}. Contact info@valoriainstitute.com with your result ({valuIndex}/100).
+            Score could not be saved: {saveError}. Contact info@valoriainstitute.com with your result ({valuIndex} points).
           </div>
         )}
         <div style={{ marginBottom:24, padding:"24px", background:"rgba(22,22,36,0.6)", border:"1px solid rgba(201,168,76,0.1)", borderRadius:T.radius.card }}>
@@ -1445,7 +1461,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
               A confirmation link has been sent to <strong style={{color:T.parchment}}>{signupEmail}</strong>.
             </p>
             <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:"0 0 24px", fontFamily:T.font.body }}>
-              Your VALU Index of <strong style={{color:T.gold}}>{valuIndex}/100</strong> has been saved. Confirm your email first; your account will then return to Valoria so you can continue your journey without signing in again. Marketplace visibility remains off until the required checks are complete.
+              Your VALU Index of <strong style={{color:T.gold}}>{valuIndex} points</strong> has been saved. Confirm your email first; your account will then return to Valoria so you can continue your journey without signing in again. Marketplace visibility remains off until the required checks are complete.
             </p>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               <button type="button" onClick={handleResendConfirmation} disabled={resendLoading} style={{ ...pillBtn(resendLoading ? "disabled" : "primary"), width:"100%" }}>
@@ -1720,7 +1736,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
               {reportError || "An error occurred. Your score has been saved."}
             </p>
             <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>
-              Your VALU Index is <strong style={{color:T.gold}}>{valuIndex}/100</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact info@valoriainstitute.com for your full report.
+              Your VALU Index is <strong style={{color:T.gold}}>{valuIndex} points</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact info@valoriainstitute.com for your full report.
             </p>
             <button onClick={generateAIReport} style={{...pillBtn("gold-ghost"), marginTop:16, padding:"11px 24px", fontSize:T.size.caption}}>
               TRY AGAIN

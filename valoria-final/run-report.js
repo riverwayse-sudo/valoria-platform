@@ -20,7 +20,7 @@ function buildPrompt({ name, role, total_score, cluster_scores, skill_scores, de
   const skillLines = Object.entries(skill_scores || {})
     .filter(([s]) => s !== "Validity")
     .sort(([, a], [, b]) => b - a)
-    .map(([s, sc]) => `  - ${s}: ${sc}/100`)
+    .map(([s, sc]) => `  - ${s}: ${sc} points`)
     .join("\n");
 
   return `You are writing a personalised professional development report for ${name}, a ${role} who completed the VALU Index assessment.
@@ -30,11 +30,11 @@ WRITING RULES:
 3. Be specific and name real skills and consequences.
 4. Speak directly to them as "you."
 SCORE DATA:
-VALU Index: ${total_score}/100 — ${designation}
+VALU Index: ${total_score} points — ${designation}
 SKILL SCORES:
 ${skillLines}
 WRITE IN THESE SECTIONS:
-## YOUR SCORE: ${total_score}/100 — ${String(designation).toUpperCase()}
+## YOUR SCORE: ${total_score} points — ${String(designation).toUpperCase()}
 ## WHAT YOU ARE GOOD AT
 ## WHERE YOU ARE LOSING GROUND
 ## WHAT THIS COSTS YOU IN THE NEXT 12 MONTHS
