@@ -52,6 +52,7 @@ const SITE_BASE = (() => {
 import { QUESTIONS } from './questions.js';
 import {
   ASSESSMENT_ORDER,
+  OPENING_POSITIONS,
   OPENING_SESSION_LENGTH,
   TOTAL_QUESTIONS,
   seedAnswersFromOpening,
@@ -143,7 +144,7 @@ export default function FullVALUAssessment() {
   );
 
   const question = QUESTIONS[ASSESSMENT_ORDER[current]];
-  const answeredTotal = Object.keys(answers).length;
+  const answeredTotal = OPENING_SESSION_LENGTH + Object.keys(answers).filter(key => !OPENING_POSITIONS.includes(Number(key))).length;
   const progress = Math.round((answeredTotal / TOTAL_QUESTIONS) * 100);
   // Experience is assessment metadata, not an authentication prerequisite.
   // Legacy snapshots may omit it or use an older label; let the participant
@@ -278,15 +279,14 @@ export default function FullVALUAssessment() {
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
         // The answer map is authoritative. Resume at the first unanswered
         // question even if a stale checkpoint pointer lags behind a saved answer.
-        const nextPlace = nextPlaceToAnswer(restoredAnswers, 1);
+        const nextPlace = nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1);
         setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1);
-      } else if (!saved && data.seeded_answers) {
-        // First visit to session 2: seed the saved opening nine and land on the
-        // first question they have not answered, never back at Question 1.
-        const seeded = data.seeded_answers || {};
-        setAnswers(seeded);
-        const nextPlace = nextPlaceToAnswer(seeded, 1) ?? ASSESSMENT_ORDER.length;
-        setCurrent(Math.max(0, nextPlace - 1));
+      } else {
+        // The verified account handoff confirms a completed opening session.
+        // Start directly at Question 10; opening-answer recall is deferred until
+        // final submission so it cannot block this event's remaining questions.
+        setAnswers({});
+        setCurrent(OPENING_SESSION_LENGTH);
       }
       setRemoteRestoreComplete(true);
     }).catch(err => {
@@ -317,7 +317,7 @@ export default function FullVALUAssessment() {
         const restoredAnswers = saved.answers && typeof saved.answers === 'object' ? saved.answers : {};
         setAnswers(restoredAnswers);
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
-        const nextPlace = nextPlaceToAnswer(restoredAnswers, 1);
+        const nextPlace = nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1);
         setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1);
         setResumeLoading(false);
       })
@@ -567,7 +567,7 @@ export default function FullVALUAssessment() {
       <div style={S.options}>
         {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
       </div>
-      <div style={S.footer}><span>{Object.keys(answers).length} answered</span><span>Progress is saved automatically.</span></div>
+      <div style={S.footer}><span>{answeredTotal} answered</span><span>Progress is saved automatically.</span></div>
       {current === ASSESSMENT_ORDER.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1]))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':'SUBMIT VALU ASSESSMENT →'}</button>}
       {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
       {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
