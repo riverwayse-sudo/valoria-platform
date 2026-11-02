@@ -144,7 +144,9 @@ describe("session 1 presents the opening nine after account authentication", () 
   test("a returning participant with a pending assessment is routed through the authenticated start bridge", () => {
     const source = gateSource();
     expect(source).toContain("localStorage.getItem('pending_taster_id')");
-    expect(source).toContain("'/journey/continue?stage=assess&taster_id='+encodeURIComponent(pending)");
+    expect(source).toContain("sessionStorage.getItem('valoria-assessment-auth')");
+    expect(source).toContain("window.location.replace((SITE_BASE?SITE_BASE:'')+'/assessment/start')");
+    expect(source).toContain("fetch('/api/link-taster'");
   });
 
   test("a stale or expired resume token is discarded instead of blocking entry", () => {
