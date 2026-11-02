@@ -12,6 +12,7 @@
 
 import { createHash, createHmac } from "node:crypto";
 import { QUESTIONS } from "../questions.js";
+import { ASSESSMENT_ORDER, OPENING_POSITIONS, OPENING_SESSION_LENGTH } from "../assessmentJourney.js";
 
 const SERVICE_ROLE = "service-role-key";
 const TASTER_ID = "11111111-1111-4111-8111-111111111111";
@@ -82,6 +83,7 @@ function makeRes() {
   res.status = (code) => { res.statusCode = code; return res; };
   res.setHeader = (key, value) => { res.headers[key] = value; return res; };
   res.json = (payload) => { res.body = payload; return res; };
+  res.end = () => res;
   return res;
 }
 
@@ -97,6 +99,7 @@ function installFetch({ existing = [], insert = {}, insertStatus = 201 } = {}) {
         name: "Temitayo Adeyemi",
         role: "Programme Manager",
         completed_at: "2026-10-25T09:00:00.000Z",
+        taster_answers: Object.fromEntries(Array.from({ length: OPENING_SESSION_LENGTH }, (_, index) => [index, 0])),
       }]);
     }
     if (url.includes("/auth/v1/admin/users/")) {
@@ -195,6 +198,40 @@ describe("Full assessment submission runtime contract", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.report_token).toBe(REPORT_TOKEN);
     expect(res.body.alreadyCompleted).toBeUndefined();
+  });
+
+  test("a participant can submit only Questions 10–58 and the server merges the verified opening nine", async () => {
+    const calls = installFetch();
+    const request = makeReq();
+    request.body.answers = Object.fromEntries(ASSESSMENT_ORDER.slice(OPENING_SESSION_LENGTH).map(position => [position, 0]));
+    request.body.timings = Array.from({ length: QUESTIONS.length - OPENING_SESSION_LENGTH }, () => 1200);
+    const res = makeRes();
+    await loadHandler()(request, res);
+
+    expect(res.statusCode).toBe(200);
+    const insert = calls.find(call => call.url.includes("/rest/v1/valu_assessments") && call.options.method === "POST");
+    const payload = JSON.parse(insert.options.body);
+    expect(Object.keys(payload.answers)).toHaveLength(QUESTIONS.length);
+    for (const position of OPENING_POSITIONS) expect(payload.answers[position]).toBe(0);
+    expect(Object.keys(request.body.answers)).toHaveLength(QUESTIONS.length - OPENING_SESSION_LENGTH);
+  });
+
+  test("the assessment API answers the event Worker preflight with the exact allowed origin", async () => {
+    const handler = loadHandler();
+    const req = {
+      method: "OPTIONS",
+      headers: {
+        origin: "https://valoria-assessment.riverwayse.workers.dev",
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "content-type",
+      },
+      socket: {},
+    };
+    const res = makeRes();
+    await handler(req, res);
+    expect(res.statusCode).toBe(204);
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("https://valoria-assessment.riverwayse.workers.dev");
+    expect(res.headers["Access-Control-Allow-Methods"]).toContain("POST");
   });
 
   test("the insert is issued exactly once, so a retry cannot duplicate a row", async () => {
