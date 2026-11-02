@@ -84,7 +84,7 @@ describe("submit-assessment accepts a two-session timing subset", () => {
   });
 
   test("canonical 58-answer scoring is unchanged", () => {
-    expect(api).toContain("computeResults(answers, timings, shuffleMap, QUESTIONS)");
+    expect(api).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
     expect(api).toContain("import { QUESTIONS } from '../src/questions.js'");
   });
 });
