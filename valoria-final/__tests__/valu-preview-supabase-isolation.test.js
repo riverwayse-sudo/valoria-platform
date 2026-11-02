@@ -69,9 +69,11 @@ describe('Valoria Supabase runtime environment isolation', () => {
     })).toBeNull();
   });
 
-  test('Cloudflare Worker Preview accepts only matching isolated preview credentials', () => {
+  test('Cloudflare Worker Preview accepts only matching isolated preview credentials despite production credentials being present', () => {
     expect(getValoriaSupabaseConfig({
       VALU_PREVIEW: '1',
+      SUPABASE_URL: 'https://prod-project.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'production-service-role',
       VITE_SUPABASE_URL: 'https://preview-project.supabase.co',
       VITE_SUPABASE_ANON_KEY: 'preview-anon',
       VALU_PREVIEW_SUPABASE_URL: 'https://preview-project.supabase.co/',
