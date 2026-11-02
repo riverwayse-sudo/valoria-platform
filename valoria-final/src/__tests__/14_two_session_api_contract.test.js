@@ -50,24 +50,28 @@ describe("taster-progress supports anonymous entry and a late identity step", ()
   });
 });
 
-describe("assessment-progress seeds the opening nine for session 2", () => {
-  const api = readApi("assessment-progress.js");
+describe("assessment-progress defers opening-answer recall until final submission", () => {
+  const progressApi = readApi("assessment-progress.js");
+  const submitApi = readApi("submit-assessment.js");
 
-  test("the stored snapshot answers are read for seeding", () => {
-    expect(api).toContain("taster_answers");
-    expect(api).toContain("seedAnswersFromOpening");
+  test("continuation restore does not read the taster answer payload", () => {
+    expect(progressApi).not.toContain("taster_answers");
+    expect(progressApi).not.toContain("seedAnswersFromOpening");
+    expect(progressApi).not.toContain("seeded_answers");
+    expect(progressApi).toContain("Continuation deliberately restores only the saved Questions 10–58 work");
   });
 
-  test("seeded answers are returned only when no second-session progress exists", () => {
-    const block = api.slice(api.indexOf("const progress = await getProgressByTasterId(tasterId);"), api.indexOf("if (progress.user_id"));
-    expect(block).toContain("seeded_answers");
+  test("a participant with no saved continuation progress is sent straight to Question 10", () => {
+    const block = progressApi.slice(progressApi.indexOf("const progress = await getProgressByTasterId(tasterId);"), progressApi.indexOf("if (progress.user_id"));
     expect(block).toContain("progress: null");
+    expect(block).not.toContain("seeded_answers");
   });
 
-  test("legacy saved progress is merged with verified opening answers without overwriting later answers", () => {
-    expect(api).toContain("const openingAnswers = seedAnswersFromOpening(resolvedIdentity.taster.taster_answers || {})");
-    expect(api).toContain("const savedAnswers = progress.answers && typeof progress.answers === \"object\" ? progress.answers : {}");
-    expect(api).toContain("progress.answers = { ...openingAnswers, ...savedAnswers }");
+  test("the final submit retrieves and merges the verified opening answers before scoring", () => {
+    expect(submitApi).toContain("seedAnswersFromOpening(taster.taster_answers || {})");
+    expect(submitApi).toContain("completeAnswers = { ...openingAnswers, ...answers }");
+    expect(submitApi).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
+    expect(submitApi).toContain("answers: completeAnswers");
   });
 });
 
@@ -80,7 +84,7 @@ describe("submit-assessment accepts a two-session timing subset", () => {
   });
 
   test("canonical 58-answer scoring is unchanged", () => {
-    expect(api).toContain("computeResults(answers, timings, shuffleMap, QUESTIONS)");
+    expect(api).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
     expect(api).toContain("import { QUESTIONS } from '../src/questions.js'");
   });
 });

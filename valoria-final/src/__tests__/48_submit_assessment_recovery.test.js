@@ -75,7 +75,7 @@ function installStatefulFetch() {
   global.fetch = async (url, options = {}) => {
     if (url.includes("rpc/consume_rate_limit")) return jsonResponse(200, { allowed: true });
     if (url.includes("/rest/v1/taster_sessions")) {
-      return jsonResponse(200, [{ id: TASTER_ID, user_id: USER_ID, name: "Temitayo Adeyemi", role: "Programme Manager", completed_at: "2026-10-25T09:00:00.000Z" }]);
+      return jsonResponse(200, [{ id: TASTER_ID, user_id: USER_ID, name: "Temitayo Adeyemi", role: "Programme Manager", completed_at: "2026-10-25T09:00:00.000Z", taster_answers: Object.fromEntries(Array.from({ length: 9 }, (_, index) => [index, 0])) }]);
     }
     if (url.includes("/auth/v1/admin/users/")) {
       return jsonResponse(200, { id: USER_ID, email: "temitayo@example.com", email_confirmed_at: "2026-10-25T09:00:00.000Z" });
