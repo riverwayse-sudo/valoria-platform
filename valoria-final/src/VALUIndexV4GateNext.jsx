@@ -260,8 +260,8 @@ export default function VALUIndexV4GateNext(){
     window.location.assign('/dashboard?welcome=profile');
     return;
    }
-   const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
-   window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
+   window.location.replace((SITE_BASE?SITE_BASE:'')+'/assessment/start');
+   return;
   }catch(err){
    setError(err?.message||'Your account could not be created yet. Your saved responses are intact — please retry.');
    setSaving(false);
@@ -294,13 +294,13 @@ export default function VALUIndexV4GateNext(){
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · YOU ARE HERE</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Create your account</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Add your details now. You’ll set your password and confirm your email in the next step.</p>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Complete your professional profile</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your professional role and experience so we can connect the opening nine to your existing account.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
     <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue at Question 10</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, return signed in to your dashboard, and complete the remaining 49 questions.</p>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Return to your dashboard and continue with the remaining 49 questions.</p>
    </div>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
@@ -310,16 +310,16 @@ export default function VALUIndexV4GateNext(){
    </div>
   </section>
   <form onSubmit={createAccount} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>ACCOUNT SETUP · STEP 2 OF 3</div><h2 style={S.formTitle}>Let’s keep your progress connected.</h2></div><div style={S.formTime}>COMPLETION<br/>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH} LEFT</div></div>
-   <p style={S.formIntro}>Use an email address you can access. We’ll connect your saved opening nine to your account, then guide you through password setup and email confirmation before returning you to your dashboard.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>PROFILE COMPLETION · STEP 2 OF 3</div><h2 style={S.formTitle}>Let’s keep your progress connected.</h2></div><div style={S.formTime}>COMPLETION<br/>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH} LEFT</div></div>
+   <p style={S.formIntro}>Your Valoria account is already confirmed. Add your professional role and experience so we can complete your profile. We’ll return you to your dashboard, where you can continue with the remaining 49 questions.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
    </div>
    <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   {authenticatedAccount ? <Field label="ACCOUNT EMAIL"><input required readOnly aria-readonly="true" style={{...S.input,opacity:.72,cursor:"not-allowed"}} type="email" value={email} autoComplete="email"/></Field> : <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>}
+   <Field label="ACCOUNT EMAIL"><input required readOnly aria-readonly="true" style={{...S.input,opacity:.72,cursor:"not-allowed"}} type="email" value={email} autoComplete="email"/></Field>
    {error&&<div style={S.error}>{error}</div>}
-   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'SAVE MY DETAILS & CONTINUE →'}</button>
+   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'SAVE MY PROFILE & CONTINUE →'}</button>
    <div style={S.saveNote}><span>✓</span> Your opening nine answers are saved.</div>
   </form>
   <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
