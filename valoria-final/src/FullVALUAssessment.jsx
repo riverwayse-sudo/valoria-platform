@@ -89,32 +89,6 @@ async function loadRemoteProgress(token) {
   return data.progress;
 }
 
-function ResumeModal({ open, progress, onContinue, onClose }) {
-  if (!open || !progress) return null;
-  const answered = Object.keys(progress.answers || {}).length;
-  const remaining = Math.max(0, progress.total_questions - answered);
-  return (
-    <div style={{position:'fixed',inset:0,zIndex:50,background:'rgba(10,10,20,.78)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-      <div style={{width:'100%',maxWidth:520,background:T.dark,border:'1px solid rgba(201,168,76,.25)',borderRadius:12,padding:'30px 28px',boxShadow:'0 24px 80px rgba(0,0,0,.4)'}}>
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:'.18em',color:T.gold}}>VALU JOURNEY · SAVED PROGRESS</div>
-        <h2 style={{fontSize:28,fontWeight:300,lineHeight:1.15,color:T.parchment,margin:'18px 0 12px'}}>You can continue where you stopped.</h2>
-        <p style={{fontSize:13,color:T.dim,lineHeight:1.75,margin:'0 0 22px'}}>
-          Your answers have been saved. You do not need to start the assessment again.
-        </p>
-        <div style={{padding:'16px 18px',border:'1px solid rgba(201,168,76,.16)',background:'rgba(201,168,76,.05)',borderRadius:7,marginBottom:22}}>
-          <div style={{fontSize:10,letterSpacing:'.12em',color:T.gold,fontWeight:700}}>PROGRESS</div>
-          <div style={{fontSize:24,color:T.parchment,marginTop:6}}>{answered} / {progress.total_questions}</div>
-          <div style={{fontSize:11,color:T.faint,marginTop:4}}>{remaining} questions remaining</div>
-        </div>
-        <div style={{display:'flex',gap:10}}>
-          <button onClick={onClose} style={S.secondary}>REVIEW LATER</button>
-          <button onClick={onContinue} style={{...S.button,flex:1}}>CONTINUE MY ASSESSMENT →</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function FullVALUAssessment() {
   const queryIdentity = useMemo(parseQuery, []);
   const [identity,setIdentity] = useState(queryIdentity);
@@ -128,10 +102,8 @@ export default function FullVALUAssessment() {
   const [reportStatus,setReportStatus] = useState('');
   const [sessionId,setSessionId] = useState('');
   const [resumeToken,setResumeToken] = useState('');
-  const [resumeProgress,setResumeProgress] = useState(null);
   const [resumeLoading,setResumeLoading] = useState(Boolean(queryIdentity.resume));
   const [resumeError,setResumeError] = useState('');
-  const [resumePopup,setResumePopup] = useState(false);
   const [remoteRestoreComplete,setRemoteRestoreComplete] = useState(false);
   const [handoffToken,setHandoffToken] = useState('');
   const [handoffStatus,setHandoffStatus] = useState('checking');
@@ -268,11 +240,13 @@ export default function FullVALUAssessment() {
       if (saved && saved.status !== 'completed') {
         setSessionId(saved.session_id);
         setResumeToken(saved.resume_token || '');
-        setAnswers(saved.answers && typeof saved.answers === 'object' ? saved.answers : {});
+        const restoredAnswers = saved.answers && typeof saved.answers === 'object' ? saved.answers : {};
+        setAnswers(restoredAnswers);
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
-        setCurrent(Math.min(Math.max(Number(saved.current_question) || 0, 0), ASSESSMENT_ORDER.length - 1));
-        setResumeProgress(saved);
-        setResumePopup(Object.keys(saved.answers || {}).length > 0);
+        // The answer map is authoritative. Resume at the first unanswered
+        // question even if a stale checkpoint pointer lags behind a saved answer.
+        const nextPlace = nextPlaceToAnswer(restoredAnswers, 1);
+        setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1);
       } else if (!saved && data.seeded_answers) {
         // First visit to session 2: seed the saved opening nine and land on the
         // first question they have not answered, never back at Question 1.
@@ -307,11 +281,11 @@ export default function FullVALUAssessment() {
         setIdentity(restored);
         setSessionId(saved.session_id);
         setResumeToken(saved.resume_token);
-        setAnswers(saved.answers || {});
+        const restoredAnswers = saved.answers && typeof saved.answers === 'object' ? saved.answers : {};
+        setAnswers(restoredAnswers);
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
-        setCurrent(Math.min(Math.max(saved.current_question || 0, 0), ASSESSMENT_ORDER.length - 1));
-        setResumeProgress(saved);
-        setResumePopup(true);
+        const nextPlace = nextPlaceToAnswer(restoredAnswers, 1);
+        setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1);
         setResumeLoading(false);
       })
       .catch(err => {
@@ -323,19 +297,13 @@ export default function FullVALUAssessment() {
   }, [identity.resume]);
 
   useEffect(() => {
-    if (identity.resume || !canUse) return;
-    let saved = null;
-    try { saved = JSON.parse(window.localStorage.getItem(resumeKey) || 'null'); } catch {}
-    const localSessionId = saved?.sessionId || makeSessionId();
-    setSessionId(localSessionId);
-    if (saved?.resumeToken) setResumeToken(saved.resumeToken);
-    if (saved && !saved.completed) {
-      if (saved.answers && typeof saved.answers === 'object') setAnswers(saved.answers);
-      if (Array.isArray(saved.timings)) setTimings(saved.timings);
-      if (Number.isInteger(saved.current) && saved.current >= 0 && saved.current < ASSESSMENT_ORDER.length) setCurrent(saved.current);
-    }
+    // The authenticated server restore is the source of truth. Do not let an
+    // old browser-local checkpoint overwrite the verified account-owned answer
+    // map (or send a participant back to the opening questions).
+    if (identity.resume || !canUse || handoffStatus !== 'ready' || !remoteRestoreComplete) return;
+    if (!sessionId) setSessionId(makeSessionId());
     setStartedAt(Date.now());
-  }, [resumeKey, canUse, identity.resume]);
+  }, [resumeKey, canUse, identity.resume, handoffStatus, remoteRestoreComplete, sessionId]);
 
   useEffect(() => {
     if (!canUse || !sessionId || result || handoffStatus !== 'ready') return;
@@ -543,7 +511,6 @@ export default function FullVALUAssessment() {
   }
 
   return <Shell>
-    <ResumeModal open={resumePopup} progress={resumeProgress} onContinue={()=>setResumePopup(false)} onClose={()=>setResumePopup(false)} />
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
       <VALUAssessmentJourney stage="continuation" currentQuestion={current + 1} />
       <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>

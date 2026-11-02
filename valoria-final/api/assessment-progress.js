@@ -269,12 +269,12 @@ async function baseHandler(req) {
     if (resolvedIdentity.user_id !== handoff.sub) return json({ error: "This secure handoff does not match the snapshot owner." }, 403);
     try {
       const progress = await getProgressByTasterId(tasterId);
+      const openingAnswers = seedAnswersFromOpening(resolvedIdentity.taster.taster_answers || {});
       if (!progress) {
         // No second-session progress yet: hand the client the opening nine answers
         // already seeded against their canonical bank positions so the participant
         // continues at the first unanswered question instead of repeating them.
-        const seeded = seedAnswersFromOpening(resolvedIdentity.taster.taster_answers || {});
-        return json({ ok: true, progress: null, seeded_answers: seeded });
+        return json({ ok: true, progress: null, seeded_answers: openingAnswers });
       }
       if (progress.user_id && progress.user_id !== resolvedIdentity.user_id) {
         return json({ error: "This saved assessment belongs to another Valoria account." }, 403);
@@ -295,6 +295,11 @@ async function baseHandler(req) {
         if (!claim.ok) throw new Error("Could not link the saved assessment to your account. Please retry.");
         progress.user_id = resolvedIdentity.user_id;
       }
+      // Older second-session rows may predate canonical opening-answer seeding.
+      // Merge the verified snapshot answers without overwriting any later saved
+      // answer, so every participant resumes at the true next unanswered item.
+      const savedAnswers = progress.answers && typeof progress.answers === "object" ? progress.answers : {};
+      progress.answers = { ...openingAnswers, ...savedAnswers };
       return json({ ok: true, progress });
     } catch (err) {
       return json({ error: err.message || "Could not restore saved VALU progress." }, 502);

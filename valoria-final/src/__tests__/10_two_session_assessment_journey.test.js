@@ -181,6 +181,21 @@ describe("session 2 presents the remaining questions and restores progress", () 
     expect(api).toContain("seeded_answers");
   });
 
+  test("a returning participant is taken straight to the first unanswered question", () => {
+    const source = fullSource();
+    expect(source).not.toContain("ResumeModal");
+    expect(source).not.toContain("resumePopup");
+    expect(source).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
+    expect(source).toContain("setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1)");
+  });
+
+  test("the verified server answer map cannot be overwritten by stale browser-local progress", () => {
+    const source = fullSource();
+    expect(source).toContain("The authenticated server restore is the source of truth");
+    expect(source).toContain("handoffStatus !== 'ready' || !remoteRestoreComplete");
+    expect(source).not.toContain("setAnswers(saved.answers)");
+  });
+
   test("answers are stored against canonical bank positions, not presentation order", () => {
     const source = fullSource();
     expect(source).toContain("const position = ASSESSMENT_ORDER[current]");
