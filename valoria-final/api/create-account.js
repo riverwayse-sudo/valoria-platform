@@ -7,7 +7,29 @@ const SUPABASE_CONFIG = getValoriaSupabaseConfig();
 const SUPABASE_URL = SUPABASE_CONFIG?.url || "";
 const SERVICE_ROLE_KEY = SUPABASE_CONFIG?.serviceRoleKey || "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const VALORIA_SITE_URL = "https://valoriainstitute.com";
+function resolveValoriaSiteUrl() {
+  // Cloudflare Worker previews and Vercel previews must never target production.
+  if (process.env.VALU_PREVIEW === "1" || process.env.VERCEL_ENV === "preview") return "";
+  const configuredOrigin = process.env.VALU_SITE_ORIGIN?.trim();
+  if (!configuredOrigin) return "https://www.valoriainstitute.com";
+
+  try {
+    const parsed = new URL(configuredOrigin);
+    if (
+      parsed.protocol !== "https:" ||
+      parsed.username ||
+      parsed.password ||
+      parsed.pathname !== "/" ||
+      parsed.search ||
+      parsed.hash
+    ) return "";
+    return parsed.origin;
+  } catch {
+    return "";
+  }
+}
+
+const VALORIA_SITE_URL = resolveValoriaSiteUrl();
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -28,7 +50,7 @@ function journeyEmailHtml(name, score, designation) {
     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
     <body style="margin:0;padding:0;background:#1A1A2E;font-family:Arial,sans-serif;color:#F7F4EE;">
       <div style="max-width:600px;margin:0 auto;padding:48px 32px;">
-        <div style="text-align:center;margin-bottom:36px;"><img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:42px;"></div>
+        <div style="text-align:center;margin-bottom:36px;"><img src="https://www.valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:42px;"></div>
         <p style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700;">VALU INDEX · ASSESSMENT COMPLETE</p>
         <h1 style="font-size:30px;line-height:1.2;font-weight:600;color:#F7F4EE;">Your Valoria journey has moved forward.</h1>
         <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU assessment is complete and your assessment is saved. Your professional record remains private while you confirm your email and complete the required profile and eligibility checks.</p>
@@ -39,7 +61,7 @@ function journeyEmailHtml(name, score, designation) {
         </div>
         <h2 style="font-size:18px;color:#F7F4EE;">What happens next</h2>
         <p style="font-size:14px;line-height:1.8;color:rgba(247,244,238,.7);">1. Confirm your email address.<br>2. Return to Valoria securely.<br>3. Complete your professional profile.<br>4. Any marketplace listing is considered only after eligibility checks.</p>
-        <div style="text-align:center;margin:34px 0;"><a href="https://valoriainstitute.com/profile/edit" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">COMPLETE YOUR PROFILE →</a></div>
+        <div style="text-align:center;margin:34px 0;"><a href="https://www.valoriainstitute.com/profile/edit" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">COMPLETE YOUR PROFILE →</a></div>
         <p style="font-size:11px;line-height:1.6;color:rgba(247,244,238,.35);text-align:center;">Valoria Institute · Worth. Built.<br>Questions? info@valoriainstitute.com</p>
       </div>
     </body></html>`;
@@ -76,7 +98,7 @@ function confirmationEmailHtml(name, actionLink) {
                 </td></tr></table>
               </td></tr>
               <tr><td style="padding:22px 32px 28px;background-color:#FAF8F3;">
-                <p style="margin:0;font-size:11px;line-height:1.8;color:#777789;">Valoria Institute · Worth. Built.<br><a href="https://valoriainstitute.com" style="color:#72591C;text-decoration:underline;">valoriainstitute.com</a> &nbsp;|&nbsp; <a href="mailto:info@valoriainstitute.com" style="color:#72591C;text-decoration:underline;">Contact support</a></p>
+                <p style="margin:0;font-size:11px;line-height:1.8;color:#777789;">Valoria Institute · Worth. Built.<br><a href="https://www.valoriainstitute.com" style="color:#72591C;text-decoration:underline;">valoriainstitute.com</a> &nbsp;|&nbsp; <a href="mailto:info@valoriainstitute.com" style="color:#72591C;text-decoration:underline;">Contact support</a></p>
               </td></tr>
             </table>
             <p style="margin:16px 0 0;font-size:10px;line-height:1.6;color:#8B887F;">A more considered way to recognise and build professional worth.</p>
@@ -88,6 +110,7 @@ function confirmationEmailHtml(name, actionLink) {
 
 export default async function handler(req) {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (!VALORIA_SITE_URL) return json({ error: "Account confirmation origin is not configured." }, 500);
   const ipLimit = await checkRateLimit(req, { namespace: "account-create-ip", limit: 5, windowSeconds: 3600 });
   if (!ipLimit.allowed) return ipLimit.response;
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) return json({ error: "Server misconfigured." }, 500);
@@ -137,7 +160,7 @@ export default async function handler(req) {
   try {
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-      body: JSON.stringify({ from: "Valoria Institute <hello@valoriainstitute.com>", to: normalizedEmail, subject: "Welcome to Valoria Institute — confirm your email", text: `Welcome to Valoria Institute.\n\nHello ${name || "there"},\n\nWe’re glad you’re here. Confirm your email address to secure your account and continue your VALU Index journey. Once confirmed, we’ll take you back to Valoria so you can pick up where you left off.\n\nConfirm your email: ${actionLink}\n\nIf you didn’t create a Valoria account, you can safely ignore this email.\n\nValoria Institute · Worth. Built.\nhttps://valoriainstitute.com`, html: confirmationEmailHtml(name || "there", actionLink) }),
+      body: JSON.stringify({ from: "Valoria Institute <hello@valoriainstitute.com>", to: normalizedEmail, subject: "Welcome to Valoria Institute — confirm your email", text: `Welcome to Valoria Institute.\n\nHello ${name || "there"},\n\nWe’re glad you’re here. Confirm your email address to secure your account and continue your VALU Index journey. Once confirmed, we’ll take you back to Valoria so you can pick up where you left off.\n\nConfirm your email: ${actionLink}\n\nIf you didn’t create a Valoria account, you can safely ignore this email.\n\nValoria Institute · Worth. Built.\nhttps://www.valoriainstitute.com`, html: confirmationEmailHtml(name || "there", actionLink) }),
     });
     if (!resendRes.ok) return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." });
   } catch { return json({ warning: "Account created, but confirmation email failed to send. Contact support to resend." }); }
