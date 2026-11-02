@@ -59,7 +59,7 @@ export default function VALUIndexV4GateNext(){
  const timer=useRef(null);
 
  const q=TASTER_QUESTIONS[current];
- const sessionProgress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
+ const sessionProgress=Math.round(((current+1)/TOTAL_QUESTIONS)*100);
  const placeInAssessment=current+1;
 
  useEffect(()=>()=>{timer.current&&clearTimeout(timer.current)},[]);
@@ -331,7 +331,7 @@ export default function VALUIndexV4GateNext(){
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
   {error&&<div style={S.error}>{error}</div>}
-  <p style={S.note}>{OPENING_SESSION_LENGTH} of {TOTAL_QUESTIONS} questions in this opening nine · Progress is saved automatically.</p>
+  <p style={S.note}>This is the opening nine of your {TOTAL_QUESTIONS}-question assessment · Progress is saved automatically.</p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
