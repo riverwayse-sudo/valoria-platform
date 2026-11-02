@@ -261,6 +261,9 @@ describe("Assessment integrity contracts", () => {
     expect(component).toContain("if (identity.resume || handoffStatus !== 'ready'");
     expect(component).toContain("resume:''");
     expect(component).toContain("handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete");
+    expect(component).toContain("const canUse = Boolean(identity.tasterId && identity.name && identity.role);");
+    expect(component).toContain("Confirm your experience band.");
+    expect(component).toContain("setIdentity(previous => ({ ...previous, experience:option.value }))");
   });
 
   test("full assessment progress writes and reminders require verified account-owned snapshots", () => {
