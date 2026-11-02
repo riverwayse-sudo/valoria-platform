@@ -47,6 +47,46 @@ describe('Valoria Supabase runtime environment isolation', () => {
     })).toBeNull();
   });
 
+  test('Cloudflare Worker Preview marker refuses production-only credentials', () => {
+    expect(getValoriaSupabaseConfig({
+      ...production,
+      VALU_PREVIEW: '1',
+      SUPABASE_URL: 'https://prod-project.supabase.co',
+      VITE_SUPABASE_URL: 'https://prod-project.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'production-anon',
+      VALU_PRODUCTION_SUPABASE_URL: 'https://prod-project.supabase.co',
+    })).toBeNull();
+  });
+
+  test('Cloudflare Worker Preview marker overrides a production runtime label', () => {
+    expect(getValoriaSupabaseConfig({
+      ...production,
+      VERCEL_ENV: 'production',
+      VALU_PREVIEW: '1',
+      VITE_SUPABASE_URL: 'https://prod-project.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'production-anon',
+      VALU_PRODUCTION_SUPABASE_URL: 'https://prod-project.supabase.co',
+    })).toBeNull();
+  });
+
+  test('Cloudflare Worker Preview accepts only matching isolated preview credentials despite production credentials being present', () => {
+    expect(getValoriaSupabaseConfig({
+      VALU_PREVIEW: '1',
+      SUPABASE_URL: 'https://prod-project.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'production-service-role',
+      VITE_SUPABASE_URL: 'https://preview-project.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'preview-anon',
+      VALU_PREVIEW_SUPABASE_URL: 'https://preview-project.supabase.co/',
+      VALU_PREVIEW_SUPABASE_ANON_KEY: 'preview-anon',
+      VALU_PREVIEW_SUPABASE_SERVICE_ROLE_KEY: 'preview-service-role',
+      VALU_PRODUCTION_SUPABASE_URL: 'https://prod-project.supabase.co',
+    })).toEqual({
+      url: 'https://preview-project.supabase.co',
+      serviceRoleKey: 'preview-service-role',
+      anonKey: 'preview-anon',
+    });
+  });
+
   test('preview accepts only a matching isolated public and server project', () => {
     expect(getValoriaSupabaseConfig({
       VERCEL_ENV: 'preview',
