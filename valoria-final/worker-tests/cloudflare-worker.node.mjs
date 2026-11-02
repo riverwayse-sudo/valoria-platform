@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 process.env.VALU_PREVIEW_SITE_ORIGIN = "https://site-preview.example";
 process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN = "https://assessment-preview.example";
 const { default: worker } = await import("../worker.js");
@@ -125,4 +126,10 @@ test("the remaining-assessment route supports a trailing slash", async () => {
   const response = await worker.fetch(new Request("https://assessment.example/remaining/"), env);
   assert.equal(response.status, 200);
   assert.equal(await response.text(), "/index.html");
+});
+
+
+test("Cloudflare sends the dedicated remaining route through the Worker before static asset handling", () => {
+  const config = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
+  assert.ok(config.assets.run_worker_first.includes("/remaining*"));
 });
