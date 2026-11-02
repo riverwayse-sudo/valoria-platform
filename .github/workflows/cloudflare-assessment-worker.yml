@@ -1,0 +1,51 @@
+name: Cloudflare assessment Worker validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "valoria-final/api/**"
+      - "valoria-final/lib/**"
+      - "valoria-final/src/**"
+      - "valoria-final/worker.js"
+      - "valoria-final/wrangler.jsonc"
+      - "valoria-final/package.json"
+      - "valoria-final/package-lock.json"
+      - ".github/workflows/cloudflare-assessment-worker.yml"
+  push:
+    branches: [main]
+    paths:
+      - "valoria-final/api/**"
+      - "valoria-final/lib/**"
+      - "valoria-final/src/**"
+      - "valoria-final/worker.js"
+      - "valoria-final/wrangler.jsonc"
+      - "valoria-final/package.json"
+      - "valoria-final/package-lock.json"
+      - ".github/workflows/cloudflare-assessment-worker.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-bundle:
+    name: Build and bundle the Cloudflare assessment Worker
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: valoria-final
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: valoria-final/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build the Vite assessment assets
+        run: npm run build
+        env:
+          CI: true
+      - name: Bundle Worker and static assets without deploying
+        run: npx --yes wrangler@4.156.0 deploy --dry-run --config wrangler.jsonc --outdir .wrangler-dry-run
