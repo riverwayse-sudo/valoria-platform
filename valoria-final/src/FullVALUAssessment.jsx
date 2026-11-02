@@ -55,7 +55,6 @@ import {
   OPENING_POSITIONS,
   OPENING_SESSION_LENGTH,
   TOTAL_QUESTIONS,
-  seedAnswersFromOpening,
   nextPlaceToAnswer,
 } from './assessmentJourney.js';
 
