@@ -47,7 +47,34 @@ describe('Valoria Supabase runtime environment isolation', () => {
     })).toBeNull();
   });
 
-  test('preview accepts only a matching isolated public and server project', () => {
+  test('Cloudflare Worker Preview marker refuses production-only credentials', () => {
+    expect(getValoriaSupabaseConfig({
+      ...production,
+      VALU_PREVIEW: '1',
+      SUPABASE_URL: 'https://prod-project.supabase.co',
+      VITE_SUPABASE_URL: 'https://prod-project.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'production-anon',
+      VALU_PRODUCTION_SUPABASE_URL: 'https://prod-project.supabase.co',
+    })).toBeNull();
+  });
+
+  test('Cloudflare Worker Preview accepts only matching isolated preview credentials', () => {
+    expect(getValoriaSupabaseConfig({
+      VALU_PREVIEW: '1',
+      VITE_SUPABASE_URL: 'https://preview-project.supabase.co',
+      VITE_SUPABASE_ANON_KEY: 'preview-anon',
+      VALU_PREVIEW_SUPABASE_URL: 'https://preview-project.supabase.co/',
+      VALU_PREVIEW_SUPABASE_ANON_KEY: 'preview-anon',
+      VALU_PREVIEW_SUPABASE_SERVICE_ROLE_KEY: 'preview-service-role',
+      VALU_PRODUCTION_SUPABASE_URL: 'https://prod-project.supabase.co',
+    })).toEqual({
+      url: 'https://preview-project.supabase.co',
+      serviceRoleKey: 'preview-service-role',
+      anonKey: 'preview-anon',
+    });
+  });
+
+  test('Vercel preview accepts only a matching isolated public and server project', () => {
     expect(getValoriaSupabaseConfig({
       VERCEL_ENV: 'preview',
       VITE_SUPABASE_URL: 'https://preview-project.supabase.co',
