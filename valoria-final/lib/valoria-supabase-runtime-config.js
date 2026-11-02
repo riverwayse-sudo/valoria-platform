@@ -1,5 +1,8 @@
 export function getValoriaSupabaseConfig(env = process.env) {
-  const isPreview = env.VERCEL_ENV === 'preview'
+  // Cloudflare Worker Previews use an explicit marker. Do not infer them from
+  // VERCEL_ENV or CF_PAGES: those variables are not set by Workers Builds.
+  const isPreview = env.VALU_PREVIEW === '1'
+    || env.VERCEL_ENV === 'preview'
     || (env.CF_PAGES === '1' && env.CF_PAGES_BRANCH !== 'main');
 
   if (isPreview) {
