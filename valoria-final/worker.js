@@ -121,7 +121,8 @@ async function serveAssessmentAsset(request, env) {
   const url = new URL(request.url);
   let assetPath = url.pathname;
 
-  if (assetPath === "/" || assetPath === "/valu/assessment" || assetPath === "/valu/assessment/") {
+  if (assetPath === "/" || assetPath === "/remaining" || assetPath === "/remaining/"
+    || assetPath === "/valu/assessment" || assetPath === "/valu/assessment/") {
     assetPath = "/index.html";
   } else if (assetPath.startsWith("/valu/assessment/")) {
     assetPath = assetPath.slice("/valu/assessment".length);
@@ -157,8 +158,8 @@ export default {
       }
     }
 
-    if (url.pathname === "/" || url.pathname === "/valu/assessment"
-      || url.pathname.startsWith("/valu/assessment/")
+    if (url.pathname === "/" || url.pathname === "/remaining" || url.pathname === "/remaining/"
+      || url.pathname === "/valu/assessment" || url.pathname.startsWith("/valu/assessment/")
       || url.pathname.startsWith("/assets/")) {
       return serveAssessmentAsset(request, env);
     }
