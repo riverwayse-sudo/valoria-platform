@@ -278,6 +278,23 @@ export default async function handler(req, res) {
 
   const forwarded = req.headers['x-forwarded-for'];
   const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
+  const body = req.body || {};
+
+  // Dashboard handoffs are protected by a 256-bit random code, a 60-second
+  // expiry, and an atomic single-use database consume. Keep this exchange
+  // independent of the shared submission rate-limit RPC: an outage in that
+  // auxiliary limiter must not prevent an authenticated participant from
+  // opening saved questions. The normal assessment submission path remains
+  // rate-limited below.
+  if (body.action === 'exchange-dashboard-handoff') {
+    try {
+      return await exchangeDashboardHandoff(body, res);
+    } catch (error) {
+      console.error('submit-assessment: dashboard handoff exchange failed', error?.message || error);
+      return json(res, 503, { ok: false, error: 'Secure assessment access is temporarily unavailable. Return to your dashboard and try again.' });
+    }
+  }
+
   try {
     const limit = await consumeRateLimit(ip);
     if (!limit?.allowed) {
@@ -287,16 +304,6 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('submit-assessment: shared rate limiter failed', err?.message || err);
     return json(res, 503, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
-  }
-
-  const body = req.body || {};
-  if (body.action === 'exchange-dashboard-handoff') {
-    try {
-      return await exchangeDashboardHandoff(body, res);
-    } catch (error) {
-      console.error('submit-assessment: dashboard handoff exchange failed', error?.message || error);
-      return json(res, 503, { ok: false, error: 'Secure assessment access is temporarily unavailable. Return to your dashboard and try again.' });
-    }
   }
   if (body.action === 'verify-handoff') return verifyHandoffRequest(body, res);
   const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId, handoff_token: handoffToken } = body;
