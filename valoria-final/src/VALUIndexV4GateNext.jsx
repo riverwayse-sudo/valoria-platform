@@ -22,7 +22,7 @@ const SITE_BASE = (() => {
   const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
-  if (host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://valoriainstitute.com';
+  if (host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://www.valoriainstitute.com';
   // Preview deployments must be paired with their site origin explicitly;
   // never silently route preview authentication into production.
   return '';
@@ -36,6 +36,7 @@ const COLORS={P:'#C9A84C',R:'#C9A84C',I:'#C9A84C',M:'#C9A84C',E:'#C9A84C'};
 const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS='#D4C9A8', DIM='rgba(250,250,247,.68)';
 
 const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
+const LEGACY_RESUME_TOKENS_KEY = 'valu_taster_legacy_resume_tokens';
 
 // Session 1 of the single 58-question VALU assessment.
 //
@@ -49,9 +50,11 @@ export default function VALUIndexV4GateNext(){
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
+ const [authenticatedAccount,setAuthenticatedAccount]=useState(false);
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
  const [tasterId,setTasterId]=useState('');
+ const [legacyProgress,setLegacyProgress]=useState(null);
  const startedRef=useRef(false);
  const timer=useRef(null);
 
@@ -74,13 +77,44 @@ export default function VALUIndexV4GateNext(){
   startedRef.current=true;
   let cancelled=false;
   async function begin(){
+   // A participant who arrives from the dashboard carries a short-lived,
+   // same-origin auth handoff. The official assessment entry is account-first.
+   let accountAuth=null;
+   try{
+    accountAuth=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null');
+    if(accountAuth?.access_token){
+     setAuthenticatedAccount(true);
+     if(accountAuth.user?.display_name)setName(accountAuth.user.display_name);
+     if(accountAuth.user?.email)setEmail(accountAuth.user.email);
+    }
+   }catch{}
+   const bridgeFresh=!!(accountAuth?.access_token&&Number(accountAuth.saved_at)>Date.now()-55*60*1000);
+   if(!bridgeFresh){
+    try{sessionStorage.removeItem('valoria-assessment-auth')}catch{}
+    window.location.replace((SITE_BASE?SITE_BASE:'')+'/assessment/start');
+    return;
+   }
    // A participant who already completed the opening session and has a pending
-   // assessment reference must not start a second, duplicate session. Send them
-   // to the authenticated continuation instead.
+   // assessment reference must not start a second, duplicate session. Link it to
+   // the authenticated account before returning to the dashboard.
    let pending='';
    try{pending=localStorage.getItem('pending_taster_id')||''}catch{}
    if(pending){
-    window.location.assign((SITE_BASE?SITE_BASE:'')+'/journey/continue?stage=assess&taster_id='+encodeURIComponent(pending));
+    try{
+     const linkResponse=await fetch('/api/link-taster',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+accountAuth.access_token},
+      body:JSON.stringify({taster_id:pending,name:accountAuth.user?.display_name||undefined}),
+     });
+     const linkData=await linkResponse.json().catch(()=>({}));
+     if(!linkResponse.ok)throw new Error(linkData.error||'Your saved VALU opening could not be linked to this account.');
+     localStorage.removeItem('pending_taster_id');
+     try{sessionStorage.removeItem('valoria-assessment-auth')}catch{}
+     window.location.assign('/dashboard?welcome=profile');
+    }catch(error){
+     setError(error?.message||'Your saved VALU opening could not be connected. Please return to your dashboard and try again.');
+     setPhase('session1');
+    }
     return;
    }
    let stored='';
@@ -92,10 +126,17 @@ export default function VALUIndexV4GateNext(){
      const p=loaded.progress||{};
      setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
      const savedAnswers=p.answers&&typeof p.answers==='object'?p.answers:{};
-     setAnswers(savedAnswers);
+     const answeredCount=Object.keys(savedAnswers).length;
      setSubmissionKey(p.submission_key||'');
      setProgressToken(stored);
-     const answeredCount=Object.keys(savedAnswers).length;
+     const totalQuestions=Number(p.total_questions)||TASTER_QUESTIONS.length;
+     const currentVersion=p.taster_version===VALU_VERSION&&totalQuestions===TASTER_QUESTIONS.length;
+     if(!currentVersion||answeredCount>TASTER_QUESTIONS.length||Number(p.current_question)>TASTER_QUESTIONS.length){
+      setLegacyProgress({version:p.taster_version||'legacy',totalQuestions,answeredCount,currentQuestion:Number(p.current_question)||0});
+      setPhase('legacy');
+      return;
+     }
+     setAnswers(savedAnswers);
      const complete=Number(p.current_question)===TASTER_QUESTIONS.length&&answeredCount===TASTER_QUESTIONS.length&&!!p.submission_key;
      if(complete){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
      setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
@@ -157,6 +198,33 @@ export default function VALUIndexV4GateNext(){
 
  const identityValid=!!(name.trim()&&role.trim()&&experience&&email.trim());
 
+ async function startCurrentVersion(){
+  if(saving)return;
+  setSaving(true);
+  setError('');
+  try{
+   const oldToken=progressToken||localStorage.getItem(RESUME_TOKEN_KEY)||'';
+   if(oldToken){
+    let stored=[];
+    try{stored=JSON.parse(localStorage.getItem(LEGACY_RESUME_TOKENS_KEY)||'[]')}catch{}
+    const archived=Array.isArray(stored)?stored:[];
+    if(!archived.includes(oldToken))archived.push(oldToken);
+    localStorage.setItem(LEGACY_RESUME_TOKENS_KEY,JSON.stringify(archived));
+   }
+   const created=await postProgress({action:'init'});
+   if(!created.resume_token)throw new Error('A new assessment session could not be created. Your earlier responses remain preserved. Please retry.');
+   localStorage.setItem(RESUME_TOKEN_KEY,created.resume_token);
+   setProgressToken(created.resume_token);
+   setAnswers({});
+   setCurrent(0);
+   setSubmissionKey('');
+   setLegacyProgress(null);
+   setPhase('session1');
+  }catch(err){
+   setError(err?.message||'We could not start the current assessment. Your earlier responses remain preserved.');
+  }finally{setSaving(false)}
+ }
+
  async function createAccount(e){
   e.preventDefault();
   if(!identityValid||saving)return;
@@ -178,6 +246,20 @@ export default function VALUIndexV4GateNext(){
    try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key}).catch(()=>{});
    try{localStorage.removeItem(RESUME_TOKEN_KEY)}catch{}
+   let authBridge=null;
+   try{authBridge=JSON.parse(sessionStorage.getItem('valoria-assessment-auth')||'null')}catch{}
+   if(authBridge?.access_token){
+    const linkResponse=await fetch('/api/link-taster',{
+     method:'POST',
+     headers:{'Content-Type':'application/json',Authorization:'Bearer '+authBridge.access_token},
+     body:JSON.stringify({taster_id:data.taster_id,name:name.trim(),role:role.trim()}),
+    });
+    const linkData=await linkResponse.json().catch(()=>({}));
+    if(!linkResponse.ok)throw new Error(linkData.error||'Your saved opening nine could not be linked to your Valoria account. Your responses remain saved.');
+    try{sessionStorage.removeItem('valoria-assessment-auth')}catch{}
+    window.location.assign('/dashboard?welcome=profile');
+    return;
+   }
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
   }catch(err){
@@ -187,6 +269,15 @@ export default function VALUIndexV4GateNext(){
  }
 
  if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU ASSESSMENT</div><h1 style={S.h1}>Preparing your assessment…</h1><p style={S.p}>We are getting Question 1 ready.</p></Shell>;
+
+ if(phase==='legacy')return <Shell>
+  <div style={S.eyebrow}>SAVED ASSESSMENT · PREVIOUS VERSION</div>
+  <h1 style={S.h1}>Your earlier progress is preserved.</h1>
+  <p style={S.p}>We found a saved {legacyProgress?.totalQuestions||15}-question taster from an earlier Valoria version, with {legacyProgress?.answeredCount||0} saved answers. The current journey uses a 9-question opening within the 58-question VALU assessment. We will not mix answers from the older question set into the current assessment.</p>
+  <p style={S.p}>Your earlier responses remain preserved on their original session. You can begin the current opening below without overwriting that record.</p>
+  {error&&<div style={S.error}>{error}</div>}
+  <button type="button" onClick={startCurrentVersion} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'PREPARING YOUR CURRENT SESSION…':'START THE CURRENT 9-QUESTION OPENING →'}</button>
+ </Shell>;
 
  if(phase==='break')return <Shell>
   <VALUAssessmentJourney stage="bridge" />
@@ -226,7 +317,7 @@ export default function VALUIndexV4GateNext(){
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
    </div>
    <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
+   {authenticatedAccount ? <Field label="ACCOUNT EMAIL"><input required readOnly aria-readonly="true" style={{...S.input,opacity:.72,cursor:"not-allowed"}} type="email" value={email} autoComplete="email"/></Field> : <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>}
    {error&&<div style={S.error}>{error}</div>}
    <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'SAVE MY DETAILS & CONTINUE →'}</button>
    <div style={S.saveNote}><span>✓</span> Your opening nine answers are saved.</div>
