@@ -380,6 +380,7 @@ export default function FullVALUAssessment() {
         identity_hash:identityHashFor(identity),
         name:identity.name,
         role:identity.role,
+        experience:identity.experience,
         current_question:nextCurrent,
         total_questions:TOTAL_QUESTIONS,
         answers:nextAnswers,
