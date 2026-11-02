@@ -22,7 +22,7 @@ const SITE_BASE = (() => {
   const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
-  if (host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://valoriainstitute.com';
+  if (host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://www.valoriainstitute.com';
   // Preview deployments must be paired with their site origin explicitly;
   // never silently route preview authentication into production.
   return '';
@@ -36,6 +36,7 @@ const COLORS={P:'#C9A84C',R:'#C9A84C',I:'#C9A84C',M:'#C9A84C',E:'#C9A84C'};
 const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS='#D4C9A8', DIM='rgba(250,250,247,.68)';
 
 const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
+const LEGACY_RESUME_TOKENS_KEY = 'valu_taster_legacy_resume_tokens';
 
 // Session 1 of the single 58-question VALU assessment.
 //
@@ -53,6 +54,7 @@ export default function VALUIndexV4GateNext(){
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
  const [tasterId,setTasterId]=useState('');
+ const [legacyProgress,setLegacyProgress]=useState(null);
  const startedRef=useRef(false);
  const timer=useRef(null);
 
@@ -123,10 +125,17 @@ export default function VALUIndexV4GateNext(){
      const p=loaded.progress||{};
      setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
      const savedAnswers=p.answers&&typeof p.answers==='object'?p.answers:{};
-     setAnswers(savedAnswers);
+     const answeredCount=Object.keys(savedAnswers).length;
      setSubmissionKey(p.submission_key||'');
      setProgressToken(stored);
-     const answeredCount=Object.keys(savedAnswers).length;
+     const totalQuestions=Number(p.total_questions)||TASTER_QUESTIONS.length;
+     const currentVersion=p.taster_version===VALU_VERSION&&totalQuestions===TASTER_QUESTIONS.length;
+     if(!currentVersion||answeredCount>TASTER_QUESTIONS.length||Number(p.current_question)>TASTER_QUESTIONS.length){
+      setLegacyProgress({version:p.taster_version||'legacy',totalQuestions,answeredCount,currentQuestion:Number(p.current_question)||0});
+      setPhase('legacy');
+      return;
+     }
+     setAnswers(savedAnswers);
      const complete=Number(p.current_question)===TASTER_QUESTIONS.length&&answeredCount===TASTER_QUESTIONS.length&&!!p.submission_key;
      if(complete){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
      setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
@@ -188,6 +197,32 @@ export default function VALUIndexV4GateNext(){
 
  const identityValid=!!(name.trim()&&role.trim()&&experience&&email.trim());
 
+ async function startCurrentVersion(){
+  if(saving)return;
+  setSaving(true);
+  setError('');
+  try{
+   const oldToken=progressToken||localStorage.getItem(RESUME_TOKEN_KEY)||'';
+   if(oldToken){
+    const stored=JSON.parse(localStorage.getItem(LEGACY_RESUME_TOKENS_KEY)||'[]');
+    const archived=Array.isArray(stored)?stored:[];
+    if(!archived.includes(oldToken))archived.push(oldToken);
+    localStorage.setItem(LEGACY_RESUME_TOKENS_KEY,JSON.stringify(archived));
+   }
+   const created=await postProgress({action:'init'});
+   if(!created.resume_token)throw new Error('A new assessment session could not be created. Your earlier responses remain preserved. Please retry.');
+   localStorage.setItem(RESUME_TOKEN_KEY,created.resume_token);
+   setProgressToken(created.resume_token);
+   setAnswers({});
+   setCurrent(0);
+   setSubmissionKey('');
+   setLegacyProgress(null);
+   setPhase('session1');
+  }catch(err){
+   setError(err?.message||'We could not start the current assessment. Your earlier responses remain preserved.');
+  }finally{setSaving(false)}
+ }
+
  async function createAccount(e){
   e.preventDefault();
   if(!identityValid||saving)return;
@@ -232,6 +267,15 @@ export default function VALUIndexV4GateNext(){
  }
 
  if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU ASSESSMENT</div><h1 style={S.h1}>Preparing your assessment…</h1><p style={S.p}>We are getting Question 1 ready.</p></Shell>;
+
+ if(phase==='legacy')return <Shell>
+  <div style={S.eyebrow}>SAVED ASSESSMENT · PREVIOUS VERSION</div>
+  <h1 style={S.h1}>Your earlier progress is preserved.</h1>
+  <p style={S.p}>We found a saved {legacyProgress?.totalQuestions||15}-question taster from an earlier Valoria version, with {legacyProgress?.answeredCount||0} saved answers. The current journey uses a 9-question opening within the 58-question VALU assessment. We will not mix answers from the older question set into the current assessment.</p>
+  <p style={S.p}>Your earlier responses remain preserved on their original session. You can begin the current opening below without overwriting that record.</p>
+  {error&&<div style={S.error}>{error}</div>}
+  <button type="button" onClick={startCurrentVersion} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'PREPARING YOUR CURRENT SESSION…':'START THE CURRENT 9-QUESTION OPENING →'}</button>
+ </Shell>;
 
  if(phase==='break')return <Shell>
   <VALUAssessmentJourney stage="bridge" />
