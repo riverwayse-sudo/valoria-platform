@@ -37,7 +37,7 @@ function journeyEmailHtml(name, score, designation) {
         </div>
         <h2 style="font-size:18px;color:#F7F4EE;">What happens next</h2>
         <p style="font-size:14px;line-height:1.8;color:rgba(247,244,238,.7);">1. Confirm your email address.<br>2. Return to Valoria securely.<br>3. Complete your professional profile.<br>4. Any marketplace listing is considered only after eligibility checks.</p>
-        <div style="text-align:center;margin:34px 0;"><a href="https://valoriainstitute.com/profile/edit" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">COMPLETE YOUR PROFILE →</a></div>
+        <div style="text-align:center;margin:34px 0;"><a href="https://valoriainstitute.com/dashboard" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">RETURN TO YOUR DASHBOARD →</a></div>
         <p style="font-size:11px;line-height:1.6;color:rgba(247,244,238,.35);text-align:center;">Valoria Institute · Worth. Built.<br>Questions? info@valoriainstitute.com</p>
       </div>
     </body></html>`;
@@ -225,8 +225,8 @@ export default async function handler(req) {
           type: "assessment_complete",
           title: "Your VALU assessment is complete",
           body: "Your VALU assessment is saved. Confirm your email and complete your professional profile; your record remains private until eligibility checks are complete.",
-          action_label: "Complete your profile",
-          action_url: "/profile/edit",
+          action_label: "Open your dashboard",
+          action_url: "/dashboard",
         }),
       });
       if (!notificationRes.ok) console.error("create-account: notification failed", notificationRes.status);
