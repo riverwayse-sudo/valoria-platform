@@ -216,7 +216,7 @@ serve(async (req: Request) => {
   let body: { email?: string; first_name?: string; score?: number | null; tier?: string | null; dimensions?: Record<string, number> | null };
   try { body = await req.json(); } catch { return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }); }
   const { email, first_name, score = null, dimensions = null } = body;
-  let { tier = null } = body;
+  
   if (!email) { return new Response(JSON.stringify({ error: "email is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }); }
   const firstName = first_name || "Professional";
   const resolvedTier = deriveTier(score ?? null);
@@ -229,7 +229,7 @@ serve(async (req: Request) => {
     console.error("RESEND_API_KEY not set");
     return new Response(JSON.stringify({ error: "Email service not configured" }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
   }
-  const subject = score !== null ? `Your VALU Index results — ${resolvedTier} tier (${score} points)` : "Welcome to Valoria Institute — complete your VALU assessment";
+  const subject = score !== null ? `Your VALU Index results — ${resolvedTier} (${score} points)` : "Welcome to Valoria Institute — complete your VALU assessment";
   const resendResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
