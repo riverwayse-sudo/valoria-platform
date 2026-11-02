@@ -15,8 +15,8 @@ export default function AssessmentNavigation({ progress = null, label = 'VALU IN
           <span style={styles.label}>{label}</span>
           {progress != null && <span style={styles.progress}>{progress}%</span>}
         </div>
-        <a className="assessment-nav-exit" href={`${SITE_URL}/valu`} style={styles.exit} aria-label="Exit assessment and return to Valoria">
-          <span>RETURN TO VALORIA</span><span aria-hidden="true">↗</span>
+        <a className="assessment-nav-exit" href={`${SITE_URL}/dashboard`} style={styles.exit} aria-label="Return to your Valoria dashboard">
+          <span>RETURN TO DASHBOARD</span><span aria-hidden="true">↗</span>
         </a>
       </div>
     </header>
