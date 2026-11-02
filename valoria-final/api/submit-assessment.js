@@ -141,7 +141,18 @@ async function exchangeDashboardHandoff(body, res) {
     limit: '1',
   });
   const linkResponse = await fetch(`${SUPABASE_URL}/rest/v1/valoria_reentry_links?${lookup}`, { headers, cache: 'no-store' });
-  if (!linkResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify dashboard access. Please return to your dashboard.' });
+  if (!linkResponse.ok) {
+    const diagnostic = await linkResponse.text().catch(() => '');
+    // Record only the upstream status and bounded error text. Never log the
+    // handoff code, its hash, account ID, snapshot ID, or participant data.
+    console.error('dashboard handoff lookup failed', {
+      status: linkResponse.status,
+      response: diagnostic.slice(0, 500),
+      supabaseConfigured: Boolean(SUPABASE_URL),
+      serviceRoleConfigured: Boolean(SERVICE_ROLE_KEY),
+    });
+    return json(res, 502, { ok: false, error: 'Could not verify dashboard access. Please return to your dashboard.' });
+  }
   const link = (await linkResponse.json())?.[0];
   if (!link?.user_id || !link?.source_id) return json(res, 401, { ok: false, error: 'This dashboard handoff has expired or has already been used.' });
 
