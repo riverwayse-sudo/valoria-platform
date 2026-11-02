@@ -68,7 +68,7 @@ export default async function handler(req, res) {
     resume_token_hash: `eq.${tokenHash}`,
     status: 'eq.in_progress',
     expires_at: `gt.${new Date().toISOString()}`,
-    select: 'name,role,experience,email,current_question,answers,submission_key',
+    select: 'name,role,experience,email,current_question,answers,submission_key,taster_version,total_questions',
     limit: '1',
   });
   const progressRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${progressParams}`, {
@@ -77,6 +77,9 @@ export default async function handler(req, res) {
   if (!progressRes.ok) return json(res, 502, { error: 'Could not verify your saved snapshot progress.' });
   const progress = (await progressRes.json())?.[0];
   if (!progress) return json(res, 404, { error: 'Your snapshot progress has expired or cannot be resumed.' });
+  if (progress.taster_version !== VALU_VERSION || Number(progress.total_questions) !== TASTER_QUESTIONS.length) {
+    return json(res, 409, { code: 'LEGACY_TASTER_VERSION', error: 'This saved session belongs to an earlier taster version. Its answers remain preserved and cannot be submitted as the current opening.' });
+  }
   if (progress.submission_key !== submission_key) return json(res, 409, { error: 'The submission reference does not match your saved progress.' });
   const { name, role, experience, email, answers } = progress;
   const normalizedEmail = String(email || '').trim().toLowerCase();

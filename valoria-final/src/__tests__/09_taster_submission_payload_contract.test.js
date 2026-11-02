@@ -7,7 +7,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { TASTER_QUESTIONS } from "../valuTaster.js";
+import { TASTER_QUESTIONS, VALU_VERSION } from "../valuTaster.js";
 
 const RESUME_TOKEN = "A".repeat(43);
 
@@ -73,6 +73,8 @@ function installFetch({ progress = {}, submit = {} } = {}) {
         experience: "9-15",
         email: "Temitayo@Example.com",
         current_question: TASTER_QUESTIONS.length,
+        taster_version: VALU_VERSION,
+        total_questions: TASTER_QUESTIONS.length,
         answers: validAnswers(),
         submission_key: SUBMISSION_KEY,
         ...progress,
