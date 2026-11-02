@@ -97,6 +97,8 @@ describe("session 1 presents questions directly, with no account gate", () => {
     const source = gateSource();
     expect(source).toContain("Question {placeInAssessment} of {TOTAL_QUESTIONS}");
     expect(source).toContain('VALUAssessmentJourney stage="opening"');
+    expect(source).toContain('Math.round(((current+1)/TOTAL_QUESTIONS)*100)');
+    expect(source).not.toContain('((current+1)/TASTER_QUESTIONS.length)');
     expect(source).not.toContain("SESSION 1 OF 2");
     // The old pre-assessment details form is gone; identity is captured at the break.
     expect(source).not.toContain("YOUR DETAILS · 01 / 03");
