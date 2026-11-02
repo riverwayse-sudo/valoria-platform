@@ -17,9 +17,15 @@ describe('account-first taster entry contract', () => {
     expect(gate).toContain("window.location.assign('/dashboard?welcome=profile')")
   })
 
-  test('the authenticated account email cannot be changed at the assessment break', () => {
+  test('the existing account email is read-only and the break completes a profile, not a second signup', () => {
     expect(gate).toContain('authenticatedAccount ? <Field label="ACCOUNT EMAIL"')
     expect(gate).toContain('readOnly aria-readonly="true"')
+    expect(gate).toContain('Complete your professional profile')
+    expect(gate).toContain('PROFILE COMPLETION · STEP 2 OF 3')
+    expect(gate).toContain('Your Valoria account is already confirmed')
+    expect(gate).not.toContain('Create your account')
+    expect(gate).not.toContain('password setup and email confirmation')
+    expect(gate).not.toContain("'/professional-signup/?'")
   })
 
   test('legacy sessions are preserved and cannot be silently mixed with the current opening', () => {
