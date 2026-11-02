@@ -168,24 +168,26 @@ describe("session 2 presents the remaining questions and restores progress", () 
     expect(source).not.toContain("SESSION 2 OF 2");
   });
 
-  test("session 2 seeds the saved opening nine and lands on the first unanswered question", () => {
+  test("session 2 starts directly at Question 10 without recalling the opening answers", () => {
     const source = fullSource();
-    expect(source).toContain("data.seeded_answers");
-    expect(source).toContain("nextPlaceToAnswer(seeded, 1)");
+    expect(source).toContain("setCurrent(OPENING_SESSION_LENGTH)");
+    expect(source).toContain("nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1)");
+    expect(source).not.toContain("data.seeded_answers");
   });
 
-  test("the assessment-progress API seeds the opening nine from the stored snapshot", () => {
+  test("the assessment-progress restore reads continuation progress only", () => {
     const api = fs.readFileSync(path.join(__dirname, "../../api/assessment-progress.js"), "utf8");
-    expect(api).toContain("taster_answers");
-    expect(api).toContain("seedAnswersFromOpening");
-    expect(api).toContain("seeded_answers");
+    expect(api).not.toContain("taster_answers");
+    expect(api).not.toContain("seedAnswersFromOpening");
+    expect(api).not.toContain("seeded_answers");
+    expect(api).toContain("Continuation deliberately restores only the saved Questions 10–58 work");
   });
 
   test("a returning participant is taken straight to the first unanswered question", () => {
     const source = fullSource();
     expect(source).not.toContain("ResumeModal");
     expect(source).not.toContain("resumePopup");
-    expect(source).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
+    expect(source).toContain("nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1)");
     expect(source).toContain("setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1)");
   });
 
