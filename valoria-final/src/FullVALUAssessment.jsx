@@ -29,7 +29,7 @@ const SITE_BASE = (() => {
       if (parsed.protocol === 'https:' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(parsed.hostname)) return parsed.origin;
     } catch {}
   }
-  const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\\/$/, '');
+  const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
   if (host === 'assessment.valoriainstitute.com') return 'https://valoriainstitute.com';
