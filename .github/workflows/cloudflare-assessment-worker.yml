@@ -7,7 +7,7 @@ on:
       - "valoria-final/api/**"
       - "valoria-final/lib/**"
       - "valoria-final/src/**"
-      - "valoria-final/__tests__/**"
+      - "valoria-final/worker-tests/**"
       - "valoria-final/worker.js"
       - "valoria-final/wrangler.jsonc"
       - "valoria-final/package.json"
@@ -19,7 +19,7 @@ on:
       - "valoria-final/api/**"
       - "valoria-final/lib/**"
       - "valoria-final/src/**"
-      - "valoria-final/__tests__/**"
+      - "valoria-final/worker-tests/**"
       - "valoria-final/worker.js"
       - "valoria-final/wrangler.jsonc"
       - "valoria-final/package.json"
@@ -46,7 +46,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Exercise Worker routing and response adapters
-        run: node --test ./__tests__/cloudflare-worker.test.mjs
+        run: node --test ./worker-tests/cloudflare-worker.node.mjs
       - name: Build the Vite assessment assets
         run: npm run build
         env:
