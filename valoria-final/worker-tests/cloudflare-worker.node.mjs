@@ -78,3 +78,32 @@ test("assessment API preflight rejects unconfigured preview origins", async () =
   }), env);
   assert.equal(response.status, 403);
 });
+
+test("full assessment preflight allows only the deployed assessment Worker origin", async () => {
+  const env = makeEnv();
+  const response = await worker.fetch(new Request("https://assessment.example/api/submit-assessment", {
+    method: "OPTIONS",
+    headers: {
+      Origin: "https://valoria-assessment.riverwayse.workers.dev",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "content-type",
+    },
+  }), env);
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get("access-control-allow-origin"), "https://valoria-assessment.riverwayse.workers.dev");
+  assert.equal(response.headers.get("access-control-allow-methods"), "POST, OPTIONS");
+  assert.match(response.headers.get("access-control-allow-headers") || "", /Content-Type/i);
+});
+
+test("full assessment preflight rejects an untrusted Worker origin", async () => {
+  const env = makeEnv();
+  const response = await worker.fetch(new Request("https://assessment.example/api/submit-assessment", {
+    method: "OPTIONS",
+    headers: {
+      Origin: "https://untrusted-worker.example",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "content-type",
+    },
+  }), env);
+  assert.equal(response.status, 403);
+});
