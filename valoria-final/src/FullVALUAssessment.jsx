@@ -479,7 +479,7 @@ export default function FullVALUAssessment() {
 
   if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
-  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href={SITE_BASE ? SITE_BASE + '/login?returnTo=%2Fdashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
+  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>This assessment must be opened from your completed VALU teaser account journey.</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
   if (handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
 
@@ -489,7 +489,7 @@ export default function FullVALUAssessment() {
     return <Shell>
       <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
       <h1 style={S.h1}>Return to your Valoria dashboard.</h1>
-      <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved snapshot and answers remain attached to your account. Sign in to your dashboard and choose Continue Assessment to open a fresh secure session.</p>
+      <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved snapshot and answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
       <a href={SITE_BASE ? SITE_BASE + '/login?returnTo=%2Fdashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
     </Shell>;
@@ -504,6 +504,7 @@ export default function FullVALUAssessment() {
       <div style={S.scoreCard}><div style={S.score}>{score}</div><div style={S.outOf}>points</div><div style={S.designation}>{designation}</div></div>
       <p style={S.p}>Your full assessment is now attached to your Valoria professional profile. Your profile can move from <strong style={{color:T.gold}}>Basic · Incomplete</strong> to complete once the required professional profile information is finished.</p>
       {reportStatus && <p style={{...S.p,color:T.gold}}>{reportStatus}</p>}
+      <a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
       {reportStatus.includes('ready') && <a href={SITE_BASE ? SITE_BASE + '/report' : undefined} style={S.button}>VIEW MY VALU REPORT →</a>}
       <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.button}>COMPLETE MY PROFILE →</a>
       <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.secondary}>OPEN PROFILE SETUP</a>
