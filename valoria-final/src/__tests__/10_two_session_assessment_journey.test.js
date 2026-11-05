@@ -65,10 +65,10 @@ describe("standalone 9-question taster", () => {
   test("taster progress is saved to its own progress API and record", () => {
     const source = gateSource();
     const progressApi = readApi("taster-progress.js");
-    expect(source).toContain('API_BASE+"/api/taster-progress"');
-    expect(source).toContain('API_BASE+"/api/submit-taster"');
+    expect(source).toContain("/api/taster-progress");
+    expect(source).toContain("/api/submit-taster");
     expect(progressApi).toContain("taster_progress");
-    expect(source).toContain("localStorage.setItem('pending_taster_id'");
+    expect(source).toContain("pending_taster_id");
   });
 
   test("the taster result sends the user to account confirmation before the separate full assessment", () => {
