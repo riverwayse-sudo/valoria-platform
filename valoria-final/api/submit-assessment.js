@@ -5,7 +5,7 @@
 
 import { computeResults } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
-import { ASSESSMENT_ORDER, OPENING_POSITIONS, OPENING_SESSION_LENGTH, seedAnswersFromOpening } from '../src/assessmentJourney.js';
+import { TOTAL_QUESTIONS } from '../src/assessmentJourney.js';
 import { computeFingerprint } from '../src/lockEngine.js';
 import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
@@ -49,18 +49,7 @@ function validateAnswers(answers) {
     return Number.isInteger(value) && value >= 0 && value < question.options.length;
   });
 }
-function validateRemainingAnswers(answers) {
-  if (!isPlainObject(answers)) return false;
-  const remaining = ASSESSMENT_ORDER.slice(OPENING_SESSION_LENGTH);
-  const allowed = new Set(remaining);
-  const keys = Object.keys(answers);
-  return keys.length === remaining.length && keys.every(key => {
-    const position = Number(key);
-    const value = answers[key];
-    return Number.isInteger(position) && allowed.has(position)
-      && Number.isInteger(value) && value >= 0 && value < QUESTIONS[position].options.length;
-  });
-}
+
 async function consumeRateLimit(ip) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_rate_limit`, {
     method: 'POST',
@@ -76,7 +65,8 @@ async function findExistingAssessment(tasterId, fingerprint) {
   const params = new URLSearchParams({
     taster_id: `eq.${tasterId}`,
     identity_hash: `eq.${fingerprint}`,
-    select: 'id,user_id,taster_id,total_score,designation,cluster_scores,skill_scores,completed_at,report_token',
+    assessment_version: 'eq.FULL_VALU_V2',
+    select: 'id,user_id,taster_id,total_score,designation,cluster_scores,skill_scores,completed_at,report_token,assessment_version',
     limit: '1',
   });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, {
@@ -179,6 +169,7 @@ async function exchangeDashboardHandoff(body, res) {
   const existingAssessmentParams = new URLSearchParams({
     or: `(user_id.eq.${link.user_id},taster_id.eq.${taster.id})`,
     completed_at: 'not.is.null',
+    assessment_version: 'eq.FULL_VALU_V2',
     select: 'id',
     limit: '1',
   });
@@ -328,14 +319,11 @@ export default async function handler(req, res) {
   if (typeof name !== 'string' || !name.trim() || name.trim().length > MAX_NAME_LENGTH) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   if (typeof role !== 'string' || !role.trim() || role.trim().length > MAX_ROLE_LENGTH) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   if (!EXPERIENCE_BANDS.has(experience)) return json(res, 400, { error: 'Select a valid experience band.' });
-  // Accept either a legacy full answer map or the 49 remaining answers.
-  // The verified opening nine are fetched from the account-owned snapshot below.
-  if (!validateAnswers(answers) && !validateRemainingAnswers(answers)) {
-    return json(res, 400, { error: 'The remaining assessment answers are incomplete or invalid.' });
+  // The 9-question taster is separate. The full VALU Index requires all 58 answers.
+  if (!validateAnswers(answers)) {
+    return json(res, 400, { error: 'The full VALU Index requires all 58 valid answers.' });
   }
-  // Timings are integrity diagnostics only — they never enter the score. A
-  // two-session completion legitimately carries fewer than 58 timings (the
-  // opening nine are answered in session 1), so accept any non-empty subset.
+  // Timings are integrity diagnostics only — they never enter the score. Resumed sessions may have fewer recorded timings.
   if (!Array.isArray(timings) || timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json(res, 400, { error: 'Invalid assessment timings.' });
   if (!validateShuffleMap(shuffleMap) || Object.keys(shuffleMap).length > MAX_SHUFFLE_KEYS) return json(res, 400, { error: 'Invalid assessment presentation mapping.' });
 
@@ -348,7 +336,7 @@ export default async function handler(req, res) {
   let taster = null;
   let resolvedUserId = null;
   let resolvedEmail = null;
-  const tasterParams = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role,completed_at,taster_answers', limit: '1' });
+  const tasterParams = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role,completed_at', limit: '1' });
   const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, {
     headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
   });
@@ -371,21 +359,8 @@ export default async function handler(req, res) {
   if (!user.email_confirmed_at) return json(res, 403, { error: 'Confirm your Valoria account email before submitting the full VALU assessment.' });
   resolvedEmail = String(user.email || '').trim().toLowerCase() || null;
 
-  // Snapshot recall is deliberately deferred until this point: participants
-  // complete Questions 10–58 first. The original nine are then merged from the
-  // verified, account-owned snapshot on the server, never supplied by the client.
-  const openingAnswers = seedAnswersFromOpening(taster.taster_answers || {});
-  let completeAnswers;
-  if (validateAnswers(answers)) {
-    const openingMatches = OPENING_POSITIONS.every(position => answers[position] === openingAnswers[position]);
-    if (!openingMatches) return json(res, 403, { error: 'The opening answers do not match your saved VALU snapshot.' });
-    completeAnswers = answers;
-  } else {
-    completeAnswers = { ...openingAnswers, ...answers };
-  }
-  if (!validateAnswers(completeAnswers)) {
-    return json(res, 409, { error: 'Your saved opening responses could not be verified. Your remaining answers are preserved; contact Valoria support to complete scoring.' });
-  }
+  // Taster responses remain separate and are never included in full VALU scoring.
+  const completeAnswers = answers;
 
   let results;
   try { results = computeResults(completeAnswers, timings, shuffleMap, QUESTIONS); }
@@ -397,7 +372,7 @@ export default async function handler(req, res) {
     designation: results.desig?.name || '', cluster_scores: results.clusterScores,
     skill_scores: results.skillScores, completed_at: completedAt, expires_at: expiresAt, ai_report: null,
     taster_id: tasterId, user_id: resolvedUserId, email: resolvedEmail,
-    answers: completeAnswers, timings, shuffle_map: shuffleMap, assessment_version: 'FULL_VALU_V1',
+    answers: completeAnswers, timings, shuffle_map: shuffleMap, assessment_version: 'FULL_VALU_V2',
   };
 
   try {
