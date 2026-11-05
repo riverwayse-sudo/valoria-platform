@@ -75,7 +75,7 @@ describe("standalone 9-question taster", () => {
     const source = gateSource();
     expect(source).toContain("Your 9-question taster is");
     expect(source).toContain("separate 58-question full assessment at Question 1");
-    expect(source).toContain("Your taster answers are saved separately");
+    expect(source).toContain("Your 9-question taster is saved separately from the full assessment.");
     expect(source).toContain("VALUAssessmentJourney stage=\"account\"");
     expect(source).not.toContain("Continue at Question 10");
     expect(source).not.toContain("remaining 49 questions");
