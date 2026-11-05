@@ -50,40 +50,42 @@ describe("taster-progress supports anonymous entry and a late identity step", ()
   });
 });
 
-describe("assessment-progress defers opening-answer recall until final submission", () => {
+describe("assessment-progress preserves independent full-assessment answers", () => {
   const progressApi = readApi("assessment-progress.js");
   const submitApi = readApi("submit-assessment.js");
 
-  test("continuation restore does not read the taster answer payload", () => {
+  test("restore does not read or merge the taster answer payload", () => {
     expect(progressApi).not.toContain("taster_answers");
     expect(progressApi).not.toContain("seedAnswersFromOpening");
-    expect(progressApi).not.toContain("seeded_answers");
-    expect(progressApi).toContain("Continuation deliberately restores only the saved Questions 10–58 work");
+    expect(progressApi).toContain("validFullAnswerMap");
+    expect(progressApi).toContain("The separate 9-question taster is never merged");
   });
 
-  test("a participant with no saved continuation progress is sent straight to Question 10", () => {
-    const block = progressApi.slice(progressApi.indexOf("const progress = await getProgressByTasterId(tasterId);"), progressApi.indexOf("if (progress.user_id"));
-    expect(block).toContain("progress: null");
-    expect(block).not.toContain("seeded_answers");
+  test("full-assessment progress is validated against the canonical 58-question bank", () => {
+    expect(progressApi).toContain('import { QUESTIONS } from "../src/questions.js"');
+    expect(progressApi).toContain("totalQuestions !== QUESTIONS.length");
+    expect(progressApi).toContain("validFullAnswerMap(answers || {})");
   });
 
-  test("the final submit retrieves and merges the verified opening answers before scoring", () => {
-    expect(submitApi).toContain("seedAnswersFromOpening(taster.taster_answers || {})");
-    expect(submitApi).toContain("completeAnswers = { ...openingAnswers, ...answers }");
+  test("full assessment submission requires 58 answers and uses them directly", () => {
+    expect(submitApi).toContain("The full VALU Index requires all 58 valid answers.");
+    expect(submitApi).toContain("const completeAnswers = answers");
+    expect(submitApi).not.toContain("seedAnswersFromOpening");
+    expect(submitApi).not.toContain("taster_answers");
     expect(submitApi).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
     expect(submitApi).toContain("answers: completeAnswers");
   });
 });
 
-describe("submit-assessment accepts a two-session timing subset", () => {
+describe("submit-assessment accepts bounded timing diagnostics", () => {
   const api = readApi("submit-assessment.js");
 
-  test("timings are validated as a bounded subset, not exactly 58", () => {
+  test("timings are validated as a bounded subset, not as scoring inputs", () => {
     expect(api).toContain("timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH");
     expect(api).not.toContain("timings.length !== MAX_TIMINGS_LENGTH");
   });
 
-  test("canonical 58-answer scoring is unchanged", () => {
+  test("the 58-question canonical scoring bank remains authoritative", () => {
     expect(api).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
     expect(api).toContain("import { QUESTIONS } from '../src/questions.js'");
   });
