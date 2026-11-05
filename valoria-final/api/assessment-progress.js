@@ -1,4 +1,5 @@
 import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
+import { QUESTIONS } from "../src/questions.js";
 import { withEdgeCors } from "./_cors.js";
 
 export const config = { runtime: "edge" };
@@ -38,6 +39,16 @@ function headers() {
 }
 
 function norm(value) { return String(value || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
+function validFullAnswerMap(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.entries(value).every(([key, answer]) => {
+    if (!/^(0|[1-9]\d*)$/.test(key)) return false;
+    const index = Number(key);
+    const question = QUESTIONS[index];
+    return Boolean(question) && Number.isInteger(answer) && answer >= 0 && answer < question.options.length;
+  });
+}
 
 function validEmail(email) {
   return typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
