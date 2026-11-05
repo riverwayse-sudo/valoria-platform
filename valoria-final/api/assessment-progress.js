@@ -278,10 +278,7 @@ async function baseHandler(req) {
     if (resolvedIdentity.error) return json({ error: resolvedIdentity.error }, 409);
     if (resolvedIdentity.user_id !== handoff.sub) return json({ error: "This secure handoff does not match the snapshot owner." }, 403);
     try {
-      // Continuation deliberately restores only the saved Questions 10–58 work.
-      // The opening-nine snapshot is retained untouched and is reconciled server-side
-      // when the full assessment is submitted, so a broken snapshot recall cannot
-      // prevent participants from completing the remaining questions.
+      // Restore only full-assessment progress. The separate 9-question taster is never merged.
       const progress = await getProgressByTasterId(tasterId);
       if (!progress) return json({ ok: true, progress: null });
       if (progress.user_id && progress.user_id !== resolvedIdentity.user_id) {
@@ -303,9 +300,7 @@ async function baseHandler(req) {
         if (!claim.ok) throw new Error("Could not link the saved assessment to your account. Please retry.");
         progress.user_id = resolvedIdentity.user_id;
       }
-      // Do not recall or merge the opening-nine answers in the continuation UI.
-      // They are merged into the scoring payload by submit-assessment after all
-      // remaining questions have been answered.
+      // Taster answers remain in taster_sessions and are never copied into this answer map.
       return json({ ok: true, progress });
     } catch (err) {
       return json({ error: err.message || "Could not restore saved VALU progress." }, 502);
@@ -316,8 +311,8 @@ async function baseHandler(req) {
     return json({ error: "Invalid assessment progress payload." }, 400);
   }
   if (!identityHash || typeof identityHash !== "string") return json({ error: "Assessment identity is required." }, 400);
-  if (currentQuestion < 0 || currentQuestion > totalQuestions || totalQuestions < 1 || totalQuestions > 100) return json({ error: "Invalid assessment position." }, 400);
-  if (answers && typeof answers !== "object") return json({ error: "Invalid answers." }, 400);
+  if (currentQuestion < 0 || currentQuestion > totalQuestions || totalQuestions !== QUESTIONS.length) return json({ error: "The full VALU Index contains 58 questions." }, 400);
+  if (!validFullAnswerMap(answers || {})) return json({ error: "Invalid full-assessment answers." }, 400);
   if (timings && !Array.isArray(timings)) return json({ error: "Invalid timings." }, 400);
   if (typeof tasterId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
     return json({ error: "A valid completed VALU snapshot is required." }, 400);
