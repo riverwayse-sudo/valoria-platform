@@ -12,7 +12,7 @@
 
 import { createHash, createHmac } from "node:crypto";
 import { QUESTIONS } from "../questions.js";
-import { ASSESSMENT_ORDER, OPENING_POSITIONS, OPENING_SESSION_LENGTH } from "../assessmentJourney.js";
+
 
 const SERVICE_ROLE = "service-role-key";
 const TASTER_ID = "11111111-1111-4111-8111-111111111111";
@@ -207,20 +207,33 @@ describe("Full assessment submission runtime contract", () => {
     expect(res.body.alreadyCompleted).toBeUndefined();
   });
 
-  test("a participant can submit only Questions 10–58 and the server merges the verified opening nine", async () => {
+  test("a 49-answer continuation cannot be submitted as the full VALU Index", async () => {
     const calls = installFetch();
     const request = makeReq();
-    request.body.answers = Object.fromEntries(ASSESSMENT_ORDER.slice(OPENING_SESSION_LENGTH).map(position => [position, 0]));
-    request.body.timings = Array.from({ length: QUESTIONS.length - OPENING_SESSION_LENGTH }, () => 1200);
+    request.body.answers = Object.fromEntries(QUESTIONS.slice(9).map((question, index) => [index + 9, 0]));
+    request.body.timings = Array.from({ length: 49 }, () => 1200);
+    const res = makeRes();
+    await loadHandler()(request, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe("The full VALU Index requires all 58 valid answers.");
+    const inserts = calls.filter(call => call.url.includes("/rest/v1/valu_assessments") && call.options.method === "POST");
+    expect(inserts).toHaveLength(0);
+  });
+
+  test("a complete 58-answer submission is stored without importing taster answers", async () => {
+    const calls = installFetch();
+    const request = makeReq();
+    const originalAnswers = { ...request.body.answers };
     const res = makeRes();
     await loadHandler()(request, res);
 
     expect(res.statusCode).toBe(200);
     const insert = calls.find(call => call.url.includes("/rest/v1/valu_assessments") && call.options.method === "POST");
     const payload = JSON.parse(insert.options.body);
-    expect(Object.keys(payload.answers)).toHaveLength(QUESTIONS.length);
-    for (const position of OPENING_POSITIONS) expect(payload.answers[position]).toBe(0);
-    expect(Object.keys(request.body.answers)).toHaveLength(QUESTIONS.length - OPENING_SESSION_LENGTH);
+    expect(payload.answers).toEqual(originalAnswers);
+    expect(Object.keys(payload.answers)).toHaveLength(58);
+    expect(payload.assessment_version).toBe("FULL_VALU_V2");
   });
 
   test("the assessment API answers the event Worker preflight with the exact allowed origin", async () => {
