@@ -38,11 +38,9 @@ const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 
 // Session 1 of the single 58-question VALU assessment.
 //
-// The participant arrives straight at Question 1 — no introductory page and no
-// account requirement. They answer the approved 9-question taster, the responses are
-// persisted, and only then are they asked to create an account at the natural
-// break. This component never scores or displays a VALU Index; the nine answers
-// are the first nine of the 58 and are scored later with the rest.
+// The participant starts with a standalone 9-question taster without an account.
+// Taster responses are persisted and scored only as a directional snapshot. They
+// are never copied into the separate 58-question full VALU assessment.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
@@ -190,8 +188,8 @@ export default function VALUIndexV4GateNext(){
  if(phase==='break')return <Shell>
   <VALUAssessmentJourney stage="account" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> 9-question taster SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
-   <h1 className="valu-results-title" style={S.h1}>Your 9-question taster are <em>saved.</em></h1>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <h1 className="valu-results-title" style={S.h1}>Your 9-question taster is <em>saved.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>Your first nine responses are safely saved. This is the account bridge in your one VALU assessment — not a separate test and not the end of your journey.</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
