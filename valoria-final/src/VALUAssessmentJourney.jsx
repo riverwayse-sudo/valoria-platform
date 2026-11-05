@@ -1,3 +1,5 @@
+import React from 'react';
+
 const STEPS = [
   { key: 'taster', title: 'Taster', detail: '9 separate questions' },
   { key: 'account', title: 'Account', detail: 'Create & confirm' },
