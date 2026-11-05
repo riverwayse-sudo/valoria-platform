@@ -291,7 +291,7 @@ async function baseHandler(req) {
         if (!claim.ok) throw new Error("Could not link the saved assessment to your account. Please retry.");
         progress.user_id = resolvedIdentity.user_id;
       }
-      // Taster answers remain separate. This response contains only the
+      // Taster answers are stored separately. This response contains only the
       // participant's saved answers to the independent full assessment.
       return json({ ok: true, progress });
     } catch (err) {
