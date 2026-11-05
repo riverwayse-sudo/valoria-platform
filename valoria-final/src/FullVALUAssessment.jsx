@@ -312,7 +312,7 @@ export default function FullVALUAssessment() {
         const restoredAnswers = saved.answers && typeof saved.answers === 'object' ? saved.answers : {};
         setAnswers(restoredAnswers);
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
-        const nextPlace = nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1);
+        const nextPlace = nextPlaceToAnswer(restoredAnswers, 1);
         setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1);
         setResumeLoading(false);
       })
@@ -517,7 +517,7 @@ export default function FullVALUAssessment() {
     return <Shell>
       <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
       <h1 style={S.h1}>Return to your Valoria dashboard.</h1>
-      <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved snapshot and answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
+      <p style={S.p}>The full VALU assessment is available from your authenticated dashboard. Your saved full-assessment answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
       <a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
     </Shell>;
