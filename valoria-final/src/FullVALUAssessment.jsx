@@ -516,7 +516,7 @@ export default function FullVALUAssessment() {
     <div style={S.eyebrow}>STAGING PREVIEW · FORMAL ASSESSMENT COMPLETE</div>
     <h1 style={S.h1}>Your full assessment preview is complete.</h1>
     <p style={S.p}>This was a local-only simulation. No official VALU Index was calculated, no participant record was created, and no answers were saved or sent to a server.</p>
-    <div style={S.scoreCard}><div style={S.score}>58</div><div style={S.outOf}>questions</div><div style={S.designation}>PREVIEW COMPLETE</div></div>
+    <div style={S.scoreCard}><div style={S.designation}>PREVIEW COMPLETE</div></div>
     <button type="button" onClick={() => window.location.assign('/valu/assessment/')} style={S.button}>RETURN TO TASTER PREVIEW →</button>
     <button type="button" onClick={() => { setPreviewComplete(false); setAnswers({}); setTimings([]); setCurrent(0); setStartedAt(Date.now()); }} style={S.secondary}>RESTART FORMAL ASSESSMENT PREVIEW</button>
   </Shell>;
@@ -582,7 +582,7 @@ export default function FullVALUAssessment() {
       <div style={S.options}>
         {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
       </div>
-      <div style={S.footer}><span>{answeredTotal} answered</span><span>{IS_PREVIEW ? 'Preview only · answers are not saved.' : 'Progress is saved automatically.'}</span></div>
+      <div style={S.footer}><span>{IS_PREVIEW ? 'Preview only · answers are not saved.' : 'Progress is saved automatically.'}</span></div>
       {current === ASSESSMENT_ORDER.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1]))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':IS_PREVIEW?'COMPLETE PREVIEW · NO SCORE →':'SUBMIT VALU ASSESSMENT →'}</button>}
       {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
       {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
