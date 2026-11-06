@@ -318,7 +318,7 @@ export default async function handler(req, res) {
   // The taster is a separate assessment. The formal VALU submission must
   // contain all 58 full-assessment answers; no taster answer is merged or reused.
   if (!validateAnswers(answers)) {
-    return json(res, 400, { error: 'The separate full VALU assessment requires all 58 answers.' });
+    return json(res, 400, { error: 'Complete all required assessment responses before submitting.' });
   }
   // Timings are integrity diagnostics only — they never enter the score.
   // Resumed sessions may have incomplete timing metadata, so accept a bounded subset.
