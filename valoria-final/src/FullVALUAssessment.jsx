@@ -590,7 +590,7 @@ export default function FullVALUAssessment() {
   </Shell>;
 }
 
-function Shell({children,preview=IS_PREVIEW}) { return <main style={S.page}>{preview&&<div role="status" style={{position:'sticky',top:0,zIndex:5,background:'#C9A84C',color:'#1A1A2E',padding:'8px 14px',textAlign:'center',fontSize:9,fontWeight:900,letterSpacing:'.12em',margin:'-22px -20px 18px'}}>STAGING PREVIEW · SIMULATED · NO PARTICIPANT DATA SAVED</div>}<div style={S.shell}>{children}</div></main> }
+function Shell({children}) { return <main style={S.page}><div style={S.shell}>{children}</div></main> }
 
 const S = {
   page:{minHeight:'100dvh',height:'auto',background:T.dark,color:T.parchment,fontFamily:"'Raleway',sans-serif",padding:'22px 20px 32px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'flex-start'},
