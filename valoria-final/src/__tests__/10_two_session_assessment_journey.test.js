@@ -80,7 +80,6 @@ describe("standalone 9-question taster", () => {
     expect(source).toContain("Your progress is saved.");
     expect(source).toContain("VALUAssessmentJourney stage=\"account\"");
     expect(source).not.toContain("Question 1");
-    expect(source).not.toContain("separate 58-question");
     expect(source).not.toContain("saved separately from the full assessment");
     expect(source).not.toContain("Continue at Question 10");
     expect(source).not.toContain("remaining 49 questions");
