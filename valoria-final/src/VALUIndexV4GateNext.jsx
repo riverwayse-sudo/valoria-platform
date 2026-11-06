@@ -204,12 +204,12 @@ export default function VALUIndexV4GateNext(){
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
     <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your taster</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'These answers exist only in this browser session.' : 'Your taster answers are saved separately and will not carry into the formal assessment.'}</p>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'These answers exist only in this browser session.' : 'Your taster responses are saved to your Valoria journey.'}</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>{IS_PREVIEW ? '02 · PREVIEW ONLY' : '02 · YOU ARE HERE'}</div>
     <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>{IS_PREVIEW ? 'Account setup disabled' : 'Create your account'}</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'Account creation and email confirmation are disabled in this simulation. Continue to inspect the separate formal assessment.' : 'Add your details now. You’ll set your password and confirm your email in the next step.'}</p>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'Account creation and email confirmation are disabled in this simulation. Continue to explore your full assessment.' : 'Add your details now. You’ll set your password and confirm your email in the next step.'}</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
@@ -224,8 +224,8 @@ export default function VALUIndexV4GateNext(){
    </div>
   </section>
   <form onSubmit={createAccount} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · NO ACCOUNT CREATED' : 'ACCOUNT SETUP'}</div><h2 style={S.formTitle}>{IS_PREVIEW ? 'Explore the separate formal assessment.' : 'Let’s keep your progress connected.'}</h2></div><div style={S.formTime}>FULL ASSESSMENT</div></div>
-   <p style={S.formIntro}>{IS_PREVIEW ? 'This is a local-only staging simulation. The sample identity below is not a real account, and no information is sent or stored.' : 'Use an email address you can access. We’ll keep your taster record linked to your account, then guide you through password setup and email confirmation before returning you to your dashboard. Your separate formal assessment begins at Question 1.'}</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · NO ACCOUNT CREATED' : 'ACCOUNT SETUP'}</div><h2 style={S.formTitle}>{IS_PREVIEW ? 'Explore your full assessment.' : 'Let’s keep your progress connected.'}</h2></div><div style={S.formTime}>FULL ASSESSMENT</div></div>
+   <p style={S.formIntro}>{IS_PREVIEW ? 'This is a local-only staging simulation. The sample identity below is not a real account, and no information is sent or stored.' : 'Use an email address you can access. We’ll connect your progress to your account, then guide you through password setup and email confirmation before returning you to your dashboard.'}</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" disabled={IS_PREVIEW}/></Field>
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" disabled={IS_PREVIEW}/></Field>
@@ -234,7 +234,7 @@ export default function VALUIndexV4GateNext(){
    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" disabled={IS_PREVIEW}/></Field>
    {error&&<div style={S.error}>{error}</div>}
    <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':IS_PREVIEW?'OPEN FULL ASSESSMENT PREVIEW →':'SAVE MY DETAILS & CONTINUE →'}</button>
-   <div style={S.saveNote}><span>✓</span> {IS_PREVIEW ? 'No account is created and no data is saved.' : 'Your taster answers are saved separately.'}</div>
+   <div style={S.saveNote}><span>✓</span> {IS_PREVIEW ? 'No account is created and no data is saved.' : 'Your taster responses are saved.'}</div>
   </form>
   <p style={S.note}>{IS_PREVIEW ? 'STAGING SIMULATION ONLY · No official VALU Index, account, or participant record is created.' : 'Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.'}</p>
  </Shell>;
