@@ -45,8 +45,10 @@ describe("Privileged API security contracts", () => {
     expect(progressApi).toContain('status: "in.(in_progress,abandoned)"');
     expect(component).toContain("action:'restore'");
     expect(component).toContain("setAnswers(restoredAnswers)");
-    expect(component).toContain("nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1)");
+    expect(component).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
     expect(component).toContain("setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1)");
+    expect(component).toContain("VALUAssessmentJourney stage=\"full\"");
+    expect(progressApi).toContain("FULL_VALU_V2_SEPARATE_TASTER");
     expect(component).toContain("remoteRestoreComplete");
     expect(component).toContain("Your saved VALU progress could not be restored");
   });
