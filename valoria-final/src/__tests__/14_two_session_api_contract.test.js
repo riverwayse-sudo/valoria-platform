@@ -29,7 +29,7 @@ describe("taster-progress supports anonymous entry and a late identity step", ()
   });
 
   test("taster progress has its own nine-question contract", () => {
-    expect(api).toContain("current_question > TASTER_QUESTIONS.length");
+    expect(api).toContain("currentQuestion > TASTER_QUESTIONS.length");
     expect(api).toContain("TASTER_QUESTIONS.length");
     expect(api).not.toContain("valu_assessment_progress");
   });
