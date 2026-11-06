@@ -71,6 +71,7 @@ export default function VALUIndexV4GateNext(){
   startedRef.current=true;
   let cancelled=false;
   async function begin(){
+   if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('session1');return;}
    // A participant who already completed the opening session and has a pending
    // assessment reference must not start a second, duplicate session. Send them
    // to the authenticated continuation instead.
@@ -123,11 +124,17 @@ export default function VALUIndexV4GateNext(){
 
  async function answer(index){
   const next={...answers,[current]:index};
+  const isLast=current===TASTER_QUESTIONS.length-1;
   setAnswers(next);
   setSaving(true);
   setError('');
+  if(IS_PREVIEW){
+   if(isLast)setPhase('break');else setCurrent(v=>v+1);
+   setSaving(false);
+   setSelected(null);
+   return;
+  }
   try{
-   const isLast=current===TASTER_QUESTIONS.length-1;
    const response=await postProgress({
     action:'save',
     resume_token:progressToken,
@@ -156,6 +163,7 @@ export default function VALUIndexV4GateNext(){
 
  async function createAccount(e){
   e.preventDefault();
+  if(IS_PREVIEW){window.location.assign('/valu/assessment/?full=1&preview=1');return;}
   if(!identityValid||saving)return;
   setSaving(true);
   setError('');
