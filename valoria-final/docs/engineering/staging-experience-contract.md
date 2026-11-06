@@ -26,6 +26,9 @@ Production release: prohibited without explicit approval.
 
 The staging review should cover the question-taking shell, assessment progress presentation, loading and validation states, completion/continuation states and responsive layouts. If live assessment APIs are unavailable due to safe isolation, use non-persistent visual fixtures clearly marked as preview data. Do not create fake production records or imply that preview results are official.
 
+## Deployment target
+The staging assessment application is built and deployed to the isolated Cloudflare Worker named valoria-staging-assessment. It must not deploy to valoria-assessment or bind the production assessment hostname.
+
 ## Release gate
 
 The staging version must pass the existing worker tests, Vite build and Wrangler dry-run. Browser verification at 1440, 1280, 768 and 390 pixels is required before acceptance. No production deployment or migration is permitted as part of this branch.
