@@ -156,7 +156,7 @@ describe("independent 58-question formal assessment", () => {
     expect(taster).toContain("const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1'");
     expect(taster).toContain("if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('session1');return;}");
     expect(taster).toContain("window.location.assign('/valu/assessment/?full=1&preview=1')");
-    expect(taster).toContain("STAGING PREVIEW · SIMULATED · NO PARTICIPANT DATA SAVED");
+    expect(taster).not.toContain("STAGING PREVIEW · SIMULATED · NO PARTICIPANT DATA SAVED");
     expect(formal).toContain("const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1'");
     expect(formal).toContain("if (IS_PREVIEW) return;");
     expect(formal).toContain("if (IS_PREVIEW) return;\n    if (!sessionId");
