@@ -206,7 +206,7 @@ export default function VALUIndexV4GateNext(){
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
     <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Start the full 58-question assessment</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, return signed in to your dashboard, and begin all 58 formal questions from Question 1.</p>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW?'Continue to the local-only formal assessment preview.':'Confirm your email, return signed in to your dashboard, and begin all 58 formal questions from Question 1.'}</p>
    </div>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
