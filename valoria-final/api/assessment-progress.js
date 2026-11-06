@@ -94,12 +94,13 @@ async function getProgressByResumeToken(token) {
 }
 
 async function getProgressByTasterId(tasterId) {
-  // Find legacy progress by its verified snapshot first. Older sessions may
-  // predate account linking and therefore have user_id = null.
+  // Restore only the current formal-assessment version. Legacy combined-model
+  // progress rows remain untouched and are deliberately not resumed.
   const params = new URLSearchParams({
     taster_id: `eq.${tasterId}`,
+    assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`,
     status: "in.(in_progress,abandoned)",
-    select: "id,session_id,resume_token,taster_id,user_id,identity_hash,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
+    select: "id,session_id,resume_token,taster_id,user_id,identity_hash,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at,assessment_version",
     order: "last_activity_at.desc",
     limit: "1",
   });
