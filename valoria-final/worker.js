@@ -144,6 +144,12 @@ export default {
     const route = API_HANDLERS.get(url.pathname);
 
     if (route) {
+      // Staging must never fall through to production Supabase credentials.
+      // Persistence stays explicitly disabled until an isolated staging
+      // database and staging-only service credentials are configured.
+      if (env.VALU_PREVIEW === "1" && env.VALU_STAGING_API_ENABLED !== "1") {
+        return json({ error: "Staging persistence is not configured yet. No participant data has been accessed." }, 503);
+      }
       try {
         return route.nodeStyle
           ? await runNodeStyleHandler(route.handler, request)
