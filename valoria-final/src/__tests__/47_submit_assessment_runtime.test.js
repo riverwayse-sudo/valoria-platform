@@ -220,7 +220,8 @@ describe("Full assessment submission runtime contract", () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.body.error).toBe("Complete all required assessment responses before submitting.");
-    expect(res.body.error).not.toMatch(/\\b58\\b|separate/i);
+    expect(res.body.error).not.toContain('58');
+    expect(res.body.error).not.toContain('separate');
     const inserts = calls.filter(call => call.url.includes("/rest/v1/valu_assessments") && call.options.method === "POST");
     expect(inserts).toHaveLength(0);
   });
