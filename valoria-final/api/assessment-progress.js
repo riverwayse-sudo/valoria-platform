@@ -1,4 +1,5 @@
 import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
+import { QUESTIONS } from "../src/questions.js";
 import { withEdgeCors } from "./_cors.js";
 
 export const config = { runtime: "edge" };
@@ -7,6 +8,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
+const FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER";
 
 function getDashboardUrl() {
   const configured = String(process.env.VALU_SITE_ORIGIN || '').trim()
@@ -70,7 +72,8 @@ async function resolveTasterIdentity(tasterId) {
 async function getProgressBySession(sessionId) {
   const params = new URLSearchParams({
     session_id: `eq.${sessionId}`,
-    select: "id,session_id,resume_token,taster_id,user_id,identity_hash,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
+    assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`,
+    select: "id,session_id,resume_token,taster_id,user_id,identity_hash,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at,assessment_version",
     limit: "1",
   });
   const res = await supabase(`valu_assessment_progress?${params}`);
@@ -81,7 +84,8 @@ async function getProgressBySession(sessionId) {
 async function getProgressByResumeToken(token) {
   const params = new URLSearchParams({
     resume_token: `eq.${token}`,
-    select: "id,session_id,resume_token,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at",
+    assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`,
+    select: "id,session_id,resume_token,name,role,experience,email,current_question,total_questions,answers,timings,session_seed,status,last_activity_at,assessment_version",
     limit: "1",
   });
   const res = await supabase(`valu_assessment_progress?${params}`);
@@ -167,7 +171,7 @@ async function runReminderSweep(req) {
   if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) return json({ error: "Unauthorized" }, 401);
 
   const now = Date.now();
-  const rowsRes = await supabase("valu_assessment_progress?status=in.(in_progress,abandoned)&email=not.is.null&select=*&limit=100");
+  const rowsRes = await supabase(`valu_assessment_progress?assessment_version=eq.${FULL_ASSESSMENT_VERSION}&status=in.(in_progress,abandoned)&email=not.is.null&select=*&limit=100`);
   if (!rowsRes.ok) return json({ error: "Could not load assessment progress." }, 502);
   const rows = await rowsRes.json();
 
@@ -267,34 +271,8 @@ async function baseHandler(req) {
     if (resolvedIdentity.error) return json({ error: resolvedIdentity.error }, 409);
     if (resolvedIdentity.user_id !== handoff.sub) return json({ error: "This secure handoff does not match the snapshot owner." }, 403);
     try {
-      // Continuation deliberately restores only the saved Questions 10–58 work.
-      // The opening-nine snapshot is retained untouched and is reconciled server-side
-      // when the full assessment is submitted, so a broken snapshot recall cannot
-      // prevent participants from completing the remaining questions.
-      const progress = await getProgressByTasterId(tasterId);
-      if (!progress) return json({ ok: true, progress: null });
-      if (progress.user_id && progress.user_id !== resolvedIdentity.user_id) {
-        return json({ error: "This saved assessment belongs to another Valoria account." }, 403);
-      }
-      if (progress.identity_hash !== `valu_progress_${tasterId}`
-        || norm(progress.name) !== norm(resolvedIdentity.taster.name)
-        || norm(progress.role) !== norm(resolvedIdentity.taster.role)) {
-        return json({ error: "Saved progress does not match this VALU snapshot." }, 403);
-      }
-      // Safely attach a legacy unlinked session only after the snapshot owner,
-      // snapshot ID, normalized identity, and identity hash have all matched.
-      if (!progress.user_id) {
-        const claim = await supabase(`valu_assessment_progress?id=eq.${progress.id}&user_id=is.null`, {
-          method: "PATCH",
-          headers: { Prefer: "return=minimal" },
-          body: JSON.stringify({ user_id: resolvedIdentity.user_id }),
-        });
-        if (!claim.ok) throw new Error("Could not link the saved assessment to your account. Please retry.");
-        progress.user_id = resolvedIdentity.user_id;
-      }
-      // Do not recall or merge the opening-nine answers in the continuation UI.
-      // They are merged into the scoring payload by submit-assessment after all
-      // remaining questions have been answered.
+      // Restore only the independent formal-assessment answer map. Taster
+      // answers are never queried, merged, seeded, or counted here.
       return json({ ok: true, progress });
     } catch (err) {
       return json({ error: err.message || "Could not restore saved VALU progress." }, 502);
@@ -305,9 +283,17 @@ async function baseHandler(req) {
     return json({ error: "Invalid assessment progress payload." }, 400);
   }
   if (!identityHash || typeof identityHash !== "string") return json({ error: "Assessment identity is required." }, 400);
-  if (currentQuestion < 0 || currentQuestion > totalQuestions || totalQuestions < 1 || totalQuestions > 100) return json({ error: "Invalid assessment position." }, 400);
-  if (answers && typeof answers !== "object") return json({ error: "Invalid answers." }, 400);
-  if (timings && !Array.isArray(timings)) return json({ error: "Invalid timings." }, 400);
+  if (totalQuestions !== QUESTIONS.length || currentQuestion < 0 || currentQuestion > QUESTIONS.length) return json({ error: "The formal assessment must contain exactly 58 questions." }, 400);
+  if (!answers || typeof answers !== "object" || Array.isArray(answers)) return json({ error: "Invalid formal assessment answers." }, 400);
+  const answerKeys = Object.keys(answers);
+  if (answerKeys.length > QUESTIONS.length || answerKeys.some(key => {
+    if (!/^(0|[1-9]\\d*)$/.test(key)) return true;
+    const position = Number(key);
+    const value = answers[key];
+    return !Number.isInteger(position) || position < 0 || position >= QUESTIONS.length
+      || !Number.isInteger(value) || value < 0 || value >= QUESTIONS[position].options.length;
+  })) return json({ error: "Formal answers must use valid canonical question positions and options." }, 400);
+  if (!Array.isArray(timings) || timings.length > QUESTIONS.length || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json({ error: "Invalid formal assessment timings." }, 400);
   if (typeof tasterId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
     return json({ error: "A valid completed VALU snapshot is required." }, 400);
   }
@@ -362,6 +348,7 @@ async function baseHandler(req) {
     answers: answers || {},
     timings: timings || [],
     session_seed: Number.isInteger(sessionSeed) ? sessionSeed : null,
+    assessment_version: FULL_ASSESSMENT_VERSION,
     status: action === "complete" ? "completed" : "in_progress",
     last_activity_at: new Date().toISOString(),
     ...(action === "complete" ? { completed_at: new Date().toISOString(), abandoned_at: null } : {}),
