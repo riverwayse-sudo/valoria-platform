@@ -514,7 +514,7 @@ export default function FullVALUAssessment() {
 
   if (previewComplete) return <Shell>
     <div style={S.eyebrow}>STAGING PREVIEW · FORMAL ASSESSMENT COMPLETE</div>
-    <h1 style={S.h1}>All 58 formal questions have been explored.</h1>
+    <h1 style={S.h1}>Your full assessment preview is complete.</h1>
     <p style={S.p}>This was a local-only simulation. No official VALU Index was calculated, no participant record was created, and no answers were saved or sent to a server.</p>
     <div style={S.scoreCard}><div style={S.score}>58</div><div style={S.outOf}>questions</div><div style={S.designation}>PREVIEW COMPLETE</div></div>
     <button type="button" onClick={() => window.location.assign('/valu/assessment/')} style={S.button}>RETURN TO TASTER PREVIEW →</button>
@@ -574,8 +574,8 @@ export default function FullVALUAssessment() {
 
   return <Shell>
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
-      <VALUAssessmentJourney stage="full" currentQuestion={current + 1} preview={IS_PREVIEW} />
-      <div style={S.top}><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · FORMAL ASSESSMENT' : 'VALU ASSESSMENT'} · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>
+      <VALUAssessmentJourney stage="full" preview={IS_PREVIEW} />
+      <div style={S.top}><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · FORMAL ASSESSMENT' : 'VALU ASSESSMENT'}</div><div style={S.progressText}>{progress}%</div></div>
       <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
       <h1 style={S.question}>{question.q}</h1>
