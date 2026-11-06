@@ -191,7 +191,8 @@ describe("Assessment integrity contracts", () => {
   test("full assessment submission requires a completed, account-owned, email-confirmed snapshot", () => {
     const source = readApi("submit-assessment.js");
     expect(source).toContain("valid snapshot reference is required");
-    expect(source).toContain("select: 'id,user_id,name,role,experience,completed_at'");
+    expect(source).toContain("select: 'id,user_id,name,role,completed_at'");
+    expect(source).not.toContain('taster_answers');
     expect(source).toContain("if (!taster.completed_at)");
     expect(source).toContain("if (!taster.user_id)");
     expect(source).toContain("if (!user.email_confirmed_at)");
