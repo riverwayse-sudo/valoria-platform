@@ -93,4 +93,12 @@ describe("formal assessment progress is independent and versioned", () => {
     expect(submitApi).toContain("timings.length !== MAX_TIMINGS_LENGTH");
     expect(submitApi).not.toContain("timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH");
   });
+
+  test("staging Worker blocks persistence until an isolated database is configured", () => {
+    const worker = fs.readFileSync(path.join(__dirname, "../../worker.js"), "utf8");
+    expect(worker).toContain('env.VALU_PREVIEW === "1"');
+    expect(worker).toContain('env.VALU_STAGING_API_ENABLED !== "1"');
+    expect(worker).toContain("Staging persistence is not configured yet");
+    expect(worker).toContain("}, 503)");
+  });
 });
