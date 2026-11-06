@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import VALUAssessmentJourney from './VALUAssessmentJourney.jsx';
+
+const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1';
 const API_BASE = (() => {
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
   // The assessment UI and API are served by the same Worker. Prefer its own
@@ -115,22 +117,23 @@ async function loadRemoteProgress(token) {
 
 export default function FullVALUAssessment() {
   const queryIdentity = useMemo(parseQuery, []);
-  const [identity,setIdentity] = useState(queryIdentity);
+  const [identity,setIdentity] = useState(IS_PREVIEW ? { tasterId:'staging-preview-taster', name:'Staging Preview Participant', role:'Product Experience Reviewer', experience:'9-15', resume:'' } : queryIdentity);
   const [current,setCurrent] = useState(0);
   const [answers,setAnswers] = useState({});
   const [startedAt,setStartedAt] = useState(Date.now());
   const [timings,setTimings] = useState([]);
   const [saving,setSaving] = useState(false);
   const [result,setResult] = useState(null);
+  const [previewComplete,setPreviewComplete] = useState(false);
   const [error,setError] = useState('');
   const [reportStatus,setReportStatus] = useState('');
-  const [sessionId,setSessionId] = useState('');
+  const [sessionId,setSessionId] = useState(IS_PREVIEW ? 'staging-preview-session' : '');
   const [resumeToken,setResumeToken] = useState('');
   const [resumeLoading,setResumeLoading] = useState(Boolean(queryIdentity.resume));
   const [resumeError,setResumeError] = useState('');
-  const [remoteRestoreComplete,setRemoteRestoreComplete] = useState(false);
-  const [handoffToken,setHandoffToken] = useState('');
-  const [handoffStatus,setHandoffStatus] = useState('checking');
+  const [remoteRestoreComplete,setRemoteRestoreComplete] = useState(IS_PREVIEW);
+  const [handoffToken,setHandoffToken] = useState(IS_PREVIEW ? 'staging-preview-only' : '');
+  const [handoffStatus,setHandoffStatus] = useState(IS_PREVIEW ? 'ready' : 'checking');
   const [handoffError,setHandoffError] = useState('');
   const mountedRef = useRef(true);
   const verifiedHandoffRef = useRef('');
@@ -168,6 +171,7 @@ export default function FullVALUAssessment() {
   }, []);
 
   useEffect(() => {
+    if (IS_PREVIEW) return;
     let handoffCode = '';
     try {
       const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
@@ -248,6 +252,7 @@ export default function FullVALUAssessment() {
   }, [identity.tasterId, identity.name, identity.role]);
 
   useEffect(() => {
+    if (IS_PREVIEW) return;
     if (identity.resume || handoffStatus !== 'ready' || !handoffToken || !identity.tasterId) return;
     let cancelled = false;
     setRemoteRestoreComplete(false);
@@ -295,7 +300,7 @@ export default function FullVALUAssessment() {
   }, [identity.resume, handoffStatus, handoffToken, identity.tasterId]);
 
   useEffect(() => {
-    if (!identity.resume) return;
+    if (IS_PREVIEW || !identity.resume) return;
     let cancelled = false;
     setResumeLoading(true);
     loadRemoteProgress(identity.resume)
@@ -335,7 +340,7 @@ export default function FullVALUAssessment() {
   }, [resumeKey, canUse, identity.resume, handoffStatus, remoteRestoreComplete, sessionId]);
 
   useEffect(() => {
-    if (!canUse || !sessionId || result || handoffStatus !== 'ready') return;
+    if (IS_PREVIEW || !canUse || !sessionId || result || handoffStatus !== 'ready') return;
     try {
       window.localStorage.setItem(resumeKey, JSON.stringify({
         sessionId,
@@ -350,7 +355,7 @@ export default function FullVALUAssessment() {
   }, [resumeKey, canUse, sessionId, resumeToken, current, answers, timings, result, handoffStatus]);
 
   useEffect(() => {
-    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
+    if (IS_PREVIEW || !canUse || !sessionId || result || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
     const timer = window.setTimeout(() => {
       saveProgress({
         action:'save',
@@ -375,6 +380,7 @@ export default function FullVALUAssessment() {
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
 
   async function persistCheckpoint(nextAnswers, nextTimings, nextCurrent) {
+    if (IS_PREVIEW) return;
     if (!sessionId || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete)) return;
     try {
       const data = await saveProgress({
@@ -427,6 +433,7 @@ export default function FullVALUAssessment() {
   }
 
   async function submitAssessment() {
+    if (IS_PREVIEW) { setPreviewComplete(true); return; }
     if (saving || result || handoffStatus !== 'ready' || !handoffToken || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])) return;
     setSaving(true);
     setError('');
@@ -505,6 +512,15 @@ export default function FullVALUAssessment() {
     }
   }
 
+  if (previewComplete) return <Shell>
+    <div style={S.eyebrow}>STAGING PREVIEW · FORMAL ASSESSMENT COMPLETE</div>
+    <h1 style={S.h1}>All 58 formal questions have been explored.</h1>
+    <p style={S.p}>This was a local-only simulation. No official VALU Index was calculated, no participant record was created, and no answers were saved or sent to a server.</p>
+    <div style={S.scoreCard}><div style={S.score}>58</div><div style={S.outOf}>questions</div><div style={S.designation}>PREVIEW COMPLETE</div></div>
+    <button type="button" onClick={() => window.location.assign('/valu/assessment/')} style={S.button}>RETURN TO TASTER PREVIEW →</button>
+    <button type="button" onClick={() => { setPreviewComplete(false); setAnswers({}); setTimings([]); setCurrent(0); setStartedAt(Date.now()); }} style={S.secondary}>RESTART FORMAL ASSESSMENT PREVIEW</button>
+  </Shell>;
+
   if (resumeLoading) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>Your progress is being retrieved securely.</p></Shell>;
 
   if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
@@ -558,23 +574,23 @@ export default function FullVALUAssessment() {
 
   return <Shell>
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
-      <VALUAssessmentJourney stage="full" currentQuestion={current + 1} />
-      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>
+      <VALUAssessmentJourney stage="full" currentQuestion={current + 1} preview={IS_PREVIEW} />
+      <div style={S.top}><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · FORMAL ASSESSMENT' : 'VALU ASSESSMENT'} · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>
       <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
       <h1 style={S.question}>{question.q}</h1>
       <div style={S.options}>
         {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
       </div>
-      <div style={S.footer}><span>{answeredTotal} answered</span><span>Progress is saved automatically.</span></div>
-      {current === ASSESSMENT_ORDER.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1]))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':'SUBMIT VALU ASSESSMENT →'}</button>}
+      <div style={S.footer}><span>{answeredTotal} answered</span><span>{IS_PREVIEW ? 'Preview only · answers are not saved.' : 'Progress is saved automatically.'}</span></div>
+      {current === ASSESSMENT_ORDER.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1]))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':IS_PREVIEW?'COMPLETE PREVIEW · NO SCORE →':'SUBMIT VALU ASSESSMENT →'}</button>}
       {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
       {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
     </div>
   </Shell>;
 }
 
-function Shell({children}) { return <main style={S.page}><div style={S.shell}>{children}</div></main> }
+function Shell({children,preview=IS_PREVIEW}) { return <main style={S.page}>{preview&&<div role="status" style={{position:'sticky',top:0,zIndex:5,background:'#C9A84C',color:'#1A1A2E',padding:'8px 14px',textAlign:'center',fontSize:9,fontWeight:900,letterSpacing:'.12em',margin:'-22px -20px 18px'}}>STAGING PREVIEW · SIMULATED · NO PARTICIPANT DATA SAVED</div>}<div style={S.shell}>{children}</div></main> }
 
 const S = {
   page:{minHeight:'100dvh',height:'auto',background:T.dark,color:T.parchment,fontFamily:"'Raleway',sans-serif",padding:'22px 20px 32px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'flex-start'},
