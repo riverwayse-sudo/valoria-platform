@@ -3,9 +3,9 @@ name: Valoria CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'experience/staging-redesign-20261106']
   pull_request:
-    branches: [main]
+    branches: [main, 'experience/staging-redesign-20261106']
 
 permissions:
   contents: read
