@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './valu-results-responsive.css';
 import VALUAssessmentJourney from './VALUAssessmentJourney.jsx';
 
+const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1';
+
 const API_BASE = (() => {
   const configuredOrigin = String(import.meta.env.VITE_VALU_API_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
@@ -41,7 +43,7 @@ const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 // never seed formal answers, and never produce an official VALU Index.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
- const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
+ const [name,setName]=useState(IS_PREVIEW?'Staging Preview Participant':''),[role,setRole]=useState(IS_PREVIEW?'Product Experience Reviewer':''),[experience,setExperience]=useState(IS_PREVIEW?'9-15':''),[email,setEmail]=useState(IS_PREVIEW?'preview@example.com':'');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
  const [progressToken,setProgressToken]=useState('');
@@ -181,25 +183,25 @@ export default function VALUIndexV4GateNext(){
   }
  }
 
- if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU TASTER</div><h1 style={S.h1}>Preparing your assessment…</h1><p style={S.p}>We are getting Question 1 ready.</p></Shell>;
+ if(phase==='loading')return <Shell preview={IS_PREVIEW}><div style={S.eyebrow}>VALU TASTER</div><h1 style={S.h1}>Preparing your assessment…</h1><p style={S.p}>We are getting Question 1 ready.</p></Shell>;
 
- if(phase==='break')return <Shell>
-  <VALUAssessmentJourney stage="account" />
+ if(phase==='break')return <Shell preview={IS_PREVIEW}>
+  <VALUAssessmentJourney stage="account" preview={IS_PREVIEW} />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> VALU TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
-   <h1 className="valu-results-title" style={S.h1}>Your 9-question taster is <em>saved.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your taster responses are safely saved as a separate directional experience. They are not part of the formal 58-question assessment and will not prefill or count toward it.</p>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> {IS_PREVIEW ? 'STAGING TASTER PREVIEW' : 'VALU TASTER SAVED'} <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <h1 className="valu-results-title" style={S.h1}>{IS_PREVIEW ? <>Your 9-question taster is <em>complete.</em></> : <>Your 9-question taster is <em>saved.</em></>}</h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>{IS_PREVIEW ? 'This is a local-only simulation. No taster answers, account details, or participant records are stored. The separate formal assessment preview begins at Question 1.' : 'Your taster responses are safely saved as a separate directional experience. They are not part of the formal 58-question assessment and will not prefill or count toward it.'}</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
     <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your 9-question taster</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your taster answers are saved separately and will not carry into the formal assessment.</p>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'These answers exist only in this browser session.' : 'Your taster answers are saved separately and will not carry into the formal assessment.'}</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · YOU ARE HERE</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Create your account</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Add your details now. You’ll set your password and confirm your email in the next step.</p>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>{IS_PREVIEW ? '02 · PREVIEW ONLY' : '02 · YOU ARE HERE'}</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>{IS_PREVIEW ? 'Account setup disabled' : 'Create your account'}</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'Account creation and email confirmation are disabled in this simulation. Continue to inspect the separate formal assessment.' : 'Add your details now. You’ll set your password and confirm your email in the next step.'}</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
@@ -214,34 +216,34 @@ export default function VALUIndexV4GateNext(){
    </div>
   </section>
   <form onSubmit={createAccount} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>ACCOUNT SETUP · STEP 2 OF 3</div><h2 style={S.formTitle}>Let’s keep your progress connected.</h2></div><div style={S.formTime}>FORMAL ASSESSMENT<br/>58 QUESTIONS</div></div>
-   <p style={S.formIntro}>Use an email address you can access. We’ll keep your taster record linked to your account, then guide you through password setup and email confirmation before returning you to your dashboard. Your separate formal assessment begins at Question 1.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · NO ACCOUNT CREATED' : 'ACCOUNT SETUP · STEP 2 OF 3'}</div><h2 style={S.formTitle}>{IS_PREVIEW ? 'Explore the separate formal assessment.' : 'Let’s keep your progress connected.'}</h2></div><div style={S.formTime}>FORMAL ASSESSMENT<br/>58 QUESTIONS</div></div>
+   <p style={S.formIntro}>{IS_PREVIEW ? 'This is a local-only staging simulation. The sample identity below is not a real account, and no information is sent or stored.' : 'Use an email address you can access. We’ll keep your taster record linked to your account, then guide you through password setup and email confirmation before returning you to your dashboard. Your separate formal assessment begins at Question 1.'}</p>
    <div className="valu-entry-form-grid" style={S.grid}>
-    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
-    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
+    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" disabled={IS_PREVIEW}/></Field>
+    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" disabled={IS_PREVIEW}/></Field>
    </div>
-   <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
+   <Field label="PROFESSIONAL EXPERIENCE"><select required disabled={IS_PREVIEW} style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
+   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" disabled={IS_PREVIEW}/></Field>
    {error&&<div style={S.error}>{error}</div>}
-   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'SAVE MY DETAILS & CONTINUE →'}</button>
-   <div style={S.saveNote}><span>✓</span> Your taster answers are saved separately.</div>
+   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':IS_PREVIEW?'OPEN FULL 58-QUESTION PREVIEW →':'SAVE MY DETAILS & CONTINUE →'}</button>
+   <div style={S.saveNote}><span>✓</span> {IS_PREVIEW ? 'No account is created and no data is saved.' : 'Your taster answers are saved separately.'}</div>
   </form>
-  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
+  <p style={S.note}>{IS_PREVIEW ? 'STAGING SIMULATION ONLY · No official VALU Index, account, or participant record is created.' : 'Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.'}</p>
  </Shell>;
 
- return <Shell mode="taster">
-  <VALUAssessmentJourney stage="taster" currentQuestion={placeInTaster} />
+ return <Shell mode="taster" preview={IS_PREVIEW}>
+  <VALUAssessmentJourney stage="taster" currentQuestion={placeInTaster} preview={IS_PREVIEW} />
   <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>Question {placeInTaster} of {TASTER_QUESTIONS.length}</div></div>
   <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
   {error&&<div style={S.error}>{error}</div>}
-  <p style={S.note}>{placeInTaster} of {TASTER_QUESTIONS.length} taster questions · Saved separately from the formal assessment.</p>
+  <p style={S.note}>{IS_PREVIEW ? `STAGING PREVIEW · ${placeInTaster} OF ${TASTER_QUESTIONS.length} · NOT SAVED` : `${placeInTaster} of ${TASTER_QUESTIONS.length} taster questions · Saved separately from the formal assessment.`}</p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
 function StepBar({active}){return null}
-function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
+function Shell({children,mode='',preview=false}){return <main className={'valu-assessment-page '+(mode?'valu-assessment-'+mode:'')} style={S.page}>{preview&&<div role="status" style={{position:'sticky',top:0,zIndex:5,background:'#C9A84C',color:'#1A1A2E',padding:'8px 14px',textAlign:'center',fontSize:9,fontWeight:900,letterSpacing:'.12em',margin:'-28px -32px 18px'}}>STAGING PREVIEW · SIMULATED · NO PARTICIPANT DATA SAVED</div>}<div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 const S={
  page:{minHeight:'calc(100dvh - 65px)',height:'auto',background:DARK,color:PARCH,padding:'28px 32px 34px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
