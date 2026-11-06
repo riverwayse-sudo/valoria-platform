@@ -557,8 +557,8 @@ export default function FullVALUAssessment() {
 
   return <Shell>
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
-      <VALUAssessmentJourney stage="full" currentQuestion={current + 1} />
-      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>
+      <VALUAssessmentJourney stage="full" />
+      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT</div></div>
       <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
       <h1 style={S.question}>{question.q}</h1>
