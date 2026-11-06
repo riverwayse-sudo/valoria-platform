@@ -70,18 +70,19 @@ describe("nine-question taster and account bridge", () => {
     const source = gateSource();
     expect(source).toContain("TASTER_QUESTIONS.length");
     expect(source).toContain("VALUAssessmentJourney stage=\"taster\"");
-    expect(source).toContain("Question {placeInTaster} of {TASTER_QUESTIONS.length}");
-    expect(source).toContain("Saved separately from the formal assessment");
+    expect(source).not.toContain("Question {placeInTaster} of {TASTER_QUESTIONS.length}");
+    expect(source).not.toContain("Saved separately from the formal assessment");
+    expect(source).toContain("Your progress is saved.");
     expect(source).not.toContain("OPENING_SESSION_LENGTH");
     expect(source).not.toContain("TOTAL_QUESTIONS");
   });
 
   test("taster completion does not claim its answers will carry into the formal assessment", () => {
     const source = gateSource();
-    expect(source).toContain("Your taster responses are safely saved as a separate directional experience");
-    expect(source).toContain("will not prefill or count toward it");
-    expect(source).toContain("will not carry into the formal assessment");
-    expect(source).toContain("begin all 58 formal questions from Question 1");
+    expect(source).toContain("Your taster responses are saved as a directional starting point.");
+    expect(source).toContain("Complete your full assessment to receive your official VALU Index.");
+    expect(source).not.toContain("will not prefill or count toward it");
+    expect(source).not.toContain("58 formal questions from Question 1");
     expect(source).not.toContain("remaining 49 questions");
     expect(source).not.toContain("Question 10");
   });
@@ -142,10 +143,13 @@ describe("independent 58-question formal assessment", () => {
 
   test("the shared journey indicator distinguishes taster, account, and full assessment", () => {
     const source = readSource("VALUAssessmentJourney.jsx");
-    expect(source).toContain("9 questions");
-    expect(source).toContain("Confirm email");
-    expect(source).toContain("58 questions");
-    expect(source).toContain("TASTER → FORMAL ASSESSMENT");
+    expect(source).toContain("Your starting insight");
+    expect(source).toContain("Secure your profile");
+    expect(source).toContain("Your full capability picture");
+    expect(source).toContain("YOUR VALU JOURNEY");
+    expect(source).not.toContain("9 questions");
+    expect(source).not.toContain("58 questions");
+    expect(source).not.toContain("QUESTION ${currentQuestion} OF");
     expect(source).not.toContain("ONE VALU ASSESSMENT");
   });
 
