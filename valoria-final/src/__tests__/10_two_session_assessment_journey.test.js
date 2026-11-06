@@ -54,7 +54,9 @@ describe("independent taster and full VALU assessment structure", () => {
 describe("standalone 9-question taster", () => {
   test("taster UI labels and counts only its own nine questions", () => {
     const source = gateSource();
-    expect(source).toContain("Question {placeInAssessment} of {TASTER_QUESTIONS.length}");
+    expect(source).not.toContain("Question {placeInAssessment} of {TASTER_QUESTIONS.length}");
+    expect(source).toContain("YOUR PROGRESS IS SAVED");
+    expect(source).toContain("sessionProgress");
     expect(source).toContain('VALUAssessmentJourney stage="taster"');
     expect(source).toContain("TASTER_QUESTIONS.length");
     expect(source).not.toContain("TOTAL_QUESTIONS");
@@ -71,12 +73,15 @@ describe("standalone 9-question taster", () => {
     expect(source).toContain("pending_taster_id");
   });
 
-  test("the taster result sends the user to account confirmation before the separate full assessment", () => {
+  test("the taster result sends the user to account setup without exposing assessment mechanics", () => {
     const source = gateSource();
-    expect(source).toContain("Your 9-question taster is");
-    expect(source).toContain("separate 58-question full assessment at Question 1");
-    expect(source).toContain("Your 9-question taster is saved separately from the full assessment.");
+    expect(source).toContain("Your snapshot is");
+    expect(source).toContain("Confirm your email, then return to your dashboard to continue.");
+    expect(source).toContain("Your progress is saved.");
     expect(source).toContain("VALUAssessmentJourney stage=\"account\"");
+    expect(source).not.toContain("Question 1");
+    expect(source).not.toContain("separate 58-question");
+    expect(source).not.toContain("saved separately from the full assessment");
     expect(source).not.toContain("Continue at Question 10");
     expect(source).not.toContain("remaining 49 questions");
   });
@@ -129,9 +134,12 @@ describe("separate 58-question full VALU assessment", () => {
 
   test("the shared journey indicator distinguishes taster, account and full assessment", () => {
     const progress = readSource("VALUAssessmentJourney.jsx");
-    expect(progress).toContain("9 separate questions");
-    expect(progress).toContain("Create & confirm");
-    expect(progress).toContain("58 questions");
+    expect(progress).toContain("title: 'Start'");
+    expect(progress).toContain("title: 'Profile'");
+    expect(progress).toContain("title: 'Assessment'");
+    expect(progress).not.toContain("9 separate questions");
+    expect(progress).not.toContain("Create & confirm");
+    expect(progress).not.toContain("58 questions");
     expect(gateSource()).toContain('VALUAssessmentJourney stage="taster"');
     expect(gateSource()).toContain('VALUAssessmentJourney stage="account"');
     expect(fullSource()).toContain('VALUAssessmentJourney stage="full"');
