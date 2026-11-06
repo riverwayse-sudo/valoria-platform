@@ -6,7 +6,7 @@ const STEPS = [
   { key: 'full', title: 'Full assessment', detail: '58 questions' },
 ];
 
-export default function VALUAssessmentJourney({ stage = 'taster', currentQuestion }) {
+export default function VALUAssessmentJourney({ stage = 'taster', currentQuestion, preview = false }) {
   const activeIndex = Math.max(0, STEPS.findIndex(step => step.key === stage));
   const questionTotal = stage === 'taster' ? 9 : stage === 'full' ? 58 : null;
   return (
@@ -14,7 +14,7 @@ export default function VALUAssessmentJourney({ stage = 'taster', currentQuestio
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12 }}>
         <span style={{ color: '#D4C9A8', fontSize: 9, fontWeight: 800, letterSpacing: '.16em' }}>TASTER → FORMAL ASSESSMENT</span>
         <span style={{ color: 'rgba(250,250,247,.48)', fontSize: 10 }}>
-          {Number.isInteger(currentQuestion) && questionTotal ? `QUESTION ${currentQuestion} OF ${questionTotal}` : 'YOUR PROGRESS IS PRESERVED'}
+          {Number.isInteger(currentQuestion) && questionTotal ? `QUESTION ${currentQuestion} OF ${questionTotal}` : preview ? 'STAGING SIMULATION · NO DATA SAVED' : 'YOUR PROGRESS IS PRESERVED'}
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
