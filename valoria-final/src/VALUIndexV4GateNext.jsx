@@ -36,11 +36,10 @@ const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS=
 
 const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 
-// Session 1 of the single 58-question VALU assessment.
-//
-// The participant starts with a standalone 9-question taster without an account.
-// Taster responses are persisted and scored only as a directional snapshot. They
-// are never copied into the separate 58-question full VALU assessment.
+// Entry flow for the VALU journey.
+// Participants begin with a short capability snapshot before account setup.
+// Snapshot responses are stored and scored independently; they never populate
+// the formal VALU assessment response record.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
