@@ -148,4 +148,21 @@ describe("independent 58-question formal assessment", () => {
     expect(source).toContain("TASTER → FORMAL ASSESSMENT");
     expect(source).not.toContain("ONE VALU ASSESSMENT");
   });
+
+  test("staging preview runs both assessment screens locally without calling persistence APIs", () => {
+    const taster = gateSource();
+    const formal = fullSource();
+    const journey = readSource("VALUAssessmentJourney.jsx");
+    expect(taster).toContain("const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1'");
+    expect(taster).toContain("if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('session1');return;}");
+    expect(taster).toContain("window.location.assign('/valu/assessment/?full=1&preview=1')");
+    expect(taster).toContain("STAGING PREVIEW · SIMULATED · NO PARTICIPANT DATA SAVED");
+    expect(formal).toContain("const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1'");
+    expect(formal).toContain("if (IS_PREVIEW) return;");
+    expect(formal).toContain("if (IS_PREVIEW) return;\n    if (!sessionId");
+    expect(formal).toContain("if (IS_PREVIEW) { setPreviewComplete(true); return; }");
+    expect(formal).toContain("COMPLETE PREVIEW · NO SCORE");
+    expect(formal).toContain("No official VALU Index was calculated");
+    expect(journey).toContain("STAGING SIMULATION · NO DATA SAVED");
+  });
 });
