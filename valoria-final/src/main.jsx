@@ -8,7 +8,9 @@ function AssessmentShell() {
   return (
     <>
       <AssessmentNavigation />
-      <VALUIndexV4App />
+      <main id="main-content">
+        <VALUIndexV4App />
+      </main>
     </>
   )
 }
