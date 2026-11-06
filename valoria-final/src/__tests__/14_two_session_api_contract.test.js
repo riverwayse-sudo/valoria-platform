@@ -57,6 +57,8 @@ describe("formal assessment progress is independent and versioned", () => {
   test("formal progress only restores the separate 58-question assessment version", () => {
     expect(progressApi).toContain('const FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER"');
     expect(progressApi).toContain("assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`");
+    const tasterLookup = progressApi.slice(progressApi.indexOf("async function getProgressByTasterId"), progressApi.indexOf("async function", progressApi.indexOf("async function getProgressByTasterId") + 1));
+    expect(tasterLookup).toContain("assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`");
     expect(progressApi).toContain("assessment_version=eq.${FULL_ASSESSMENT_VERSION}");
     expect(progressApi).toContain("totalQuestions !== QUESTIONS.length");
     expect(progressApi).not.toContain("taster_answers");
