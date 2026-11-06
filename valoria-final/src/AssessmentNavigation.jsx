@@ -1,6 +1,6 @@
 import React from 'react';
 
-const T = { parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.28)', dark:'#1A1A2E' };
+const T = { parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.74)', dark:'#1A1A2E' };
 const ALLOWED_SITE_HOSTS = ['valoriainstitute.com', 'www.valoriainstitute.com', 'staging.valoriainstitute.com'];
 const IS_STAGING = import.meta.env.VITE_VALU_PREVIEW === '1';
 
@@ -41,7 +41,7 @@ export default function AssessmentNavigation({ progress = null, label = 'VALU IN
             <span style={styles.label}>{label}</span>
             {progress != null && <span style={styles.progress}>{progress}%</span>}
           </div>
-          <a className="assessment-nav-exit" href={`${siteUrl}/dashboard`} style={styles.exit} aria-label="Return to your Valoria dashboard">
+          <a className="assessment-nav-exit" href={`${siteUrl}/dashboard`} style={styles.exit} aria-label="Return to dashboard">
             <span>RETURN TO DASHBOARD</span><span aria-hidden="true">↗</span>
           </a>
         </div>
