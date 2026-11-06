@@ -296,7 +296,7 @@ async function baseHandler(req) {
   if (!answers || typeof answers !== "object" || Array.isArray(answers)) return json({ error: "Invalid formal assessment answers." }, 400);
   const answerKeys = Object.keys(answers);
   if (answerKeys.length > QUESTIONS.length || answerKeys.some(key => {
-    if (!/^(0|[1-9]\\d*)$/.test(key)) return true;
+    if (!/^(0|[1-9]\d*)$/.test(key)) return true;
     const position = Number(key);
     const value = answers[key];
     return !Number.isInteger(position) || position < 0 || position >= QUESTIONS.length
