@@ -1,19 +1,20 @@
 import React from 'react';
 
 const STEPS = [
-  { key: 'opening', title: 'Opening', detail: 'Questions 1–9' },
-  { key: 'bridge', title: 'Account', detail: 'Save & confirm' },
-  { key: 'continuation', title: 'Continue', detail: 'Questions 10–58' },
+  { key: 'taster', title: 'Taster', detail: '9 questions' },
+  { key: 'account', title: 'Account', detail: 'Confirm email' },
+  { key: 'full', title: 'Full assessment', detail: '58 questions' },
 ];
 
-export default function VALUAssessmentJourney({ stage = 'opening', currentQuestion }) {
+export default function VALUAssessmentJourney({ stage = 'taster', currentQuestion }) {
   const activeIndex = Math.max(0, STEPS.findIndex(step => step.key === stage));
+  const questionTotal = stage === 'taster' ? 9 : stage === 'full' ? 58 : null;
   return (
-    <section aria-label="One VALU assessment journey" style={{ margin: '0 0 28px' }}>
+    <section aria-label="Valoria assessment journey" style={{ margin: '0 0 28px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: '#D4C9A8', fontSize: 9, fontWeight: 800, letterSpacing: '.16em' }}>ONE VALU ASSESSMENT</span>
+        <span style={{ color: '#D4C9A8', fontSize: 9, fontWeight: 800, letterSpacing: '.16em' }}>TASTER → FORMAL ASSESSMENT</span>
         <span style={{ color: 'rgba(250,250,247,.48)', fontSize: 10 }}>
-          {Number.isInteger(currentQuestion) ? `QUESTION ${currentQuestion} OF 58` : 'YOUR PROGRESS IS PRESERVED'}
+          {Number.isInteger(currentQuestion) && questionTotal ? `QUESTION ${currentQuestion} OF ${questionTotal}` : 'YOUR PROGRESS IS PRESERVED'}
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
