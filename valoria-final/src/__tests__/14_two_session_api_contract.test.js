@@ -52,7 +52,7 @@ describe("full-assessment progress is independent of taster progress", () => {
     expect(progressApi).not.toContain("taster_answers");
     expect(progressApi).not.toContain("seedAnswersFromOpening");
     expect(progressApi).not.toContain("seeded_answers");
-    expect(progressApi).toContain("Taster answers remain separate");
+    expect(progressApi).toContain("Taster answers are stored separately");
   });
 
   test("a participant without saved full progress starts at the beginning of the full assessment", () => {
