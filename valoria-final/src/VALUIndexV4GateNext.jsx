@@ -72,7 +72,7 @@ export default function VALUIndexV4GateNext(){
   let cancelled=false;
   async function begin(){
    if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('session1');return;}
-   // A participant who already completed the opening session and has a pending
+   // A participant who already completed the taster session and has a pending
    // assessment reference must not start a second, duplicate session. Send them
    // to the authenticated continuation instead.
    let pending='';
@@ -191,7 +191,7 @@ export default function VALUIndexV4GateNext(){
   }
  }
 
- if(phase==='loading')return <Shell preview={IS_PREVIEW}><div style={S.eyebrow}>VALU TASTER</div><h1 style={S.h1}>Preparing your assessment…</h1><p style={S.p}>We are getting Question 1 ready.</p></Shell>;
+ if(phase==='loading')return <Shell preview={IS_PREVIEW}><div style={S.eyebrow}>VALU TASTER</div><h1 style={S.h1}>Preparing your taster…</h1><p style={S.p}>We are getting Question 1 of 9 ready.</p></Shell>;
 
  if(phase==='break')return <Shell preview={IS_PREVIEW}>
   <VALUAssessmentJourney stage="account" preview={IS_PREVIEW} />
