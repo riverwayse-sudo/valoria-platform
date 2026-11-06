@@ -273,6 +273,15 @@ async function baseHandler(req) {
     try {
       // Restore only the independent formal-assessment answer map. Taster
       // answers are never queried, merged, seeded, or counted here.
+      const progress = await getProgressByTasterId(tasterId);
+      if (!progress) return json({ ok: true, progress: null });
+      if (progress.taster_id !== tasterId
+        || progress.user_id !== resolvedIdentity.user_id
+        || progress.identity_hash !== `valu_progress_${tasterId}`
+        || Number(progress.total_questions) !== QUESTIONS.length
+        || !["in_progress", "abandoned"].includes(progress.status)) {
+        return json({ error: "Saved formal progress does not match the verified account and assessment." }, 403);
+      }
       return json({ ok: true, progress });
     } catch (err) {
       return json({ error: err.message || "Could not restore saved VALU progress." }, 502);
