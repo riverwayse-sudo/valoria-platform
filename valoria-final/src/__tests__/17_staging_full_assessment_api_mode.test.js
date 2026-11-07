@@ -11,6 +11,10 @@ describe("staging formal assessment uses the isolated API", () => {
     expect(workflow).toContain('VITE_VALU_PREVIEW: "0"');
     expect(workflow).toContain('VITE_VALU_API_ORIGIN: "https://valoria-staging-assessment.riverwayse.workers.dev"');
     expect(workflow).toContain('VITE_VALU_SITE_ORIGIN: "https://valoria-staging-site.riverwayse.workers.dev"');
+    expect(workflow).not.toContain('VITE_VALU_PREVIEW: "1"');
+    const wrangler = read("wrangler.jsonc");
+    expect(wrangler).toContain('"VALU_STAGING_API_ENABLED": "1"');
+    expect(wrangler).toContain('"SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co"');
   });
 
   test("the formal assessment persists, restores and submits through the assessment API", () => {
