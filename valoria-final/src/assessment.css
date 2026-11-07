@@ -54,6 +54,10 @@ button.valu-option:disabled { cursor: default; }
 
 :focus-visible { outline: 2px solid rgba(201,168,76,.5); outline-offset: 2px; }
 
+#main-content {
+  scroll-margin-top: 72px;
+}
+
 .assessment-skip-link {
   position: absolute;
   left: 16px;
