@@ -315,14 +315,14 @@ export default async function handler(req, res) {
   if (typeof name !== 'string' || !name.trim() || name.trim().length > MAX_NAME_LENGTH) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   if (typeof role !== 'string' || !role.trim() || role.trim().length > MAX_ROLE_LENGTH) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   if (!EXPERIENCE_BANDS.has(experience)) return json(res, 400, { error: 'Select a valid experience band.' });
-  // The taster is a separate assessment. The formal VALU submission must
-  // contain all 58 full-assessment answers; no taster answer is merged or reused.
+  // The formal instrument is independent: every submission must contain all
+  // 58 formal answers. No answer is read from or copied from the taster record.
   if (!validateAnswers(answers)) {
-    return json(res, 400, { error: 'Complete all required assessment responses before submitting.' });
+    return json(res, 400, { error: 'All 58 formal assessment answers are required and must be valid.' });
   }
-  // Timings are integrity diagnostics only — they never enter the score.
-  // Resumed sessions may have incomplete timing metadata, so accept a bounded subset.
-  if (!Array.isArray(timings) || timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json(res, 400, { error: 'Invalid assessment timings.' });
+  // Each formal question has its own timing record. Timings are diagnostics,
+  // never score inputs.
+  if (!Array.isArray(timings) || timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json(res, 400, { error: 'Invalid formal assessment timings.' });
   if (!validateShuffleMap(shuffleMap) || Object.keys(shuffleMap).length > MAX_SHUFFLE_KEYS) return json(res, 400, { error: 'Invalid assessment presentation mapping.' });
 
   const fingerprint = computeFingerprint(name, role);
@@ -357,8 +357,8 @@ export default async function handler(req, res) {
   if (!user.email_confirmed_at) return json(res, 403, { error: 'Confirm your Valoria account email before submitting the full VALU assessment.' });
   resolvedEmail = String(user.email || '').trim().toLowerCase() || null;
 
-  // The taster session verifies identity and account ownership only.
-  // Its answers remain in taster_sessions and never enter the full VALU score.
+  // The taster record is used only to verify account ownership and journey
+  // provenance. Its answer payload is deliberately never fetched or merged.
   const completeAnswers = answers;
 
   let results;
