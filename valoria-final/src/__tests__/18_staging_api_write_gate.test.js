@@ -1,13 +1,15 @@
 "use strict";
 
+import fs from "node:fs";
+import path from "node:path";
 import worker from "../../worker.js";
 
 describe("isolated assessment staging API gate", () => {
   test("does not ship a legacy public Index.html that can shadow the Vite assessment app shell", () => {
-    const legacyIndex = new URL("../../public/Index.html", import.meta.url);
-    const canonicalIndex = new URL("../../index.html", import.meta.url);
-    expect(() => require("node:fs").accessSync(legacyIndex)).toThrow();
-    expect(require("node:fs").readFileSync(canonicalIndex, "utf8")).toContain("<title>Valoria Institute</title>");
+    const legacyIndex = path.join(__dirname, "../../public/Index.html");
+    const canonicalIndex = path.join(__dirname, "../../index.html");
+    expect(fs.existsSync(legacyIndex)).toBe(false);
+    expect(fs.readFileSync(canonicalIndex, "utf8")).toContain("<title>Valoria Institute</title>");
   });
 
   test("blocks all routed assessment API actions while staging writes are disabled", async () => {
