@@ -27,6 +27,16 @@ describe("staging formal assessment uses the isolated API", () => {
     expect(deployWorkflow).toContain("npx --yes wrangler@4.156.0 deploy");
   });
 
+  test("the taster and formal assessment remain separate instruments", () => {
+    const taster = read("src/valuTaster.js");
+    const tasterIds = [...taster.matchAll(/id:\\s*["']([^"']+)["']/g)].map(match => match[1]);
+    const questionBank = read("src/questions.js");
+    const formalIds = [...questionBank.matchAll(/\\{\\s*id:\\s*["']([^"']+)["']/g)].map(match => match[1]);
+    expect(tasterIds).toHaveLength(9);
+    expect(formalIds).toHaveLength(58);
+    expect(formalIds.filter(id => /^VA\\d+$/.test(id))).toHaveLength(4);
+  });
+
   test("the formal assessment persists, restores and submits through the assessment API", () => {
     const assessment = read("src/FullVALUAssessment.jsx");
     expect(assessment).toContain("fetch(API_BASE + '/api/assessment-progress'");
