@@ -2,7 +2,7 @@ import React from 'react';
 
 const T = { parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.74)', dark:'#1A1A2E' };
 const ALLOWED_SITE_HOSTS = ['valoriainstitute.com', 'www.valoriainstitute.com', 'staging.valoriainstitute.com', 'valoria-staging-site.riverwayse.workers.dev'];
-const IS_STAGING = import.meta.env.VITE_VALU_PREVIEW === '1';
+const IS_STAGING = import.meta.env.VITE_VALU_STAGING === '1';
 
 function getSiteUrl() {
   if (typeof window !== 'undefined') {
