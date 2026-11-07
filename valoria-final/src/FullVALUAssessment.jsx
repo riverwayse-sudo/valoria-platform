@@ -35,12 +35,12 @@ const SITE_BASE = (() => {
     try {
       const requested = new URLSearchParams(window.location.search).get('site_origin');
       const parsed = new URL(requested || '');
-      if (parsed.protocol === 'https:' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(parsed.hostname)) {
+      if (parsed.protocol === 'https:' && ['valoriainstitute.com', 'www.valoriainstitute.com', 'valoria-staging-site.riverwayse.workers.dev'].includes(parsed.hostname)) {
         window.sessionStorage.setItem('valu-site-origin', parsed.origin);
         return parsed.origin;
       }
       const saved = new URL(window.sessionStorage.getItem('valu-site-origin') || '');
-      if (saved.protocol === 'https:' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(saved.hostname)) return saved.origin;
+      if (saved.protocol === 'https:' && ['valoriainstitute.com', 'www.valoriainstitute.com', 'valoria-staging-site.riverwayse.workers.dev'].includes(saved.hostname)) return saved.origin;
     } catch {}
   }
   const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
