@@ -234,15 +234,17 @@ describe("Full assessment submission runtime contract", () => {
     expect(res.body.error).toContain("All 58 formal assessment answers are required");
   });
 
-  test("a full answer map with an incomplete timing map is rejected", async () => {
-    installFetch();
+  test("a full answer map with partial timing metadata is accepted for resumed sessions", async () => {
+    const calls = installFetch();
     const request = makeReq();
     request.body.timings = Array.from({ length: 49 }, () => 1200);
     const res = makeRes();
     await loadHandler()(request, res);
 
-    expect(res.statusCode).toBe(400);
-    expect(res.body.error).toContain("Invalid formal assessment timings");
+    expect(res.statusCode).toBe(200);
+    expect(res.body.report_token).toBe(REPORT_TOKEN);
+    const insert = calls.find(call => call.url.includes("/rest/v1/valu_assessments") && call.options.method === "POST");
+    expect(JSON.parse(insert.options.body).timings).toHaveLength(49);
   });
 
   test("the assessment API answers the event Worker preflight with the exact allowed origin", async () => {
