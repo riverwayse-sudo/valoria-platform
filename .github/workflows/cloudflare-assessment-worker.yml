@@ -2,7 +2,7 @@ name: Cloudflare assessment Worker validation
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, experience/staging-redesign-20261106]
     paths:
       - "valoria-final/api/**"
       - "valoria-final/lib/**"
