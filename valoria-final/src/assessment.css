@@ -100,3 +100,31 @@ button.valu-option:disabled { cursor: default; }
   .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-option span:first-child { width:26px !important; height:26px !important; }
   .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > p { margin-top:12px !important; }
 }
+
+/* Assessment content alignment contract: questions, instructions, labels and progress copy share a left edge. */
+.valu-assessment-page,
+.valu-assessment-page :is(h1,h2,h3,h4,p,label,legend,li,small,strong,em) {
+  text-align: left !important;
+}
+
+.valu-assessment-page .valu-taster-top,
+.valu-assessment-page .valu-assessment-steps,
+.valu-assessment-page .valu-start-panel {
+  align-items: flex-start !important;
+}
+
+.valu-assessment-page .valu-taster-top {
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.valu-assessment-page .form-time,
+.valu-assessment-page .valu-entry-form-time {
+  text-align: left !important;
+}
+
+@media (max-width: 760px) {
+  .valu-assessment-page { padding-left: 16px !important; padding-right: 16px !important; }
+  .valu-assessment-page .valu-assessment-shell { width: 100% !important; }
+  .valu-assessment-page .valu-entry-form-card { padding: 20px 16px !important; }
+}
