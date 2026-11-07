@@ -60,8 +60,8 @@ describe('public homepage RPC permissions', () => {
       path.join(process.cwd(), 'supabase/migrations/20261107120000_grant_public_homepage_rpc_execution.sql'),
       'utf8'
     )
-    expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\\.get_homepage_professional_previews_v2\\(\\) TO anon, authenticated/i)
-    expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\\.get_homepage_professional_count\\(\\) TO anon, authenticated/i)
+    expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.get_homepage_professional_previews_v2() TO anon, authenticated;')
+    expect(migration).toContain('GRANT EXECUTE ON FUNCTION public.get_homepage_professional_count() TO anon, authenticated;')
   })
 })
 
@@ -73,8 +73,8 @@ describe('separate marketplace listing acknowledgement', () => {
       'utf8'
     )
     expect(migration).toMatch(/professional_profile_acknowledgements AS acknowledgement/i)
-    expect(migration).toMatch(/acknowledgement\\.acknowledgement_type = 'marketplace_public_listing'/i)
-    expect(migration).toMatch(/acknowledgement\\.acknowledged_at IS NOT NULL/i)
-    expect(migration).toMatch(/length\\(trim\\(acknowledgement\\.acknowledgement_text\\)\\) > 0/i)
+    expect(migration).toContain("acknowledgement.acknowledgement_type = 'marketplace_public_listing'")
+    expect(migration).toContain('acknowledgement.acknowledged_at IS NOT NULL')
+    expect(migration).toContain('length(trim(acknowledgement.acknowledgement_text)) > 0')
   })
 })
