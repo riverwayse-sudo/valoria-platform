@@ -79,8 +79,8 @@ describe("nine-question taster and account bridge", () => {
 
   test("taster completion does not claim its answers will carry into the formal assessment", () => {
     const source = gateSource();
-    expect(source).toContain("Your taster responses are saved as a directional starting point.");
-    expect(source).toContain("Complete your full assessment to receive your official VALU Index.");
+    expect(source).toContain("Your snapshot responses are saved as a directional starting point.");
+    expect(source).toContain("Create or connect your secure Valoria account, then complete your full assessment to receive your official VALU Index.");
     expect(source).not.toContain("will not prefill or count toward it");
     expect(source).not.toContain("58 formal questions from Question 1");
     expect(source).not.toContain("remaining 49 questions");
