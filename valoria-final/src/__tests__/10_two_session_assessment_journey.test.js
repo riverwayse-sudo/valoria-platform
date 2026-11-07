@@ -171,7 +171,7 @@ describe("independent 58-question formal assessment", () => {
     expect(taster).toContain("if (host.includes('staging')) return 'https://staging.valoriainstitute.com'");
     expect(taster).toContain("return typeof window !== 'undefined' ? window.location.origin : ''");
     expect(wrangler).toContain('"SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co"');
-    expect(wrangler).toContain('"VALU_PRODUCTION_SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co"');
+    expect(wrangler).toContain('"VALU_PRODUCTION_SUPABASE_URL": "https://sbkgpisgkuhbalsxqkdr.supabase.co"');
     expect(wrangler).toContain('"VALU_STAGING_API_ENABLED": "1"');
     expect(wrangler).toContain('"name": "valoria-staging-assessment"');
   });
