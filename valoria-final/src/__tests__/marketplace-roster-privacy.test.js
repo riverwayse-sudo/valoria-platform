@@ -21,3 +21,23 @@ describe('public marketplace roster privacy', () => {
     expect(executableSql).not.toMatch(/registered_only/i)
   })
 })
+
+
+describe('public roster eligibility and revocation boundary', () => {
+  test('final private predicate preserves Basic taster and gates Full listings', () => {
+    const migration = fs.readFileSync(
+      path.join(process.cwd(), 'supabase/migrations/20261107113000_harden_public_roster_eligibility_and_revocation_gates.sql'),
+      'utf8'
+    )
+    expect(migration).toMatch(/private\\.is_marketplace_profile_public/i)
+    expect(migration).toMatch(/visibility IN \\('public', 'marketplace'\\)/i)
+    expect(migration).toMatch(/private\\.is_professional_listing_blocked\\(pp\\.id\\)/i)
+    expect(migration).toMatch(/roster\\.assessment_access = 'basic'/i)
+    expect(migration).toMatch(/taster_sessions AS t[\\s\\S]*t\\.completed_at IS NOT NULL/i)
+    expect(migration).toMatch(/roster\\.assessment_access = 'full'/i)
+    expect(migration).toMatch(/pp\\.profile_complete IS TRUE/i)
+    expect(migration).toMatch(/private\\.valu_assessment_is_current\\(pp\\.id\\)/i)
+    expect(migration).toMatch(/capability\\.eligible_for_listing IS TRUE/i)
+    expect(migration).toMatch(/capability\\.eligibility_status = 'listed'/i)
+  })
+})
