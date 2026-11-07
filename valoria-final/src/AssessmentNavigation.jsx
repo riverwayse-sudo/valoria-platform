@@ -1,7 +1,7 @@
 import React from 'react';
 
 const T = { parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.74)', dark:'#1A1A2E' };
-const ALLOWED_SITE_HOSTS = ['valoriainstitute.com', 'www.valoriainstitute.com', 'staging.valoriainstitute.com'];
+const ALLOWED_SITE_HOSTS = ['valoriainstitute.com', 'www.valoriainstitute.com', 'staging.valoriainstitute.com', 'valoria-staging-site.riverwayse.workers.dev'];
 const IS_STAGING = import.meta.env.VITE_VALU_PREVIEW === '1';
 
 function getSiteUrl() {
@@ -25,7 +25,6 @@ function getSiteUrl() {
   }
   return 'https://valoriainstitute.com';
 }
-const LOGO_URL = 'https://valoriainstitute.com/logo.png';
 
 export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {
   const siteUrl = getSiteUrl();
@@ -35,7 +34,7 @@ export default function AssessmentNavigation({ progress = null, label = 'VALU IN
       <header style={styles.header} aria-label="Assessment navigation">
         <div className="assessment-nav-inner" style={styles.inner}>
           <a href={`${siteUrl}/`} style={styles.brand} aria-label="Return to Valoria Institute homepage">
-            <img src={LOGO_URL} alt="Valoria Institute" className="assessment-nav-logo" style={styles.logo} />
+            <img src={`${siteUrl}/logo.png`} alt="Valoria Institute" className="assessment-nav-logo" style={styles.logo} />
           </a>
           <div className="assessment-nav-center" style={styles.center} aria-live="polite">
             <span style={styles.label}>{label}</span>
