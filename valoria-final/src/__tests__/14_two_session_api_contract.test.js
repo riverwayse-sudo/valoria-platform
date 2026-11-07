@@ -55,6 +55,7 @@ describe("full-assessment progress is independent of taster progress", () => {
     expect(progressApi).not.toContain("seedAnswersFromOpening");
     expect(progressApi).not.toContain("seeded_answers");
     expect(progressApi).toContain("totalQuestions !== QUESTIONS.length");
+    expect(progressApi).toContain("Number(progress.total_questions) !== QUESTIONS.length");
     expect(progressApi).not.toContain("assessment_version");
   });
 
