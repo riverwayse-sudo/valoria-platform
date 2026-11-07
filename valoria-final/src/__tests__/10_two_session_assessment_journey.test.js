@@ -152,7 +152,7 @@ describe("independent 58-question formal assessment", () => {
     expect(source).toContain("title: 'Snapshot'");
     expect(source).toContain("title: 'Account'");
     expect(source).toContain("title: 'Assessment'");
-    expect(source).toContain("YOUR VALU JOURNEY");
+    expect(source).toContain("VALU ASSESSMENT");
     expect(source).not.toContain("9 questions");
     expect(source).not.toContain("58 questions");
     expect(source).not.toContain("QUESTION ${currentQuestion} OF");
