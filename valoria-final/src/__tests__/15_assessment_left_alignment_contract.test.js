@@ -21,6 +21,13 @@ describe("VALU assessment left-alignment contract", () => {
     expect(css).toMatch(/\.valu-assessment-page,\s*\.valu-assessment-page\s*\*\s*\{\s*text-align:\s*left\s*!important;/);
   });
 
+  test("assessment typography is loaded once from the shared stylesheet", () => {
+    const css = read("assessment.css");
+    const legacyPrime = read("PRIMEAssessment.jsx");
+    expect((css.match(/fonts\\.googleapis\\.com/g) || []).length).toBe(1);
+    expect(legacyPrime).not.toContain("fonts.googleapis.com");
+  });
+
   test("assessment journey status and progress labels are left aligned", () => {
     const journey = read("VALUAssessmentJourney.jsx");
     expect(journey).toContain("textAlign:'left'");
