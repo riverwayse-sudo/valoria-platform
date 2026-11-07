@@ -87,12 +87,22 @@ describe("nine-question taster and account bridge", () => {
     expect(source).not.toContain("Question 10");
   });
 
-  test("the taster persists its own nine answers before the account bridge", () => {
+  test("professional registration is completed before the taster begins", () => {
+    const source = gateSource();
+    expect(source).toContain("VALUAssessmentJourney stage=\"registration\"");
+    expect(source).toContain("async function registerLead(e)");
+    expect(source).toContain("action:'identify'");
+    expect(source.indexOf("if(phase==='registration')")).toBeLessThan(source.indexOf('return <Shell mode="taster"'));
+    expect(source).toContain("This is not your Valoria account.");
+  });
+
+  test("the taster persists its own nine answers before secure account creation", () => {
     const source = gateSource();
     expect(source).toContain("current_question:isLast?TASTER_QUESTIONS.length:current+1");
     expect(source).toContain("setPhase('break')");
-    expect(source).toContain("action:'identify'");
+    expect(source).toContain("async function continueToAccount()");
     expect(source).toContain("localStorage.setItem('pending_taster_id',data.taster_id)");
+    expect(source).not.toContain("async function createAccount");
   });
 
   test("the taster never computes or presents an official VALU Index", () => {
@@ -141,12 +151,14 @@ describe("independent 58-question formal assessment", () => {
     expect(api).toContain("assessment_version=eq.${FULL_ASSESSMENT_VERSION}");
   });
 
-  test("the shared journey indicator distinguishes taster, account, and full assessment", () => {
+  test("the shared journey indicator distinguishes all four journey stages", () => {
     const source = readSource("VALUAssessmentJourney.jsx");
+    expect(source).toContain("Your professional details");
     expect(source).toContain("Your starting insight");
     expect(source).toContain("Secure your profile");
     expect(source).toContain("Your full capability picture");
     expect(source).toContain("YOUR VALU JOURNEY");
+    expect(source).toContain("repeat(4,minmax(0,1fr))");
     expect(source).not.toContain("9 questions");
     expect(source).not.toContain("58 questions");
     expect(source).not.toContain("QUESTION ${currentQuestion} OF");
@@ -158,7 +170,7 @@ describe("independent 58-question formal assessment", () => {
     const formal = fullSource();
     const journey = readSource("VALUAssessmentJourney.jsx");
     expect(taster).toContain("const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1'");
-    expect(taster).toContain("if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('session1');return;}");
+    expect(taster).toContain("if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('registration');return;}");
     expect(taster).toContain("window.location.assign('/valu/assessment/?full=1&preview=1')");
     expect(taster).not.toContain("STAGING PREVIEW · SIMULATED · NO PARTICIPANT DATA SAVED");
     expect(formal).toContain("const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1'");
