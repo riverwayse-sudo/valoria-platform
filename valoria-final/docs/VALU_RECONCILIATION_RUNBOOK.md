@@ -146,3 +146,16 @@ The live POST flow (init → save → reload/load → complete/submit → idempo
 The full VALU assessment must be opened through an authenticated Valoria account that owns the exact completed taster session and has a confirmed email. The site issues a signed four-hour HMAC handoff bound to the account ID and taster UUID; the token travels in the URL fragment and is sent to assessment APIs only in request bodies. The assessment UI removes the fragment immediately, validates the token before showing questions, and sends it with every canonical submission, attachment, and progress write.
 
 The assessment API verifies the token signature, audience, expiry, taster UUID, saved name/role, account ownership, and confirmed email. Direct legacy URLs without a token stop at an account-linking screen. Assessment progress cannot trust a client-supplied user ID or email; the API resolves both from the verified taster owner and refuses mismatched session/resume tokens. Reminder links return through the authenticated continuation route. Duplicate submissions for the same verified account and taster return the existing canonical score, allowing a fresh signed handoff to retry profile/journey attachment without creating a second score.
+
+
+## Production snapshot — 7 November 2026
+- Completed taster sessions: 45.
+- Linked taster accounts: 5.
+- Corroborated contact candidates awaiting account claim: 16.
+- Unresolved taster identities requiring manual review: 24.
+- Eligible non-test marketplace roster records: 14 (11 Full, 3 Basic).
+- All 14 eligible records are currently Registered-only pending the participant's latest public-visibility acknowledgement.
+- Consented public profiles: 0.
+- Test profiles in the marketplace roster: 0.
+- Revoked profiles in the marketplace roster: 0.
+- Listed-profile eligibility/visibility conflicts: 0.
