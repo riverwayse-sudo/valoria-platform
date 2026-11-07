@@ -33,7 +33,7 @@
       "name": "valoria-staging-assessment",
       "vars": {
         "VALU_PREVIEW": "1",
-        "VALU_STAGING_API_ENABLED": "0",
+        "VALU_STAGING_API_ENABLED": "1",
         "SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co",
         "VALU_PRODUCTION_SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co",
         "VALORIA_SITE_URL": "https://valoria-staging-site.riverwayse.workers.dev"
