@@ -28,6 +28,12 @@ describe("VALU assessment left-alignment contract", () => {
     expect(legacyPrime).not.toContain("fonts.googleapis.com");
   });
 
+  test("assessment screens respect reduced-motion preferences", () => {
+    const css = read("assessment.css");
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(css).toContain("animation-duration: 0.01ms !important");
+  });
+
   test("assessment journey status and progress labels are left aligned", () => {
     const journey = read("VALUAssessmentJourney.jsx");
     expect(journey).toContain("textAlign:'left'");
