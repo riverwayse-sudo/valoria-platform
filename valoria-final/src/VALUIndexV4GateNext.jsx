@@ -89,7 +89,7 @@ export default function VALUIndexV4GateNext(){
      const p=loaded.progress||{};
      setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
      setProgressToken(stored);
-     setPrivacyAcknowledged(true);
+     setPrivacyAcknowledged(Boolean(p.lead_capture_id));
      const savedAnswers=p.answers&&typeof p.answers==='object'?p.answers:{};
      setAnswers(savedAnswers);
      setSubmissionKey(p.submission_key||'');
