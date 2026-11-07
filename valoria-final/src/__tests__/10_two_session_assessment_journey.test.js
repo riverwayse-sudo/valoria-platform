@@ -125,7 +125,7 @@ describe("independent 58-question formal assessment", () => {
   test("formal answers are persisted independently under the 58-question contract", () => {
     const api = readApi("assessment-progress.js");
     expect(api).toContain("totalQuestions !== QUESTIONS.length");
-    expect(api).toContain("Formal answers must use valid canonical question positions and options");
+    expect(api).toContain("Invalid formal assessment answer map");
     expect(api).not.toContain("taster_answers");
     expect(api).not.toContain("seedAnswersFromOpening");
     expect(api).toContain("Number(progress.total_questions) !== QUESTIONS.length");
