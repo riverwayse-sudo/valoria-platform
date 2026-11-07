@@ -26,7 +26,7 @@ function getSiteUrl() {
   return 'https://valoriainstitute.com';
 }
 
-export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {
+export default function AssessmentNavigation({ progress = null, label = 'VALU ASSESSMENT' }) {
   const siteUrl = getSiteUrl();
   return (
     <>
