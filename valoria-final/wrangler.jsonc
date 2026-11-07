@@ -34,8 +34,8 @@
       "vars": {
         "VALU_PREVIEW": "1",
         "VALU_STAGING_API_ENABLED": "0",
-        "SUPABASE_URL": "https://preview-disabled.invalid",
-        "VALU_PRODUCTION_SUPABASE_URL": "https://preview-disabled.invalid"
+        "SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co",
+        "VALU_PRODUCTION_SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co"
       }
     }
   }
