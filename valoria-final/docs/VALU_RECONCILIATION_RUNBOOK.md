@@ -3,6 +3,7 @@
 ## Canonical sources
 
 - Full assessment records: `public.valu_assessments`
+- Pre-taster contact registrations: `public.lead_captures` where `source='valu_taster_signup'`
 - Taster/snapshot records: `public.taster_sessions`
 - Authenticated accounts: `auth.users`
 - Taster-to-contact evidence projection: `public.taster_identity_candidates` (service-role only)
@@ -14,6 +15,21 @@
 - Review ledger: `public.identity_reconciliation_reviews`
 
 Counts across these tables are not expected to be equal. A person may have a taster and a full assessment; a contact may be identified before they register; a newly created account may have a profile but no completed full assessment yet. Report tasters, identified contacts, authenticated accounts, profiles, completed assessments, and public marketplace listings as separate populations.
+
+## Registration-first identity anchor
+
+New VALU taster journeys begin with a lead registration, not an anonymous taster session. The database contract is:
+
+- `lead_captures.id` is the persistent lead identity (`lead_capture_id`).
+- `taster_progress.lead_capture_id` links resumable answers to that lead before the first question is shown.
+- `taster_sessions.lead_capture_id` links the completed snapshot to the same lead.
+- `taster_identity_candidates.lead_capture_id` preserves the direct source relationship for reconciliation and later account claiming.
+- The registration RPC creates the lead and resumable progress atomically, uses an idempotency key, and refuses mismatched retries.
+- Database insert triggers reject new progress and taster-session rows without a lead ID. Historical rows remain intact; legacy sessions can be attached to a lead through the registration recovery path without resetting answers.
+- Account creation is still a separate post-taster action. A lead ID identifies the registration and links the snapshot; it does not by itself prove authenticated account ownership. Only a verified account/email claim may set the authenticated owner.
+- Marketing permission is independent: `lead_captures.consent` is false unless the participant explicitly opts into Valoria email updates. It must never be inferred from the required assessment registration or Privacy Notice acknowledgement.
+
+The earlier anonymous-taster wording in the original website review is superseded for new journeys by the registration-first decision. This does not change the separate 9-question taster and 58-question full assessment, their scoring, or the requirement to keep their records independent.
 
 ## Identity model
 
