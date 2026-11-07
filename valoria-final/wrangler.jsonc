@@ -25,7 +25,7 @@
       "SUPABASE_URL": "https://preview-disabled.invalid",
       "VALU_PRODUCTION_SUPABASE_URL": "https://preview-disabled.invalid",
       "VALU_PREVIEW": "1",
-      "VALU_STAGING_API_ENABLED": "0"
+      "VALU_STAGING_API_ENABLED": "1"
     }
   },
   "env": {
