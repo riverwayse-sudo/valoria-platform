@@ -21,8 +21,9 @@ describe("nine-question taster submission contract", () => {
       .sort();
     // Migrations apply in filename order, so the last definition is the effective one.
     const effective = definitions[definitions.length - 1];
-    expect(effective).toBe("20261030090000_explicit_taster_completion.sql");
-    expect(readMigration(effective)).toContain("(SELECT count(*) FROM jsonb_object_keys(p_answers)) <> 9");
+    expect(effective).toBe("20261107131213_fix_taster_identity_candidate_lead_lookup.sql");
+    expect(readMigration(effective)).toContain("jsonb_object_keys(p_answers)) <> 9");
+    expect(readMigration(effective)).toContain("lead_capture_id");
     for (const name of definitions) {
       // Every definition rejects an incomplete snapshot; only the newest accept nine.
       expect(readMigration(name)).toMatch(/jsonb_object_keys\(p_answers\)\) <> (9|15)/);

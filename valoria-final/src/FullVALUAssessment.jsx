@@ -575,14 +575,26 @@ export default function FullVALUAssessment() {
   return <Shell>
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
       <VALUAssessmentJourney stage="full" preview={IS_PREVIEW} />
-      <div style={S.top}><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · FORMAL ASSESSMENT' : 'VALU ASSESSMENT'}</div><div style={S.progressText}>{progress}%</div></div>
-      <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
-      <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
-      <h1 style={S.question}>{question.q}</h1>
+      <div className="valu-full-context">
+        <span>VALU ASSESSMENT</span>
+        <span>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</span>
+      </div>
+      <div className="valu-full-prompt">{question.q}</div>
+      <div className="valu-full-progress" role="progressbar" aria-label="Assessment progress" aria-valuenow={progress} aria-valuemin="0" aria-valuemax="100">
+        <div style={{ width: `${progress}%` }} />
+      </div>
+      {current > 0 && (
+        <button type="button" className="valu-assessment-back" onClick={() => setCurrent(value => Math.max(0, value - 1))}>
+          ← PREVIOUS RESPONSE
+        </button>
+      )}
       <div style={S.options}>
         {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
       </div>
-      <div style={S.footer}><span>{IS_PREVIEW ? 'Preview only · answers are not saved.' : 'Progress is saved automatically.'}</span></div>
+      <div className="valu-full-footer">
+        <span>{IS_PREVIEW ? 'Preview only · answers are not saved.' : 'Your responses are saved automatically.'}</span>
+        {!IS_PREVIEW && <span className="valu-full-save"><span>✓</span> {saving ? 'SAVING' : 'SAVED'}</span>}
+      </div>
       {current === ASSESSMENT_ORDER.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1]))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':IS_PREVIEW?'COMPLETE PREVIEW · NO SCORE →':'SUBMIT VALU ASSESSMENT →'}</button>}
       {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
       {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
