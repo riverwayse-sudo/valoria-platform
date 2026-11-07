@@ -49,6 +49,6 @@ describe('public roster read privilege', () => {
       path.join(process.cwd(), 'supabase/migrations/20261107115000_grant_public_roster_select_through_rls.sql'),
       'utf8'
     )
-    expect(migration).toMatch(/GRANT SELECT ON TABLE public\\.marketplace_public_roster TO anon, authenticated/i)
+    expect(migration).toMatch(/GRANT SELECT ON TABLE public\.marketplace_public_roster TO anon, authenticated/i)
   })
 })
