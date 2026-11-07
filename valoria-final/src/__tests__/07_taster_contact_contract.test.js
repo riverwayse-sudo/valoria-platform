@@ -10,6 +10,8 @@ describe("Snapshot submission contact contract", () => {
  });
  test("uses the validated normalized email in the identity projection", () => {
   expect(source).toContain("p_email: normalizedEmail");
+  expect(source).toContain("progress.lead_capture_id");
+  expect(source).toContain("p_lead_capture_id: progress.lead_capture_id");
   expect(source).toContain("submit_taster_with_identity_candidate");
  });
  test("keeps server-side answer validation and rate limiting", () => {
