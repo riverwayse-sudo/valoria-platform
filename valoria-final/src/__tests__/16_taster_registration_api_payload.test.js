@@ -11,7 +11,9 @@ const PROGRESS_ID = "33333333-3333-4333-8333-333333333333";
 function loadHandler() {
   process.env.SUPABASE_URL = "https://staging-example.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "test-staging-service-role-key";
+  const rateLimitPath = require.resolve("../../api/_rateLimit.js");
   const modulePath = require.resolve("../../api/taster-progress.js");
+  delete require.cache[rateLimitPath];
   delete require.cache[modulePath];
   return require("../../api/taster-progress.js").default;
 }
