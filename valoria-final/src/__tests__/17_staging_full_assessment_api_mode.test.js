@@ -19,12 +19,12 @@ describe("staging formal assessment uses the isolated API", () => {
   });
 
   test("staging deployment is opt-in for same-repository deploy branches", () => {
-    const deployWorkflow = readRepo(".github/workflows/cloudflare-assessment-staging-deploy.yml");
+    const deployWorkflow = readRepo(".github/workflows/cloudflare-assessment-staging-pr-deploy.yml");
     expect(deployWorkflow).toContain("pull_request:");
     expect(deployWorkflow).toContain("startsWith(github.event.pull_request.head.ref, 'deploy/staging-')");
     expect(deployWorkflow).toContain("github.event.pull_request.head.repo.full_name == github.repository");
     expect(deployWorkflow).toContain("environment: staging");
-    expect(deployWorkflow).toContain("npx wrangler deploy");
+    expect(deployWorkflow).toContain("npx --yes wrangler@4.156.0 deploy");
   });
 
   test("the formal assessment persists, restores and submits through the assessment API", () => {
