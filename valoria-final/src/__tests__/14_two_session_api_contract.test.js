@@ -54,7 +54,8 @@ describe("full-assessment progress is independent of taster progress", () => {
     expect(progressApi).not.toContain("taster_answers");
     expect(progressApi).not.toContain("seedAnswersFromOpening");
     expect(progressApi).not.toContain("seeded_answers");
-    expect(progressApi).toContain("assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`");
+    expect(progressApi).toContain("totalQuestions !== QUESTIONS.length");
+    expect(progressApi).not.toContain("assessment_version");
   });
 
   test("assessment reminder emails never expose internal question counts", () => {
@@ -91,9 +92,9 @@ describe("full assessment submission validates a complete answer map", () => {
 
   test("timings are bounded integrity diagnostics and never part of scoring", () => {
     expect(api).toContain("const MAX_TIMINGS_LENGTH = QUESTIONS.length");
-    expect(api).toContain("timings.length !== MAX_TIMINGS_LENGTH");
+    expect(api).toContain("timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH");
     expect(api).toContain("value > 86_400_000");
-    expect(api).not.toContain("timings.length > QUESTIONS.length");
+    expect(api).not.toContain("timings.length !== MAX_TIMINGS_LENGTH");
   });
 
   test("the scoring engine receives exactly the submitted full-assessment answers", () => {
