@@ -8,7 +8,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
-const FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER";
+// Taster answers are stored separately; this endpoint persists only the formal assessment.\nconst FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER";
 
 function getDashboardUrl() {
   const configured = String(process.env.VALU_SITE_ORIGIN || '').trim()
