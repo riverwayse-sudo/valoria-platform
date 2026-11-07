@@ -12,10 +12,10 @@ const CORS_HEADERS = {
 
 function deriveTier(score: number | null): string {
   if (score === null || score === undefined) return "Assessment Follow-up";
-  if (score >= 80) return "Force to Align With";
-  if (score >= 65) return "Emerging Force";
-  if (score >= 50) return "Developing Professional";
-  if (score >= 35) return "Building Foundations";
+  if (score >= 90) return "Elite";
+  if (score >= 75) return "Distinguished";
+  if (score >= 55) return "Proficient";
+  if (score >= 35) return "Standard";
   return "Assessment Follow-up";
 }
 
