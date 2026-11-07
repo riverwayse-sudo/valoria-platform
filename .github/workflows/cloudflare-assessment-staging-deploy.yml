@@ -1,5 +1,5 @@
 name: Deploy Valoria assessment Worker to staging
-# Final security validation: build and smoke-test the current Worker after consent-gated projection and admin-block policy reconciliation.
+# Final end-to-end validation: verify consent, eligibility, admin blocks, Snapshot journey label and CORS.
 
 on:
   pull_request:
