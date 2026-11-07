@@ -239,7 +239,7 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> {IS_PREVIEW ? 'STAGING TASTER PREVIEW' : 'VALU TASTER SAVED'} <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>{IS_PREVIEW ? <>Your snapshot is <em>complete.</em></> : <>Your snapshot is <em>saved.</em></>}</h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>{IS_PREVIEW ? 'This is a local-only simulation. No answers, account details, or participant records are stored.' : 'Your snapshot responses are saved as a directional starting point. Create or connect your secure Valoria account to continue to the full assessment.'}</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>{IS_PREVIEW ? 'This is a local-only simulation. No answers, account details, or participant records are stored.' : 'Your snapshot responses are saved as a directional starting point. Create or connect your secure Valoria account, then complete your full assessment to receive your official VALU Index.'}</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.18)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
