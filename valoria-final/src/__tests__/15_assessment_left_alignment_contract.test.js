@@ -27,6 +27,16 @@ describe("VALU assessment left-alignment contract", () => {
     expect(journey).toContain("alignItems:'flex-start'");
   });
 
+  test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
+    const full = read("FullVALUAssessment.jsx");
+    expect(full).toContain("Your VALU Index is complete.");
+    expect(full).toContain("Your Full VALU assessment is complete.");
+    expect(full).toContain("COMPLETE MY PROFILE");
+    expect(full).toContain("RETURN TO DASHBOARD");
+    expect(full).not.toContain("Basic · Incomplete");
+    expect(full).not.toContain("current + 1} / TOTAL_QUESTIONS");
+  });
+
   test("assessment navigation title begins at the left edge of its own grid cell", () => {
     const navigation = read("AssessmentNavigation.jsx");
     expect(navigation).toContain("justifyContent:'flex-start'");
