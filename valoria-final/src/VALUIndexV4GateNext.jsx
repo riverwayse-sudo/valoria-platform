@@ -157,15 +157,36 @@ export default function VALUIndexV4GateNext(){
 
  const identityValid=!!(name.trim()&&role.trim()&&experience&&email.trim());
 
- async function createAccount(e){
+ async function registerLead(e){
   e.preventDefault();
-  if(IS_PREVIEW){window.location.assign('/valu/assessment/?full=1&preview=1');return;}
   if(!identityValid||saving)return;
+  if(IS_PREVIEW){setPhase('session1');return;}
   setSaving(true);
   setError('');
   try{
-   // Attach the account identity to the saved session, then persist the snapshot.
-   await postProgress({action:'identify',resume_token:progressToken,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
+   let token=progressToken;
+   if(!token){
+    const created=await postProgress({action:'init'});
+    if(!created.resume_token)throw new Error('Your registration could not be started. Please retry.');
+    token=created.resume_token;
+    setProgressToken(token);
+    try{localStorage.setItem(RESUME_TOKEN_KEY,token)}catch{}
+   }
+   await postProgress({action:'identify',resume_token:token,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
+   setPhase('session1');
+  }catch(err){
+   setError(err?.message||'Your details could not be saved. Please retry.');
+  }finally{
+   setSaving(false);
+  }
+ }
+
+ async function continueToAccount(){
+  if(IS_PREVIEW){window.location.assign('/valu/assessment/?full=1&preview=1');return;}
+  if(saving)return;
+  setSaving(true);
+  setError('');
+  try{
    const key=submissionKey||(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'');
    if(!key)throw new Error('Your browser could not create a secure submission reference. Refresh the page and try again.');
    setSubmissionKey(key);
@@ -182,7 +203,8 @@ export default function VALUIndexV4GateNext(){
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
   }catch(err){
-   setError(err?.message||'Your account could not be created yet. Your saved responses are intact — please retry.');
+   setError(err?.message||'Your saved responses are intact. Please retry the account step.');
+  }finally{
    setSaving(false);
   }
  }
