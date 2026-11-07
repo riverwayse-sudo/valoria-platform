@@ -12,53 +12,53 @@ const CORS_HEADERS = {
 
 function deriveTier(score: number | null): string {
   if (score === null || score === undefined) return "Assessment Follow-up";
-  if (score >= 80) return "Force to Align With";
-  if (score >= 65) return "Emerging Force";
-  if (score >= 50) return "Developing Professional";
-  if (score >= 35) return "Building Foundations";
+  if (score >= 90) return "Elite";
+  if (score >= 75) return "Distinguished";
+  if (score >= 55) return "Proficient";
+  if (score >= 35) return "Standard";
   return "Assessment Follow-up";
 }
 
 function getNextSteps(score: number | null): string {
   if (score === null) {
     return `
-      <li>Complete your VALU Index assessment to receive your official points score.</li>
+      <li>Complete your Full VALU Index assessment to receive your official points score and merit designation.</li>
       <li>Return to your dashboard to continue your professional profile.</li>
-      <li>Marketplace visibility follows the full assessment, profile and capability eligibility checks.</li>
+      <li>Basic marketplace access is a separate pathway based on a completed VALU taster.</li>
     `;
   }
-  if (score >= 80) {
+  if (score >= 90) {
     return `
-      <li>Your merit designation is <strong>Force to Align With</strong>. Complete your professional profile and capability details.</li>
-      <li>Marketplace visibility is subject to the Institute's profile, assessment and capability eligibility checks.</li>
-      <li>Use your PRIME dimension results to identify where to sustain and extend your professional strength.</li>
+      <li>Your merit designation is <strong>Elite</strong>. Sustain the strengths demonstrated across your PRIME dimensions.</li>
+      <li>Full marketplace visibility remains subject to profile and capability eligibility checks.</li>
+      <li>Basic marketplace access remains a separate pathway based on a completed VALU taster.</li>
     `;
   }
-  if (score >= 65) {
+  if (score >= 75) {
     return `
-      <li>Your merit designation is <strong>Emerging Force</strong>. Strengthen the evidence behind your professional capabilities.</li>
-      <li>Complete your professional profile and selected capability details for eligibility review.</li>
-      <li>Use your PRIME results to identify the next development priority.</li>
+      <li>Your merit designation is <strong>Distinguished</strong>. Build on the professional strengths reflected in your PRIME results.</li>
+      <li>Full marketplace visibility remains subject to profile and capability eligibility checks.</li>
+      <li>Basic marketplace access remains a separate pathway based on a completed VALU taster.</li>
     `;
   }
-  if (score >= 50) {
+  if (score >= 55) {
     return `
-      <li>Your merit designation is <strong>Developing Professional</strong>. Identify the dimensions where focused development will matter most.</li>
-      <li>Complete your professional profile and capability details before marketplace eligibility can be assessed.</li>
-      <li>Explore PRIME-aligned development opportunities that address your priority areas.</li>
+      <li>Your merit designation is <strong>Proficient</strong>. Strengthen the evidence behind your professional capabilities.</li>
+      <li>Full marketplace visibility remains subject to profile and capability eligibility checks.</li>
+      <li>Basic marketplace access remains a separate pathway based on a completed VALU taster.</li>
     `;
   }
   if (score >= 35) {
     return `
-      <li>Your merit designation is <strong>Building Foundations</strong>. Review your PRIME dimension results and select a development priority.</li>
-      <li>Complete your professional profile and capability details. A score of 35 points is only one marketplace eligibility condition.</li>
-      <li>Marketplace listing is confirmed only after all required checks are satisfied.</li>
+      <li>Your merit designation is <strong>Standard</strong>. Review your PRIME dimension results and select a development priority.</li>
+      <li>This score meets the Full VALU assessment threshold; profile and capability requirements still apply to Full marketplace visibility.</li>
+      <li>Basic marketplace access remains a separate pathway based on a completed VALU taster.</li>
     `;
   }
   return `
-    <li>Your assessment is recorded. Your current score does not meet the 35-point marketplace score threshold.</li>
+    <li>Your Full VALU Index score is below 35 points, so no merit designation is assigned at this level.</li>
+    <li>This score does not meet the Full marketplace assessment threshold. Basic marketplace access remains a separate pathway through a completed VALU taster.</li>
     <li>Review your PRIME dimension results and choose a focused development priority.</li>
-    <li>Continue developing your professional evidence before your next assessment.</li>
   `;
 }
 
