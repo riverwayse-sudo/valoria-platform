@@ -96,6 +96,16 @@ describe("nine-question taster and account bridge", () => {
     expect(source).toContain("This is not your Valoria account.");
   });
 
+  test("progress API can attach identity before any taster answers are saved", () => {
+    const api = readApi("taster-progress.js");
+    expect(api).toContain("if (action === 'init')");
+    expect(api).toContain("if (action === 'identify')");
+    expect(api).toContain("if (action === 'save')");
+    expect(api.indexOf("if (action === 'identify')")).toBeLessThan(api.indexOf("if (action === 'save')"));
+    expect(api).toContain("return json(res, 200, { identified: true })");
+    expect(api).toContain("current_question: 0, answers: {}, status: 'in_progress'");
+  });
+
   test("the taster persists its own nine answers before secure account creation", () => {
     const source = gateSource();
     expect(source).toContain("current_question:isLast?TASTER_QUESTIONS.length:current+1");
