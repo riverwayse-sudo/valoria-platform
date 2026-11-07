@@ -147,6 +147,17 @@ describe("separate 58-question full VALU assessment", () => {
     expect(landing).not.toMatch(/DM Sans|Cormorant Garamond|#378ADD|#1D9E75|#7F77DD|#BA7517|#D85A30/)
   })
 
+  test("assessment conversion events are sent to the shared Valoria analytics property", () => {
+    const index = fs.readFileSync(path.join(__dirname, "../../index.html"), "utf8")
+    const taster = readSource("VALUIndexV4Gate.jsx")
+    const full = fullSource()
+    expect(index).toContain("G-63M4SRXQKM")
+    expect(taster).toContain('valu_taster_start')
+    expect(taster).toContain('valu_taster_complete')
+    expect(full).toContain('valu_index_open')
+    expect(full).toContain('valu_index_complete')
+  })
+
   test("the shared journey indicator distinguishes taster, account and full assessment", () => {
     const progress = readSource("VALUAssessmentJourney.jsx");
     expect(progress).toContain("title: 'Start'");
