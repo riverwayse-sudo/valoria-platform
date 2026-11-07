@@ -35,6 +35,11 @@ describe("registration-first VALU taster identity contract", () => {
     expect(progressApi).toContain("p_privacy_acknowledged: body.privacy_acknowledged === true");
   });
 
+  test("registration form does not render a literal newline artefact after the email field", () => {
+    expect(gate).not.toContain("</Field>\\n   <p style={S.note}>");
+    expect(gate).toContain("</Field>\n   <p style={S.note}>");
+  });
+
   test("marketing email consent remains optional and separate from assessment registration", () => {
     expect(schema).toContain("coalesce(p_marketing_consent, false)");
     expect(schema).toContain("'explicit_valu_taster_marketing_opt_in'");
