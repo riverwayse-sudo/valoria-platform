@@ -561,7 +561,7 @@ export default function FullVALUAssessment() {
       <VALUAssessmentJourney stage="full" />
       <div className="valu-full-heading">
         <div><div style={S.eyebrow}>YOUR VALU INDEX</div><p className="valu-full-prompt">A considered view of your professional capability.</p></div>
-        <span className="valu-full-save"><span aria-hidden="true">✓</span> SAVED AS YOU GO</span>
+        <span className="valu-full-save"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</span>
       </div>
       <div className="valu-full-progress" role="progressbar" aria-label="Assessment progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div className="valu-full-context"><span>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</span><span>SELECT THE RESPONSE THAT BEST REFLECTS YOU</span></div>
