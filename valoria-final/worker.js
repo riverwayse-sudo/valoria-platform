@@ -142,8 +142,9 @@ async function serveAssessmentAsset(request, env) {
   return env.ASSETS.fetch(new Request(url, request));
 }
 
-// Public profile and certificate visibility is enforced by consent-aware Supabase RLS;
-// this Worker must not introduce a bypass around the upstream authorization layer.
+// Public profile and certificate visibility is enforced by consent-aware Supabase RLS.
+// This Worker must never bypass the database's eligibility, consent or admin-block checks.
+// The same policy governs Full and Basic profile visibility.
 
 export default {
   async fetch(request, env) {
