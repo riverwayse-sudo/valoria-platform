@@ -43,7 +43,7 @@ function journeyEmailHtml(name, score, designation, siteUrl = VALORIA_SITE_URL) 
     </body></html>`;
 }
 
-function confirmationEmailHtml(name, actionLink) {
+function confirmationEmailHtml(name, actionLink, siteUrl = VALORIA_SITE_URL) {
   const safeName = escapeHtml(name || "there");
   const safeLink = escapeHtml(actionLink);
   return `
