@@ -43,8 +43,8 @@ const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 
 // Entry flow for the VALU journey.
-// Participants begin with a short capability snapshot before account setup.
-// Snapshot responses are stored and scored independently; they never populate
+// Participants begin with the VALU taster before account setup.
+// Taster responses are stored and scored independently; they never populate
 // the formal VALU assessment response record.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
@@ -200,7 +200,7 @@ export default function VALUIndexV4GateNext(){
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
    const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved. Please retry.');
+   if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
    setTasterId(data.taster_id);
    try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
@@ -209,7 +209,7 @@ export default function VALUIndexV4GateNext(){
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
   }catch(err){
-   setError(err?.message||'Your snapshot could not be saved yet. Your registered details and responses remain intact — please retry.');
+   setError(err?.message||'Your taster could not be saved yet. Your registered details and responses remain intact — please retry.');
    setSaving(false);
   }
  }
@@ -219,7 +219,7 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> YOUR VALU JOURNEY</div>
    <h1 className="valu-results-title" style={S.h1}>Start with your <em>details.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Register before beginning your snapshot. This saves your contact and professional details so your Valoria journey stays connected. You will secure your Valoria account after your snapshot.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Register before beginning your taster. This saves your contact and professional details so your Valoria journey stays connected. You will secure your Valoria account after your taster.</p>
   </section>
   <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
    <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Tell us a little about yourself.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
@@ -229,7 +229,7 @@ export default function VALUIndexV4GateNext(){
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" maxLength={160}/></Field>
    </div>
    <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>\n   <p style={S.note}>If you already have a Valoria account, use the email address associated with it so your snapshot can be connected to that account.</p>
+   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>\n   <p style={S.note}>If you already have a Valoria account, use the email address associated with it so your taster can be connected to that account.</p>
    <Field label="ORGANISATION (OPTIONAL)"><input style={S.input} value={organisation} onChange={e=>setOrganisation(e.target.value)} placeholder="Your organisation" autoComplete="organization" maxLength={180}/></Field>
    <Field label="WHAT ARE YOU MOST INTERESTED IN? (OPTIONAL)"><select style={S.input} value={interest} onChange={e=>setInterest(e.target.value)}><option value="">Select an interest</option><option value="Professional visibility">Professional visibility</option><option value="Career and leadership opportunities">Career and leadership opportunities</option><option value="Speaking and facilitation">Speaking and facilitation</option><option value="Learning and development">Learning and development</option><option value="Other">Other</option></select></Field>
    <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
@@ -241,16 +241,16 @@ export default function VALUIndexV4GateNext(){
     <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
    </label>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'REGISTER & BEGIN MY SNAPSHOT →'}</button>
-   <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved snapshot.</div>
+   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'REGISTER & BEGIN MY TASTER →'}</button>
+   <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved taster.</div>
   </form>
  </Shell>;
 
- if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU</div><h1 style={S.h1}>Preparing your snapshot…</h1><p style={S.p}>We are getting your session ready.</p></Shell>;
+ if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU</div><h1 style={S.h1}>Preparing your taster…</h1><p style={S.p}>We are getting your session ready.</p></Shell>;
 
  if(phase==='intro')return <Shell>
   <section className="valu-assessment-intro" aria-labelledby="valu-taster-intro-title">
-   <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU INDEX</div>
+   <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU TASTER</div>
    <div className="valu-intro-rule"><span/></div>
    <p className="valu-intro-overline">A CLEARER VIEW OF YOUR PROFESSIONAL CAPABILITY</p>
    <h1 id="valu-taster-intro-title" className="valu-intro-title">Your professional worth deserves to be <em>understood.</em></h1>
@@ -258,7 +258,7 @@ export default function VALUIndexV4GateNext(){
    <div className="valu-intro-benefits">
     <div><span className="valu-intro-check">✓</span><span><strong>Simple, considered choices</strong><small>Choose the response that best reflects your experience.</small></span></div>
     <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>You can leave and return without losing saved responses.</small></span></div>
-    <div><span className="valu-intro-check">✓</span><span><strong>A useful next step</strong><small>Your snapshot helps you understand where to continue.</small></span></div>
+    <div><span className="valu-intro-check">✓</span><span><strong>A useful next step</strong><small>Your taster helps you understand where to continue.</small></span></div>
    </div>
    <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU TASTER <span>→</span></button>
    <p className="valu-intro-assurance">Your responses are handled securely and are not shown as a public profile.</p>
@@ -269,7 +269,7 @@ export default function VALUIndexV4GateNext(){
   <VALUAssessmentJourney stage="account" />
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
-   <h1 className="valu-results-title" style={S.h1}>Your snapshot is <em>saved.</em></h1>
+   <h1 className="valu-results-title" style={S.h1}>Your taster is <em>saved.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
@@ -291,20 +291,20 @@ export default function VALUIndexV4GateNext(){
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
    <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
-    <div style={S.resultRow}><div style={S.dimensionCode}>YOUR SNAPSHOT</div><h2 style={S.scoreName}>Saved</h2><strong style={S.scoreValue}>✓</strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>YOUR TASTER</div><h2 style={S.scoreName}>Saved</h2><strong style={S.scoreValue}>✓</strong></div>
     <div style={S.resultRow}><div style={S.dimensionCode}>NEXT STEP</div><h2 style={S.scoreName}>Account setup</h2><strong style={S.scoreValue}>→</strong></div>
    </div>
   </section>
   <section className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
    <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Secure your Valoria account.</h2></div><div style={S.formTime}>ACCOUNT SETUP</div></div>
-   <p style={S.formIntro}>Your registration details and snapshot are saved. Continue to create your Valoria account, confirm your email and access your dashboard.</p>
+   <p style={S.formIntro}>Your registration details and taster are saved. Continue to create your Valoria account, confirm your email and access your dashboard.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED NAME</div><h2 style={S.scoreName}>{name}</h2></div>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED EMAIL</div><h2 style={{...S.scoreName,overflowWrap:'anywhere'}}>{email}</h2></div>
    </div>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR SNAPSHOT…':'CONTINUE TO ACCOUNT CREATION →'}</button>
-   <div style={S.saveNote}><span>✓</span> Your registration and snapshot remain connected.</div>
+   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO ACCOUNT CREATION →'}</button>
+   <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
   </section>
   <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
