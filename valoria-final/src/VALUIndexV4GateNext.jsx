@@ -260,7 +260,7 @@ export default function VALUIndexV4GateNext(){
   <VALUAssessmentJourney stage="taster" currentQuestion={placeInTaster} preview={IS_PREVIEW} />
   <div className="valu-taster-top" style={S.top}>
    <div><div style={S.eyebrow}>VALU TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div>
-   <div className="valu-taster-save-state"><span>✓</span> {saving ? 'SAVING' : 'SAVED'}</div>
+   <div className="valu-taster-save-state"><span>✓</span> {IS_PREVIEW ? 'PREVIEW ONLY' : saving ? 'SAVING' : 'SAVED'}</div>
   </div>
   <div className="valu-taster-progress" role="progressbar" aria-label="Taster progress" aria-valuenow={sessionProgress} aria-valuemin="0" aria-valuemax="100" style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
