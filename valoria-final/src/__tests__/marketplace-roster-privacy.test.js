@@ -52,3 +52,15 @@ describe('public roster read privilege', () => {
     expect(migration).toMatch(/GRANT SELECT ON TABLE public\.marketplace_public_roster TO anon, authenticated/i)
   })
 })
+
+
+describe('public homepage RPC permissions', () => {
+  test('only safe public homepage projection RPCs are executable by public roles', () => {
+    const migration = fs.readFileSync(
+      path.join(process.cwd(), 'supabase/migrations/20261107120000_grant_public_homepage_rpc_execution.sql'),
+      'utf8'
+    )
+    expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\\.get_homepage_professional_previews_v2\\(\\) TO anon, authenticated/i)
+    expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\\.get_homepage_professional_count\\(\\) TO anon, authenticated/i)
+  })
+})
