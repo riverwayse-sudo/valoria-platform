@@ -19,7 +19,8 @@ describe("Assessment version provenance contract", () => {
     expect(migration).toContain("SET assessment_version = 'LEGACY_UNVERSIONED'");
     expect(migration).toContain("WHERE assessment_version IS NULL");
     expect(migration).not.toContain("VALU-v4.0");
-    expect(migration).not.toContain("FULL_VALU_V1");
+    expect(submit).toContain('const FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER"');
+    expect(submit).toContain("assessment_version: FULL_ASSESSMENT_VERSION");
   });
 
   test("future rows cannot omit assessment version provenance", () => {
