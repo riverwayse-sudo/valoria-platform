@@ -57,7 +57,7 @@ describe("registration-first VALU taster identity contract", () => {
     expect(schema).toContain("before insert on public.taster_progress");
     expect(schema).toContain("before insert on public.taster_sessions");
     expect(schema).toContain("lead_capture_id is required before a new taster record can be created");
-    expect(submitApi).toContain("Complete your registration before submitting your snapshot.");
+    expect(submitApi).toContain("Complete your registration before submitting your taster.");
   });
 
   test("account creation remains a separate post-taster conversion step", () => {
