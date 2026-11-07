@@ -1,6 +1,20 @@
 name: Deploy Valoria assessment Worker to staging
 
 on:
+  pull_request:
+    branches:
+      - experience/staging-redesign-20261106
+    types: [opened, synchronize, reopened]
+    paths:
+      - "valoria-final/api/**"
+      - "valoria-final/lib/**"
+      - "valoria-final/src/**"
+      - "valoria-final/worker-tests/**"
+      - "valoria-final/worker.js"
+      - "valoria-final/wrangler.jsonc"
+      - "valoria-final/package.json"
+      - "valoria-final/package-lock.json"
+      - ".github/workflows/cloudflare-assessment-staging-deploy.yml"
   push:
     branches:
       - experience/staging-redesign-20261106
@@ -14,6 +28,7 @@ on:
       - "valoria-final/package.json"
       - "valoria-final/package-lock.json"
       - ".github/workflows/cloudflare-assessment-staging-deploy.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -24,6 +39,7 @@ concurrency:
 
 jobs:
   deploy-staging:
+    if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'deploy/staging-')) }}
     name: Test, build and deploy isolated staging assessment Worker
     runs-on: ubuntu-latest
     defaults:
