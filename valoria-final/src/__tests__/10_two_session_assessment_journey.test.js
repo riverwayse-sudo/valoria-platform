@@ -153,10 +153,10 @@ describe("independent 58-question formal assessment", () => {
     expect(api).not.toContain("assessment_version");
   });
 
-  test("the shared journey indicator distinguishes registration, snapshot, account and full assessment", () => {
+  test("the shared journey indicator distinguishes registration, taster, account and full assessment", () => {
     const source = readSource("VALUAssessmentJourney.jsx");
     expect(source).toContain("title: 'Register'");
-    expect(source).toContain("title: 'Snapshot'");
+    expect(source).toContain("title: 'Taster'");
     expect(source).toContain("title: 'Account'");
     expect(source).toContain("title: 'Assessment'");
     expect(source).toContain("YOUR VALU JOURNEY");
