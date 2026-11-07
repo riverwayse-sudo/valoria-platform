@@ -2,8 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './valu-results-responsive.css';
 import VALUAssessmentJourney from './VALUAssessmentJourney.jsx';
 
-const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1';
-
 const API_BASE = (() => {
   const configuredOrigin = String(import.meta.env.VITE_VALU_API_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
@@ -37,13 +35,18 @@ const COLORS={P:'#C9A84C',R:'#C9A84C',I:'#C9A84C',M:'#C9A84C',E:'#C9A84C'};
 const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS='#D4C9A8', DIM='rgba(250,250,247,.68)';
 
 const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
+const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 
-// The nine-question directional taster is a separate instrument from the
-// formal 58-question VALU assessment. Its answers are saved independently,
-// never seed formal answers, and never produce an official VALU Index.
+// Entry flow for the VALU journey.
+// Participants begin with a short capability snapshot before account setup.
+// Snapshot responses are stored and scored independently; they never populate
+// the formal VALU assessment response record.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
- const [name,setName]=useState(IS_PREVIEW?'Staging Preview Participant':''),[role,setRole]=useState(IS_PREVIEW?'Product Experience Reviewer':''),[experience,setExperience]=useState(IS_PREVIEW?'9-15':''),[email,setEmail]=useState(IS_PREVIEW?'preview@example.com':'');
+ const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
+ const [organisation,setOrganisation]=useState(''),[interest,setInterest]=useState('');
+ const [marketingConsent,setMarketingConsent]=useState(false),[privacyAcknowledged,setPrivacyAcknowledged]=useState(false);
+ const [registrationKey,setRegistrationKey]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
  const [progressToken,setProgressToken]=useState('');
@@ -54,7 +57,7 @@ export default function VALUIndexV4GateNext(){
 
  const q=TASTER_QUESTIONS[current];
  const sessionProgress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
- const placeInTaster=current+1;
+ const placeInAssessment=current+1;
 
  useEffect(()=>()=>{timer.current&&clearTimeout(timer.current)},[]);
 
@@ -65,16 +68,12 @@ export default function VALUIndexV4GateNext(){
   return payload;
  }
 
- // Direct entry: restore a resumable session, or begin one anonymously.
+ // Restore a registered session, or require registration before any new taster begins.
  useEffect(()=>{
   if(startedRef.current)return;
   startedRef.current=true;
   let cancelled=false;
   async function begin(){
-   if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('intro');return;}
-   // A participant who already completed the taster session and has a pending
-   // assessment reference must not start a second, duplicate session. Send them
-   // to the authenticated continuation instead.
    let pending='';
    try{pending=localStorage.getItem('pending_taster_id')||''}catch{}
    if(pending){
@@ -83,40 +82,36 @@ export default function VALUIndexV4GateNext(){
    }
    let stored='';
    try{stored=localStorage.getItem(RESUME_TOKEN_KEY)||''}catch{}
-   try{
-    if(stored){
+   if(stored){
+    try{
      const loaded=await postProgress({action:'load',resume_token:stored});
      if(cancelled)return;
      const p=loaded.progress||{};
      setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
+     setProgressToken(stored);
+     setPrivacyAcknowledged(Boolean(p.lead_capture_id));
      const savedAnswers=p.answers&&typeof p.answers==='object'?p.answers:{};
      setAnswers(savedAnswers);
      setSubmissionKey(p.submission_key||'');
-     setProgressToken(stored);
      const answeredCount=Object.keys(savedAnswers).length;
      const complete=Number(p.current_question)===TASTER_QUESTIONS.length&&answeredCount===TASTER_QUESTIONS.length&&!!p.submission_key;
-     if(complete){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
+     if(p.lead_capture_id){
+      if(complete){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
+      setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
+      setPhase('session1');
+      return;
+     }
+     // Legacy in-progress sessions are preserved. Their owner registers once
+     // before continuing, which attaches the existing progress to a lead ID.
+     try{setRegistrationKey(localStorage.getItem(SIGNUP_KEY_KEY)||'')}catch{}
      setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
-     setPhase('session1');
+     setPhase('registration');
      return;
+    }catch{
+     try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
     }
-   }catch{
-    // A stale or expired resume token must not block entry: discard it and
-    // start a fresh anonymous session below.
-    try{localStorage.removeItem(RESUME_TOKEN_KEY)}catch{}
    }
-   try{
-    const created=await postProgress({action:'init'});
-    if(cancelled)return;
-    if(!created.resume_token)throw new Error('Your assessment could not be started. Please retry.');
-    try{localStorage.setItem(RESUME_TOKEN_KEY,created.resume_token)}catch{}
-    setProgressToken(created.resume_token);
-    setPhase('intro');
-   }catch(err){
-    if(cancelled)return;
-    setError(err?.message||'We could not start your assessment. Please refresh to retry.');
-    setPhase('session1');
-   }
+   if(!cancelled)setPhase('registration');
   }
   begin();
   return ()=>{cancelled=true};
@@ -124,17 +119,11 @@ export default function VALUIndexV4GateNext(){
 
  async function answer(index){
   const next={...answers,[current]:index};
-  const isLast=current===TASTER_QUESTIONS.length-1;
   setAnswers(next);
   setSaving(true);
   setError('');
-  if(IS_PREVIEW){
-   if(isLast)setPhase('break');else setCurrent(v=>v+1);
-   setSaving(false);
-   setSelected(null);
-   return;
-  }
   try{
+   const isLast=current===TASTER_QUESTIONS.length-1;
    const response=await postProgress({
     action:'save',
     resume_token:progressToken,
@@ -159,41 +148,102 @@ export default function VALUIndexV4GateNext(){
 
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
- const identityValid=!!(name.trim()&&role.trim()&&experience&&email.trim());
+ const identityValid=!!(name.trim()&&role.trim()&&experience&&email.trim()&&privacyAcknowledged);
 
- async function createAccount(e){
+ async function registerForTaster(e){
   e.preventDefault();
-  if(IS_PREVIEW){window.location.assign('/valu/assessment/?full=1&preview=1');return;}
   if(!identityValid||saving)return;
   setSaving(true);
   setError('');
   try{
-   // Attach the account identity to the saved session, then persist the snapshot.
-   await postProgress({action:'identify',resume_token:progressToken,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
-   const key=submissionKey||(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'');
+   const token=progressToken||(()=>{
+    const bytes=new Uint8Array(32);
+    window.crypto.getRandomValues(bytes);
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+   })();
+   const signupKey=registrationKey||window.crypto.randomUUID();
+   setProgressToken(token);
+   setRegistrationKey(signupKey);
+   try{localStorage.setItem(RESUME_TOKEN_KEY,token);localStorage.setItem(SIGNUP_KEY_KEY,signupKey)}catch{}
+   const data=await postProgress({
+    action:'register',resume_token:token,signup_key:signupKey,
+    name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),
+    organisation:organisation.trim(),interest,
+    marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
+   });
+   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU journey. Please retry.');
+   const answeredCount=Object.keys(answers).length;
+   const complete=current===TASTER_QUESTIONS.length-1&&answeredCount===TASTER_QUESTIONS.length&&!!submissionKey;
+   setPhase(complete?'break':answeredCount?'session1':'intro');
+  }catch(err){
+   setError(err?.message||'We could not save your registration. Please retry.');
+  }finally{
+   setSaving(false);
+  }
+ }
+
+ async function createAccount(e){
+  e.preventDefault();
+  if(!progressToken||saving)return;
+  setSaving(true);
+  setError('');
+  try{
+   const key=submissionKey||(typeof window.crypto!=='undefined'&&window.crypto.randomUUID?window.crypto.randomUUID():'');
    if(!key)throw new Error('Your browser could not create a secure submission reference. Refresh the page and try again.');
    setSubmissionKey(key);
    const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:TASTER_QUESTIONS.length,submission_key:key});
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
    const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your taster response could not be saved. Please retry.');
+   if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved. Please retry.');
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
    setTasterId(data.taster_id);
    try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
-   await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key}).catch(()=>{});
-   try{localStorage.removeItem(RESUME_TOKEN_KEY)}catch{}
+   await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
+   try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
   }catch(err){
-   setError(err?.message||'Your account could not be created yet. Your saved responses are intact — please retry.');
+   setError(err?.message||'Your snapshot could not be saved yet. Your registered details and responses remain intact — please retry.');
    setSaving(false);
   }
  }
 
- if(phase==='loading')return <Shell preview={IS_PREVIEW}><div style={S.eyebrow}>VALU TASTER</div><h1 style={S.h1}>Preparing your taster…</h1><p style={S.p}>We are preparing your taster experience.</p></Shell>;
+ if(phase==='registration')return <Shell>
+  <VALUAssessmentJourney stage="registration" />
+  <section className="valu-results-header" style={S.resultsHeader}>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> YOUR VALU JOURNEY</div>
+   <h1 className="valu-results-title" style={S.h1}>Start with your <em>details.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>Register before beginning your snapshot. This saves your contact and professional details so your Valoria journey stays connected. You will secure your Valoria account after your snapshot.</p>
+  </section>
+  <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
+   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Tell us a little about yourself.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
+   <p style={S.formIntro}>Your details are used to save your progress and support relevant follow-up from Valoria.</p>
+   <div className="valu-entry-form-grid" style={S.grid}>
+    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
+    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" maxLength={160}/></Field>
+   </div>
+   <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
+   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>\n   <p style={S.note}>If you already have a Valoria account, use the email address associated with it so your snapshot can be connected to that account.</p>
+   <Field label="ORGANISATION (OPTIONAL)"><input style={S.input} value={organisation} onChange={e=>setOrganisation(e.target.value)} placeholder="Your organisation" autoComplete="organization" maxLength={180}/></Field>
+   <Field label="WHAT ARE YOU MOST INTERESTED IN? (OPTIONAL)"><select style={S.input} value={interest} onChange={e=>setInterest(e.target.value)}><option value="">Select an interest</option><option value="Professional visibility">Professional visibility</option><option value="Career and leadership opportunities">Career and leadership opportunities</option><option value="Speaking and facilitation">Speaking and facilitation</option><option value="Learning and development">Learning and development</option><option value="Other">Other</option></select></Field>
+   <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
+    <input type="checkbox" required checked={privacyAcknowledged} onChange={e=>setPrivacyAcknowledged(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
+    <span>I acknowledge that Valoria will process these details to administer my assessment and manage my journey. Read the <a href={(SITE_BASE||'https://valoriainstitute.com')+'/privacy'} style={{color:GOLD,textDecoration:'underline'}}>Privacy Notice</a>.</span>
+   </label>
+   <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
+    <input type="checkbox" checked={marketingConsent} onChange={e=>setMarketingConsent(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
+    <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
+   </label>
+   {error&&<div style={S.error} role="alert">{error}</div>}
+   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'REGISTER & BEGIN MY SNAPSHOT →'}</button>
+   <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved snapshot.</div>
+  </form>
+ </Shell>;
 
- if(phase==='intro')return <Shell mode="taster">
+ if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU</div><h1 style={S.h1}>Preparing your snapshot…</h1><p style={S.p}>We are getting your session ready.</p></Shell>;
+
+ if(phase==='intro')return <Shell>
   <section className="valu-assessment-intro" aria-labelledby="valu-taster-intro-title">
    <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU INDEX</div>
    <div className="valu-intro-rule"><span/></div>
@@ -202,77 +252,72 @@ export default function VALUIndexV4GateNext(){
    <p className="valu-intro-copy">Begin with a short reflection on how you work, relate and create value. Your responses help establish a starting point for your Valoria journey.</p>
    <div className="valu-intro-benefits">
     <div><span className="valu-intro-check">✓</span><span><strong>Simple, considered choices</strong><small>Choose the response that best reflects your experience.</small></span></div>
-    <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>{IS_PREVIEW ? 'This staging preview is temporary and does not save responses.' : 'You can leave and return without losing saved responses.'}</small></span></div>
+    <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>You can leave and return without losing saved responses.</small></span></div>
     <div><span className="valu-intro-check">✓</span><span><strong>A useful next step</strong><small>Your snapshot helps you understand where to continue.</small></span></div>
    </div>
    <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU TASTER <span>→</span></button>
-   <p className="valu-intro-assurance">{IS_PREVIEW ? 'STAGING PREVIEW · NO ACCOUNT OR PARTICIPANT RECORD IS CREATED.' : 'Your responses are handled securely and are not shown as a public profile.'}</p>
+   <p className="valu-intro-assurance">Your responses are handled securely and are not shown as a public profile.</p>
   </section>
  </Shell>;
 
- if(phase==='break')return <Shell preview={IS_PREVIEW}>
-  <VALUAssessmentJourney stage="account" preview={IS_PREVIEW} />
+ if(phase==='break')return <Shell>
+  <VALUAssessmentJourney stage="account" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> {IS_PREVIEW ? 'STAGING TASTER PREVIEW' : 'VALU TASTER SAVED'} <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
-   <h1 className="valu-results-title" style={S.h1}>{IS_PREVIEW ? <>Your taster is <em>complete.</em></> : <>Your taster is <em>saved.</em></>}</h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>{IS_PREVIEW ? 'This is a local-only simulation. No answers, account details, or participant records are stored.' : 'Your taster responses are saved as a directional starting point. Complete your full assessment to receive your official VALU Index.'}</p>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <h1 className="valu-results-title" style={S.h1}>Your snapshot is <em>saved.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your taster</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'These answers exist only in this browser session.' : 'Your taster responses are saved to your Valoria journey.'}</p>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU taster</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>{IS_PREVIEW ? '02 · PREVIEW ONLY' : '02 · YOU ARE HERE'}</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>{IS_PREVIEW ? 'Account setup disabled' : 'Create your account'}</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'Account creation and email confirmation are disabled in this simulation. Continue to explore your full assessment.' : 'Add your details now. You’ll set your password and confirm your email in the next step.'}</p>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · YOU ARE HERE</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Create your account</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Add your details now. You’ll set your password and confirm your email in the next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Start the full assessment</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW?'Continue to your full assessment preview.':'Confirm your email and return to your dashboard to continue your full assessment.'}</p>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue with Valoria</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, then return to your dashboard to continue.</p>
    </div>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
    <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
-    <div style={S.resultRow}><div style={S.dimensionCode}>TASTER</div><h2 style={S.scoreName}>Completed</h2><strong style={S.scoreValue}>Complete</strong></div>
-    <div style={S.resultRow}><div style={S.dimensionCode}>FORMAL ASSESSMENT</div><h2 style={S.scoreName}>Ready to begin</h2><strong style={S.scoreValue}>Ready</strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>YOUR SNAPSHOT</div><h2 style={S.scoreName}>Saved</h2><strong style={S.scoreValue}>✓</strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>NEXT STEP</div><h2 style={S.scoreName}>Account setup</h2><strong style={S.scoreValue}>→</strong></div>
    </div>
   </section>
-  <form onSubmit={createAccount} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · NO ACCOUNT CREATED' : 'ACCOUNT SETUP'}</div><h2 style={S.formTitle}>{IS_PREVIEW ? 'Explore your full assessment.' : 'Let’s keep your progress connected.'}</h2></div><div style={S.formTime}>FULL ASSESSMENT</div></div>
-   <p style={S.formIntro}>{IS_PREVIEW ? 'This is a local-only staging simulation. The sample identity below is not a real account, and no information is sent or stored.' : 'Use an email address you can access. We’ll connect your progress to your account, then guide you through password setup and email confirmation before returning you to your dashboard.'}</p>
+  <section className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
+   <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Secure your Valoria account.</h2></div><div style={S.formTime}>ACCOUNT SETUP</div></div>
+   <p style={S.formIntro}>Your registration details and snapshot are saved. Continue to create your Valoria account, confirm your email and access your dashboard.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
-    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" disabled={IS_PREVIEW}/></Field>
-    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" disabled={IS_PREVIEW}/></Field>
+    <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED NAME</div><h2 style={S.scoreName}>{name}</h2></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED EMAIL</div><h2 style={{...S.scoreName,overflowWrap:'anywhere'}}>{email}</h2></div>
    </div>
-   <Field label="PROFESSIONAL EXPERIENCE"><select required disabled={IS_PREVIEW} style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" disabled={IS_PREVIEW}/></Field>
-   {error&&<div style={S.error}>{error}</div>}
-   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':IS_PREVIEW?'OPEN FULL ASSESSMENT PREVIEW →':'SAVE MY DETAILS & CONTINUE →'}</button>
-   <div style={S.saveNote}><span>✓</span> {IS_PREVIEW ? 'No account is created and no data is saved.' : 'Your taster responses are saved.'}</div>
-  </form>
-  <p style={S.note}>{IS_PREVIEW ? 'STAGING SIMULATION ONLY · No official VALU Index, account, or participant record is created.' : 'Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.'}</p>
+   {error&&<div style={S.error} role="alert">{error}</div>}
+   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR SNAPSHOT…':'CONTINUE TO ACCOUNT CREATION →'}</button>
+   <div style={S.saveNote}><span>✓</span> Your registration and snapshot remain connected.</div>
+  </section>
+  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
 
- return <Shell mode="taster" preview={IS_PREVIEW}>
-  <VALUAssessmentJourney stage="taster" currentQuestion={placeInTaster} preview={IS_PREVIEW} />
-  <div className="valu-taster-top" style={S.top}>
-   <div><div style={S.eyebrow}>VALU TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div>
-   <div className="valu-taster-save-state"><span>✓</span> {IS_PREVIEW ? 'PREVIEW ONLY' : saving ? 'SAVING' : 'SAVED'}</div>
-  </div>
-  <div className="valu-taster-progress" role="progressbar" aria-label="Taster progress" aria-valuenow={sessionProgress} aria-valuemin="0" aria-valuemax="100" style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
+ return <Shell mode="taster">
+  <VALUAssessmentJourney stage="taster" currentQuestion={placeInAssessment} />
+  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div className="valu-taster-save-state"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</div></div>
+  <div className="valu-taster-progress" role="progressbar" aria-label="Taster progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={sessionProgress} style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
-  {current > 0 && <button type="button" className="valu-taster-back" onClick={()=>{setCurrent(value=>Math.max(0,value-1));setSelected(null)}}>← REVIEW PREVIOUS RESPONSE</button>}
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
+  {current>0&&<button type="button" className="valu-assessment-back" disabled={saving||selected!==null} onClick={()=>setCurrent(value=>Math.max(0,value-1))}>← REVIEW PREVIOUS RESPONSE</button>}
   {error&&<div style={S.error}>{error}</div>}
-  <p style={S.note}>{IS_PREVIEW ? 'STAGING PREVIEW · NOT SAVED' : 'Your progress is saved.'}</p>
+  <p style={S.note}>Your progress is saved as you go.</p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
 function StepBar({active}){return null}
-function Shell({children,mode=''}){return <main className={'valu-assessment-page '+(mode?'valu-assessment-'+mode:'')} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
+function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 const S={
  page:{minHeight:'calc(100dvh - 65px)',height:'auto',background:DARK,color:PARCH,padding:'28px 32px 34px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
