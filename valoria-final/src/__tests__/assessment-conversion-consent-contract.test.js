@@ -20,7 +20,11 @@ describe('assessment conversion and visibility consent contracts', () => {
     expect(source).toContain('valu-assessment-intro')
     expect(source).toContain('role="progressbar"')
     expect(source).toContain('aria-label="Taster progress"')
-    expect(source).toContain('valu-taster-back')
+    expect(source).toContain('valu-assessment-back')
+    expect(source).toContain("phase==='registration'")
+    expect(source).toContain("action:'register'")
+    expect(source).toContain('privacy_acknowledged:privacyAcknowledged')
+    expect(source).toContain('marketing_consent:marketingConsent')
     expect(source).not.toMatch(/of 9|1 of 9|Question \$\{[^}]+\} of/)
   })
 
