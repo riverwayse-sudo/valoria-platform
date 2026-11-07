@@ -1,8 +1,8 @@
 begin;
 
--- The original RPC definitions contained a double-escaped dot in their email
--- regex. Replace the function source in-place so valid email addresses pass
--- the database-level check. Keep every other function statement unchanged.
+-- Correct the double-escaped dot in both registration RPC email patterns.
+-- Recreate the existing functions from their current definitions, changing
+-- only the regex escape so valid email addresses pass database validation.
 do $migration$
 declare
   v_function record;
@@ -20,7 +20,7 @@ begin
   loop
     v_definition := pg_catalog.pg_get_functiondef(v_function.oid);
 
-    if pg_catalog.position(E'\\\\.' in v_definition) = 0 then
+    if pg_catalog.strpos(v_definition, E'\\\\.') = 0 then
       raise exception 'Expected escaped email dot not found in function %', v_function.oid;
     end if;
 
