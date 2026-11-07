@@ -87,9 +87,11 @@ jobs:
           status="$(curl -sS -o /tmp/valu-cors-response -w '%{http_code}' -X OPTIONS "$base/api/taster-progress" \
             -H 'Origin: https://valoria-staging-site.riverwayse.workers.dev' \
             -H 'Access-Control-Request-Method: POST' \
-            -H 'Access-Control-Request-Headers: authorization,content-type')"
+            -H 'Access-Control-Request-Headers: content-type,idempotency-key')"
           if [[ "$status" != "204" ]]; then
             echo "Assessment API CORS preflight returned HTTP $status"
             cat /tmp/valu-cors-response || true
             exit 1
           fi
+          grep -iq '^access-control-allow-origin: https://valoria-staging-site.riverwayse.workers.dev' /tmp/valu-cors-headers
+          grep -iq '^access-control-allow-headers: Content-Type, Idempotency-Key' /tmp/valu-cors-headers
