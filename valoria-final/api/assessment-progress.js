@@ -1,4 +1,5 @@
 import { verifyValuHandoffTokenEdge } from "../lib/valu-handoff-token-edge.js";
+import { QUESTIONS } from "../src/questions.js";
 import { withEdgeCors } from "./_cors.js";
 
 export const config = { runtime: "edge" };
@@ -109,7 +110,6 @@ async function sendReminder(row, reminderNumber) {
 
   const dashboardUrl = getDashboardUrl();
   if (!dashboardUrl) return false;
-  const remaining = Math.max(0, row.total_questions - row.current_question);
   const subject = reminderNumber === 1
     ? "Your VALU assessment is waiting for you"
     : "Continue your VALU journey";
@@ -123,8 +123,7 @@ async function sendReminder(row, reminderNumber) {
     </p>
     <div style="margin:28px 0;padding:20px;border:1px solid rgba(201,168,76,.22);background:rgba(201,168,76,.06);border-radius:8px">
       <div style="font-size:11px;letter-spacing:.14em;color:#C9A84C;font-weight:700">YOUR PROGRESS</div>
-      <div style="font-size:26px;margin-top:8px">${row.current_question} / ${row.total_questions} questions</div>
-      <div style="color:rgba(247,244,238,.55);font-size:13px;margin-top:6px">${remaining} remaining</div>
+      <div style="font-size:16px;line-height:1.6;margin-top:8px">Your responses are saved. Continue where you left off when you return.</div>
     </div>
     <a href="${dashboardUrl}" style="display:inline-block;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-weight:700;letter-spacing:.1em;font-size:12px;padding:16px 24px;border-radius:999px">RETURN TO MY VALORIA DASHBOARD →</a>
     <p style="color:rgba(247,244,238,.35);font-size:11px;line-height:1.7;margin-top:34px">Your progress is retained as part of your Valoria journey. Sign in to your account to see the next step. If you have already completed the assessment, no further action is required.</p>
@@ -303,9 +302,22 @@ async function baseHandler(req) {
     return json({ error: "Invalid assessment progress payload." }, 400);
   }
   if (!identityHash || typeof identityHash !== "string") return json({ error: "Assessment identity is required." }, 400);
-  if (currentQuestion < 0 || currentQuestion > totalQuestions || totalQuestions < 1 || totalQuestions > 100) return json({ error: "Invalid assessment position." }, 400);
-  if (answers && typeof answers !== "object") return json({ error: "Invalid answers." }, 400);
-  if (timings && !Array.isArray(timings)) return json({ error: "Invalid timings." }, 400);
+  if (totalQuestions !== QUESTIONS.length || currentQuestion < 0 || currentQuestion > QUESTIONS.length) {
+    return json({ error: "The formal assessment must contain all 58 questions." }, 400);
+  }
+  if (!answers || typeof answers !== "object" || Array.isArray(answers)) return json({ error: "Invalid formal assessment answers." }, 400);
+  const answerKeys = Object.keys(answers);
+  if (answerKeys.length > QUESTIONS.length || answerKeys.some(key => {
+    const position = Number(key);
+    const value = answers[key];
+    return !Number.isInteger(position) || position < 0 || position >= QUESTIONS.length
+      || !Number.isInteger(value) || value < 0 || value >= QUESTIONS[position].options.length;
+  })) return json({ error: "Invalid formal assessment answer map." }, 400);
+  if (timings && !Array.isArray(timings)) return json({ error: "Invalid formal assessment timings." }, 400);
+  const timingValues = Array.isArray(timings) ? timings : [];
+  if (timingValues.length > QUESTIONS.length || timingValues.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) {
+    return json({ error: "Invalid formal assessment timings." }, 400);
+  }
   if (typeof tasterId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
     return json({ error: "A valid completed VALU snapshot is required." }, 400);
   }
