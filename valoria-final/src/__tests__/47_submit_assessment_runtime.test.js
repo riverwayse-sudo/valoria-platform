@@ -231,7 +231,7 @@ describe("Full assessment submission runtime contract", () => {
     await loadHandler()(request, res);
 
     expect(res.statusCode).toBe(400);
-    expect(res.body.error).toContain("All 58 formal assessment answers are required");
+    expect(res.body.error).toContain("Complete the full VALU assessment before submitting");
   });
 
   test("a full answer map with partial timing metadata is accepted for resumed sessions", async () => {
