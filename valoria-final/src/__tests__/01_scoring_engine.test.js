@@ -163,16 +163,10 @@ describe("computeWeightedIndex", () => {
 // ── SECTION 3: getDesignation ─────────────────────────────────────────────
 describe("getDesignation", () => {
   const cases = [
-    [100, "Force to Align With"],
-    [90, "Force to Align With"],
-    [89, "Force to Align With"],
-    [80, "Force to Align With"],
-    [79, "Emerging Force"],
-    [65, "Emerging Force"],
-    [64, "Developing Professional"],
-    [50, "Developing Professional"],
-    [49, "Building Foundations"],
-    [35, "Building Foundations"],
+    [100, "Elite"], [90, "Elite"],
+    [89, "Distinguished"], [75, "Distinguished"],
+    [74, "Proficient"], [55, "Proficient"],
+    [54, "Standard"], [35, "Standard"],
   ];
 
   test.each(cases)("score %i points → %s", (score, expectedName) => {
@@ -186,12 +180,11 @@ describe("getDesignation", () => {
 
   test("returns a designation object with its minimum points boundary", () => {
     const designation = getDesignation(72);
-    expect(designation).toHaveProperty("min", 65);
-    expect(designation).toHaveProperty("name", "Emerging Force");
+    expect(designation).toHaveProperty("min", 55);
+    expect(designation).toHaveProperty("name", "Proficient");
   });
 });
 
-// ── SECTION 4: getPathway ─────────────────────────────────────────────────
 describe("getPathway", () => {
   const cases = [
     [100, "Advanced Development Pathway"],
