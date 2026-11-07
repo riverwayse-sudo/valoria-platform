@@ -8,6 +8,7 @@ import { QUESTIONS } from '../src/questions.js';
 import { computeFingerprint } from '../src/lockEngine.js';
 import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
+import { applyCors } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -241,26 +242,6 @@ async function verifyHandoffRequest(body, res) {
     expires_at: handoff.exp,
     identity: { taster_id: taster.id, name: taster.name || '', role: taster.role || '', experience: taster.experience || '' },
   });
-}
-
-const ALLOWED_ORIGINS = new Set([
-  'https://valoriainstitute.com',
-  'https://www.valoriainstitute.com',
-  'https://assessment.valoriainstitute.com',
-  'https://valoria-assessment.riverwayse.workers.dev',
-]);
-
-function applyCors(req, res) {
-  const origin = req.headers.origin;
-  res.setHeader('Vary', 'Origin');
-  if (typeof origin === 'string' && ALLOWED_ORIGINS.has(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Idempotency-Key');
-    res.setHeader('Access-Control-Max-Age', '600');
-    return true;
-  }
-  return false;
 }
 
 export default async function handler(req, res) {
