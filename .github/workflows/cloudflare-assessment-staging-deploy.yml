@@ -1,5 +1,5 @@
 name: Deploy Valoria assessment Worker to staging
-# Staging refresh: validate and deploy the current experience branch without touching production.
+# Controlled refresh: run the existing isolated staging checks against the current experience branch.
 
 on:
   pull_request:
@@ -50,18 +50,23 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: valoria-final/package-lock.json
+
       - name: Install locked dependencies
         run: npm ci
+
       - name: Test Worker routing and response adapters
         run: node --test ./worker-tests/cloudflare-worker.node.mjs
+
       - name: Run platform unit tests
         run: npm test -- --runInBand
+
       - name: Build isolated staging assessment assets
         run: npm run build
         env:
@@ -69,6 +74,7 @@ jobs:
           VITE_VALU_PREVIEW: "0"
           VITE_VALU_API_ORIGIN: "https://valoria-staging-assessment.riverwayse.workers.dev"
           VITE_VALU_SITE_ORIGIN: "https://valoria-staging-site.riverwayse.workers.dev"
+
       - name: Validate Cloudflare deployment credentials
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
@@ -78,11 +84,13 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy only the staging assessment Worker
         run: npx --yes wrangler@4.156.0 deploy --config wrangler.jsonc --env staging
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Smoke-test assessment entry and site-origin CORS
         shell: bash
         run: |
@@ -90,7 +98,14 @@ jobs:
           base="https://valoria-staging-assessment.riverwayse.workers.dev"
           curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base/remaining" -o /tmp/valu-assessment-entry.html
           grep -q 'VALU' /tmp/valu-assessment-entry.html
-          status="$(curl -sS -D /tmp/valu-cors-headers -o /tmp/valu-cors-response -w '%{http_code}' -X OPTIONS "$base/api/taster-progress" -H 'Origin: https://valoria-staging-site.riverwayse.workers.dev' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type,idempotency-key')"
-          if [[ "$status" != "204" ]]; then echo "Assessment API CORS preflight returned HTTP $status"; cat /tmp/valu-cors-response || true; exit 1; fi
+          status="$(curl -sS -D /tmp/valu-cors-headers -o /tmp/valu-cors-response -w '%{http_code}' -X OPTIONS "$base/api/taster-progress" \
+            -H 'Origin: https://valoria-staging-site.riverwayse.workers.dev' \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: content-type,idempotency-key')"
+          if [[ "$status" != "204" ]]; then
+            echo "Assessment API CORS preflight returned HTTP $status"
+            cat /tmp/valu-cors-response || true
+            exit 1
+          fi
           grep -iq '^access-control-allow-origin: https://valoria-staging-site.riverwayse.workers.dev' /tmp/valu-cors-headers
           grep -iq '^access-control-allow-headers: Content-Type, Idempotency-Key' /tmp/valu-cors-headers
