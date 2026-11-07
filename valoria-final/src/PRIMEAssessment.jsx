@@ -880,7 +880,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
                 Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
               </h1>
               <p style={{ fontSize:16, fontWeight:300, color:T.text.tertiary, lineHeight:1.75, margin:"0 0 40px", maxWidth:460, fontFamily:T.font.body }}>
-                55 questions across five PRIME clusters. Designed to surface what you genuinely do — not what you aspire to do.
+                The VALU Index assesses professional capability across the five PRIME clusters. It is designed to surface how you work — not simply what you aspire to do.
               </p>
               <div style={{ display:"flex", background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:T.radius.chip, overflow:"hidden", marginBottom:40, maxWidth:400 }}>
                 {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Always",v:"Free"}].map((s,i)=>(
