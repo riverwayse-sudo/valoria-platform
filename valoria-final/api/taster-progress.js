@@ -56,9 +56,9 @@ export default async function handler(req, res) {
   const action = body.action;
   if (!['init', 'load', 'save', 'identify', 'complete'].includes(action)) return json(res, 400, { error: 'Unsupported progress action.' });
 
-  // Anonymous direct entry: the participant reaches Question 1 before any account
-  // or identity is required, so init establishes a resumable session with no
-  // personal details. Identity is attached later at the session break.
+  // Pre-snapshot registration: init establishes a resumable session, then the
+  // identify action attaches contact and professional details before any
+  // taster answers are accepted. A Valoria account is created after the snapshot.
   if (action === 'init') {
     const resumeToken = randomBytes(32).toString('base64url');
     const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress`, {
@@ -86,8 +86,8 @@ export default async function handler(req, res) {
     const progress = await getProgress(tokenHash);
     if (!progress) return json(res, 404, { error: 'This session has expired or is no longer resumable.' });
 
-    // Attach the account identity captured at the session break. This is a
-    // metadata update only; it never resets saved answers or progress.
+    // Attach the pre-snapshot registration details. This metadata update never
+    // resets saved answers or progress, so the session remains resumable.
     if (action === 'identify') {
       const name = typeof body.name === 'string' ? body.name.trim() : '';
       const role = typeof body.role === 'string' ? body.role.trim() : '';
