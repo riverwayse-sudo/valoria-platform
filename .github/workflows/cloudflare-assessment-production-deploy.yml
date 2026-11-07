@@ -1,6 +1,12 @@
 name: Deploy Valoria assessment Worker to Cloudflare production
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'valoria-final/**'
+      - '.github/workflows/cloudflare-assessment-production-deploy.yml'
   workflow_dispatch:
     inputs:
       confirm_production:
@@ -17,7 +23,7 @@ concurrency:
 
 jobs:
   deploy-production:
-    if: ${{ inputs.confirm_production == 'DEPLOY' }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.confirm_production == 'DEPLOY') || (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-production]')) }}
     name: Test, build, deploy and smoke-test production assessment Worker
     runs-on: ubuntu-latest
     environment: production
@@ -74,6 +80,9 @@ jobs:
           base="https://assessment.valoriainstitute.com"
           curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base/remaining" -o /tmp/valu-production-entry.html
           grep -q 'VALU' /tmp/valu-production-entry.html
+          curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base/valu/assessment/" -o /tmp/valu-production-taster-entry.html
+          grep -qi 'VALU ASSESSMENT' /tmp/valu-production-taster-entry.html
+          grep -qi 'BEGIN MY TASTER' /tmp/valu-production-taster-entry.html
           for spec in "GET /api/process-readiness-queue" "POST /api/sweep-unsent-reports"; do
             method="${spec%% *}"
             route="${spec#* }"
