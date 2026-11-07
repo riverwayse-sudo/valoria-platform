@@ -22,6 +22,7 @@ const SITE_BASE = (() => {
   const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  if (host === 'valoria-staging-assessment.riverwayse.workers.dev') return 'https://valoria-staging-site.riverwayse.workers.dev';
   if (host.endsWith('.workers.dev')) return typeof window !== 'undefined' ? window.location.origin : '';
   if (host.includes('staging')) return 'https://staging.valoriainstitute.com';
   if (host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://valoriainstitute.com';
