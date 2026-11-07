@@ -11,7 +11,7 @@ set search_path = ''
 as $$
 declare
   v_professional_id uuid := auth.uid();
-  v_consent_text text := 'I agree to make my professional profile visible in Valoria’s public Marketplace. I understand that my name, professional headline, selected capabilities and profile details marked for public display may be shown to organisations and people exploring the Marketplace. If I complete the full VALU assessment and meet the relevant eligibility requirements, my VALU Index result and approved capability summary may also appear. I can withdraw this permission at any time by changing my Marketplace visibility in Profile settings.';
+  v_consent_text text := 'I agree to make my professional profile visible in Valoria’s public Marketplace. I understand that my name, professional headline, selected capabilities and profile details marked for public display may be shown to organisations and people exploring the Marketplace. If I complete the full VALU assessment and meet the relevant eligibility requirements, my VALU Index result and approved capability summary may also appear. I can withdraw this permission at any time by changing my Marketplace visibility from Edit Profile.';
 begin
   if v_professional_id is null then
     raise exception 'Authentication required';
