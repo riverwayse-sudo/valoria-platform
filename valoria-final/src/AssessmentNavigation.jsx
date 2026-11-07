@@ -31,7 +31,7 @@ export default function AssessmentNavigation({ progress = null, label = 'VALU IN
   const siteUrl = getSiteUrl();
   return (
     <>
-      {IS_STAGING && <div style={styles.previewNotice}>STAGING PREVIEW · NOT PRODUCTION</div>}
+      {IS_STAGING && <div role="status" aria-label="Staging environment notice" style={styles.previewNotice}>STAGING PREVIEW · NOT PRODUCTION</div>}
       <header style={styles.header} aria-label="Assessment navigation">
         <div className="assessment-nav-inner" style={styles.inner}>
           <a href={`${siteUrl}/`} style={styles.brand} aria-label="Return to Valoria Institute homepage">
