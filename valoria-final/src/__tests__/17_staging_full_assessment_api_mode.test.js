@@ -25,6 +25,10 @@ describe("staging formal assessment uses the isolated API", () => {
     expect(deployWorkflow).toContain("github.event.pull_request.head.repo.full_name == github.repository");
     expect(deployWorkflow).toContain("environment: staging");
     expect(deployWorkflow).toContain("npx --yes wrangler@4.156.0 deploy");
+    expect(deployWorkflow).toContain("Smoke-test assessment entry and site-origin CORS");
+    expect(deployWorkflow).toContain("Access-Control-Request-Headers: content-type,idempotency-key");
+    expect(deployWorkflow).toContain("access-control-allow-origin");
+    expect(deployWorkflow).toContain("access-control-allow-headers");
   });
 
   test("the taster and formal assessment remain separate instruments", () => {
