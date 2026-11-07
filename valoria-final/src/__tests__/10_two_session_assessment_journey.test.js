@@ -137,7 +137,7 @@ describe("separate 58-question full VALU assessment", () => {
       readSource("VALUIndexV4GateNext.jsx"),
       readSource("PRIMEAssessment.jsx"),
       fullSource(),
-      fs.readFileSync(path.join(__dirname, "../../public/Index.html"), "utf8"),
+      fs.readFileSync(path.join(__dirname, "../../index.html"), "utf8"),
     ].join("\\n")
     expect(publicScreens).not.toMatch(/\\b(?:9|55|58)\\s*[- ]?questions?\\b/i)
     expect(publicScreens).not.toMatch(/question\\s*\\{[^}]+\\}\\s*of\\s*\\{/i)
