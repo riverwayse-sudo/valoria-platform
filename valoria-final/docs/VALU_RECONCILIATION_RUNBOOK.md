@@ -155,7 +155,8 @@ The assessment API verifies the token signature, audience, expiry, taster UUID, 
 - Unresolved taster identities requiring manual review: 24.
 - Eligible non-test marketplace roster records: 5 (5 Basic, 0 Full).
 - The 5 linked taster participants are all retained as Basic; the 2 who also have Full assessments remain Basic until their active capability evidence is approved.
-- 11 Full-assessed profiles have not met the Full listing evidence gate; 9 without linked tasters are not listed, while the 2 with tasters remain Basic.
+- 11 non-revoked Full-assessed profiles have exact latest-assessment/profile score and completion-time matches, current expiry, and points above threshold; none currently passes the approved-capability evidence gate. Nine without linked tasters are not listed, while the two with tasters remain Basic.
+- Two revoked Full-assessed profiles remain excluded regardless of score. Five missing profile expiry dates were reconciled to the established 365-day validity period only after exact score and completion-time matches.
 - All 5 Basic records are currently Registered-only pending the participant's latest public-visibility acknowledgement.
 - Consented public profiles: 0.
 - Test profiles in the marketplace roster: 0.
