@@ -17,7 +17,7 @@ describe("nine-question taster submission contract", () => {
   test("every later definition of the RPC agrees on the answer count", () => {
     const definitions = fs.readdirSync(MIGRATIONS)
       .filter(name => name.endsWith(".sql"))
-      .filter(name => readMigration(name).includes("FUNCTION public.submit_taster_with_identity_candidate"))
+      .filter(name => /FUNCTION\\s+public\\.submit_taster_with_identity_candidate/i.test(readMigration(name)))
       .sort();
     // Migrations apply in filename order, so the last definition is the effective one.
     const effective = definitions[definitions.length - 1];
