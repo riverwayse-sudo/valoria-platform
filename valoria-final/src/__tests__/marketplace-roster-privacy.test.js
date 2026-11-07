@@ -17,7 +17,7 @@ describe('public marketplace roster privacy', () => {
     expect(migration).toMatch(/ADMIN_REVOKED.*ADMIN_SUSPENDED/s)
     expect(migration).toMatch(/USING \(public\.is_marketplace_profile_public\(professional_id\)\)/i)
     expect(migration).toMatch(/TO anon, authenticated/i)
-    const executableSql = migration.replace(/^\\s*--.*$/gm, '').replace(/\\/\\*[\\s\\S]*?\\*\\//g, '')
+    const executableSql = migration.replace(/^\s*--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
     expect(executableSql).not.toMatch(/registered_only/i)
   })
 })
