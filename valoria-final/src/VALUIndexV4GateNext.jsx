@@ -65,16 +65,13 @@ export default function VALUIndexV4GateNext(){
   return payload;
  }
 
- // Direct entry: restore a resumable session, or begin one anonymously.
+ // Contact and professional details are registered before the taster begins.
  useEffect(()=>{
   if(startedRef.current)return;
   startedRef.current=true;
   let cancelled=false;
   async function begin(){
-   if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('session1');return;}
-   // A participant who already completed the taster session and has a pending
-   // assessment reference must not start a second, duplicate session. Send them
-   // to the authenticated continuation instead.
+   if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('registration');return;}
    let pending='';
    try{pending=localStorage.getItem('pending_taster_id')||''}catch{}
    if(pending){
@@ -94,28 +91,27 @@ export default function VALUIndexV4GateNext(){
      setSubmissionKey(p.submission_key||'');
      setProgressToken(stored);
      const answeredCount=Object.keys(savedAnswers).length;
-     const complete=Number(p.current_question)===TASTER_QUESTIONS.length&&answeredCount===TASTER_QUESTIONS.length&&!!p.submission_key;
+     const complete=Number(p.current_question)===TASTER_QUESTIONS.length&&answeredCount===TASTER_QUESTIONS.length;
      if(complete){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
      setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
-     setPhase('session1');
+     const identified=!!(p.name&&p.role&&p.experience&&p.email);
+     setPhase(identified?'session1':'registration');
      return;
     }
    }catch{
-    // A stale or expired resume token must not block entry: discard it and
-    // start a fresh anonymous session below.
     try{localStorage.removeItem(RESUME_TOKEN_KEY)}catch{}
    }
    try{
     const created=await postProgress({action:'init'});
     if(cancelled)return;
-    if(!created.resume_token)throw new Error('Your assessment could not be started. Please retry.');
+    if(!created.resume_token)throw new Error('Your registration could not be started. Please retry.');
     try{localStorage.setItem(RESUME_TOKEN_KEY,created.resume_token)}catch{}
     setProgressToken(created.resume_token);
-    setPhase('session1');
+    setPhase('registration');
    }catch(err){
     if(cancelled)return;
-    setError(err?.message||'We could not start your assessment. Please refresh to retry.');
-    setPhase('session1');
+    setError(err?.message||'We could not prepare your registration. Please retry.');
+    setPhase('registration');
    }
   }
   begin();
