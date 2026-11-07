@@ -17,7 +17,7 @@ describe("nine-question taster submission contract", () => {
   test("every later definition of the RPC agrees on the answer count", () => {
     const definitions = fs.readdirSync(MIGRATIONS)
       .filter(name => name.endsWith(".sql"))
-      .filter(name => readMigration(name).includes("FUNCTION public.submit_taster_with_identity_candidate"))
+      .filter(name => readMigration(name).toUpperCase().includes("FUNCTION PUBLIC.SUBMIT_TASTER_WITH_IDENTITY_CANDIDATE"))
       .sort();
     // Migrations apply in filename order, so the last definition is the effective one.
     const effective = definitions[definitions.length - 1];
@@ -40,7 +40,7 @@ describe("nine-question taster submission contract", () => {
       "submission retry could not be reconciled",
       "submission key was reused with different snapshot data",
       "ON CONFLICT ON CONSTRAINT taster_identity_candidates_pkey DO NOTHING",
-      "SET search_path = pg_catalog, public",
+      "SET search_path = ''",
     ]) {
       expect(fix).toContain(rule);
     }
