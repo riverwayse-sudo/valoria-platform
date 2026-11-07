@@ -271,6 +271,9 @@ async function baseHandler(req) {
       // never read, merged or scored as part of the 58-question full assessment.
       const progress = await getProgressByTasterId(tasterId);
       if (!progress) return json({ ok: true, progress: null });
+      if (Number(progress.total_questions) !== QUESTIONS.length) {
+        return json({ error: "Your saved assessment is preserved but needs review before it can be resumed." }, 409);
+      }
       if (progress.user_id && progress.user_id !== resolvedIdentity.user_id) {
         return json({ error: "This saved assessment belongs to another Valoria account." }, 403);
       }
