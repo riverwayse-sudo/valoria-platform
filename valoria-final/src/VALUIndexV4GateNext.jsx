@@ -238,45 +238,45 @@ export default function VALUIndexV4GateNext(){
   <VALUAssessmentJourney stage="account" preview={IS_PREVIEW} />
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> {IS_PREVIEW ? 'STAGING TASTER PREVIEW' : 'VALU TASTER SAVED'} <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
-   <h1 className="valu-results-title" style={S.h1}>{IS_PREVIEW ? <>Your taster is <em>complete.</em></> : <>Your taster is <em>saved.</em></>}</h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>{IS_PREVIEW ? 'This is a local-only simulation. No answers, account details, or participant records are stored.' : 'Your taster responses are saved as a directional starting point. Complete your full assessment to receive your official VALU Index.'}</p>
+   <h1 className="valu-results-title" style={S.h1}>{IS_PREVIEW ? <>Your snapshot is <em>complete.</em></> : <>Your snapshot is <em>saved.</em></>}</h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>{IS_PREVIEW ? 'This is a local-only simulation. No answers, account details, or participant records are stored.' : 'Your snapshot responses are saved as a directional starting point. Create or connect your secure Valoria account to continue to the full assessment.'}</p>
   </section>
-  <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
-   <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your taster</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'These answers exist only in this browser session.' : 'Your taster responses are saved to your Valoria journey.'}</p>
+  <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,margin:'8px 0 22px'}}>
+   <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.18)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETE</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Professional registration</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your contact and professional details are saved.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>{IS_PREVIEW ? '02 · PREVIEW ONLY' : '02 · YOU ARE HERE'}</div>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · COMPLETE</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your snapshot</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'These answers exist only in this browser session.' : 'Your snapshot responses are saved to your Valoria journey.'}</p>
+   </div>
+   <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>{IS_PREVIEW ? '03 · PREVIEW ONLY' : '03 · YOU ARE HERE'}</div>
     <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>{IS_PREVIEW ? 'Account setup disabled' : 'Create your account'}</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'Account creation and email confirmation are disabled in this simulation. Continue to explore your full assessment.' : 'Add your details now. You’ll set your password and confirm your email in the next step.'}</p>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW ? 'Account creation and email confirmation are disabled in this simulation.' : 'Set your password and confirm your email in the next step.'}</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Start the full assessment</h3>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>04 · UP NEXT</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Full assessment</h3>
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>{IS_PREVIEW?'Continue to your full assessment preview.':'Confirm your email and return to your dashboard to continue your full assessment.'}</p>
    </div>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
    <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
-    <div style={S.resultRow}><div style={S.dimensionCode}>TASTER</div><h2 style={S.scoreName}>Completed</h2><strong style={S.scoreValue}>Complete</strong></div>
-    <div style={S.resultRow}><div style={S.dimensionCode}>FORMAL ASSESSMENT</div><h2 style={S.scoreName}>Ready to begin</h2><strong style={S.scoreValue}>Ready</strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>SNAPSHOT</div><h2 style={S.scoreName}>Completed</h2><strong style={S.scoreValue}>Complete</strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>FULL ASSESSMENT</div><h2 style={S.scoreName}>Ready to begin</h2><strong style={S.scoreValue}>Ready</strong></div>
    </div>
   </section>
-  <form onSubmit={createAccount} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · NO ACCOUNT CREATED' : 'ACCOUNT SETUP'}</div><h2 style={S.formTitle}>{IS_PREVIEW ? 'Explore your full assessment.' : 'Let’s keep your progress connected.'}</h2></div><div style={S.formTime}>FULL ASSESSMENT</div></div>
-   <p style={S.formIntro}>{IS_PREVIEW ? 'This is a local-only staging simulation. The sample identity below is not a real account, and no information is sent or stored.' : 'Use an email address you can access. We’ll connect your progress to your account, then guide you through password setup and email confirmation before returning you to your dashboard.'}</p>
-   <div className="valu-entry-form-grid" style={S.grid}>
-    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" disabled={IS_PREVIEW}/></Field>
-    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" disabled={IS_PREVIEW}/></Field>
-   </div>
-   <Field label="PROFESSIONAL EXPERIENCE"><select required disabled={IS_PREVIEW} style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" disabled={IS_PREVIEW}/></Field>
-   {error&&<div style={S.error}>{error}</div>}
-   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':IS_PREVIEW?'OPEN FULL ASSESSMENT PREVIEW →':'SAVE MY DETAILS & CONTINUE →'}</button>
-   <div style={S.saveNote}><span>✓</span> {IS_PREVIEW ? 'No account is created and no data is saved.' : 'Your taster responses are saved.'}</div>
-  </form>
+  <section aria-label="Secure account setup" className="valu-entry-form-card" style={{...S.formCard,marginTop:18,maxWidth:790,width:'100%',marginLeft:'auto',marginRight:'auto'}}>
+   <div style={S.formTop}><div><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · NO ACCOUNT CREATED' : 'ACCOUNT SETUP'}</div><h2 style={S.formTitle}>{IS_PREVIEW ? 'Explore your full assessment.' : 'Your details are saved. Keep your progress connected.'}</h2></div><div style={S.formTime}>SECURE ACCOUNT</div></div>
+   <p style={S.formIntro}>{IS_PREVIEW ? 'This is a local-only staging simulation. No account or participant record will be created.' : 'Create or connect your secure Valoria account next. You will set your password and confirm your email before returning to your dashboard to continue the full assessment.'}</p>
+   {!IS_PREVIEW && <p style={{fontSize:11,color:DIM,margin:'0 0 14px'}}>Registered as {name} · {email}</p>}
+   {error&&<div role="alert" style={S.error}>{error}</div>}
+   <button type="button" disabled={saving} onClick={continueToAccount} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR SNAPSHOT…':IS_PREVIEW?'OPEN FULL ASSESSMENT PREVIEW →':'CREATE MY VALORIA ACCOUNT →'}</button>
+   <div style={S.saveNote}><span>✓</span> {IS_PREVIEW ? 'No account is created and no data is saved.' : 'Your snapshot responses and registration details are saved.'}</div>
+  </section>
   <p style={S.note}>{IS_PREVIEW ? 'STAGING SIMULATION ONLY · No official VALU Index, account, or participant record is created.' : 'Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.'}</p>
  </Shell>;
 
