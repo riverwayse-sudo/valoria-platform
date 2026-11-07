@@ -120,6 +120,12 @@ describe("independent 58-question formal assessment", () => {
     expect(source).not.toContain("seedAnswersFromOpening");
   });
 
+  test("full assessment handoff preserves the exact staging site origin", () => {
+    const source = fullSource();
+    expect(source).toContain("site_origin");
+    expect(source).toContain("valoria-staging-site.riverwayse.workers.dev");
+  });
+
   test("formal answers are persisted independently under the 58-question contract", () => {
     const api = readApi("assessment-progress.js");
     expect(api).toContain('const FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER"');
