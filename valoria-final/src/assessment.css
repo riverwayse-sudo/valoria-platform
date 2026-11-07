@@ -103,7 +103,7 @@ button.valu-option:disabled { cursor: default; }
 
 /* Assessment content alignment contract: questions, instructions, labels and progress copy share a left edge. */
 .valu-assessment-page,
-.valu-assessment-page :is(h1,h2,h3,h4,p,label,legend,li,small,strong,em) {
+.valu-assessment-page * {
   text-align: left !important;
 }
 
