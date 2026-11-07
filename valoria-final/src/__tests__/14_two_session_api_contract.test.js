@@ -1,89 +1,105 @@
 "use strict";
 
-// API contract for the two-session journey.
-//
-// Session 1 must be startable anonymously (no account before Question 1), and
-// identity is attached at the break with a non-destructive metadata update.
-// Session 2 must seed the saved opening nine answers from the stored snapshot.
+// API contract for two independent VALU assessment records.
 
 const fs = require("fs");
 const path = require("path");
 
 const readApi = name => fs.readFileSync(path.join(__dirname, "../../api", name), "utf8");
 
-describe("taster-progress supports anonymous entry and a late identity step", () => {
+describe("taster-progress requires registration before a new taster", () => {
   const api = readApi("taster-progress.js");
 
-  test("init creates a resumable session with no personal details", () => {
-    expect(api).toContain("action === 'init'");
-    expect(api).toContain("name: null, role: null, experience: null, email: null");
+  test("registration creates the lead and resumable progress through one RPC", () => {
+    expect(api).toContain("action === 'register'");
+    expect(api).toContain("rpc/begin_valu_taster_signup");
+    expect(api).toContain("p_resume_token_hash: hashToken(body.resume_token)");
+    expect(api).toContain("p_privacy_acknowledged: body.privacy_acknowledged === true");
+    expect(api).not.toContain("action === 'init'");
+    expect(api).not.toContain("action === 'identify'");
   });
 
-  test("an identify action attaches identity without resetting answers or progress", () => {
-    expect(api).toContain("action === 'identify'");
-    const identifyBlock = api.slice(api.indexOf("if (action === 'identify')"), api.indexOf("if (action === 'load')"));
-    expect(identifyBlock).toContain("name, role, experience, email");
-    // It must not touch answers or current_question.
-    expect(identifyBlock).not.toContain("answers");
-    expect(identifyBlock).not.toContain("current_question");
+  test("new sessions cannot be initialized anonymously and registration is rate limited", () => {
+    expect(api).toContain("['register', 'load', 'save', 'complete']");
+    expect(api).toContain("consumeRegistrationRateLimit(req)");
+    expect(api).toContain("p_limit: 12");
   });
 
-  test("the action allow-list includes identify", () => {
-    expect(api).toContain("['init', 'load', 'save', 'identify', 'complete']");
+  test("resume reads preserve the direct lead identity link", () => {
+    expect(api).toContain("lead_capture_id");
+    expect(api).toContain("progress.lead_capture_id");
+    expect(api).toContain("lead_capture_id: `eq.${progress.lead_capture_id}`");
   });
 
-  test("identity columns are nullable so anonymous init can create the row", () => {
+  test("legacy identity fields remain nullable while new taster inserts require a lead", () => {
     const migrations = path.join(__dirname, "../../supabase/migrations");
-    const files = fs.readdirSync(migrations).filter(n => n.endsWith(".sql")).sort();
-    const relax = files.filter(n => {
-      const sql = fs.readFileSync(path.join(migrations, n), "utf8");
-      return sql.includes("ALTER TABLE public.taster_progress") && /DROP NOT NULL/.test(sql);
-    });
-    // Without this, init's NULL identity insert fails the NOT NULL constraint and
-    // repeats "We could not establish a resumable session" for every participant.
-    expect(relax.length).toBeGreaterThan(0);
-    const sql = fs.readFileSync(path.join(migrations, relax[relax.length - 1]), "utf8");
+    const relax = fs.readFileSync(path.join(migrations, "20261030120000_relax_taster_progress_identity_nullable.sql"), "utf8");
+    const identity = fs.readFileSync(path.join(migrations, "20261107131125_require_lead_registration_for_new_valu_tasters.sql"), "utf8");
     for (const col of ["name", "role", "experience", "email"]) {
-      expect(sql).toMatch(new RegExp(`ALTER COLUMN ${col} DROP NOT NULL`, "i"));
+      expect(relax).toMatch(new RegExp(`ALTER COLUMN ${col} DROP NOT NULL`, "i"));
     }
-    expect(relax[relax.length - 1]).toBe("20261030120000_relax_taster_progress_identity_nullable.sql");
+    expect(identity).toContain("taster_progress_lead_capture_id_fkey");
+    expect(identity).toContain("taster_sessions_lead_capture_id_fkey");
+    expect(identity).toContain("trg_require_lead_capture_for_taster_progress");
+    expect(identity).toContain("trg_require_lead_capture_for_taster_session");
   });
 });
 
-describe("assessment-progress defers opening-answer recall until final submission", () => {
+describe("full-assessment progress is independent of taster progress", () => {
   const progressApi = readApi("assessment-progress.js");
   const submitApi = readApi("submit-assessment.js");
 
-  test("continuation restore does not read the taster answer payload", () => {
+  test("full progress restore reads its own table and never reads taster answers", () => {
+    expect(progressApi).toContain("valu_assessment_progress");
     expect(progressApi).not.toContain("taster_answers");
     expect(progressApi).not.toContain("seedAnswersFromOpening");
     expect(progressApi).not.toContain("seeded_answers");
-    expect(progressApi).toContain("Continuation deliberately restores only the saved Questions 10–58 work");
+    expect(progressApi).toContain("totalQuestions !== QUESTIONS.length");
+    expect(progressApi).toContain("Number(progress.total_questions) !== QUESTIONS.length");
+    expect(progressApi).not.toContain("assessment_version");
   });
 
-  test("a participant with no saved continuation progress is sent straight to Question 10", () => {
-    const block = progressApi.slice(progressApi.indexOf("const progress = await getProgressByTasterId(tasterId);"), progressApi.indexOf("if (progress.user_id"));
-    expect(block).toContain("progress: null");
-    expect(block).not.toContain("seeded_answers");
+  test("assessment reminder emails never expose internal question counts", () => {
+    expect(progressApi).not.toContain("${row.current_question} / ${row.total_questions} questions");
+    expect(progressApi).not.toContain("${remaining} remaining");
+    expect(progressApi).toContain("Your responses are saved. Continue where you left off");
   });
 
-  test("the final submit retrieves and merges the verified opening answers before scoring", () => {
-    expect(submitApi).toContain("seedAnswersFromOpening(taster.taster_answers || {})");
-    expect(submitApi).toContain("completeAnswers = { ...openingAnswers, ...answers }");
+  test("a participant without saved full progress starts at the beginning of the full assessment", () => {
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    expect(component).toContain("setCurrent(0)");
+    expect(component).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
+  });
+
+  test("final submission scores the full 58-answer map without merging the taster", () => {
+    expect(submitApi).toContain("if (!validateAnswers(answers))");
+    expect(submitApi).toContain("const completeAnswers = answers");
     expect(submitApi).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
     expect(submitApi).toContain("answers: completeAnswers");
+    expect(submitApi).not.toContain("seedAnswersFromOpening");
+    expect(submitApi).not.toContain("taster_answers");
+    expect(submitApi).not.toContain("validateRemainingAnswers");
+  });
+
+  test("taster identity is used only to verify account ownership and journey provenance", () => {
+    expect(submitApi).toContain("taster.user_id !== handoff.sub");
+    expect(submitApi).toContain("taster_id: tasterId, user_id: resolvedUserId");
+    expect(submitApi).not.toContain("select: 'id,user_id,name,role,completed_at,taster_answers'");
   });
 });
 
-describe("submit-assessment accepts a two-session timing subset", () => {
+describe("full assessment submission validates a complete answer map", () => {
   const api = readApi("submit-assessment.js");
 
-  test("timings are validated as a bounded subset, not exactly 58", () => {
+  test("timings are bounded integrity diagnostics and never part of scoring", () => {
+    expect(api).toContain("const MAX_TIMINGS_LENGTH = QUESTIONS.length");
     expect(api).toContain("timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH");
+    expect(api).toContain("value > 86_400_000");
     expect(api).not.toContain("timings.length !== MAX_TIMINGS_LENGTH");
   });
 
-  test("canonical 58-answer scoring is unchanged", () => {
+  test("the scoring engine receives exactly the submitted full-assessment answers", () => {
+    expect(api).toContain("const completeAnswers = answers");
     expect(api).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
     expect(api).toContain("import { QUESTIONS } from '../src/questions.js'");
   });

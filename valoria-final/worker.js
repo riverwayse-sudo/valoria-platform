@@ -1,9 +1,13 @@
+// Public profile and certificate visibility is enforced by consent-aware Supabase RLS.
+// The assessment Worker must not bypass the database authorization layer.
 import tasterProgress from "./api/taster-progress.js";
 import submitTaster from "./api/submit-taster.js";
 import assessmentProgress from "./api/assessment-progress.js";
 import submitAssessment from "./api/submit-assessment.js";
 import linkAssessmentToTaster from "./api/link-assessment-to-taster.js";
 import generateAndSendReport from "./api/generate-and-send-report.js";
+import { GET as processReadinessQueue } from "./api/process-readiness-queue.js";
+import sweepUnsentReports from "./api/sweep-unsent-reports.js";
 
 const API_HANDLERS = new Map([
   ["/api/taster-progress", { handler: tasterProgress, nodeStyle: true }],
@@ -12,6 +16,8 @@ const API_HANDLERS = new Map([
   ["/api/submit-assessment", { handler: submitAssessment, nodeStyle: true }],
   ["/api/link-assessment-to-taster", { handler: linkAssessmentToTaster, nodeStyle: true }],
   ["/api/generate-and-send-report", { handler: generateAndSendReport, nodeStyle: false }],
+  ["/api/process-readiness-queue", { handler: processReadinessQueue, nodeStyle: false }],
+  ["/api/sweep-unsent-reports", { handler: sweepUnsentReports, nodeStyle: false }],
 ]);
 
 function json(data, status = 200) {

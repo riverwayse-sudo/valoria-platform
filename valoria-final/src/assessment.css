@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Raleway:wght@200;300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Raleway:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -54,6 +54,28 @@ button.valu-option:disabled { cursor: default; }
 
 :focus-visible { outline: 2px solid rgba(201,168,76,.5); outline-offset: 2px; }
 
+#main-content {
+  scroll-margin-top: 72px;
+}
+
+.assessment-skip-link {
+  position: absolute;
+  left: 16px;
+  top: -100px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: 4px;
+  background: #C9A84C;
+  color: #1A1A2E;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.assessment-skip-link:focus {
+  top: 8px;
+}
+
+
 .valu-path-rail { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .valu-start-panel { min-width: 0; }
 
@@ -99,4 +121,43 @@ button.valu-option:disabled { cursor: default; }
   .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-option { min-height:54px; padding:11px 12px !important; font-size:13px !important; }
   .valu-assessment-page.valu-assessment-taster .valu-assessment-shell .valu-option span:first-child { width:26px !important; height:26px !important; }
   .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > p { margin-top:12px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Assessment content alignment contract: questions, instructions, labels and progress copy share a left edge. */
+.valu-assessment-page,
+.valu-assessment-page * {
+  text-align: left !important;
+}
+
+.valu-assessment-page .valu-taster-top,
+.valu-assessment-page .valu-assessment-steps,
+.valu-assessment-page .valu-start-panel {
+  align-items: flex-start !important;
+}
+
+.valu-assessment-page .valu-taster-top {
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.valu-assessment-page .form-time,
+.valu-assessment-page .valu-entry-form-time {
+  text-align: left !important;
+}
+
+@media (max-width: 760px) {
+  .valu-assessment-page { padding-left: 16px !important; padding-right: 16px !important; }
+  .valu-assessment-page .valu-assessment-shell { width: 100% !important; }
+  .valu-assessment-page .valu-entry-form-card { padding: 20px 16px !important; }
 }

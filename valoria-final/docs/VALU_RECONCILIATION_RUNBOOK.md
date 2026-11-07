@@ -42,11 +42,12 @@ Repeated taster records can point to the same contact. Preserve each taster ID a
 5. Never recalculate historical scores as part of identity repair. Preserve answers, score, completion timestamp, scoring version, rubric version, and taster provenance.
 6. Unknown historical taster versions remain `legacy_unknown` until immutable release/deployment evidence proves the version.
 7. Every automated reconciliation decision must be recorded in `identity_reconciliation_reviews` with `review_actor_type='system'`; human decisions must carry a real authenticated `reviewed_by` account.
-8. A contact candidate is not automatically a public marketplace listing. Public Basic listing requires the product's approved identity/account-claim, consent, readiness, visibility, and listing-governance gates. Full VALU completion continues to control full-assessment benefits and tier display.
-9. Do not use `profile_complete` alone as the definition of assessment completion or Basic marketplace eligibility. Use canonical readiness/eligibility and visibility fields; preserve test fixtures unless their retirement is explicitly authorized.
-10. Keep unlinked taster sessions in the review queue unless a stable, verified identity link is available.
-11. The populated event stream is `valoria_journey_events`; do not treat the empty legacy `journey_events` table as the current journey history.
-12. The candidate projection contains contact data and is service-role only; never expose it through a public roster or client-readable API.
+8. A contact candidate is not automatically a public marketplace listing. A **Basic** listing is available after a completed taster is linked to an authenticated account, the account has a minimum professional identity (verified taster name and role may supply missing display-name/headline fields), the profile is marked for listing, and the participant explicitly opts into public visibility. Basic does not require a Full VALU score, full-profile completion, or Full-tier evidence approvals. If a participant has both a Full assessment and a taster but has not met Full listing requirements, the taster preserves a Basic listing. The taster-linked roster projection assigns the Basic tier and default Talent directory track; it must not invent a VALU score, designation, or full-assessment summary. A Basic profile may appear in the all-professionals directory before selecting additional capability tracks. Full listings require a current assessment, at least 35 VALU points, a complete profile, and approved evidence for every active capability. The 35-point threshold is separate from profile completeness and capability evidence.
+9. A taster contact candidate is not an authenticated account. Only corroborated `contact_candidate` records may be claimed through `/professional-signup/recover` or sign-in, confirmed-email authentication and exact account-name/taster-name plus saved-role checks. `unresolved` and `conflicting_evidence` records remain in manual review; never auto-link them from email, name, role, date, or score alone.
+10. Do not use `profile_complete` alone as the definition of assessment completion or Basic marketplace eligibility. Use canonical tier, identity, consent, visibility, and listing-governance fields. Profiles with `is_test=true` must never be inserted into the public roster, including during refresh or repair operations. Retain fixture records for audit unless hard deletion is separately authorized.
+11. Keep unlinked taster sessions in the review queue unless a stable, verified identity link is available.
+12. The populated event stream is `valoria_journey_events`; do not treat the empty legacy `journey_events` table as the current journey history.
+13. The candidate projection contains contact data and is service-role only; never expose it through a public roster or client-readable API.
 
 ## Operational reconciliation
 
@@ -69,7 +70,7 @@ Call `private.valu_reconciliation_health()` from a privileged server-side proces
 - Zero completed assessments missing their correct identity link.
 - Zero assessment-owner conflicts.
 - Zero completed assessments missing their expected journey/current-assessment state.
-- Zero listed profiles with an eligibility or visibility conflict. Profile-incomplete and test-fixture counts remain separately visible for operational review and are not silently reclassified.
+- Zero non-test listed profiles with an eligibility or visibility conflict. Basic listings are counted separately from Full listings; profile-incomplete Full profiles and test fixtures remain separate informational counters.
 - Every taster has a row in `taster_identity_candidates` and is categorized as account-linked, contact-candidate, conflicting-evidence, or unresolved.
 - Every contact candidate without an account has a verified-email claim/recovery next action; no account ownership is inferred from name, role, score, or dates.
 - Unknown historical version provenance remains explicitly unknown rather than inferred.
@@ -117,7 +118,7 @@ The 2026-10-15 baseline above has been superseded by a fresh production query. D
 - Of those 17 missing-link assessments, 5 have review-ledger entries and 12 have no review entry. The five assessment reviews are account-match decisions; they do not resolve the missing taster links.
 - Exact contact-email cross-checks produced one candidate for a missing-link assessment, but its name/role evidence conflicts. There are zero missing-link assessments with an exact candidate name-and-role match. No link was inferred.
 - Completed taster sessions: 36; 34 have no authenticated account owner.
-- Taster identity candidate rows: 36 (2 account-linked, 16 contact candidates, 18 unresolved, 0 conflicting-evidence status at this snapshot).
+- Taster identity candidate rows: 45 (5 account-linked, 16 corroborated contact candidates, 24 unresolved, 0 conflicting-evidence status). All 45 completed taster sessions have a corresponding identity candidate row; 40 remain unlinked.
 - Latest review decisions cover 39 distinct source records: 5 assessment records marked verified-match, 1 taster marked verified-match, and 33 tasters marked unmatched. All 39 remain open; a verified match is not closed until the identity correction is applied and verified. Closed-without-link decisions: 0.
 - Professional profiles: 18; listed profiles/public roster rows: 17/17, with zero roster membership mismatches.
 - Active capabilities: 20; eligible active capabilities waiting in a non-listed status: 0.
@@ -145,3 +146,19 @@ The live POST flow (init → save → reload/load → complete/submit → idempo
 The full VALU assessment must be opened through an authenticated Valoria account that owns the exact completed taster session and has a confirmed email. The site issues a signed four-hour HMAC handoff bound to the account ID and taster UUID; the token travels in the URL fragment and is sent to assessment APIs only in request bodies. The assessment UI removes the fragment immediately, validates the token before showing questions, and sends it with every canonical submission, attachment, and progress write.
 
 The assessment API verifies the token signature, audience, expiry, taster UUID, saved name/role, account ownership, and confirmed email. Direct legacy URLs without a token stop at an account-linking screen. Assessment progress cannot trust a client-supplied user ID or email; the API resolves both from the verified taster owner and refuses mismatched session/resume tokens. Reminder links return through the authenticated continuation route. Duplicate submissions for the same verified account and taster return the existing canonical score, allowing a fresh signed handoff to retry profile/journey attachment without creating a second score.
+
+
+## Production snapshot — 7 November 2026
+- Completed taster sessions: 45.
+- Linked taster accounts: 5.
+- Corroborated contact candidates awaiting account claim: 16.
+- Unresolved taster identities requiring manual review: 24.
+- Eligible non-test marketplace roster records: 5 (5 Basic, 0 Full).
+- The 5 linked taster participants are all retained as Basic; the 2 who also have Full assessments remain Basic until their active capability evidence is approved.
+- 11 non-revoked Full-assessed profiles have exact latest-assessment/profile score and completion-time matches, current expiry, and points above threshold; none currently passes the approved-capability evidence gate. Nine without linked tasters are not listed, while the two with tasters remain Basic.
+- Two revoked Full-assessed profiles remain excluded regardless of score. Five missing profile expiry dates were reconciled to the established 365-day validity period only after exact score and completion-time matches.
+- All 5 Basic records are currently Registered-only pending the participant's latest public-visibility acknowledgement.
+- Consented public profiles: 0.
+- Test profiles in the marketplace roster: 0.
+- Revoked profiles in the marketplace roster: 0.
+- Listed-profile eligibility/visibility conflicts: 0.

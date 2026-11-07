@@ -1,83 +1,55 @@
-// assessmentJourney.js — the canonical two-session shape of the ONE VALU assessment.
+// assessmentJourney.js — formal VALU assessment lifecycle.
 //
-// There is a single 58-question assessment with one intentional account-confirmation bridge:
-//   Opening (questions 1–9)   — the approved nine-question opening set.
-//   Bridge                    — account creation and email confirmation.
-//   Completion (questions 10–58) — the remaining 49 questions.
+// The nine-question taster is a separate directional experience. It is not
+// part of the formal instrument, does not seed answers, and is never scored
+// into the official VALU Index.
 //
-// The approved nine are a curated subset of the same canonical bank, chosen to
-// span all five PRIME clusters. They are NOT a separate assessment: every answer
-// is stored against its canonical bank position and all 58 answers are scored by
-// the one scoring engine.
-//
-// Presentation order is the approved nine first, then the remaining questions in
-// canonical bank order. This changes neither the question bank nor the scoring
-// definition — it only decides the order the participant meets the questions.
+// The formal VALU assessment always consists of all 58 canonical questions,
+// starts at Question 1, and records its own independent answer map.
 
 import { QUESTIONS } from "./questions.js";
-import { TASTER_QUESTIONS } from "./valuTaster.js";
 
-export const TOTAL_QUESTIONS = QUESTIONS.length; // 58
+export const TOTAL_QUESTIONS = QUESTIONS.length;
+export const ASSESSMENT_ORDER = QUESTIONS.map((_, index) => index);
 
-const positionById = new Map(QUESTIONS.map((question, index) => [question.id, index]));
+// Compatibility exports for older callers. There is no opening/continuation
+// split in the formal assessment: every formal question belongs to the same
+// 58-question instrument.
+export const OPENING_POSITIONS = [];
+export const REMAINING_POSITIONS = [...ASSESSMENT_ORDER];
+export const OPENING_SESSION_LENGTH = 0;
+export const REMAINING_SESSION_LENGTH = TOTAL_QUESTIONS;
 
-// Bank positions of the approved nine opening questions, in their approved order.
-export const OPENING_POSITIONS = TASTER_QUESTIONS.map(question => {
-  const index = positionById.get(question.id);
-  if (index === undefined) throw new Error(`Approved opening question missing from the canonical bank: ${question.id}`);
-  return index;
-});
-
-const openingSet = new Set(OPENING_POSITIONS);
-
-// The remaining bank positions, in canonical bank order.
-export const REMAINING_POSITIONS = QUESTIONS
-  .map((_, index) => index)
-  .filter(index => !openingSet.has(index));
-
-// The full completion order: approved nine first, then the remaining 49.
-export const ASSESSMENT_ORDER = [...OPENING_POSITIONS, ...REMAINING_POSITIONS];
-
-export const OPENING_SESSION_LENGTH = OPENING_POSITIONS.length; // 9
-export const REMAINING_SESSION_LENGTH = REMAINING_POSITIONS.length; // 49
-
-// Map from bank position to its 1-based place in the completion order.
 const placeByPosition = new Map(ASSESSMENT_ORDER.map((position, place) => [position, place]));
 
-/** 1-based position in the completion order (1..58) for a canonical bank position. */
+/** 1-based position in the formal 58-question assessment. */
 export function placeForPosition(position) {
   const place = placeByPosition.get(position);
   if (place === undefined) throw new Error(`Unknown assessment position: ${position}`);
   return place + 1;
 }
 
-/** The bank positions belonging to the opening (first) session, in order. */
+/** No formal assessment questions are borrowed from the separate taster. */
 export function openingPositions() {
-  return [...OPENING_POSITIONS];
+  return [];
 }
 
-/** The bank positions belonging to the second session, in order. */
+/** All 58 canonical bank positions belong to the formal assessment. */
 export function remainingPositions() {
   return [...REMAINING_POSITIONS];
 }
 
 /**
- * Seed a full 58-slot answer map from the nine saved opening answers.
- * `openingAnswers` is keyed 0..8 in the approved order (as the snapshot stores it).
+ * Legacy compatibility helper. Taster answers must never seed the formal
+ * assessment, so this function intentionally returns an empty answer map.
  */
-export function seedAnswersFromOpening(openingAnswers = {}) {
-  const seeded = {};
-  OPENING_POSITIONS.forEach((position, openingIndex) => {
-    const choice = openingAnswers[openingIndex];
-    if (Number.isInteger(choice)) seeded[position] = choice;
-  });
-  return seeded;
+export function seedAnswersFromOpening() {
+  return {};
 }
 
 /**
- * The next question to present, walking the completion order from `fromPlace`
- * (1-based) and skipping any position already answered.
- * Returns the 1-based place (1..TOTAL_QUESTIONS) or null when all are answered.
+ * Return the 1-based position of the next unanswered formal question, or null
+ * when all 58 formal questions have been answered.
  */
 export function nextPlaceToAnswer(answers = {}, fromPlace = 1) {
   for (let place = Math.max(1, fromPlace); place <= ASSESSMENT_ORDER.length; place += 1) {
@@ -87,7 +59,7 @@ export function nextPlaceToAnswer(answers = {}, fromPlace = 1) {
   return null;
 }
 
-/** How many of the 58 questions have been answered. */
+/** Number of formal questions answered; taster answers are never included. */
 export function answeredCount(answers = {}) {
   return ASSESSMENT_ORDER.reduce(
     (count, position) => (Object.prototype.hasOwnProperty.call(answers, position) ? count + 1 : count),

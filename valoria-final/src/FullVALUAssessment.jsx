@@ -52,8 +52,6 @@ const SITE_BASE = (() => {
 import { QUESTIONS } from './questions.js';
 import {
   ASSESSMENT_ORDER,
-  OPENING_POSITIONS,
-  OPENING_SESSION_LENGTH,
   TOTAL_QUESTIONS,
   nextPlaceToAnswer,
 } from './assessmentJourney.js';
@@ -143,7 +141,7 @@ export default function FullVALUAssessment() {
   );
 
   const question = QUESTIONS[ASSESSMENT_ORDER[current]];
-  const answeredTotal = OPENING_SESSION_LENGTH + Object.keys(answers).filter(key => !OPENING_POSITIONS.includes(Number(key))).length;
+  const answeredTotal = Object.keys(answers).length;
   const progress = Math.round((answeredTotal / TOTAL_QUESTIONS) * 100);
   // Experience is assessment metadata, not an authentication prerequisite.
   // Legacy snapshots may omit it or use an older label; let the participant
@@ -151,7 +149,7 @@ export default function FullVALUAssessment() {
   const canUse = Boolean(identity.tasterId && identity.name && identity.role);
   const hasValidExperience = isValidExperience(identity.experience);
 
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(() => { window.gtag?.("event", "valu_index_open", { assessment_type: "full" }); return () => { mountedRef.current = false; }; }, []);
 
   // Strip legacy identity/resume query parameters from the visible URL as soon
   // as the client hydrates. New links never include these values, but this
@@ -278,14 +276,13 @@ export default function FullVALUAssessment() {
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
         // The answer map is authoritative. Resume at the first unanswered
         // question even if a stale checkpoint pointer lags behind a saved answer.
-        const nextPlace = nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1);
+        const nextPlace = nextPlaceToAnswer(restoredAnswers, 1);
         setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1);
       } else {
-        // The verified account handoff confirms a completed opening session.
-        // Start directly at Question 10; opening-answer recall is deferred until
-        // final submission so it cannot block this event's remaining questions.
+        // The taster is a separate record. Start the independent full
+        // assessment at Question 1 with a fresh answer map.
         setAnswers({});
-        setCurrent(OPENING_SESSION_LENGTH);
+        setCurrent(0);
       }
       setRemoteRestoreComplete(true);
     }).catch(err => {
@@ -316,7 +313,7 @@ export default function FullVALUAssessment() {
         const restoredAnswers = saved.answers && typeof saved.answers === 'object' ? saved.answers : {};
         setAnswers(restoredAnswers);
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
-        const nextPlace = nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1);
+        const nextPlace = nextPlaceToAnswer(restoredAnswers, 1);
         setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1);
         setResumeLoading(false);
       })
@@ -329,9 +326,8 @@ export default function FullVALUAssessment() {
   }, [identity.resume]);
 
   useEffect(() => {
-    // The authenticated server restore is the source of truth. Do not let an
-    // old browser-local checkpoint overwrite the verified account-owned answer
-    // map (or send a participant back to the opening questions).
+    // The authenticated server restore is the source of truth. Taster answers
+    // are stored separately and are never seeded into this full-assessment map.
     if (identity.resume || !canUse || handoffStatus !== 'ready' || !remoteRestoreComplete) return;
     if (!sessionId) setSessionId(makeSessionId());
     setStartedAt(Date.now());
@@ -494,6 +490,7 @@ export default function FullVALUAssessment() {
 
       try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}
       try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
+      window.gtag?.("event", "valu_index_complete", { assessment_type: "full" });
       setResult(scoreData.results);
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
@@ -521,7 +518,7 @@ export default function FullVALUAssessment() {
     return <Shell>
       <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
       <h1 style={S.h1}>Return to your Valoria dashboard.</h1>
-      <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved snapshot and answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
+      <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved taster and answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
       <a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
     </Shell>;
@@ -535,15 +532,42 @@ export default function FullVALUAssessment() {
     const score = result.valuIndex ?? result.total_score ?? result.score;
     const designation = result.desig?.name || result.designation || 'VALU Index';
     return <Shell>
-      <div style={S.eyebrow}>OFFICIAL VALU INDEX</div>
-      <h1 style={S.h1}>Your official standard is set.</h1>
-      <div style={S.scoreCard}><div style={S.score}>{score}</div><div style={S.outOf}>points</div><div style={S.designation}>{designation}</div></div>
-      <p style={S.p}>Your full assessment is now attached to your Valoria professional profile. Your profile can move from <strong style={{color:T.gold}}>Basic · Incomplete</strong> to complete once the required professional profile information is finished.</p>
-      {reportStatus && <p style={{...S.p,color:T.gold}}>{reportStatus}</p>}
-      <a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
-      {reportStatus.includes('ready') && <a href={SITE_BASE ? SITE_BASE + '/report' : undefined} style={S.button}>VIEW MY VALU REPORT →</a>}
-      <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.button}>COMPLETE MY PROFILE →</a>
-      <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.secondary}>OPEN PROFILE SETUP</a>
+      <section style={S.resultWrap}>
+        <div style={S.resultEyebrow}><span style={S.resultCheck}>✓</span> OFFICIAL VALU INDEX · ASSESSMENT COMPLETE</div>
+        <h1 style={S.resultTitle}>Your VALU Index is complete.</h1>
+        <p style={S.resultIntro}>Your professional assessment has been scored and attached to your Valoria profile. Your result is now part of your professional record.</p>
+
+        <div style={S.resultCard}>
+          <div style={S.resultScoreBlock}>
+            <div style={S.resultScore}>{score}</div>
+            <div style={S.resultScoreCaption}>VALU INDEX <span>·</span> POINTS</div>
+          </div>
+          <div style={S.resultDivider} />
+          <div style={S.resultDesignationBlock}>
+            <div style={S.resultLabel}>YOUR PROFESSIONAL DESIGNATION</div>
+            <div style={S.resultDesignation}>{designation}</div>
+            <div style={S.resultAttached}><span style={S.resultDot} /> Assessment attached to your profile</div>
+          </div>
+        </div>
+
+        <div style={S.nextStepCard}>
+          <div style={S.nextStepEyebrow}>YOUR NEXT STEP</div>
+          <h2 style={S.nextStepTitle}>Complete your professional profile</h2>
+          <p style={S.nextStepText}>Your Full VALU assessment is complete. Your professional profile still needs the required information and evidence before it can be considered for public listing.</p>
+          <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.primaryAction}>COMPLETE MY PROFILE <span>→</span></a>
+        </div>
+
+        {reportStatus && <div style={S.reportStatus}>
+          <div style={S.reportStatusLabel}>VALU REPORT</div>
+          <p style={S.reportStatusText}>{reportStatus}</p>
+          {reportStatus.includes('ready') && <a href={SITE_BASE ? SITE_BASE + '/report' : undefined} style={S.reportLink}>VIEW MY VALU REPORT →</a>}
+        </div>}
+
+        <div style={S.resultFooter}>
+          <span>Keep building what matters.</span>
+          <a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.dashboardLink}>RETURN TO DASHBOARD <span>↗</span></a>
+        </div>
+      </section>
     </Shell>;
   }
 
@@ -551,7 +575,7 @@ export default function FullVALUAssessment() {
     return <Shell>
       <div style={S.eyebrow}>VALU ASSESSMENT · ONE DETAIL</div>
       <h1 style={S.h1}>Confirm your experience band.</h1>
-      <p style={S.p}>We need a current experience band to complete your assessment record. Choose the range that best reflects your total professional experience. This does not change your saved VALU snapshot or its answers.</p>
+      <p style={S.p}>We need a current experience band to complete your assessment record. Choose the range that best reflects your total professional experience. This does not change your saved taster or its answers.</p>
       <div style={S.options}>
         {EXPERIENCE_OPTIONS.map(option => <button key={option.value} type="button" onClick={() => setIdentity(previous => ({ ...previous, experience:option.value }))} style={S.option}><span style={S.optionLetter}>→</span><span>{option.label}</span></button>)}
       </div>
@@ -561,8 +585,8 @@ export default function FullVALUAssessment() {
 
   return <Shell>
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
-      <VALUAssessmentJourney stage="continuation" currentQuestion={current + 1} />
-      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>
+      <VALUAssessmentJourney stage="full" />
+      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT</div></div>
       <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
       <h1 style={S.question}>{question.q}</h1>
@@ -577,7 +601,7 @@ export default function FullVALUAssessment() {
   </Shell>;
 }
 
-function Shell({children}) { return <main style={S.page}><div style={S.shell}>{children}</div></main> }
+function Shell({children}) { return <main id="main-content" tabIndex={-1} className="valu-assessment-page valu-assessment-full" style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main> }
 
 const S = {
   page:{minHeight:'100dvh',height:'auto',background:T.dark,color:T.parchment,fontFamily:"'Raleway',sans-serif",padding:'22px 20px 32px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'flex-start'},
@@ -604,4 +628,30 @@ const S = {
   score:{fontSize:64,fontWeight:200,color:T.gold,lineHeight:1},
   outOf:{fontSize:14,color:T.faint},
   designation:{fontSize:12,color:T.parchment,letterSpacing:'.12em',textTransform:'uppercase',justifySelf:'end'},
+  resultWrap:{width:'100%',maxWidth:820,margin:'0 auto',padding:'clamp(20px,4vw,42px) 0 24px'},
+  resultEyebrow:{display:'flex',alignItems:'center',gap:10,fontSize:9,fontWeight:800,letterSpacing:'.17em',color:'rgba(201,168,76,.9)'},
+  resultCheck:{display:'inline-flex',alignItems:'center',justifyContent:'center',width:22,height:22,borderRadius:'50%',border:'1px solid rgba(201,168,76,.55)',fontSize:12,color:T.gold},
+  resultTitle:{fontSize:'clamp(30px,5vw,48px)',fontWeight:400,lineHeight:1.12,letterSpacing:'-.035em',color:T.parchment,margin:'22px 0 12px',maxWidth:650},
+  resultIntro:{fontSize:14,lineHeight:1.8,color:T.dim,maxWidth:650,margin:'0 0 30px'},
+  resultCard:{display:'grid',gridTemplateColumns:'minmax(112px,.65fr) 1px minmax(0,1.35fr)',alignItems:'center',gap:'clamp(18px,4vw,36px)',padding:'clamp(22px,4vw,34px)',border:'1px solid rgba(201,168,76,.25)',borderRadius:12,background:'linear-gradient(120deg,rgba(201,168,76,.09),rgba(46,46,74,.42) 55%)',boxShadow:'0 18px 50px rgba(0,0,0,.12)'},
+  resultScoreBlock:{minWidth:0},
+  resultScore:{fontSize:'clamp(58px,9vw,82px)',fontWeight:300,lineHeight:.95,letterSpacing:'-.06em',color:T.gold},
+  resultScoreCaption:{fontSize:9,fontWeight:700,letterSpacing:'.14em',color:T.dim,marginTop:12},
+  resultDivider:{height:76,width:1,background:'rgba(201,168,76,.25)'},
+  resultDesignationBlock:{minWidth:0},
+  resultLabel:{fontSize:9,fontWeight:700,letterSpacing:'.14em',lineHeight:1.5,color:T.faint,marginBottom:10},
+  resultDesignation:{fontSize:'clamp(17px,2.7vw,24px)',fontWeight:700,lineHeight:1.25,letterSpacing:'.015em',color:T.parchment,textTransform:'uppercase',overflowWrap:'anywhere'},
+  resultAttached:{display:'flex',alignItems:'center',gap:8,fontSize:11,color:T.dim,marginTop:16},
+  resultDot:{width:7,height:7,borderRadius:'50%',background:'#8FAE91',boxShadow:'0 0 0 4px rgba(143,174,145,.12)'},
+  nextStepCard:{marginTop:22,padding:'clamp(22px,4vw,30px)',borderRadius:12,background:T.parchment,color:T.dark},
+  nextStepEyebrow:{fontSize:9,fontWeight:800,letterSpacing:'.17em',color:'#8C7130',marginBottom:12},
+  nextStepTitle:{fontSize:'clamp(21px,3.5vw,30px)',fontWeight:600,lineHeight:1.2,letterSpacing:'-.025em',margin:'0 0 10px'},
+  nextStepText:{fontSize:13,lineHeight:1.75,color:'rgba(26,26,46,.72)',maxWidth:620,margin:'0 0 22px'},
+  primaryAction:{display:'inline-flex',alignItems:'center',justifyContent:'center',gap:18,minHeight:48,padding:'0 24px',borderRadius:999,background:T.gold,color:T.dark,textDecoration:'none',fontSize:10,fontWeight:800,letterSpacing:'.12em'},
+  reportStatus:{marginTop:20,padding:'17px 20px',borderLeft:'2px solid '+T.gold,background:'rgba(247,244,238,.045)'},
+  reportStatusLabel:{fontSize:9,fontWeight:800,letterSpacing:'.15em',color:T.gold,marginBottom:7},
+  reportStatusText:{fontSize:12,lineHeight:1.7,color:T.dim,margin:0},
+  reportLink:{display:'inline-block',fontSize:10,fontWeight:800,letterSpacing:'.1em',color:T.gold,textDecoration:'none',marginTop:10},
+  resultFooter:{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:14,marginTop:26,paddingTop:18,borderTop:'1px solid rgba(247,244,238,.1)',fontSize:10,color:T.faint},
+  dashboardLink:{color:T.dim,textDecoration:'none',fontSize:9,fontWeight:800,letterSpacing:'.12em'},
 };
