@@ -24,7 +24,7 @@ describe("VALU assessment left-alignment contract", () => {
   test("assessment typography is loaded once from the shared stylesheet", () => {
     const css = read("assessment.css");
     const legacyPrime = read("PRIMEAssessment.jsx");
-    expect((css.match(/fonts\\.googleapis\\.com/g) || []).length).toBe(1);
+    expect((css.match(/fonts\.googleapis\.com/g) || []).length).toBe(1);
     expect(legacyPrime).not.toContain("fonts.googleapis.com");
   });
 
