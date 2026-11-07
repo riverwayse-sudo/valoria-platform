@@ -156,7 +156,7 @@ describe("Snapshot submission RPC payload contract", () => {
     await loadHandler()(makeReq(), res);
 
     expect(res.statusCode).toBe(502);
-    expect(res.body.error).toBe("We could not securely save your snapshot and recovery record together. Please retry.");
+    expect(res.body.error).toBe("We could not securely save your taster and recovery record together. Please retry.");
     expect(res.body.taster_id).toBeUndefined();
   });
 
@@ -175,7 +175,7 @@ describe("Snapshot submission RPC payload contract", () => {
     await loadHandler()(makeReq(), res);
 
     expect(res.statusCode).toBe(400);
-    expect(res.body.error).toContain("Finish and save all snapshot answers");
+    expect(res.body.error).toContain("Finish and save all taster answers");
     expect(calls.some(call => call.url.includes("submit_taster_with_identity_candidate"))).toBe(false);
   });
 });
