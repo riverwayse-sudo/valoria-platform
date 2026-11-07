@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS } from '../src/valuTaster.js';
