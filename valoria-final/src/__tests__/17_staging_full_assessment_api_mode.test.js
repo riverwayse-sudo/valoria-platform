@@ -4,10 +4,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const read = relative => fs.readFileSync(path.join(__dirname, "../..", relative), "utf8");
+const readRepo = relative => fs.readFileSync(path.join(__dirname, "../../..", relative), "utf8");
 
 describe("staging formal assessment uses the isolated API", () => {
   test("the staging build does not compile the full assessment into local-only preview mode", () => {
-    const workflow = read(".github/workflows/cloudflare-assessment-staging-deploy.yml");
+    const workflow = readRepo(".github/workflows/cloudflare-assessment-staging-deploy.yml");
     expect(workflow).toContain('VITE_VALU_PREVIEW: "0"');
     expect(workflow).toContain('VITE_VALU_API_ORIGIN: "https://valoria-staging-assessment.riverwayse.workers.dev"');
     expect(workflow).toContain('VITE_VALU_SITE_ORIGIN: "https://valoria-staging-site.riverwayse.workers.dev"');
