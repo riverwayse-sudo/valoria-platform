@@ -1,6 +1,7 @@
-export default function VALUAssessmentJourney({ stage = 'taster', preview = false }) {
+export default function VALUAssessmentJourney({ stage = 'registration', preview = false }) {
   const steps = [
-    { key: 'taster', title: 'Taster', detail: 'Your starting insight' },
+    { key: 'registration', title: 'Register', detail: 'Your professional details' },
+    { key: 'taster', title: 'Snapshot', detail: 'Your starting insight' },
     { key: 'account', title: 'Account', detail: 'Secure your profile' },
     { key: 'full', title: 'Assessment', detail: 'Your full capability picture' },
   ]
@@ -13,7 +14,7 @@ export default function VALUAssessmentJourney({ stage = 'taster', preview = fals
           {preview ? 'STAGING SIMULATION · NO DATA SAVED' : 'YOUR PROGRESS IS PRESERVED'}
         </span>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:8 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:8 }}>
         {steps.map((step,index) => {
           const done = index < active
           const current = index === active
