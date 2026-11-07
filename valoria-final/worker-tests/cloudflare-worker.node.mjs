@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 process.env.VALU_PREVIEW_SITE_ORIGIN = "https://site-preview.example";
 process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN = "https://assessment-preview.example";
+process.env.SUPABASE_URL = "https://staging-db.invalid";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "test-only-service-role-key";
+process.env.CRON_SECRET = "test-only-cron-secret";
 const { default: worker } = await import("../worker.js");
 
 function makeEnv() {
@@ -132,4 +135,27 @@ test("the remaining-assessment route supports a trailing slash", async () => {
 test("Cloudflare sends the dedicated remaining route through the Worker before static asset handling", () => {
   const config = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
   assert.ok(config.assets.run_worker_first.includes("/remaining*"));
+});
+
+
+test("marketplace readiness queue endpoint is registered and requires cron authentication", async () => {
+  const env = makeEnv();
+  const response = await worker.fetch(
+    new Request("https://assessment.example/api/process-readiness-queue"),
+    env,
+  );
+  assert.equal(response.status, 401);
+  assert.match(await response.text(), /Unauthorized/);
+  assert.deepEqual(env.seen, []);
+});
+
+test("unsent report sweep endpoint is registered and requires cron authentication", async () => {
+  const env = makeEnv();
+  const response = await worker.fetch(
+    new Request("https://assessment.example/api/sweep-unsent-reports", { method: "POST" }),
+    env,
+  );
+  assert.equal(response.status, 401);
+  assert.match(await response.text(), /Unauthorized/);
+  assert.deepEqual(env.seen, []);
 });
