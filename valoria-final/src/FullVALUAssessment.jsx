@@ -58,7 +58,7 @@ import {
   nextPlaceToAnswer,
 } from './assessmentJourney.js';
 
-const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.24)' };
+const T = { dark:'#1A1A2E', parchment:'#F7F4EE', gold:'#C9A84C', dim:'rgba(247,244,238,.52)', faint:'rgba(247,244,238,.72)' };
 const CLUSTER_NAMES = { P:'Presence', R:'Relationships', I:'Intelligence', M:'Mastery', E:'Enterprise' };
 const EXPERIENCE_OPTIONS = [
   { value:'0-3', label:'0–3 years' },
