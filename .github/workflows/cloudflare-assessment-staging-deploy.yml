@@ -1,0 +1,74 @@
+name: Deploy Valoria assessment Worker to staging
+
+on:
+  push:
+    branches:
+      - experience/staging-redesign-20261106
+    paths:
+      - "valoria-final/api/**"
+      - "valoria-final/lib/**"
+      - "valoria-final/src/**"
+      - "valoria-final/worker-tests/**"
+      - "valoria-final/worker.js"
+      - "valoria-final/wrangler.jsonc"
+      - "valoria-final/package.json"
+      - "valoria-final/package-lock.json"
+      - ".github/workflows/cloudflare-assessment-staging-deploy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: valoria-staging-assessment-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    name: Test, build and deploy isolated staging assessment Worker
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: valoria-final
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: valoria-final/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Test Worker routing and response adapters
+        run: node --test ./worker-tests/cloudflare-worker.node.mjs
+
+      - name: Run platform unit tests
+        run: npm test -- --runInBand
+
+      - name: Build isolated staging assessment assets
+        run: npm run build
+        env:
+          CI: true
+          VITE_VALU_PREVIEW: "1"
+          VITE_VALU_API_ORIGIN: "https://valoria-staging-assessment.riverwayse.workers.dev"
+          VITE_VALU_SITE_ORIGIN: "https://valoria-staging-site.riverwayse.workers.dev"
+
+      - name: Validate Cloudflare deployment credentials
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Cloudflare staging deployment requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets."
+            exit 1
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy only the staging assessment Worker
+        run: npx --yes wrangler@4.156.0 deploy --config wrangler.jsonc --env staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
