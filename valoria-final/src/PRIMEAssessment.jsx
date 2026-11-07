@@ -184,7 +184,7 @@ const pillBtn = (variant = "primary") => ({
 });
 
 // ── PAGE NUMBER ────────────────────────────────────────────────────────────
-function PageNumber({ current, total }) {
+function PageNumber() {
   return (
     <div style={{
       fontFamily: T.font.label,
@@ -196,7 +196,7 @@ function PageNumber({ current, total }) {
       whiteSpace: "nowrap",
       userSelect: "none",
     }}>
-      {current} <span style={{ color: T.text.ghost }}>/ {total}</span>
+      VALU INDEX
     </div>
   );
 }
@@ -880,16 +880,8 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
                 Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
               </h1>
               <p style={{ fontSize:16, fontWeight:300, color:T.text.tertiary, lineHeight:1.75, margin:"0 0 40px", maxWidth:460, fontFamily:T.font.body }}>
-                55 questions across five PRIME clusters. Designed to surface what you genuinely do — not what you aspire to do.
+                The VALU Index assesses professional capability across the five PRIME clusters. It is designed to surface how you work — not simply what you aspire to do.
               </p>
-              <div style={{ display:"flex", background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:T.radius.chip, overflow:"hidden", marginBottom:40, maxWidth:400 }}>
-                {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Always",v:"Free"}].map((s,i)=>(
-                  <div key={i} style={{ flex:1, padding:"18px 8px", textAlign:"center", borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none" }}>
-                    <div style={{ fontSize:22, fontWeight:700, color:T.gold, lineHeight:1, fontFamily:T.font.display }}>{s.v}</div>
-                    <div style={{ fontSize:T.size.caption, color:T.text.ghost, marginTop:5, letterSpacing:"0.06em", fontFamily:T.font.body }}>{s.l}</div>
-                  </div>
-                ))}
-              </div>
               <div>
                 <div style={{ fontSize:T.size.micro, color:"rgba(201,168,76,0.35)", letterSpacing:"0.18em", marginBottom:14, fontFamily:T.font.label }}>WHAT IS ASSESSED</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -933,7 +925,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
             <div style={{ marginBottom:16, padding:"14px 18px", background:"rgba(55,138,221,0.06)", border:"1px solid rgba(55,138,221,0.25)", borderRadius:T.radius.chip }}>
               <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#D4C9A8", letterSpacing:"0.14em", marginBottom:6, fontFamily:T.font.body }}>SESSION IN PROGRESS</div>
               <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.7, margin:"0 0 10px" }}>
-                You have a session in progress at question {checkpoint.currentQ + 1} of {TOTAL}.
+                You have an assessment in progress. Your saved responses are ready to resume.
               </p>
               <button
                 onClick={() => onBegin({ name: checkpoint.name, role: checkpoint.role, resume: true })}
