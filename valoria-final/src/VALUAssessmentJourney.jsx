@@ -1,8 +1,9 @@
 import React from 'react';
 
 const STEPS = [
-  { key: 'taster', title: 'Start', detail: 'Begin your journey' },
-  { key: 'account', title: 'Profile', detail: 'Your details are saved' },
+  { key: 'registration', title: 'Register', detail: 'Your details are connected' },
+  { key: 'taster', title: 'Snapshot', detail: 'A guided starting point' },
+  { key: 'account', title: 'Account', detail: 'Secure your Valoria access' },
   { key: 'full', title: 'Assessment', detail: 'Continue when ready' },
 ];
 
