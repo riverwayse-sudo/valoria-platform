@@ -89,3 +89,22 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke-test assessment entry and site-origin CORS
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://valoria-staging-assessment.riverwayse.workers.dev"
+          curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base/remaining" -o /tmp/valu-assessment-entry.html
+          grep -q 'VALU' /tmp/valu-assessment-entry.html
+          status="$(curl -sS -D /tmp/valu-cors-headers -o /tmp/valu-cors-response -w '%{http_code}' -X OPTIONS "$base/api/taster-progress" \
+            -H 'Origin: https://valoria-staging-site.riverwayse.workers.dev' \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: content-type,idempotency-key')"
+          if [[ "$status" != "204" ]]; then
+            echo "Assessment API CORS preflight returned HTTP $status"
+            cat /tmp/valu-cors-response || true
+            exit 1
+          fi
+          grep -iq '^access-control-allow-origin: https://valoria-staging-site.riverwayse.workers.dev' /tmp/valu-cors-headers
+          grep -iq '^access-control-allow-headers: Content-Type, Idempotency-Key' /tmp/valu-cors-headers
