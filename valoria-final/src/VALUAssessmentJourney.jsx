@@ -11,10 +11,10 @@ export default function VALUAssessmentJourney({ stage = 'taster' }) {
   const statusLabel = stage === 'registration' ? 'REGISTER TO SAVE YOUR JOURNEY' : stage === 'account' ? 'YOUR SNAPSHOT IS SAVED' : stage === 'full' ? 'CONTINUE WHEN READY' : 'YOUR PROGRESS IS SAVED';
   const activeIndex = Math.max(0, STEPS.findIndex(step => step.key === stage));
   return (
-    <section aria-label="VALU assessment progress" style={{ margin: '0 0 28px' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:12 }}>
+    <section aria-label="VALU assessment progress" style={{ margin: '0 0 28px', textAlign:'left' }}>
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:6, marginBottom:12, textAlign:'left' }}>
         <span style={{ color:'#C9A84C', fontSize:9, fontWeight:800, letterSpacing:'.16em' }}>YOUR VALU JOURNEY</span>
-        <span style={{ color:'rgba(247,244,238,.48)', fontSize:10 }}>{statusLabel}</span>
+        <span style={{ color:'rgba(247,244,238,.48)', fontSize:10, textAlign:'left' }}>{statusLabel}</span>
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(88px,1fr))', gap:8 }}>
         {STEPS.map((step,index) => {
