@@ -46,6 +46,8 @@ function validTimings() {
 function loadHandler() {
   process.env.SUPABASE_URL = "https://example.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE;
+  process.env.VALU_PREVIEW_SITE_ORIGIN = "https://valoria-staging-site.riverwayse.workers.dev";
+  process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN = "https://valoria-staging-assessment.riverwayse.workers.dev";
   const path = require.resolve("../../api/submit-assessment.js");
   delete require.cache[path];
   return require("../../api/submit-assessment.js").default;
@@ -119,6 +121,31 @@ describe("Full assessment submission runtime contract", () => {
   afterEach(() => {
     delete global.fetch;
     jest.restoreAllMocks();
+  });
+
+  test("answers the exact configured staging-site CORS preflight", async () => {
+    const request = makeReq();
+    request.method = "OPTIONS";
+    request.headers.origin = "https://valoria-staging-site.riverwayse.workers.dev";
+    const response = makeRes();
+
+    await loadHandler()(request, response);
+
+    expect(response.statusCode).toBe(204);
+    expect(response.headers["Access-Control-Allow-Origin"]).toBe(request.headers.origin);
+    expect(response.headers["Access-Control-Allow-Methods"]).toContain("POST");
+  });
+
+  test("rejects unconfigured origins on the full-assessment endpoint", async () => {
+    const request = makeReq();
+    request.method = "OPTIONS";
+    request.headers.origin = "https://untrusted.example";
+    const response = makeRes();
+
+    await loadHandler()(request, response);
+
+    expect(response.statusCode).toBe(403);
+    expect(response.headers["Access-Control-Allow-Origin"]).toBeUndefined();
   });
 
   test("dashboard handoff exchange atomically consumes a code and rejects reuse", async () => {
