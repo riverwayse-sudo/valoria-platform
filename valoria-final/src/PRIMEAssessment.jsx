@@ -918,7 +918,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
               <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(34px,8vw,48px)", fontWeight:200, lineHeight:1.05, color:T.parchment, margin:"0 0 12px" }}>
                 Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
               </h1>
-              <p style={{ fontSize:T.size.body, color:T.text.tertiary, lineHeight:1.65, margin:"0 0 24px", fontFamily:T.font.body }}>55 questions across five PRIME clusters.</p>
+              <p style={{ fontSize:T.size.body, color:T.text.tertiary, lineHeight:1.65, margin:"0 0 24px", fontFamily:T.font.body }}>The VALU Index assesses professional capability across the five PRIME clusters.</p>
               <div style={{ display:"flex", marginBottom:28, background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:T.radius.chip, overflow:"hidden" }}>
                 {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Free",v:"Always"}].map((s,i)=>(
                   <div key={i} style={{ flex:1, padding:"12px 6px", textAlign:"center", borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none" }}>
