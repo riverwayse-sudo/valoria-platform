@@ -92,9 +92,9 @@ export default function VALUIndexV4GateNext(){
      setProgressToken(stored);
      const answeredCount=Object.keys(savedAnswers).length;
      const complete=Number(p.current_question)===TASTER_QUESTIONS.length&&answeredCount===TASTER_QUESTIONS.length;
-     if(complete){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
-     setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
      const identified=!!(p.name&&p.role&&p.experience&&p.email);
+     if(complete&&identified){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
+     setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
      setPhase(identified?'session1':'registration');
      return;
     }
@@ -173,7 +173,7 @@ export default function VALUIndexV4GateNext(){
     try{localStorage.setItem(RESUME_TOKEN_KEY,token)}catch{}
    }
    await postProgress({action:'identify',resume_token:token,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
-   setPhase('session1');
+   setPhase(Object.keys(answers).length===TASTER_QUESTIONS.length?'break':'session1');
   }catch(err){
    setError(err?.message||'Your details could not be saved. Please retry.');
   }finally{
