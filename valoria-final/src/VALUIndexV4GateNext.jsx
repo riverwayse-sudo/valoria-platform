@@ -22,6 +22,7 @@ const SITE_BASE = (() => {
   const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) return configuredOrigin;
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  if (host.includes('staging')) return 'https://staging.valoriainstitute.com';
   if (host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://valoriainstitute.com';
   // Preview deployments must be paired with their site origin explicitly;
   // never silently route preview authentication into production.
