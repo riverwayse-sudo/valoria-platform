@@ -37,6 +37,15 @@ describe("VALU assessment left-alignment contract", () => {
     expect(full).not.toContain("current + 1} / TOTAL_QUESTIONS");
   });
 
+  test("the legacy taster no longer queries public profiles with an anonymous key", () => {
+    const legacyGate = read("VALUIndexV4Gate.jsx");
+    const activeApp = read("VALUIndexV4App.jsx");
+    expect(activeApp).toContain("VALUIndexV4GateNext");
+    expect(legacyGate).not.toContain("SUPABASE_ANON_KEY");
+    expect(legacyGate).not.toContain("professional_profiles?\u0024{params}");
+    expect(legacyGate).not.toContain("AssessmentProof");
+  });
+
   test("assessment navigation title begins at the left edge of its own grid cell", () => {
     const navigation = read("AssessmentNavigation.jsx");
     expect(navigation).toContain("justifyContent:'flex-start'");
