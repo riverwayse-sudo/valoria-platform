@@ -109,7 +109,7 @@ export default function VALUIndexV4GateNext(){
     if(!created.resume_token)throw new Error('Your assessment could not be started. Please retry.');
     try{localStorage.setItem(RESUME_TOKEN_KEY,created.resume_token)}catch{}
     setProgressToken(created.resume_token);
-    setPhase('session1');
+    setPhase('intro');
    }catch(err){
     if(cancelled)return;
     setError(err?.message||'We could not start your assessment. Please refresh to retry.');
@@ -184,6 +184,23 @@ export default function VALUIndexV4GateNext(){
 
  if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU</div><h1 style={S.h1}>Preparing your snapshot…</h1><p style={S.p}>We are getting your session ready.</p></Shell>;
 
+ if(phase==='intro')return <Shell>
+  <section className="valu-assessment-intro" aria-labelledby="valu-taster-intro-title">
+   <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU INDEX</div>
+   <div className="valu-intro-rule"><span/></div>
+   <p className="valu-intro-overline">A CLEARER VIEW OF YOUR PROFESSIONAL CAPABILITY</p>
+   <h1 id="valu-taster-intro-title" className="valu-intro-title">Your professional worth deserves to be <em>understood.</em></h1>
+   <p className="valu-intro-copy">Begin with a short reflection on how you work, relate and create value. Your responses help establish a starting point for your Valoria journey.</p>
+   <div className="valu-intro-benefits">
+    <div><span className="valu-intro-check">✓</span><span><strong>Simple, considered choices</strong><small>Choose the response that best reflects your experience.</small></span></div>
+    <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>You can leave and return without losing saved responses.</small></span></div>
+    <div><span className="valu-intro-check">✓</span><span><strong>A useful next step</strong><small>Your snapshot helps you understand where to continue.</small></span></div>
+   </div>
+   <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU TASTER <span>→</span></button>
+   <p className="valu-intro-assurance">Your responses are handled securely and are not shown as a public profile.</p>
+  </section>
+ </Shell>;
+
  if(phase==='break')return <Shell>
   <VALUAssessmentJourney stage="account" />
   <section className="valu-results-header" style={S.resultsHeader}>
@@ -232,10 +249,11 @@ export default function VALUIndexV4GateNext(){
 
  return <Shell mode="taster">
   <VALUAssessmentJourney stage="taster" currentQuestion={placeInAssessment} />
-  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>YOUR PROGRESS IS SAVED</div></div>
-  <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
+  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div className="valu-taster-save-state"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</div></div>
+  <div className="valu-taster-progress" role="progressbar" aria-label="Taster progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={sessionProgress} style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
+  {current>0&&<button type="button" className="valu-assessment-back" disabled={saving||selected!==null} onClick={()=>setCurrent(value=>Math.max(0,value-1))}>← REVIEW PREVIOUS RESPONSE</button>}
   {error&&<div style={S.error}>{error}</div>}
   <p style={S.note}>Your progress is saved as you go.</p>
  </Shell>;

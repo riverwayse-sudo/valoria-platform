@@ -2,7 +2,6 @@ name: Cloudflare assessment Worker validation
 
 on:
   pull_request:
-    branches: [main]
     paths:
       - "valoria-final/api/**"
       - "valoria-final/lib/**"
@@ -12,6 +11,7 @@ on:
       - "valoria-final/wrangler.jsonc"
       - "valoria-final/package.json"
       - "valoria-final/package-lock.json"
+      - "valoria-final/supabase/migrations/**"
       - ".github/workflows/cloudflare-assessment-worker.yml"
   push:
     branches: [main]
@@ -53,3 +53,5 @@ jobs:
           CI: true
       - name: Bundle Worker and static assets without deploying
         run: npx --yes wrangler@4.156.0 deploy --dry-run --config wrangler.jsonc --outdir .wrangler-dry-run
+      - name: Validate isolated staging Worker configuration without deploying
+        run: npx --yes wrangler@4.156.0 deploy --dry-run --config wrangler.jsonc --env staging --outdir .wrangler-staging-dry-run
