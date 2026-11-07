@@ -1,33 +1,31 @@
 import React from 'react';
 
 const STEPS = [
-  { key: 'opening', title: 'Opening', detail: 'Questions 1–9' },
-  { key: 'bridge', title: 'Account', detail: 'Save & confirm' },
-  { key: 'continuation', title: 'Continue', detail: 'Questions 10–58' },
+  { key: 'taster', title: 'Start', detail: 'Begin your journey' },
+  { key: 'account', title: 'Profile', detail: 'Your details are saved' },
+  { key: 'full', title: 'Assessment', detail: 'Continue when ready' },
 ];
 
-export default function VALUAssessmentJourney({ stage = 'opening', currentQuestion }) {
+export default function VALUAssessmentJourney({ stage = 'taster' }) {
   const activeIndex = Math.max(0, STEPS.findIndex(step => step.key === stage));
   return (
-    <section aria-label="One VALU assessment journey" style={{ margin: '0 0 28px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ color: '#D4C9A8', fontSize: 9, fontWeight: 800, letterSpacing: '.16em' }}>ONE VALU ASSESSMENT</span>
-        <span style={{ color: 'rgba(250,250,247,.48)', fontSize: 10 }}>
-          {Number.isInteger(currentQuestion) ? `QUESTION ${currentQuestion} OF 58` : 'YOUR PROGRESS IS PRESERVED'}
-        </span>
+    <section aria-label="VALU assessment progress" style={{ margin: '0 0 28px' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:12 }}>
+        <span style={{ color:'#C9A84C', fontSize:9, fontWeight:800, letterSpacing:'.16em' }}>VALU ASSESSMENT</span>
+        <span style={{ color:'rgba(247,244,238,.48)', fontSize:10 }}>YOUR PROGRESS IS SAVED</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
-        {STEPS.map((step, index) => {
-          const complete = index < activeIndex;
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:8 }}>
+        {STEPS.map((step,index) => {
+          const done = index < activeIndex;
           const active = index === activeIndex;
           return (
-            <div key={step.key} aria-current={active ? 'step' : undefined} style={{ minWidth: 0 }}>
-              <div style={{ height: 3, borderRadius: 99, background: complete || active ? '#C9A84C' : 'rgba(250,250,247,.12)' }} />
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                <span style={{ color: complete || active ? '#C9A84C' : 'rgba(250,250,247,.42)', fontSize: 9, fontWeight: 800, letterSpacing: '.08em' }}>{complete ? '✓' : `0${index + 1}`}</span>
-                <span style={{ color: active ? '#FAFAF7' : 'rgba(250,250,247,.58)', fontSize: 9, fontWeight: 800, letterSpacing: '.08em' }}>{step.title.toUpperCase()}</span>
+            <div key={step.key} aria-current={active ? 'step' : undefined} style={{ minWidth:0 }}>
+              <div style={{ height:3, borderRadius:99, background:done || active ? '#C9A84C' : 'rgba(247,244,238,.12)' }} />
+              <div style={{ display:'flex', alignItems:'baseline', gap:6, flexWrap:'wrap', marginTop:8 }}>
+                {done && <span aria-hidden="true" style={{ color:'#C9A84C', fontSize:9, fontWeight:800 }}>✓</span>}
+                <span style={{ color:active ? '#FAFAF7' : 'rgba(247,244,238,.58)', fontSize:9, fontWeight:800, letterSpacing:'.08em' }}>{step.title.toUpperCase()}</span>
               </div>
-              <div style={{ color: 'rgba(250,250,247,.4)', fontSize: 9, marginTop: 3 }}>{step.detail}</div>
+              <div style={{ color:'rgba(247,244,238,.4)', fontSize:9, marginTop:3 }}>{step.detail}</div>
             </div>
           );
         })}

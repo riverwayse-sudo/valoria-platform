@@ -1,26 +1,13 @@
 "use strict";
 
-// Two-session VALU journey contract.
-//
-// There is ONE 58-question assessment, completed in two sessions:
-//   Session 1 — the approved opening nine (direct entry, no account required).
-//   Session 2 — the remaining 49 questions (after account confirmation).
-//
-// These tests pin the shape of that journey so it cannot silently regress into
-// the previous "taster is a separate product, then start a second assessment"
-// flow, which is exactly what left a participant unable to continue.
+// Contract for two independent assessment records:
+// 1) the 9-question taster; 2) the separate 58-question full VALU assessment.
 
 const fs = require("fs");
 const path = require("path");
-
 const {
   ASSESSMENT_ORDER,
-  OPENING_POSITIONS,
-  OPENING_SESSION_LENGTH,
-  REMAINING_POSITIONS,
-  REMAINING_SESSION_LENGTH,
   TOTAL_QUESTIONS,
-  seedAnswersFromOpening,
   nextPlaceToAnswer,
   answeredCount,
   placeForPosition,
@@ -29,207 +16,158 @@ const { QUESTIONS } = require("../questions");
 const { TASTER_QUESTIONS } = require("../valuTaster");
 
 const readSource = relative => fs.readFileSync(path.join(__dirname, "..", relative), "utf8");
+const readApi = name => fs.readFileSync(path.join(__dirname, "../../api", name), "utf8");
 const gateSource = () => readSource("VALUIndexV4GateNext.jsx");
 const fullSource = () => readSource("FullVALUAssessment.jsx");
 
-describe("one continuous VALU assessment with an account-confirmation bridge", () => {
-  test("the canonical assessment is exactly 58 questions", () => {
-    expect(QUESTIONS.length).toBe(58);
+describe("independent taster and full VALU assessment structure", () => {
+  test("the full VALU assessment contains exactly 58 canonical questions", () => {
+    expect(QUESTIONS).toHaveLength(58);
     expect(TOTAL_QUESTIONS).toBe(58);
-  });
-
-  test("the opening session is the approved nine and the second session is the remaining 49", () => {
-    expect(OPENING_SESSION_LENGTH).toBe(9);
-    expect(REMAINING_SESSION_LENGTH).toBe(49);
-    expect(ASSESSMENT_ORDER.length).toBe(58);
-  });
-
-  test("the approved opening nine are the same questions as the canonical taster", () => {
-    const openingIds = OPENING_POSITIONS.map(position => QUESTIONS[position].id);
-    expect(openingIds).toEqual(TASTER_QUESTIONS.map(question => question.id));
-  });
-
-  test("the opening nine and the remaining 49 partition the bank with no duplicates", () => {
-    const combined = [...OPENING_POSITIONS, ...REMAINING_POSITIONS].sort((a, b) => a - b);
-    expect(combined).toEqual(Array.from({ length: 58 }, (_, index) => index));
+    expect(ASSESSMENT_ORDER).toEqual(Array.from({ length: 58 }, (_, index) => index));
     expect(new Set(ASSESSMENT_ORDER).size).toBe(58);
   });
 
-  test("the opening nine span all five PRIME clusters", () => {
-    const clusters = new Set(OPENING_POSITIONS.map(position => QUESTIONS[position].cluster));
-    for (const cluster of ["P", "R", "I", "M", "E"]) expect(clusters.has(cluster)).toBe(true);
+  test("the taster has its own nine-question count and is not imported into full assessment order", () => {
+    expect(TASTER_QUESTIONS).toHaveLength(9);
+    const journey = readSource("assessmentJourney.js");
+    expect(journey).not.toContain("valuTaster");
+    expect(journey).not.toContain("OPENING_POSITIONS");
+    expect(journey).not.toContain("seedAnswersFromOpening");
+  });
+
+  test("full assessment starts at Question 1 and counts only its own answers", () => {
+    expect(nextPlaceToAnswer({}, 1)).toBe(1);
+    expect(placeForPosition(0)).toBe(1);
+    const answers = { 0: 2, 1: 1, 2: 0 };
+    expect(answeredCount(answers)).toBe(3);
+    expect(nextPlaceToAnswer(answers, 1)).toBe(4);
+  });
+
+  test("full assessment progress reaches 58 only after 58 full answers", () => {
+    const answers = Object.fromEntries(ASSESSMENT_ORDER.map(position => [position, 0]));
+    expect(answeredCount(answers)).toBe(58);
+    expect(nextPlaceToAnswer(answers, 1)).toBe(null);
   });
 });
 
-describe("session 1 → session 2 continuity", () => {
-  test("the saved opening nine seed their canonical bank positions", () => {
-    const openingAnswers = { 0: 2, 1: 1, 2: 0, 3: 3, 4: 2, 5: 1, 6: 0, 7: 3, 8: 2 };
-    const seeded = seedAnswersFromOpening(openingAnswers);
-    expect(Object.keys(seeded).length).toBe(9);
-    OPENING_POSITIONS.forEach((position, index) => {
-      expect(seeded[position]).toBe(openingAnswers[index]);
-    });
-    expect(answeredCount(seeded)).toBe(9);
+describe("standalone 9-question taster", () => {
+  test("taster UI labels and counts only its own nine questions", () => {
+    const source = gateSource();
+    expect(source).not.toContain("Question {placeInAssessment} of {TASTER_QUESTIONS.length}");
+    expect(source).toContain("YOUR PROGRESS IS SAVED");
+    expect(source).toContain("sessionProgress");
+    expect(source).toContain('VALUAssessmentJourney stage="taster"');
+    expect(source).toContain("TASTER_QUESTIONS.length");
+    expect(source).not.toContain("TOTAL_QUESTIONS");
+    expect(source).not.toContain("Question 10");
+    expect(source).not.toContain("remaining 49");
   });
 
-  test("the participant resumes at question 10, not back at question 1", () => {
-    const seeded = seedAnswersFromOpening({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 });
-    expect(nextPlaceToAnswer(seeded, 1)).toBe(10);
-    expect(placeForPosition(ASSESSMENT_ORDER[9])).toBe(10);
+  test("taster progress is saved to its own progress API and record", () => {
+    const source = gateSource();
+    const progressApi = readApi("taster-progress.js");
+    expect(source).toContain("/api/taster-progress");
+    expect(source).toContain("/api/submit-taster");
+    expect(progressApi).toContain("taster_progress");
+    expect(source).toContain("pending_taster_id");
   });
 
-  test("resuming skips questions already answered anywhere in the order", () => {
-    const seeded = seedAnswersFromOpening({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 });
-    const answers = { ...seeded, [ASSESSMENT_ORDER[9]]: 1, [ASSESSMENT_ORDER[10]]: 1 };
-    expect(nextPlaceToAnswer(answers, 10)).toBe(12);
-  });
-
-  test("nextPlaceToAnswer returns null only when all 58 are answered", () => {
-    const full = {};
-    ASSESSMENT_ORDER.forEach(position => { full[position] = 0; });
-    expect(answeredCount(full)).toBe(58);
-    expect(nextPlaceToAnswer(full, 1)).toBe(null);
+  test("the taster result sends the user to account setup without exposing assessment mechanics", () => {
+    const source = gateSource();
+    expect(source).toContain("Your snapshot is");
+    expect(source).toContain("Confirm your email, then return to your dashboard to continue.");
+    expect(source).toContain("Your progress is saved.");
+    expect(source).toContain("VALUAssessmentJourney stage=\"account\"");
+    expect(source).not.toContain("Question 1");
+    expect(source).not.toContain("saved separately from the full assessment");
+    expect(source).not.toContain("Continue at Question 10");
+    expect(source).not.toContain("remaining 49 questions");
   });
 });
 
-describe("session 1 presents questions directly, with no account gate", () => {
-  test("the gate starts at Question 1 without an intro details form", () => {
-    const source = gateSource();
-    expect(source).toContain("Question {placeInAssessment} of {TOTAL_QUESTIONS}");
-    expect(source).toContain('VALUAssessmentJourney stage="opening"');
-    expect(source).not.toContain("SESSION 1 OF 2");
-    // The old pre-assessment details form is gone; identity is captured at the break.
-    expect(source).not.toContain("YOUR DETAILS · 01 / 03");
-    expect(source).not.toContain("Tell us about yourself.");
-    expect(source).not.toContain("START MY 9-QUESTION TASTER");
-  });
-
-  test("the opening session persists the ninth answer before showing the account break", () => {
-    const source = gateSource();
-    // The break phase is entered only inside answer() after the save resolves.
-    expect(source).toContain("setPhase('break')");
-    const answerBody = source.slice(source.indexOf("async function answer(index)"), source.indexOf("function choose(index)"));
-    expect(answerBody).toContain("await postProgress(");
-    expect(answerBody).toContain("current_question:isLast?TASTER_QUESTIONS.length:current+1");
-    expect(answerBody).toContain("setPhase('break')");
-  });
-
-  test("the account is requested after the break, not before the questions", () => {
-    const source = gateSource();
-    const breakIndex = source.indexOf("phase==='break'");
-    const sessionIndex = source.indexOf('mode="taster"');
-    expect(breakIndex).toBeGreaterThan(-1);
-    expect(sessionIndex).toBeGreaterThan(-1);
-    expect(source).toContain("SAVE MY DETAILS & CONTINUE");
-    expect(source).toContain("action:'identify'");
-  });
-
-  test("creating the account carries the exact session reference to signup", () => {
-    const source = gateSource();
-    expect(source).toContain("professional-signup/?");
-    expect(source).toContain("taster_id:data.taster_id");
-    expect(source).toContain("new URLSearchParams({taster_id:data.taster_id");
-    expect(source).toContain("localStorage.setItem('pending_taster_id',data.taster_id)");
-  });
-
-  test("the session 1 gate never scores or displays a VALU Index", () => {
-    const source = gateSource();
-    expect(source).not.toContain("computeTasterResult");
-    expect(source).not.toContain("YOUR PRIME SNAPSHOT");
-    expect(source).not.toContain("directional");
-  });
-
-  test("a returning participant with a pending assessment is sent to continuation, not a new session", () => {
-    const source = gateSource();
-    expect(source).toContain("localStorage.getItem('pending_taster_id')");
-    expect(source).toContain("'/journey/continue?stage=assess&taster_id='+encodeURIComponent(pending)");
-  });
-
-  test("a stale or expired resume token is discarded instead of blocking entry", () => {
-    const source = gateSource();
-    const begin = source.slice(source.indexOf("async function begin()"), source.indexOf("begin();"));
-    expect(begin).toContain("localStorage.removeItem(RESUME_TOKEN_KEY)");
-    expect(begin).toContain("postProgress({action:'init'})");
-  });
-
-  test("API requests use the deployment-root API host, not the Vite asset base", () => {
-    expect(gateSource()).toContain("VITE_VALU_API_ORIGIN");
-    expect(gateSource()).toContain("https://assessment.valoriainstitute.com");
-    expect(gateSource()).not.toContain("import.meta.env.BASE_URL");
-    expect(fullSource()).not.toContain("import.meta.env.BASE_URL");
-  });
-});
-
-describe("session 2 presents the remaining questions and restores progress", () => {
-  test("the full assessment renders questions in the two-session completion order", () => {
+describe("separate 58-question full VALU assessment", () => {
+  test("the full assessment renders the canonical bank in order", () => {
     const source = fullSource();
     expect(source).toContain("QUESTIONS[ASSESSMENT_ORDER[current]]");
-    expect(source).toContain('VALUAssessmentJourney stage="continuation"');
-    expect(source).not.toContain("SESSION 2 OF 2");
+    expect(source).toContain('VALUAssessmentJourney stage="full"');
+    expect(source).toContain("TOTAL_QUESTIONS");
+    expect(source).not.toContain("OPENING_POSITIONS");
+    expect(source).not.toContain("OPENING_SESSION_LENGTH");
+    expect(source).not.toContain("Question 10");
   });
 
-  test("session 2 starts directly at Question 10 without recalling the opening answers", () => {
+  test("a new full assessment starts at Question 1", () => {
     const source = fullSource();
-    expect(source).toContain("setCurrent(OPENING_SESSION_LENGTH)");
-    expect(source).toContain("nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1)");
-    expect(source).not.toContain("data.seeded_answers");
+    expect(source).toContain("setCurrent(0)");
+    expect(source).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
+    expect(source).not.toContain("setCurrent(OPENING_SESSION_LENGTH)");
+    expect(source).not.toContain("seedAnswersFromOpening");
   });
 
-  test("the assessment-progress restore reads continuation progress only", () => {
-    const api = fs.readFileSync(path.join(__dirname, "../../api/assessment-progress.js"), "utf8");
+  test("saved full-assessment progress resumes at its first unanswered question", () => {
+    const source = fullSource();
+    expect(source).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
+    expect(source).toContain("setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1)");
+    expect(source).toContain("The authenticated server restore is the source of truth");
+    expect(source).toContain("remoteRestoreComplete");
+  });
+
+  test("full progress is stored independently from taster progress and never reads taster answers", () => {
+    const api = readApi("assessment-progress.js");
+    expect(api).toContain("valu_assessment_progress");
     expect(api).not.toContain("taster_answers");
     expect(api).not.toContain("seedAnswersFromOpening");
-    expect(api).not.toContain("seeded_answers");
-    expect(api).toContain("Continuation deliberately restores only the saved Questions 10–58 work");
+    expect(api).toContain("Taster answers are stored separately");
   });
 
-  test("a returning participant is taken straight to the first unanswered question", () => {
-    const source = fullSource();
-    expect(source).not.toContain("ResumeModal");
-    expect(source).not.toContain("resumePopup");
-    expect(source).toContain("nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1)");
-    expect(source).toContain("setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1)");
+  test("final submission requires all 58 full-assessment answers and never merges taster answers", () => {
+    const api = readApi("submit-assessment.js");
+    expect(api).toContain("validateAnswers(answers)");
+    expect(api).toContain("const completeAnswers = answers");
+    expect(api).not.toContain("validateRemainingAnswers");
+    expect(api).not.toContain("seedAnswersFromOpening");
+    expect(api).not.toContain("taster_answers");
+    expect(api).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
   });
 
-  test("the verified server answer map cannot be overwritten by stale browser-local progress", () => {
-    const source = fullSource();
-    expect(source).toContain("The authenticated server restore is the source of truth");
-    expect(source).toContain("handoffStatus !== 'ready' || !remoteRestoreComplete");
-    expect(source).not.toContain("setAnswers(saved.answers)");
-  });
+  test("public assessment screens hide internal question counts and implementation mechanics", () => {
+    const publicScreens = [
+      readSource("VALUIndexV4Gate.jsx"),
+      readSource("VALUIndexV4GateNext.jsx"),
+      readSource("PRIMEAssessment.jsx"),
+      fullSource(),
+      fs.readFileSync(path.join(__dirname, "../../public/Index.html"), "utf8"),
+    ].join("\\n")
+    expect(publicScreens).not.toMatch(/\\b(?:9|55|58)\\s*[- ]?questions?\\b/i)
+    expect(publicScreens).not.toMatch(/question\\s*\\{[^}]+\\}\\s*of\\s*\\{/i)
+    expect(publicScreens).not.toMatch(/independently assessed|certified facilitators|only verifiable professional credential/i)
+    const landing = fs.readFileSync(path.join(__dirname, "../../public/Index.html"), "utf8")
+    expect(landing).toContain("family=Raleway")
+    expect(landing).not.toMatch(/DM Sans|Cormorant Garamond|#378ADD|#1D9E75|#7F77DD|#BA7517|#D85A30/)
+  })
 
-  test("answers are stored against canonical bank positions, not presentation order", () => {
-    const source = fullSource();
-    expect(source).toContain("const position = ASSESSMENT_ORDER[current]");
-    expect(source).toContain("nextAnswers = { ...answers, [position]: optionIndex }");
-  });
+  test("assessment conversion events are sent to the shared Valoria analytics property", () => {
+    const index = fs.readFileSync(path.join(__dirname, "../../index.html"), "utf8")
+    const taster = readSource("VALUIndexV4Gate.jsx")
+    const full = fullSource()
+    expect(index).toContain("G-63M4SRXQKM")
+    expect(taster).toContain('valu_taster_start')
+    expect(taster).toContain('valu_taster_complete')
+    expect(full).toContain('valu_index_open')
+    expect(full).toContain('valu_index_complete')
+  })
 
-
-  test("the post-question-nine bridge clearly previews account setup, email confirmation, and Question 10", () => {
-    const source = gateSource();
-    expect(source).toContain("What happens next");
-    expect(source).toContain("02 · YOU ARE HERE");
-    expect(source).toContain("Create your account");
-    expect(source).toContain("set your password and confirm your email");
-    expect(source).toContain("03 · UP NEXT");
-    expect(source).toContain("Continue at Question 10");
-    expect(source).toContain("remaining 49 questions");
-    expect(source).toContain("ACCOUNT SETUP · STEP 2 OF 3");
-    expect(source).toContain("SAVE MY DETAILS & CONTINUE");
-  });
-
-describe("three-stage experience presentation", () => {
-  test("opening, account bridge, and completion share one progress component", () => {
+  test("the shared journey indicator distinguishes taster, account and full assessment", () => {
     const progress = readSource("VALUAssessmentJourney.jsx");
-    expect(gateSource()).toContain('VALUAssessmentJourney stage="opening"');
-    expect(gateSource()).toContain('VALUAssessmentJourney stage="bridge"');
-    expect(fullSource()).toContain('VALUAssessmentJourney stage="continuation"');
-    expect(progress).toContain("Questions 1–9");
-    expect(progress).toContain("Save & confirm");
-    expect(progress).toContain("Questions 10–58");
-    expect(gateSource()).not.toContain("SESSION 1 OF 2");
-    expect(fullSource()).not.toContain("SESSION 2 OF 2");
+    expect(progress).toContain("title: 'Start'");
+    expect(progress).toContain("title: 'Profile'");
+    expect(progress).toContain("title: 'Assessment'");
+    expect(progress).not.toContain("9 separate questions");
+    expect(progress).not.toContain("Create & confirm");
+    expect(progress).not.toContain("58 questions");
+    expect(gateSource()).toContain('VALUAssessmentJourney stage="taster"');
+    expect(gateSource()).toContain('VALUAssessmentJourney stage="account"');
+    expect(fullSource()).toContain('VALUAssessmentJourney stage="full"');
   });
-});
-
 });

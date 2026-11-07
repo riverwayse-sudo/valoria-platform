@@ -29,7 +29,6 @@ const SITE_BASE = (() => {
 })();
 
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from './valuTaster.js';
-import { OPENING_SESSION_LENGTH, TOTAL_QUESTIONS } from './assessmentJourney.js';
 
 const CLUSTERS={P:'Presence',R:'Relationships',I:'Intelligence',M:'Mastery',E:'Enterprise'};
 const COLORS={P:'#C9A84C',R:'#C9A84C',I:'#C9A84C',M:'#C9A84C',E:'#C9A84C'};
@@ -37,13 +36,10 @@ const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS=
 
 const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 
-// Session 1 of the single 58-question VALU assessment.
-//
-// The participant arrives straight at Question 1 — no introductory page and no
-// account requirement. They answer the approved opening nine, the responses are
-// persisted, and only then are they asked to create an account at the natural
-// break. This component never scores or displays a VALU Index; the nine answers
-// are the first nine of the 58 and are scored later with the rest.
+// Entry flow for the VALU journey.
+// Participants begin with a short capability snapshot before account setup.
+// Snapshot responses are stored and scored independently; they never populate
+// the formal VALU assessment response record.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
@@ -172,7 +168,7 @@ export default function VALUIndexV4GateNext(){
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
    const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your opening nine could not be saved. Please retry.');
+   if(!response.ok)throw new Error(data.error||'Your snapshot could not be saved. Please retry.');
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
    setTasterId(data.taster_id);
    try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
@@ -186,20 +182,20 @@ export default function VALUIndexV4GateNext(){
   }
  }
 
- if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU ASSESSMENT</div><h1 style={S.h1}>Preparing your assessment…</h1><p style={S.p}>We are getting Question 1 ready.</p></Shell>;
+ if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU</div><h1 style={S.h1}>Preparing your snapshot…</h1><p style={S.p}>We are getting your session ready.</p></Shell>;
 
  if(phase==='break')return <Shell>
-  <VALUAssessmentJourney stage="bridge" />
+  <VALUAssessmentJourney stage="account" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> OPENING NINE SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
-   <h1 className="valu-results-title" style={S.h1}>Your opening nine are <em>saved.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your first nine responses are safely saved. This is the account bridge in your one VALU assessment — not a separate test and not the end of your journey.</p>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <h1 className="valu-results-title" style={S.h1}>Your snapshot is <em>saved.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your opening nine</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your answers are saved and will carry into the full assessment.</p>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU taster</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · YOU ARE HERE</div>
@@ -208,19 +204,19 @@ export default function VALUIndexV4GateNext(){
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue at Question 10</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, return signed in to your dashboard, and complete the remaining 49 questions.</p>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue with Valoria</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, then return to your dashboard to continue.</p>
    </div>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
    <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
-    <div style={S.resultRow}><div style={S.dimensionCode}>OPENING 9</div><h2 style={S.scoreName}>Completed</h2><strong style={S.scoreValue}>{OPENING_SESSION_LENGTH}<small style={S.scoreOutOf}>/{TOTAL_QUESTIONS} questions</small></strong></div>
-    <div style={S.resultRow}><div style={S.dimensionCode}>REMAINING 49</div><h2 style={S.scoreName}>Ready to continue</h2><strong style={S.scoreValue}>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH}<small style={S.scoreOutOf}> questions remaining</small></strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>YOUR SNAPSHOT</div><h2 style={S.scoreName}>Saved</h2><strong style={S.scoreValue}>✓</strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>NEXT STEP</div><h2 style={S.scoreName}>Account setup</h2><strong style={S.scoreValue}>→</strong></div>
    </div>
   </section>
   <form onSubmit={createAccount} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>ACCOUNT SETUP · STEP 2 OF 3</div><h2 style={S.formTitle}>Let’s keep your progress connected.</h2></div><div style={S.formTime}>COMPLETION<br/>{TOTAL_QUESTIONS-OPENING_SESSION_LENGTH} LEFT</div></div>
-   <p style={S.formIntro}>Use an email address you can access. We’ll connect your saved opening nine to your account, then guide you through password setup and email confirmation before returning you to your dashboard.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>ACCOUNT SETUP</div><h2 style={S.formTitle}>Let’s keep your progress connected.</h2></div><div style={S.formTime}>YOUR ACCOUNT</div></div>
+   <p style={S.formIntro}>Your progress is saved. After creating your account and confirming your email, return to your dashboard to continue.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name"/></Field>
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title"/></Field>
@@ -229,19 +225,19 @@ export default function VALUIndexV4GateNext(){
    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"/></Field>
    {error&&<div style={S.error}>{error}</div>}
    <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR SESSION…':'SAVE MY DETAILS & CONTINUE →'}</button>
-   <div style={S.saveNote}><span>✓</span> Your opening nine answers are saved.</div>
+   <div style={S.saveNote}><span>✓</span> Your progress is saved.</div>
   </form>
   <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
 
  return <Shell mode="taster">
-  <VALUAssessmentJourney stage="opening" currentQuestion={placeInAssessment} />
-  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU ASSESSMENT</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>Question {placeInAssessment} of {TOTAL_QUESTIONS}</div></div>
+  <VALUAssessmentJourney stage="taster" currentQuestion={placeInAssessment} />
+  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div style={S.counter}>YOUR PROGRESS IS SAVED</div></div>
   <div className="valu-taster-progress" style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
   {error&&<div style={S.error}>{error}</div>}
-  <p style={S.note}>{OPENING_SESSION_LENGTH} of {TOTAL_QUESTIONS} questions in this opening nine · Progress is saved automatically.</p>
+  <p style={S.note}>Your progress is saved as you go.</p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}

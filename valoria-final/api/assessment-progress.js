@@ -267,10 +267,9 @@ async function baseHandler(req) {
     if (resolvedIdentity.error) return json({ error: resolvedIdentity.error }, 409);
     if (resolvedIdentity.user_id !== handoff.sub) return json({ error: "This secure handoff does not match the snapshot owner." }, 403);
     try {
-      // Continuation deliberately restores only the saved Questions 10–58 work.
-      // The opening-nine snapshot is retained untouched and is reconciled server-side
-      // when the full assessment is submitted, so a broken snapshot recall cannot
-      // prevent participants from completing the remaining questions.
+      // Restore only the separate full-assessment progress record.
+      // The 9-question taster remains in taster_progress/taster_sessions and is
+      // never read, merged or scored as part of the 58-question full assessment.
       const progress = await getProgressByTasterId(tasterId);
       if (!progress) return json({ ok: true, progress: null });
       if (progress.user_id && progress.user_id !== resolvedIdentity.user_id) {
@@ -292,9 +291,8 @@ async function baseHandler(req) {
         if (!claim.ok) throw new Error("Could not link the saved assessment to your account. Please retry.");
         progress.user_id = resolvedIdentity.user_id;
       }
-      // Do not recall or merge the opening-nine answers in the continuation UI.
-      // They are merged into the scoring payload by submit-assessment after all
-      // remaining questions have been answered.
+      // Taster answers are stored separately. This response contains only the
+      // participant's saved answers to the independent full assessment.
       return json({ ok: true, progress });
     } catch (err) {
       return json({ error: err.message || "Could not restore saved VALU progress." }, 502);

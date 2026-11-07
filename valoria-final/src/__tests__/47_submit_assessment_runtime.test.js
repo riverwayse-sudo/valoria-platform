@@ -12,7 +12,6 @@
 
 import { createHash, createHmac } from "node:crypto";
 import { QUESTIONS } from "../questions.js";
-import { ASSESSMENT_ORDER, OPENING_POSITIONS, OPENING_SESSION_LENGTH } from "../assessmentJourney.js";
 
 const SERVICE_ROLE = "service-role-key";
 const TASTER_ID = "11111111-1111-4111-8111-111111111111";
@@ -99,7 +98,6 @@ function installFetch({ existing = [], insert = {}, insertStatus = 201 } = {}) {
         name: "Temitayo Adeyemi",
         role: "Programme Manager",
         completed_at: "2026-10-25T09:00:00.000Z",
-        taster_answers: Object.fromEntries(Array.from({ length: OPENING_SESSION_LENGTH }, (_, index) => [index, 0])),
       }]);
     }
     if (url.includes("/auth/v1/admin/users/")) {
@@ -195,32 +193,37 @@ describe("Full assessment submission runtime contract", () => {
     expect(rateLimitCalls).toBe(0);
   });
 
-  test("a first-time full-assessment submission persists and returns a report token", async () => {
-    installFetch();
-    const res = makeRes();
-    await loadHandler()(makeReq(), res);
-
-    // Before the fix this was 500: insertRes was read outside its block, so the
-    // row was written and then the handler threw before returning the token.
-    expect(res.statusCode).toBe(200);
-    expect(res.body.report_token).toBe(REPORT_TOKEN);
-    expect(res.body.alreadyCompleted).toBeUndefined();
-  });
-
-  test("a participant can submit only Questions 10–58 and the server merges the verified opening nine", async () => {
+  test("a first-time 58-question full assessment persists independently and returns a report token", async () => {
     const calls = installFetch();
     const request = makeReq();
-    request.body.answers = Object.fromEntries(ASSESSMENT_ORDER.slice(OPENING_SESSION_LENGTH).map(position => [position, 0]));
-    request.body.timings = Array.from({ length: QUESTIONS.length - OPENING_SESSION_LENGTH }, () => 1200);
     const res = makeRes();
     await loadHandler()(request, res);
 
     expect(res.statusCode).toBe(200);
+    expect(res.body.report_token).toBe(REPORT_TOKEN);
+    expect(res.body.alreadyCompleted).toBeUndefined();
     const insert = calls.find(call => call.url.includes("/rest/v1/valu_assessments") && call.options.method === "POST");
     const payload = JSON.parse(insert.options.body);
-    expect(Object.keys(payload.answers)).toHaveLength(QUESTIONS.length);
-    for (const position of OPENING_POSITIONS) expect(payload.answers[position]).toBe(0);
-    expect(Object.keys(request.body.answers)).toHaveLength(QUESTIONS.length - OPENING_SESSION_LENGTH);
+    expect(Object.keys(payload.answers)).toHaveLength(58);
+    expect(payload.answers).toEqual(request.body.answers);
+    const tasterLookup = calls.find(call => call.url.includes("/rest/v1/taster_sessions"));
+    expect(tasterLookup.url).not.toContain("taster_answers");
+  });
+
+  test("a 49-answer payload is rejected instead of borrowing answers from the taster", async () => {
+    const calls = installFetch();
+    const request = makeReq();
+    request.body.answers = Object.fromEntries(QUESTIONS.slice(0, 49).map((_, index) => [index, 0]));
+    request.body.timings = Array.from({ length: 49 }, () => 1200);
+    const res = makeRes();
+    await loadHandler()(request, res);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe("Complete all required assessment responses before submitting.");
+    expect(res.body.error).not.toContain('58');
+    expect(res.body.error).not.toContain('separate');
+    const inserts = calls.filter(call => call.url.includes("/rest/v1/valu_assessments") && call.options.method === "POST");
+    expect(inserts).toHaveLength(0);
   });
 
   test("the assessment API answers the event Worker preflight with the exact allowed origin", async () => {

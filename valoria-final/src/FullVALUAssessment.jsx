@@ -52,8 +52,6 @@ const SITE_BASE = (() => {
 import { QUESTIONS } from './questions.js';
 import {
   ASSESSMENT_ORDER,
-  OPENING_POSITIONS,
-  OPENING_SESSION_LENGTH,
   TOTAL_QUESTIONS,
   nextPlaceToAnswer,
 } from './assessmentJourney.js';
@@ -143,7 +141,7 @@ export default function FullVALUAssessment() {
   );
 
   const question = QUESTIONS[ASSESSMENT_ORDER[current]];
-  const answeredTotal = OPENING_SESSION_LENGTH + Object.keys(answers).filter(key => !OPENING_POSITIONS.includes(Number(key))).length;
+  const answeredTotal = Object.keys(answers).length;
   const progress = Math.round((answeredTotal / TOTAL_QUESTIONS) * 100);
   // Experience is assessment metadata, not an authentication prerequisite.
   // Legacy snapshots may omit it or use an older label; let the participant
@@ -151,7 +149,7 @@ export default function FullVALUAssessment() {
   const canUse = Boolean(identity.tasterId && identity.name && identity.role);
   const hasValidExperience = isValidExperience(identity.experience);
 
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(() => { window.gtag?.("event", "valu_index_open", { assessment_type: "full" }); return () => { mountedRef.current = false; }; }, []);
 
   // Strip legacy identity/resume query parameters from the visible URL as soon
   // as the client hydrates. New links never include these values, but this
@@ -278,14 +276,13 @@ export default function FullVALUAssessment() {
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
         // The answer map is authoritative. Resume at the first unanswered
         // question even if a stale checkpoint pointer lags behind a saved answer.
-        const nextPlace = nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1);
+        const nextPlace = nextPlaceToAnswer(restoredAnswers, 1);
         setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1);
       } else {
-        // The verified account handoff confirms a completed opening session.
-        // Start directly at Question 10; opening-answer recall is deferred until
-        // final submission so it cannot block this event's remaining questions.
+        // The taster is a separate record. Start the independent full
+        // assessment at Question 1 with a fresh answer map.
         setAnswers({});
-        setCurrent(OPENING_SESSION_LENGTH);
+        setCurrent(0);
       }
       setRemoteRestoreComplete(true);
     }).catch(err => {
@@ -316,7 +313,7 @@ export default function FullVALUAssessment() {
         const restoredAnswers = saved.answers && typeof saved.answers === 'object' ? saved.answers : {};
         setAnswers(restoredAnswers);
         setTimings(Array.isArray(saved.timings) ? saved.timings : []);
-        const nextPlace = nextPlaceToAnswer(restoredAnswers, OPENING_SESSION_LENGTH + 1);
+        const nextPlace = nextPlaceToAnswer(restoredAnswers, 1);
         setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1);
         setResumeLoading(false);
       })
@@ -329,9 +326,8 @@ export default function FullVALUAssessment() {
   }, [identity.resume]);
 
   useEffect(() => {
-    // The authenticated server restore is the source of truth. Do not let an
-    // old browser-local checkpoint overwrite the verified account-owned answer
-    // map (or send a participant back to the opening questions).
+    // The authenticated server restore is the source of truth. Taster answers
+    // are stored separately and are never seeded into this full-assessment map.
     if (identity.resume || !canUse || handoffStatus !== 'ready' || !remoteRestoreComplete) return;
     if (!sessionId) setSessionId(makeSessionId());
     setStartedAt(Date.now());
@@ -494,6 +490,7 @@ export default function FullVALUAssessment() {
 
       try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}
       try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
+      window.gtag?.("event", "valu_index_complete", { assessment_type: "full" });
       setResult(scoreData.results);
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
@@ -561,8 +558,8 @@ export default function FullVALUAssessment() {
 
   return <Shell>
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
-      <VALUAssessmentJourney stage="continuation" currentQuestion={current + 1} />
-      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT · {current + 1} / {TOTAL_QUESTIONS}</div><div style={S.progressText}>{progress}%</div></div>
+      <VALUAssessmentJourney stage="full" />
+      <div style={S.top}><div style={S.eyebrow}>VALU ASSESSMENT</div></div>
       <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
       <h1 style={S.question}>{question.q}</h1>
