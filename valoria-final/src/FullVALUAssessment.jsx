@@ -149,7 +149,7 @@ export default function FullVALUAssessment() {
   const canUse = Boolean(identity.tasterId && identity.name && identity.role);
   const hasValidExperience = isValidExperience(identity.experience);
 
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(() => { window.gtag?.("event", "valu_index_open", { assessment_type: "full" }); return () => { mountedRef.current = false; }; }, []);
 
   // Strip legacy identity/resume query parameters from the visible URL as soon
   // as the client hydrates. New links never include these values, but this
@@ -490,6 +490,7 @@ export default function FullVALUAssessment() {
 
       try { window.localStorage.setItem(resumeKey, JSON.stringify({ completed:true, completedAt:new Date().toISOString() })); } catch {}
       try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
+      window.gtag?.("event", "valu_index_complete", { assessment_type: "full" });
       setResult(scoreData.results);
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
