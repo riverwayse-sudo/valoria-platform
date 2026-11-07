@@ -3,6 +3,13 @@
 import worker from "../../worker.js";
 
 describe("isolated assessment staging API gate", () => {
+  test("does not ship a legacy public Index.html that can shadow the Vite assessment app shell", () => {
+    const legacyIndex = new URL("../../public/Index.html", import.meta.url);
+    const canonicalIndex = new URL("../../index.html", import.meta.url);
+    expect(() => require("node:fs").accessSync(legacyIndex)).toThrow();
+    expect(require("node:fs").readFileSync(canonicalIndex, "utf8")).toContain("<title>Valoria Institute</title>");
+  });
+
   test("blocks all routed assessment API actions while staging writes are disabled", async () => {
     const request = new Request("https://valoria-staging-assessment.example.workers.dev/api/taster-progress", {
       method: "POST",
