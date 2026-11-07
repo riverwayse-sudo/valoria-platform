@@ -41,3 +41,14 @@ describe('public roster eligibility and revocation boundary', () => {
     expect(migration).toMatch(/capability\.eligibility_status = 'listed'/i)
   })
 })
+
+
+describe('public roster read privilege', () => {
+  test('anon and authenticated can read only through the public roster RLS policy', () => {
+    const migration = fs.readFileSync(
+      path.join(process.cwd(), 'supabase/migrations/20261107115000_grant_public_roster_select_through_rls.sql'),
+      'utf8'
+    )
+    expect(migration).toMatch(/GRANT SELECT ON TABLE public\\.marketplace_public_roster TO anon, authenticated/i)
+  })
+})
