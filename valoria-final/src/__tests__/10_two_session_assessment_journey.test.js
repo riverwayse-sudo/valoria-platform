@@ -142,6 +142,9 @@ describe("separate 58-question full VALU assessment", () => {
     expect(publicScreens).not.toMatch(/\\b(?:9|55|58)\\s*[- ]?questions?\\b/i)
     expect(publicScreens).not.toMatch(/question\\s*\\{[^}]+\\}\\s*of\\s*\\{/i)
     expect(publicScreens).not.toMatch(/independently assessed|certified facilitators|only verifiable professional credential/i)
+    const landing = fs.readFileSync(path.join(__dirname, "../../public/Index.html"), "utf8")
+    expect(landing).toContain("family=Raleway")
+    expect(landing).not.toMatch(/DM Sans|Cormorant Garamond|#378ADD|#1D9E75|#7F77DD|#BA7517|#D85A30/)
   })
 
   test("the shared journey indicator distinguishes taster, account and full assessment", () => {
