@@ -194,7 +194,7 @@ export default function VALUIndexV4GateNext(){
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your 9-question taster</h3>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU taster</h3>
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
