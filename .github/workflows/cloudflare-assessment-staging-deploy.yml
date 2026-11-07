@@ -1,4 +1,5 @@
 name: Deploy Valoria assessment Worker to staging
+# Controlled refresh: run the existing isolated staging checks against the current experience branch.
 
 on:
   pull_request:
