@@ -29,12 +29,14 @@ describe("staging formal assessment uses the isolated API", () => {
 
   test("the taster and formal assessment remain separate instruments", () => {
     const taster = read("src/valuTaster.js");
-    const tasterIds = [...taster.matchAll(/id:\\s*["']([^"']+)["']/g)].map(match => match[1]);
+    const tasterIdsMatch = taster.match(/const TASTER_IDS = \[([\s\S]*?)\]/);
+    expect(tasterIdsMatch).not.toBeNull();
+    const tasterIds = [...tasterIdsMatch[1].matchAll(/["']([^"']+)["']/g)].map(match => match[1]);
     const questionBank = read("src/questions.js");
-    const formalIds = [...questionBank.matchAll(/\\{\\s*id:\\s*["']([^"']+)["']/g)].map(match => match[1]);
+    const formalIds = [...questionBank.matchAll(/\{\s*id:\s*["']([^"']+)["']/g)].map(match => match[1]);
     expect(tasterIds).toHaveLength(9);
     expect(formalIds).toHaveLength(58);
-    expect(formalIds.filter(id => /^VA\\d+$/.test(id))).toHaveLength(4);
+    expect(formalIds.filter(id => /^VA\d+$/.test(id))).toHaveLength(4);
   });
 
   test("the formal assessment persists, restores and submits through the assessment API", () => {
