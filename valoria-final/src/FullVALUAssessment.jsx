@@ -4,6 +4,8 @@ import VALUAssessmentJourney from './VALUAssessmentJourney.jsx';
 const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1';
 const API_BASE = (() => {
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  if (host === 'valoria-staging-site.riverwayse.workers.dev') return 'https://valoria-staging-assessment.riverwayse.workers.dev';
+  if (host === 'valoria-staging-assessment.riverwayse.workers.dev') return typeof window !== 'undefined' ? window.location.origin : '';
   // The assessment UI and API are served by the same Worker. Prefer its own
   // origin on workers.dev so assessment POSTs do not depend on cross-origin
   // preflight to the custom domain.
