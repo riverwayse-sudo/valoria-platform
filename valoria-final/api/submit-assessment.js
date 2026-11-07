@@ -9,6 +9,7 @@ import { computeFingerprint } from '../src/lockEngine.js';
 import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { applyCors } from './_cors.js';
+// Staging release marker: use the exact configured Worker preview origins.
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
