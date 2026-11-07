@@ -159,7 +159,7 @@ export default function VALUIndexV4GateNext(){
    const token=progressToken||(()=>{
     const bytes=new Uint8Array(32);
     window.crypto.getRandomValues(bytes);
-    return btoa(String.fromCharCode(...bytes)).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
    })();
    const signupKey=registrationKey||window.crypto.randomUUID();
    setProgressToken(token);
