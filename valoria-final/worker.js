@@ -1,3 +1,5 @@
+// Public profile and certificate visibility is enforced by consent-aware Supabase RLS.
+// The assessment Worker must not bypass the database authorization layer.
 import tasterProgress from "./api/taster-progress.js";
 import submitTaster from "./api/submit-taster.js";
 import assessmentProgress from "./api/assessment-progress.js";
