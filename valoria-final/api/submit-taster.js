@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     resume_token_hash: `eq.${tokenHash}`,
     status: 'eq.in_progress',
     expires_at: `gt.${new Date().toISOString()}`,
-    select: 'name,role,experience,email,current_question,answers,submission_key',
+    select: 'name,role,experience,email,current_question,answers,submission_key,lead_capture_id',
     limit: '1',
   });
   const progressRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${progressParams}`, {
@@ -79,6 +79,7 @@ export default async function handler(req, res) {
   const { name, role, experience, email, answers } = progress;
   const normalizedEmail = String(email || '').trim().toLowerCase();
   if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'The saved contact email is invalid. Contact Valoria support.' });
+  if (typeof progress.lead_capture_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(progress.lead_capture_id)) return json(res, 409, { error: 'Complete your registration before submitting your snapshot.' });
   if (progress.current_question !== TASTER_QUESTIONS.length || !validAnswers(answers)) return json(res, 400, { error: 'Finish and save all snapshot answers before submitting.' });
 
 
@@ -109,6 +110,7 @@ export default async function handler(req, res) {
         p_strongest_cluster: results.strongest.id,
         p_weakest_cluster: results.weakest.id,
         p_taster_version: String(VALU_VERSION),
+        p_lead_capture_id: progress.lead_capture_id,
       }),
     });
     if (!submitRes.ok) {
