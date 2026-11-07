@@ -64,3 +64,17 @@ describe('public homepage RPC permissions', () => {
     expect(migration).toMatch(/GRANT EXECUTE ON FUNCTION public\\.get_homepage_professional_count\\(\\) TO anon, authenticated/i)
   })
 })
+
+
+describe('separate marketplace listing acknowledgement', () => {
+  test('public roster access requires a recorded marketplace listing acknowledgement', () => {
+    const migration = fs.readFileSync(
+      path.join(process.cwd(), 'supabase/migrations/20261107123000_require_explicit_marketplace_profile_acknowledgement.sql'),
+      'utf8'
+    )
+    expect(migration).toMatch(/professional_profile_acknowledgements AS acknowledgement/i)
+    expect(migration).toMatch(/acknowledgement\\.acknowledgement_type = 'marketplace_public_listing'/i)
+    expect(migration).toMatch(/acknowledgement\\.acknowledged_at IS NOT NULL/i)
+    expect(migration).toMatch(/length\\(trim\\(acknowledgement\\.acknowledgement_text\\)\\) > 0/i)
+  })
+})
