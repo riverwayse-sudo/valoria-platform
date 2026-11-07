@@ -575,10 +575,19 @@ export default function FullVALUAssessment() {
   return <Shell>
     <div className="valu-assessment-content" style={{position:'relative',zIndex:1}}>
       <VALUAssessmentJourney stage="full" preview={IS_PREVIEW} />
-      <div style={S.top}><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · FORMAL ASSESSMENT' : 'VALU ASSESSMENT'}</div><div style={S.progressText}>{progress}%</div></div>
-      <div style={S.progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
-      <div style={S.cluster}>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</div>
-      <h1 style={S.question}>{question.q}</h1>
+      <div className="valu-full-heading">
+        <div className="valu-full-kicker">VALU INDEX</div>
+        <div className="valu-full-cluster">{CLUSTER_NAMES[question.cluster] || question.cluster}</div>
+        <div className="valu-full-prompt">{question.q}</div>
+      </div>
+      <div className="valu-full-progress" role="progressbar" aria-label="Assessment progress" aria-valuenow={progress} aria-valuemin="0" aria-valuemax="100">
+        <div className="valu-full-progress-fill" style={{ width: `${progress}%` }} />
+      </div>
+      {current > 0 && (
+        <button type="button" className="valu-full-back" onClick={() => setCurrent(value => Math.max(0, value - 1))}>
+          ← Review previous response
+        </button>
+      )}
       <div style={S.options}>
         {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
       </div>
