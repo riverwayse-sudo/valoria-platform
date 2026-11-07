@@ -22,6 +22,7 @@ export default function AssessmentNavigation({ progress = null, label = 'VALU IN
   const siteUrl = getSiteUrl();
   return (
     <header style={styles.header} aria-label="Assessment navigation">
+      <a className="assessment-skip-link" href="#main-content">Skip to assessment content</a>
       <div className="assessment-nav-inner" style={styles.inner}>
         <a href={`${siteUrl}/`} style={styles.brand} aria-label="Return to Valoria Institute homepage">
           <img src={LOGO_URL} alt="Valoria Institute" className="assessment-nav-logo" style={styles.logo} />
