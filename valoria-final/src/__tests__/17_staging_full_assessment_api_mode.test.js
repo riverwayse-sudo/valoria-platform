@@ -18,6 +18,15 @@ describe("staging formal assessment uses the isolated API", () => {
     expect(wrangler).toContain('"SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co"');
   });
 
+  test("staging deployment is opt-in for same-repository deploy branches", () => {
+    const deployWorkflow = readRepo(".github/workflows/cloudflare-assessment-staging-deploy.yml");
+    expect(deployWorkflow).toContain("pull_request:");
+    expect(deployWorkflow).toContain("startsWith(github.event.pull_request.head.ref, 'deploy/staging-')");
+    expect(deployWorkflow).toContain("github.event.pull_request.head.repo.full_name == github.repository");
+    expect(deployWorkflow).toContain("environment: staging");
+    expect(deployWorkflow).toContain("npx --yes wrangler@4.156.0 deploy");
+  });
+
   test("the formal assessment persists, restores and submits through the assessment API", () => {
     const assessment = read("src/FullVALUAssessment.jsx");
     expect(assessment).toContain("fetch(API_BASE + '/api/assessment-progress'");
