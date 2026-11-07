@@ -210,6 +210,29 @@ export default function VALUIndexV4GateNext(){
  }
 
  if(phase==='loading')return <Shell preview={IS_PREVIEW}><div style={S.eyebrow}>VALU TASTER</div><h1 style={S.h1}>Preparing your taster…</h1><p style={S.p}>We are preparing your taster experience.</p></Shell>;
+ if(phase==='registration')return <Shell preview={IS_PREVIEW}>
+  <VALUAssessmentJourney stage="registration" preview={IS_PREVIEW} />
+  <section className="valu-results-header" style={S.resultsHeader}>
+   <div style={S.eyebrow}>PROFESSIONAL REGISTRATION</div>
+   <h1 style={S.h1}>Start with your details.</h1>
+   <p style={S.resultsIntro}>{IS_PREVIEW ? 'This is a local-only staging simulation. The sample identity is not a real participant, and no information is sent or stored.' : 'Register your contact and professional details before the snapshot. This is not your Valoria account. You create or connect your secure account after the snapshot.'}</p>
+  </section>
+  <form onSubmit={registerLead} className="valu-entry-form-card" style={{...S.formCard,marginTop:18,maxWidth:790,width:'100%',marginLeft:'auto',marginRight:'auto'}}>
+   <div style={S.formTop}><div><div style={S.eyebrow}>{IS_PREVIEW ? 'STAGING PREVIEW · NO DATA SAVED' : 'YOUR PROFESSIONAL DETAILS'}</div><h2 style={S.formTitle}>A few details to begin.</h2></div><div style={S.formTime}>SNAPSHOT REGISTRATION</div></div>
+   <p style={S.formIntro}>Use details you can access and recognise. No password or Valoria account is required at this stage.</p>
+   <div className="valu-entry-form-grid" style={S.grid}>
+    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" disabled={IS_PREVIEW}/></Field>
+    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" disabled={IS_PREVIEW}/></Field>
+   </div>
+   <Field label="PROFESSIONAL EXPERIENCE"><select required disabled={IS_PREVIEW} style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
+   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" disabled={IS_PREVIEW}/></Field>
+   {error&&<div role="alert" style={S.error}>{error}</div>}
+   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR DETAILS…':IS_PREVIEW?'CONTINUE TO TASTER PREVIEW →':'SAVE DETAILS & BEGIN SNAPSHOT →'}</button>
+   <div style={S.saveNote}><span>✓</span> {IS_PREVIEW ? 'No information is sent or stored.' : 'Your details are saved to help preserve your snapshot progress.'}</div>
+  </form>
+  <p style={S.note}>Your secure Valoria account is created or connected after the snapshot, before you continue to the full assessment.</p>
+ </Shell>;
+
 
  if(phase==='break')return <Shell preview={IS_PREVIEW}>
   <VALUAssessmentJourney stage="account" preview={IS_PREVIEW} />
