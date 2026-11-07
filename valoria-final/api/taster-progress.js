@@ -149,13 +149,13 @@ export default async function handler(req, res) {
       const submissionKey = body.submission_key || null;
       if (!validPartialAnswers(answers) || !Number.isInteger(currentQuestion) || currentQuestion < 0 || currentQuestion > TASTER_QUESTIONS.length
         || Object.keys(answers).some(key => Number(key) >= currentQuestion)) {
-        return json(res, 400, { error: 'Snapshot progress is incomplete or invalid.' });
+        return json(res, 400, { error: 'Taster progress is incomplete or invalid.' });
       }
       if (submissionKey && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submissionKey)) {
         return json(res, 400, { error: 'Invalid submission reference.' });
       }
       if (progress.submission_key && submissionKey && progress.submission_key !== submissionKey) {
-        return json(res, 409, { error: 'This snapshot already has a different submission reference. Reload your saved progress.' });
+        return json(res, 409, { error: 'This taster already has a different submission reference. Reload your saved progress.' });
       }
       const patch = {
         answers,
@@ -168,31 +168,31 @@ export default async function handler(req, res) {
         method: 'PATCH', headers: { ...headers(), Prefer: 'return=representation' }, body: JSON.stringify(patch),
       });
       if (!response.ok) return json(res, 502, { error: 'Your latest answer could not be saved. Please retry before continuing.' });
-      if (!(await response.json())?.[0]?.id) return json(res, 409, { error: 'This snapshot is no longer editable.' });
+      if (!(await response.json())?.[0]?.id) return json(res, 409, { error: 'This taster is no longer editable.' });
       return json(res, 200, { saved: true, submission_key: progress.submission_key || submissionKey || null });
     }
 
     const tasterId = body.taster_id;
     if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
-      return json(res, 400, { error: 'A valid saved snapshot reference is required.' });
+      return json(res, 400, { error: 'A valid saved taster reference is required.' });
     }
     if (!progress.submission_key || (body.submission_key && body.submission_key !== progress.submission_key)) {
       return json(res, 409, { error: 'The saved submission reference does not match this progress session.' });
     }
-    if (!progress.lead_capture_id) return json(res, 409, { error: 'Complete your registration before saving this snapshot.' });
+    if (!progress.lead_capture_id) return json(res, 409, { error: 'Complete your registration before saving this taster.' });
     const tasterParams = new URLSearchParams({ id: `eq.${tasterId}`, submission_key: `eq.${progress.submission_key}`, lead_capture_id: `eq.${progress.lead_capture_id}`, select: 'id,lead_capture_id', limit: '1' });
     const tasterResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, { headers: headers() });
-    if (!tasterResponse.ok) return json(res, 502, { error: 'Could not verify the completed snapshot reference.' });
-    if (!(await tasterResponse.json())?.[0]?.id) return json(res, 409, { error: 'The snapshot reference does not match this saved submission.' });
+    if (!tasterResponse.ok) return json(res, 502, { error: 'Could not verify the completed taster reference.' });
+    if (!(await tasterResponse.json())?.[0]?.id) return json(res, 409, { error: 'The taster reference does not match this saved submission.' });
     const params = new URLSearchParams({ id: `eq.${progress.id}`, status: 'eq.in_progress', select: 'id' });
     const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, {
       method: 'PATCH', headers: { ...headers(), Prefer: 'return=representation' },
       body: JSON.stringify({ status: 'completed', taster_id: tasterId, current_question: TASTER_QUESTIONS.length, updated_at: new Date().toISOString() }),
     });
-    if (!response.ok) return json(res, 502, { error: 'Snapshot saved, but recovery status needs a retry.' });
+    if (!response.ok) return json(res, 502, { error: 'Taster saved, but recovery status needs a retry.' });
     return json(res, 200, { completed: Boolean((await response.json())?.[0]?.id) });
   } catch (error) {
     console.error('taster-progress: operation failed', error?.message || error);
-    return json(res, 502, { error: 'We could not retrieve or save snapshot progress. Please retry.' });
+    return json(res, 502, { error: 'We could not retrieve or save taster progress. Please retry.' });
   }
 }
