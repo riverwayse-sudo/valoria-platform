@@ -28,6 +28,17 @@ describe("VALU assessment left-alignment contract", () => {
     expect(legacyPrime).not.toContain("fonts.googleapis.com");
   });
 
+  test("both assessment stages expose a keyboard skip link to the main region", () => {
+    const navigation = read("AssessmentNavigation.jsx");
+    const full = read("FullVALUAssessment.jsx");
+    const taster = read("VALUIndexV4GateNext.jsx");
+    const css = read("assessment.css");
+    expect(navigation).toContain('href="#main-content"');
+    expect(full).toContain('id="main-content" tabIndex={-1}');
+    expect(taster).toContain('id="main-content" tabIndex={-1}');
+    expect(css).toContain(".assessment-skip-link");
+  });
+
   test("assessment screens respect reduced-motion preferences", () => {
     const css = read("assessment.css");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
