@@ -217,7 +217,7 @@ export default function VALUIndexV4GateNext(){
  if(phase==='registration')return <Shell>
   <VALUAssessmentJourney stage="registration" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> YOUR VALU JOURNEY</div>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> YOUR DETAILS FIRST</div>
    <h1 className="valu-results-title" style={S.h1}>Start with your <em>details.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>Register before beginning your taster. This saves your contact and professional details so your Valoria journey stays connected. You will secure your Valoria account after your taster.</p>
   </section>
