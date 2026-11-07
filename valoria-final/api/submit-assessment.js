@@ -371,7 +371,7 @@ export default async function handler(req, res) {
     designation: results.desig?.name || '', cluster_scores: results.clusterScores,
     skill_scores: results.skillScores, completed_at: completedAt, expires_at: expiresAt, ai_report: null,
     taster_id: tasterId, user_id: resolvedUserId, email: resolvedEmail,
-    answers: completeAnswers, timings, shuffle_map: shuffleMap, assessment_version: 'FULL_VALU_V1',
+    answers: completeAnswers, timings, shuffle_map: shuffleMap, assessment_version: 'FULL_VALU_V2_SEPARATE_TASTER',
   };
 
   try {
