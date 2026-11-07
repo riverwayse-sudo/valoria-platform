@@ -131,6 +131,19 @@ describe("separate 58-question full VALU assessment", () => {
     expect(api).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
   });
 
+  test("public assessment screens hide internal question counts and implementation mechanics", () => {
+    const publicScreens = [
+      readSource("VALUIndexV4Gate.jsx"),
+      readSource("VALUIndexV4GateNext.jsx"),
+      readSource("PRIMEAssessment.jsx"),
+      fullSource(),
+      fs.readFileSync(path.join(__dirname, "../../public/Index.html"), "utf8"),
+    ].join("\\n")
+    expect(publicScreens).not.toMatch(/\\b(?:9|55|58)\\s*[- ]?questions?\\b/i)
+    expect(publicScreens).not.toMatch(/question\\s*\\{[^}]+\\}\\s*of\\s*\\{/i)
+    expect(publicScreens).not.toMatch(/independently assessed|certified facilitators|only verifiable professional credential/i)
+  })
+
   test("the shared journey indicator distinguishes taster, account and full assessment", () => {
     const progress = readSource("VALUAssessmentJourney.jsx");
     expect(progress).toContain("title: 'Start'");
