@@ -7,6 +7,8 @@ const API_BASE = (() => {
   // /valu/assessment/ asset base. The latter produces POSTs to a path that
   // falls through to index.html and returns 405.
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  if (host === 'valoria-staging-site.riverwayse.workers.dev') return 'https://valoria-staging-assessment.riverwayse.workers.dev';
+  if (host === 'valoria-staging-assessment.riverwayse.workers.dev') return typeof window !== 'undefined' ? window.location.origin : '';
   if (host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com' || host === 'assessment.valoriainstitute.com') {
     return 'https://assessment.valoriainstitute.com';
   }
