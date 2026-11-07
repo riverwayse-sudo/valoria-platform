@@ -101,6 +101,17 @@ button.valu-option:disabled { cursor: default; }
   .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > p { margin-top:12px !important; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Assessment content alignment contract: questions, instructions, labels and progress copy share a left edge. */
 .valu-assessment-page,
 .valu-assessment-page * {
