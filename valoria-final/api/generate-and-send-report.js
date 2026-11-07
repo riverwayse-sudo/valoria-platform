@@ -91,10 +91,10 @@ async function markFailed(identityHash, failureCode) {
 function canonicalDesignation(score) {
   const points = Number(score);
   if (!Number.isFinite(points) || points < 35 || points > 100) return "Assessment Follow-up";
-  if (points >= 80) return "Force to Align With";
-  if (points >= 65) return "Emerging Force";
-  if (points >= 50) return "Developing Professional";
-  return "Building Foundations";
+  if (points >= 90) return "Elite";
+  if (points >= 75) return "Distinguished";
+  if (points >= 55) return "Proficient";
+  return "Standard";
 }
 
 function reportMatchesCanonicalAssessment(reportText, assessment) {
