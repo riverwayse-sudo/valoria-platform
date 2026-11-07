@@ -24,6 +24,7 @@ describe("nine-question taster submission contract", () => {
     expect(effective).toBe("20261107131213_fix_taster_identity_candidate_lead_lookup.sql");
     expect(readMigration(effective)).toContain("jsonb_object_keys(p_answers)) <> 9");
     expect(readMigration(effective)).toContain("lead_capture_id");
+    expect(readMigration(effective)).toContain("set search_path = ''");
     for (const name of definitions) {
       // Every definition rejects an incomplete snapshot; only the newest accept nine.
       expect(readMigration(name)).toMatch(/jsonb_object_keys\(p_answers\)\) <> (9|15)/);
@@ -40,7 +41,7 @@ describe("nine-question taster submission contract", () => {
       "submission retry could not be reconciled",
       "submission key was reused with different snapshot data",
       "ON CONFLICT ON CONSTRAINT taster_identity_candidates_pkey DO NOTHING",
-      "SET search_path = ''",
+      "SET search_path = pg_catalog, public",
     ]) {
       expect(fix).toContain(rule);
     }
