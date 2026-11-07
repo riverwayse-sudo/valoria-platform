@@ -15,7 +15,7 @@ export default function VALUAssessmentJourney({ stage = 'taster' }) {
         <span style={{ color:'#C9A84C', fontSize:9, fontWeight:800, letterSpacing:'.16em' }}>VALU ASSESSMENT</span>
         <span style={{ color:'rgba(247,244,238,.48)', fontSize:10 }}>YOUR PROGRESS IS SAVED</span>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,minmax(0,1fr))', gap:8 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(88px,1fr))', gap:8 }}>
         {STEPS.map((step,index) => {
           const done = index < activeIndex;
           const active = index === activeIndex;
