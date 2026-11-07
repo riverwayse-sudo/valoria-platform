@@ -57,6 +57,12 @@ describe("full-assessment progress is independent of taster progress", () => {
     expect(progressApi).toContain("assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`");
   });
 
+  test("assessment reminder emails never expose internal question counts", () => {
+    expect(progressApi).not.toContain("${row.current_question} / ${row.total_questions} questions");
+    expect(progressApi).not.toContain("${remaining} remaining");
+    expect(progressApi).toContain("Your responses are saved. Continue where you left off");
+  });
+
   test("a participant without saved full progress starts at the beginning of the full assessment", () => {
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     expect(component).toContain("setCurrent(0)");
