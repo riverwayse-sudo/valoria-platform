@@ -43,7 +43,7 @@ const styles = {
   inner:{width:'100%',maxWidth:1180,minHeight:64,margin:'0 auto',padding:'0 20px',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:18},
   brand:{display:'inline-flex',alignItems:'center',gap:9,width:'fit-content',color:T.parchment,textDecoration:'none'},
   logo:{height:40,width:'auto',display:'block',objectFit:'contain'},
-  center:{display:'flex',alignItems:'center',justifyContent:'center',gap:10,whiteSpace:'nowrap'},
+  center:{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:10,whiteSpace:'nowrap',textAlign:'left'},
   label:{fontSize:10,fontWeight:700,letterSpacing:'.16em',color:T.gold},
   progress:{fontSize:10,color:T.faint,letterSpacing:'.08em'},
   exit:{justifySelf:'end',display:'inline-flex',alignItems:'center',gap:7,minHeight:44,color:T.faint,textDecoration:'none',fontSize:9,fontWeight:600,letterSpacing:'.12em'},
