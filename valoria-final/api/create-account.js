@@ -5,7 +5,7 @@ import { checkRateLimit } from "./_rateLimit.js";
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const VALORIA_SITE_URL = (process.env.VALORIA_SITE_URL || "https://valoriainstitute.com").replace(/\\/$/, "");
+const VALORIA_SITE_URL = (process.env.VALORIA_SITE_URL || "https://valoriainstitute.com").replace(/\/$/, "");
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
