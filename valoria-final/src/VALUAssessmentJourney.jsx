@@ -2,13 +2,13 @@ import React from 'react';
 
 const STEPS = [
   { key: 'registration', title: 'Register', detail: 'Your details are connected' },
-  { key: 'taster', title: 'Taster', detail: 'A guided starting point' },
+  { key: 'taster', title: 'Snapshot', detail: 'A guided starting point' },
   { key: 'account', title: 'Account', detail: 'Secure your Valoria access' },
   { key: 'full', title: 'Assessment', detail: 'Continue when ready' },
 ];
 
 export default function VALUAssessmentJourney({ stage = 'taster' }) {
-  const statusLabel = stage === 'registration' ? 'REGISTER TO SAVE YOUR JOURNEY' : stage === 'account' ? 'YOUR TASTER IS SAVED' : stage === 'full' ? 'CONTINUE WHEN READY' : 'YOUR PROGRESS IS SAVED';
+  const statusLabel = stage === 'registration' ? 'REGISTER TO SAVE YOUR JOURNEY' : stage === 'account' ? 'YOUR SNAPSHOT IS SAVED' : stage === 'full' ? 'CONTINUE WHEN READY' : 'YOUR PROGRESS IS SAVED';
   const activeIndex = Math.max(0, STEPS.findIndex(step => step.key === stage));
   return (
     <section aria-label="VALU assessment progress" style={{ margin: '0 0 28px' }}>
