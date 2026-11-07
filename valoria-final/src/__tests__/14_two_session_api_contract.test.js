@@ -84,8 +84,9 @@ describe("full assessment submission validates a complete answer map", () => {
   const api = readApi("submit-assessment.js");
 
   test("timings are bounded integrity diagnostics and never part of scoring", () => {
-    expect(api).toContain("timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH");
-    expect(api).not.toContain("timings.length !== MAX_TIMINGS_LENGTH");
+    expect(api).toContain("!Array.isArray(timings) || timings.length > QUESTIONS.length");
+    expect(api).toContain("value > 86_400_000");
+    expect(api).not.toContain("timings.length !== QUESTIONS.length");
   });
 
   test("the scoring engine receives exactly the submitted full-assessment answers", () => {
