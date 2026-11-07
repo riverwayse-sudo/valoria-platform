@@ -59,7 +59,7 @@ export default async function handler(req, res) {
   }
 
   const { resume_token, submission_key } = req.body || {};
-  if (typeof resume_token !== 'string' || !/^[A-Za-z0-9_-]{40,64}$/.test(resume_token)) return json(res, 401, { error: 'A valid snapshot resume token is required.' });
+  if (typeof resume_token !== 'string' || !/^[A-Za-z0-9_-]{40,64}$/.test(resume_token)) return json(res, 401, { error: 'A valid taster resume token is required.' });
   if (typeof submission_key !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submission_key)) return json(res, 400, { error: 'A valid submission reference is required. Please retry the final step.' });
   const tokenHash = createHash('sha256').update(resume_token).digest('hex');
   const progressParams = new URLSearchParams({
@@ -72,15 +72,15 @@ export default async function handler(req, res) {
   const progressRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${progressParams}`, {
     headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
   });
-  if (!progressRes.ok) return json(res, 502, { error: 'Could not verify your saved snapshot progress.' });
+  if (!progressRes.ok) return json(res, 502, { error: 'Could not verify your saved taster progress.' });
   const progress = (await progressRes.json())?.[0];
-  if (!progress) return json(res, 404, { error: 'Your snapshot progress has expired or cannot be resumed.' });
+  if (!progress) return json(res, 404, { error: 'Your taster progress has expired or cannot be resumed.' });
   if (progress.submission_key !== submission_key) return json(res, 409, { error: 'The submission reference does not match your saved progress.' });
   const { name, role, experience, email, answers } = progress;
   const normalizedEmail = String(email || '').trim().toLowerCase();
   if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'The saved contact email is invalid. Contact Valoria support.' });
-  if (typeof progress.lead_capture_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(progress.lead_capture_id)) return json(res, 409, { error: 'Complete your registration before submitting your snapshot.' });
-  if (progress.current_question !== TASTER_QUESTIONS.length || !validAnswers(answers)) return json(res, 400, { error: 'Finish and save all snapshot answers before submitting.' });
+  if (typeof progress.lead_capture_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(progress.lead_capture_id)) return json(res, 409, { error: 'Complete your registration before submitting your taster.' });
+  if (progress.current_question !== TASTER_QUESTIONS.length || !validAnswers(answers)) return json(res, 400, { error: 'Finish and save all taster answers before submitting.' });
 
 
 
@@ -116,14 +116,14 @@ export default async function handler(req, res) {
     if (!submitRes.ok) {
       const detail = await submitRes.text().catch(() => '');
       console.error('submit-taster: atomic submission failed', submitRes.status, detail.slice(0, 500));
-      return json(res, 502, { error: 'We could not securely save your snapshot and recovery record together. Please retry.' });
+      return json(res, 502, { error: 'We could not securely save your taster and recovery record together. Please retry.' });
     }
     const payload = await submitRes.json();
     const record = Array.isArray(payload) ? payload[0] : payload;
-    if (!record?.taster_id) return json(res, 502, { error: 'The snapshot save could not be confirmed. Please retry.' });
+    if (!record?.taster_id) return json(res, 502, { error: 'The taster save could not be confirmed. Please retry.' });
     return json(res, 200, { results, taster_id: record.taster_id, created: record.created !== false });
   } catch (err) {
     console.error('submit-taster: atomic submission network error', err?.message || 'unknown');
-    return json(res, 502, { error: 'The snapshot save could not be confirmed. Please retry.' });
+    return json(res, 502, { error: 'The taster save could not be confirmed. Please retry.' });
   }
 }
