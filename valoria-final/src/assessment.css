@@ -54,6 +54,24 @@ button.valu-option:disabled { cursor: default; }
 
 :focus-visible { outline: 2px solid rgba(201,168,76,.5); outline-offset: 2px; }
 
+.assessment-skip-link {
+  position: absolute;
+  left: 16px;
+  top: -100px;
+  z-index: 100;
+  padding: 10px 14px;
+  border-radius: 4px;
+  background: #C9A84C;
+  color: #1A1A2E;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.assessment-skip-link:focus {
+  top: 8px;
+}
+
+
 .valu-path-rail { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .valu-start-panel { min-width: 0; }
 
