@@ -14,6 +14,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MAX_NAME_LENGTH = 200;
 const MAX_ROLE_LENGTH = 160;
 const MAX_TIMINGS_LENGTH = QUESTIONS.length;
+const FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER";
 const MAX_SHUFFLE_KEYS = QUESTIONS.length;
 const EXPERIENCE_BANDS = new Set(['0-3', '4-8', '9-15', '15+']);
 const RATE_LIMIT = 10;
@@ -63,6 +64,7 @@ async function findExistingAssessment(tasterId, fingerprint) {
   const params = new URLSearchParams({
     taster_id: `eq.${tasterId}`,
     identity_hash: `eq.${fingerprint}`,
+    assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`,
     select: 'id,user_id,taster_id,total_score,designation,cluster_scores,skill_scores,completed_at,report_token',
     limit: '1',
   });
@@ -166,6 +168,7 @@ async function exchangeDashboardHandoff(body, res) {
   const existingAssessmentParams = new URLSearchParams({
     or: `(user_id.eq.${link.user_id},taster_id.eq.${taster.id})`,
     completed_at: 'not.is.null',
+    assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`,
     select: 'id',
     limit: '1',
   });
@@ -318,7 +321,7 @@ export default async function handler(req, res) {
   // The formal instrument is independent: every submission must contain all
   // 58 formal answers. No answer is read from or copied from the taster record.
   if (!validateAnswers(answers)) {
-    return json(res, 400, { error: 'All 58 formal assessment answers are required and must be valid.' });
+    return json(res, 400, { error: 'Complete the full VALU assessment before submitting.' });
   }
   // Each formal question has its own timing record. Timings are diagnostics,
   // never score inputs.
@@ -371,7 +374,7 @@ export default async function handler(req, res) {
     designation: results.desig?.name || '', cluster_scores: results.clusterScores,
     skill_scores: results.skillScores, completed_at: completedAt, expires_at: expiresAt, ai_report: null,
     taster_id: tasterId, user_id: resolvedUserId, email: resolvedEmail,
-    answers: completeAnswers, timings, shuffle_map: shuffleMap, assessment_version: 'FULL_VALU_V2_SEPARATE_TASTER',
+    answers: completeAnswers, timings, shuffle_map: shuffleMap, assessment_version: FULL_ASSESSMENT_VERSION,
   };
 
   try {
