@@ -322,7 +322,7 @@ export default function VALUIndexV4GateNext(){
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
 function StepBar({active}){return null}
-function Shell({children,mode=''}){return <main className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
+function Shell({children,mode=''}){return <main id="main-content" tabIndex={-1} className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 const S={
  page:{minHeight:'calc(100dvh - 65px)',height:'auto',background:DARK,color:PARCH,padding:'28px 32px 34px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
