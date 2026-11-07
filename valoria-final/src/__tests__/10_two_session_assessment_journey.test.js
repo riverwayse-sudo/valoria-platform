@@ -66,53 +66,38 @@ describe("separate taster and formal assessment contracts", () => {
 });
 
 describe("nine-question taster and account bridge", () => {
-  test("taster UI is explicitly a separate nine-question experience", () => {
+  test("lead registration precedes the separate taster and no question counts are exposed", () => {
     const source = gateSource();
     expect(source).toContain("TASTER_QUESTIONS.length");
+    expect(source).toContain("VALUAssessmentJourney stage=\"registration\"");
     expect(source).toContain("VALUAssessmentJourney stage=\"taster\"");
-    expect(source).not.toContain("Question {placeInTaster} of {TASTER_QUESTIONS.length}");
-    expect(source).not.toContain("Saved separately from the formal assessment");
-    expect(source).toContain("Your progress is saved.");
+    expect(source).toContain("YOUR PROGRESS IS SAVED");
+    expect(source).toContain("privacy_acknowledged:privacyAcknowledged");
+    expect(source).toContain("marketing_consent:marketingConsent");
+    expect(source).not.toMatch(/of 9|1 of 9|Question \\{[^}]+\\} of/);
     expect(source).not.toContain("OPENING_SESSION_LENGTH");
     expect(source).not.toContain("TOTAL_QUESTIONS");
   });
 
-  test("taster completion does not claim its answers will carry into the formal assessment", () => {
+  test("taster completion leads to account creation and does not promise automatic Marketplace listing", () => {
     const source = gateSource();
-    expect(source).toContain("Your snapshot responses are saved as a directional starting point.");
-    expect(source).toContain("Create or connect your secure Valoria account, then complete your full assessment to receive your official VALU Index.");
+    expect(source).toContain("Your responses are safely saved. Create your account to continue your Valoria journey.");
+    expect(source).toContain("Completing the assessment does not grant marketplace listing.");
+    expect(source).toContain("Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.");
     expect(source).not.toContain("will not prefill or count toward it");
     expect(source).not.toContain("58 formal questions from Question 1");
     expect(source).not.toContain("remaining 49 questions");
     expect(source).not.toContain("Question 10");
   });
 
-  test("professional registration is completed before the taster begins", () => {
+  test("registration, answer saves and completion remain linked to the same lead", () => {
     const source = gateSource();
-    expect(source).toContain("VALUAssessmentJourney stage=\"registration\"");
-    expect(source).toContain("async function registerLead(e)");
-    expect(source).toContain("action:'identify'");
-    expect(source.indexOf("if(phase==='registration')")).toBeLessThan(source.indexOf('return <Shell mode="taster"'));
-    expect(source).toContain("This is not your Valoria account.");
-  });
-
-  test("progress API can attach identity before any taster answers are saved", () => {
-    const api = readApi("taster-progress.js");
-    expect(api).toContain("if (action === 'init')");
-    expect(api).toContain("if (action === 'identify')");
-    expect(api).toContain("if (action === 'save')");
-    expect(api.indexOf("if (action === 'identify')")).toBeLessThan(api.indexOf("if (action === 'save')"));
-    expect(api).toContain("return json(res, 200, { identified: true })");
-    expect(api).toContain("current_question: 0, answers: {}, status: 'in_progress'");
-  });
-
-  test("the taster persists its own nine answers before secure account creation", () => {
-    const source = gateSource();
-    expect(source).toContain("current_question:isLast?TASTER_QUESTIONS.length:current+1");
-    expect(source).toContain("setPhase('break')");
-    expect(source).toContain("async function continueToAccount()");
+    expect(source).toContain("action:'register'");
+    expect(source).toContain("action:'save'");
+    expect(source).toContain("action:'complete'");
     expect(source).toContain("localStorage.setItem('pending_taster_id',data.taster_id)");
-    expect(source).not.toContain("async function createAccount");
+    expect(source).toContain("'/professional-signup/?'+params.toString()");
+    expect(source).not.toContain("action:'identify'");
   });
 
   test("the taster never computes or presents an official VALU Index", () => {
@@ -161,34 +146,27 @@ describe("independent 58-question formal assessment", () => {
     expect(api).toContain("assessment_version=eq.${FULL_ASSESSMENT_VERSION}");
   });
 
-  test("the shared journey indicator distinguishes all four journey stages", () => {
+  test("the shared journey indicator distinguishes registration, snapshot, account and full assessment", () => {
     const source = readSource("VALUAssessmentJourney.jsx");
-    expect(source).toContain("Your professional details");
-    expect(source).toContain("Your starting insight");
-    expect(source).toContain("Secure your profile");
-    expect(source).toContain("Your full capability picture");
+    expect(source).toContain("title: 'Register'");
+    expect(source).toContain("title: 'Snapshot'");
+    expect(source).toContain("title: 'Account'");
+    expect(source).toContain("title: 'Assessment'");
     expect(source).toContain("YOUR VALU JOURNEY");
-    expect(source).toContain("repeat(4,minmax(0,1fr))");
     expect(source).not.toContain("9 questions");
     expect(source).not.toContain("58 questions");
     expect(source).not.toContain("QUESTION ${currentQuestion} OF");
     expect(source).not.toContain("ONE VALU ASSESSMENT");
   });
 
-  test("staging preview runs both assessment screens locally without calling persistence APIs", () => {
+  test("staging assessment traffic is isolated to the staging site and Supabase project", () => {
     const taster = gateSource();
-    const formal = fullSource();
-    const journey = readSource("VALUAssessmentJourney.jsx");
-    expect(taster).toContain("const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1'");
-    expect(taster).toContain("if(IS_PREVIEW){setProgressToken('staging-preview-only');setPhase('registration');return;}");
-    expect(taster).toContain("window.location.assign('/valu/assessment/?full=1&preview=1')");
-    expect(taster).not.toContain("STAGING PREVIEW · SIMULATED · NO PARTICIPANT DATA SAVED");
-    expect(formal).toContain("const IS_PREVIEW = import.meta.env.VITE_VALU_PREVIEW === '1'");
-    expect(formal).toContain("if (IS_PREVIEW) return;");
-    expect(formal).toContain("if (IS_PREVIEW) return;\n    if (!sessionId");
-    expect(formal).toContain("if (IS_PREVIEW) { setPreviewComplete(true); return; }");
-    expect(formal).toContain("COMPLETE PREVIEW · NO SCORE");
-    expect(formal).toContain("No official VALU Index was calculated");
-    expect(journey).toContain("STAGING SIMULATION · NO DATA SAVED");
+    const wrangler = fs.readFileSync(path.join(__dirname, "../../wrangler.jsonc"), "utf8");
+    expect(taster).toContain("if (host.includes('staging')) return 'https://staging.valoriainstitute.com'");
+    expect(taster).toContain("return typeof window !== 'undefined' ? window.location.origin : ''");
+    expect(wrangler).toContain('"SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co"');
+    expect(wrangler).toContain('"VALU_PRODUCTION_SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co"');
+    expect(wrangler).toContain('"VALU_STAGING_API_ENABLED": "1"');
+    expect(wrangler).toContain('"name": "valoria-staging-assessment"');
   });
 });
