@@ -52,7 +52,7 @@ describe('assessment conversion and visibility consent contracts', () => {
   })
 
   test('Marketplace visibility consent is owner-authenticated and records a fixed acknowledgement', () => {
-    const migration = read('supabase/migrations/20261107130000_set_marketplace_public_listing_consent_rpc.sql')
+    const migration = read('supabase/migrations/20261107132047_set_marketplace_public_listing_consent_rpc.sql')
     expect(migration).toMatch(/SECURITY DEFINER/i)
     expect(migration).toMatch(/SET search_path = ''/i)
     expect(migration).toContain('auth.uid()')
