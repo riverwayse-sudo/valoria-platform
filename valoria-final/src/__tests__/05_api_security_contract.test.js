@@ -38,6 +38,7 @@ describe("Privileged API security contracts", () => {
   test("full VALU assessment restores saved answers by verified account-owned taster after login", () => {
     const progressApi = readApi("assessment-progress.js");
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    const submitApi = readApi("submit-assessment.js");
     expect(progressApi).toContain('if (action === "restore")');
     expect(progressApi).toContain("await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason =>");
     expect(progressApi).toContain("getProgressByTasterId(tasterId)");
@@ -48,7 +49,10 @@ describe("Privileged API security contracts", () => {
     expect(component).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
     expect(component).toContain("setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1)");
     expect(component).toContain("VALUAssessmentJourney stage=\"full\"");
-    expect(progressApi).toContain("FULL_VALU_V2_SEPARATE_TASTER");
+    expect(progressApi).not.toContain("assessment_version");
+    expect(progressApi).toContain("totalQuestions !== QUESTIONS.length");
+    expect(progressApi).toContain("Number(progress.total_questions) !== QUESTIONS.length");
+    expect(submitApi).toContain("FULL_ASSESSMENT_VERSION");
     expect(component).toContain("remoteRestoreComplete");
     expect(component).toContain("Your saved VALU progress could not be restored");
   });
