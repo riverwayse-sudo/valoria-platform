@@ -138,9 +138,9 @@ describe("independent 58-question formal assessment", () => {
 
   test("formal submission requires all 58 answers and never reads taster answer values", () => {
     const api = readApi("submit-assessment.js");
-    expect(api).toContain("All 58 formal assessment answers are required");
+    expect(api).toContain("Complete the full VALU assessment before submitting");
     expect(api).toContain("const completeAnswers = answers");
-    expect(api).toContain("assessment_version: 'FULL_VALU_V2_SEPARATE_TASTER'");
+    expect(api).toContain("assessment_version: FULL_ASSESSMENT_VERSION");
     expect(api).not.toContain("taster_answers");
     expect(api).not.toContain("seedAnswersFromOpening");
     expect(api).not.toContain("openingAnswers");
@@ -148,8 +148,9 @@ describe("independent 58-question formal assessment", () => {
 
   test("progress restore is scoped to the new formal assessment version", () => {
     const api = readApi("assessment-progress.js");
-    expect(api).toContain("assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`");
-    expect(api).toContain("assessment_version=eq.${FULL_ASSESSMENT_VERSION}");
+    expect(api).toContain("totalQuestions !== QUESTIONS.length");
+    expect(api).toContain("Number(progress.total_questions) !== QUESTIONS.length");
+    expect(api).not.toContain("assessment_version");
   });
 
   test("the shared journey indicator distinguishes registration, snapshot, account and full assessment", () => {
