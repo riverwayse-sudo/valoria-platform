@@ -7,39 +7,41 @@ const path = require("path");
 
 const readApi = name => fs.readFileSync(path.join(__dirname, "../../api", name), "utf8");
 
-describe("taster-progress supports anonymous entry and a late identity step", () => {
+describe("taster-progress requires registration before a new taster", () => {
   const api = readApi("taster-progress.js");
 
-  test("init creates a resumable taster session without personal details", () => {
-    expect(api).toContain("action === 'init'");
-    expect(api).toContain("name: null, role: null, experience: null, email: null");
+  test("registration creates the lead and resumable progress through one RPC", () => {
+    expect(api).toContain("action === 'register'");
+    expect(api).toContain("rpc/begin_valu_taster_signup");
+    expect(api).toContain("p_resume_token_hash: hashToken(body.resume_token)");
+    expect(api).toContain("p_privacy_acknowledged: body.privacy_acknowledged === true");
+    expect(api).not.toContain("action === 'init'");
+    expect(api).not.toContain("action === 'identify'");
   });
 
-  test("identify attaches identity without resetting taster answers or progress", () => {
-    expect(api).toContain("action === 'identify'");
-    const identifyBlock = api.slice(api.indexOf("if (action === 'identify')"), api.indexOf("if (action === 'load')"));
-    expect(identifyBlock).toContain("name, role, experience, email");
-    expect(identifyBlock).not.toContain("answers");
-    expect(identifyBlock).not.toContain("current_question");
+  test("new sessions cannot be initialized anonymously and registration is rate limited", () => {
+    expect(api).toContain("['register', 'load', 'save', 'complete']");
+    expect(api).toContain("consumeRegistrationRateLimit(req)");
+    expect(api).toContain("p_limit: 12");
   });
 
-  test("the action allow-list includes identify", () => {
-    expect(api).toContain("['init', 'load', 'save', 'identify', 'complete']");
+  test("resume reads preserve the direct lead identity link", () => {
+    expect(api).toContain("lead_capture_id");
+    expect(api).toContain("progress.lead_capture_id");
+    expect(api).toContain("lead_capture_id: `eq.${progress.lead_capture_id}`");
   });
 
-  test("identity columns remain nullable for anonymous taster initialization", () => {
+  test("legacy identity fields remain nullable while new taster inserts require a lead", () => {
     const migrations = path.join(__dirname, "../../supabase/migrations");
-    const files = fs.readdirSync(migrations).filter(n => n.endsWith(".sql")).sort();
-    const relax = files.filter(n => {
-      const sql = fs.readFileSync(path.join(migrations, n), "utf8");
-      return sql.includes("ALTER TABLE public.taster_progress") && /DROP NOT NULL/.test(sql);
-    });
-    expect(relax.length).toBeGreaterThan(0);
-    const sql = fs.readFileSync(path.join(migrations, relax[relax.length - 1]), "utf8");
+    const relax = fs.readFileSync(path.join(migrations, "20261030120000_relax_taster_progress_identity_nullable.sql"), "utf8");
+    const identity = fs.readFileSync(path.join(migrations, "20261107131125_require_lead_registration_for_new_valu_tasters.sql"), "utf8");
     for (const col of ["name", "role", "experience", "email"]) {
-      expect(sql).toMatch(new RegExp(`ALTER COLUMN ${col} DROP NOT NULL`, "i"));
+      expect(relax).toMatch(new RegExp(`ALTER COLUMN ${col} DROP NOT NULL`, "i"));
     }
-    expect(relax[relax.length - 1]).toBe("20261030120000_relax_taster_progress_identity_nullable.sql");
+    expect(identity).toContain("taster_progress_lead_capture_id_fkey");
+    expect(identity).toContain("taster_sessions_lead_capture_id_fkey");
+    expect(identity).toContain("trg_require_lead_capture_for_taster_progress");
+    expect(identity).toContain("trg_require_lead_capture_for_taster_session");
   });
 });
 
