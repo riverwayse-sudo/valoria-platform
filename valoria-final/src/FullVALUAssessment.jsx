@@ -536,7 +536,7 @@ export default function FullVALUAssessment() {
     return <Shell>
       <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
       <h1 style={S.h1}>Return to your Valoria dashboard.</h1>
-      <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved snapshot and answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
+      <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved taster and answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
       <a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a>
     </Shell>;
@@ -566,7 +566,7 @@ export default function FullVALUAssessment() {
     return <Shell>
       <div style={S.eyebrow}>VALU ASSESSMENT · ONE DETAIL</div>
       <h1 style={S.h1}>Confirm your experience band.</h1>
-      <p style={S.p}>We need a current experience band to complete your assessment record. Choose the range that best reflects your total professional experience. This does not change your saved VALU snapshot or its answers.</p>
+      <p style={S.p}>We need a current experience band to complete your assessment record. Choose the range that best reflects your total professional experience. This does not change your saved taster or its answers.</p>
       <div style={S.options}>
         {EXPERIENCE_OPTIONS.map(option => <button key={option.value} type="button" onClick={() => setIdentity(previous => ({ ...previous, experience:option.value }))} style={S.option}><span style={S.optionLetter}>→</span><span>{option.label}</span></button>)}
       </div>
