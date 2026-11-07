@@ -14,7 +14,7 @@ describe('staging assessment navigation isolation', () => {
   })
 
   test('staging build points both assessment and site origins to isolated Workers', () => {
-    const workflow = read('.github/workflows/cloudflare-assessment-staging-deploy.yml')
+    const workflow = fs.readFileSync(path.join(process.cwd(), '..', '.github/workflows/cloudflare-assessment-staging-deploy.yml'), 'utf8')
     expect(workflow).toContain('VITE_VALU_STAGING: "1"')
     expect(workflow).toContain('VITE_VALU_API_ORIGIN: "https://valoria-staging-assessment.riverwayse.workers.dev"')
     expect(workflow).toContain('VITE_VALU_SITE_ORIGIN: "https://valoria-staging-site.riverwayse.workers.dev"')
