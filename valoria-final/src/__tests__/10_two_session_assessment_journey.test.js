@@ -160,9 +160,13 @@ describe("separate 58-question full VALU assessment", () => {
 
   test("the shared journey indicator distinguishes taster, account and full assessment", () => {
     const progress = readSource("VALUAssessmentJourney.jsx");
-    expect(progress).toContain("title: 'Start'");
-    expect(progress).toContain("title: 'Profile'");
+    expect(progress).toContain("key: 'registration'");
+    expect(progress).toContain("title: 'Register'");
+    expect(progress).toContain("key: 'taster'");
+    expect(progress).toContain("title: 'Snapshot'");
+    expect(progress).toContain("title: 'Account'");
     expect(progress).toContain("title: 'Assessment'");
+    expect(progress).toContain("key: 'full'");
     expect(progress).not.toContain("9 separate questions");
     expect(progress).not.toContain("Create & confirm");
     expect(progress).not.toContain("58 questions");
