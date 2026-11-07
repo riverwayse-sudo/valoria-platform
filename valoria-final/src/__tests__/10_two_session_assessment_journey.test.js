@@ -137,14 +137,14 @@ describe("separate 58-question full VALU assessment", () => {
       readSource("VALUIndexV4GateNext.jsx"),
       readSource("PRIMEAssessment.jsx"),
       fullSource(),
-      fs.readFileSync(path.join(__dirname, "../../public/Index.html"), "utf8"),
+      fs.readFileSync(path.join(__dirname, "../../index.html"), "utf8"),
     ].join("\\n")
     expect(publicScreens).not.toMatch(/\\b(?:9|55|58)\\s*[- ]?questions?\\b/i)
     expect(publicScreens).not.toMatch(/question\\s*\\{[^}]+\\}\\s*of\\s*\\{/i)
     expect(publicScreens).not.toMatch(/independently assessed|certified facilitators|only verifiable professional credential/i)
-    const landing = fs.readFileSync(path.join(__dirname, "../../public/Index.html"), "utf8")
-    expect(landing).toContain("family=Raleway")
-    expect(landing).not.toMatch(/DM Sans|Cormorant Garamond|#378ADD|#1D9E75|#7F77DD|#BA7517|#D85A30/)
+    const assessmentStyles = fs.readFileSync(path.join(__dirname, "../assessment.css"), "utf8")
+    expect(assessmentStyles).toContain("family=Raleway")
+    expect(assessmentStyles).not.toMatch(/DM Sans|Cormorant Garamond|#378ADD|#1D9E75|#7F77DD|#BA7517|#D85A30/)
   })
 
   test("assessment conversion events are sent to the shared Valoria analytics property", () => {
@@ -160,9 +160,13 @@ describe("separate 58-question full VALU assessment", () => {
 
   test("the shared journey indicator distinguishes taster, account and full assessment", () => {
     const progress = readSource("VALUAssessmentJourney.jsx");
-    expect(progress).toContain("title: 'Start'");
-    expect(progress).toContain("title: 'Profile'");
+    expect(progress).toContain("key: 'registration'");
+    expect(progress).toContain("title: 'Register'");
+    expect(progress).toContain("key: 'taster'");
+    expect(progress).toContain("title: 'Snapshot'");
+    expect(progress).toContain("title: 'Account'");
     expect(progress).toContain("title: 'Assessment'");
+    expect(progress).toContain("key: 'full'");
     expect(progress).not.toContain("9 separate questions");
     expect(progress).not.toContain("Create & confirm");
     expect(progress).not.toContain("58 questions");

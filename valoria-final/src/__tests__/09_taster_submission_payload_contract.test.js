@@ -22,6 +22,7 @@ function deterministicUuid(label) {
 const SUBMISSION_KEY = deterministicUuid("snapshot-submission-key");
 const OTHER_SUBMISSION_KEY = deterministicUuid("other-submission-key");
 const TASTER_ID = deterministicUuid("taster-id");
+const LEAD_CAPTURE_ID = deterministicUuid("lead-capture-id");
 
 function validAnswers() {
   return Object.fromEntries(TASTER_QUESTIONS.map((question, index) => [index, 0]));
@@ -75,6 +76,7 @@ function installFetch({ progress = {}, submit = {} } = {}) {
         current_question: TASTER_QUESTIONS.length,
         answers: validAnswers(),
         submission_key: SUBMISSION_KEY,
+        lead_capture_id: LEAD_CAPTURE_ID,
         ...progress,
       }]);
     }
@@ -121,6 +123,16 @@ describe("Snapshot submission RPC payload contract", () => {
     expect(body.p_email).toBe("temitayo@example.com");
     expect(body.p_submission_key).toBe(SUBMISSION_KEY);
     expect(body.p_taster_version).toBeTruthy();
+    expect(body.p_lead_capture_id).toBe(LEAD_CAPTURE_ID);
+  });
+
+  test("rejects a taster without a lead identity before calling the submission RPC", async () => {
+    const calls = installFetch({ progress: { lead_capture_id: null } });
+    const res = makeRes();
+    await loadHandler()(makeReq(), res);
+    expect(res.statusCode).toBe(409);
+    expect(res.body.error).toContain("registration");
+    expect(calls.some(call => call.url.includes("submit_taster_with_identity_candidate"))).toBe(false);
   });
 
   test("does not send the removed normalisedScores field", async () => {

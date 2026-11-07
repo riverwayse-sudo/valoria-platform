@@ -144,6 +144,14 @@ export default {
     const route = API_HANDLERS.get(url.pathname);
 
     if (route) {
+      // Isolated staging stays read-only until its own Supabase service key is
+      // configured and writes are explicitly enabled. This gate covers every
+      // routed assessment API, including POST-based read/restore operations.
+      if (env.VALU_PREVIEW === "1" && env.VALU_STAGING_API_ENABLED !== "1") {
+        return json({
+          error: "This staging preview is read-only. Assessment actions are temporarily disabled; no data was changed.",
+        }, 503);
+      }
       try {
         return route.nodeStyle
           ? await runNodeStyleHandler(route.handler, request)
