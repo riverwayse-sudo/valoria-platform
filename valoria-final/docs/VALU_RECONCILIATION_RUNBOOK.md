@@ -118,7 +118,7 @@ The 2026-10-15 baseline above has been superseded by a fresh production query. D
 - Of those 17 missing-link assessments, 5 have review-ledger entries and 12 have no review entry. The five assessment reviews are account-match decisions; they do not resolve the missing taster links.
 - Exact contact-email cross-checks produced one candidate for a missing-link assessment, but its name/role evidence conflicts. There are zero missing-link assessments with an exact candidate name-and-role match. No link was inferred.
 - Completed taster sessions: 36; 34 have no authenticated account owner.
-- Completed taster identity outcomes: 45 (5 linked accounts, 16 corroborated contact candidates awaiting account claim, 24 unresolved identities requiring manual review, 0 conflicting-evidence status at this snapshot).
+- Taster identity candidate rows: 36 (2 account-linked, 16 contact candidates, 18 unresolved, 0 conflicting-evidence status at this snapshot). The completed taster table contains 45 sessions (5 linked, 16 corroborated contact candidates, 24 unresolved); the 9-session difference between the session total and candidate-row total still requires explicit reconciliation before closure.
 - Latest review decisions cover 39 distinct source records: 5 assessment records marked verified-match, 1 taster marked verified-match, and 33 tasters marked unmatched. All 39 remain open; a verified match is not closed until the identity correction is applied and verified. Closed-without-link decisions: 0.
 - Professional profiles: 18; listed profiles/public roster rows: 17/17, with zero roster membership mismatches.
 - Active capabilities: 20; eligible active capabilities waiting in a non-listed status: 0.
