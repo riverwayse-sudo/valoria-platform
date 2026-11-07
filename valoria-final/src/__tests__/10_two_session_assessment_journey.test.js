@@ -153,6 +153,7 @@ describe("independent 58-question formal assessment", () => {
     expect(api).not.toContain("assessment_version");
   });
 
+  // Snapshot is the user-facing label; "taster" remains the underlying journey stage key.
   test("the shared journey indicator distinguishes registration, snapshot, account and full assessment", () => {
     const source = readSource("VALUAssessmentJourney.jsx");
     expect(source).toContain("title: 'Register'");
