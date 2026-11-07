@@ -322,7 +322,7 @@ export default async function handler(req, res) {
   }
   // Each formal question has its own timing record. Timings are diagnostics,
   // never score inputs.
-  if (!Array.isArray(timings) || timings.length !== MAX_TIMINGS_LENGTH || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json(res, 400, { error: 'Invalid formal assessment timings.' });
+  if (!Array.isArray(timings) || timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json(res, 400, { error: 'Invalid formal assessment timings.' });
   if (!validateShuffleMap(shuffleMap) || Object.keys(shuffleMap).length > MAX_SHUFFLE_KEYS) return json(res, 400, { error: 'Invalid assessment presentation mapping.' });
 
   const fingerprint = computeFingerprint(name, role);
