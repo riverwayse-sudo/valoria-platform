@@ -61,7 +61,7 @@ if (typeof document !== "undefined") {
   if (!document.getElementById(FONT_ID)) {
     const s = document.createElement("style");
     s.id = FONT_ID;
-    s.textContent = `@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,200;0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Mono:wght@400&display=swap');
+    s.textContent = `
     *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     input, select, textarea { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
     input::placeholder { color: rgba(247,244,238,0.2) !important; }
