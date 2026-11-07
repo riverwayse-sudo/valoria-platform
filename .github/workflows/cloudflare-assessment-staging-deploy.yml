@@ -71,7 +71,8 @@ jobs:
         run: npm run build
         env:
           CI: true
-          VITE_VALU_PREVIEW: "1"
+          VITE_VALU_PREVIEW: "0"
+          VITE_VALU_STAGING: "1"
           VITE_VALU_API_ORIGIN: "https://valoria-staging-assessment.riverwayse.workers.dev"
           VITE_VALU_SITE_ORIGIN: "https://valoria-staging-site.riverwayse.workers.dev"
 
