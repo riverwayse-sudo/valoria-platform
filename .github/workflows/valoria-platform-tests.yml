@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - main
+      - experience/staging-redesign-20261106
     paths:
       - "valoria-final/**"
       - "supabase/**"
