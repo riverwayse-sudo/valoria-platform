@@ -574,7 +574,7 @@ export default function FullVALUAssessment() {
   </Shell>;
 }
 
-function Shell({children}) { return <main style={S.page}><div style={S.shell}>{children}</div></main> }
+function Shell({children}) { return <main className="valu-assessment-page valu-assessment-full" style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main> }
 
 const S = {
   page:{minHeight:'100dvh',height:'auto',background:T.dark,color:T.parchment,fontFamily:"'Raleway',sans-serif",padding:'22px 20px 32px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'flex-start'},
