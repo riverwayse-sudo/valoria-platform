@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 
 describe('public marketplace roster privacy', () => {
-  test('anonymous roster reads are restricted to visible, listed, non-test profiles', () => {
+  test('anonymous roster reads exclude private, test and revoked profiles', () => {
     const migration = fs.readFileSync(
       path.join(process.cwd(), 'supabase/migrations/20261107090000_restrict_public_marketplace_roster_visibility.sql'),
       'utf8'
