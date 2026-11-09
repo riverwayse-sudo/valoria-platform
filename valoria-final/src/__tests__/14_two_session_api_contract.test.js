@@ -59,6 +59,14 @@ describe("full-assessment progress is independent of taster progress", () => {
     expect(progressApi).not.toContain("assessment_version");
   });
 
+  test("full-assessment save failures are visible instead of claiming progress is saved", () => {
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    expect(component).toContain("setProgressSaveStatus('failed')");
+    expect(component).toContain("setProgressSaveError(err?.message");
+    expect(component).toContain("SAVE ISSUE — CHECK MESSAGE BELOW");
+    expect(component).not.toContain("}).catch(() => {});");
+  });
+
   test("assessment reminder emails never expose internal question counts", () => {
     expect(progressApi).not.toContain("${row.current_question} / ${row.total_questions} questions");
     expect(progressApi).not.toContain("${remaining} remaining");
