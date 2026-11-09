@@ -121,6 +121,8 @@ export default function FullVALUAssessment() {
   const [startedAt,setStartedAt] = useState(Date.now());
   const [timings,setTimings] = useState([]);
   const [saving,setSaving] = useState(false);
+  const [progressSaveStatus,setProgressSaveStatus] = useState('checking');
+  const [progressSaveError,setProgressSaveError] = useState('');
   const [result,setResult] = useState(null);
   const [error,setError] = useState('');
   const [reportStatus,setReportStatus] = useState('');
@@ -367,8 +369,15 @@ export default function FullVALUAssessment() {
         timings,
         session_seed:0,
       }).then(data => {
-        if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
-      }).catch(() => {});
+        if (!mountedRef.current) return;
+        if (data.resume_token) setResumeToken(data.resume_token);
+        setProgressSaveStatus('saved');
+        setProgressSaveError('');
+      }).catch(err => {
+        if (!mountedRef.current) return;
+        setProgressSaveStatus('failed');
+        setProgressSaveError(err?.message || 'Your latest response could not be saved to your Valoria account. Keep this page open and retry.');
+      });
     }, 250);
     return () => window.clearTimeout(timer);
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
@@ -393,7 +402,15 @@ export default function FullVALUAssessment() {
         session_seed:0,
       });
       if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
+      if (mountedRef.current) {
+        setProgressSaveStatus('saved');
+        setProgressSaveError('');
+      }
     } catch (err) {
+      if (mountedRef.current) {
+        setProgressSaveStatus('failed');
+        setProgressSaveError(err?.message || 'Your latest response could not be saved to your Valoria account. Keep this page open and retry.');
+      }
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
         try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
         setHandoffToken('');
@@ -588,7 +605,7 @@ export default function FullVALUAssessment() {
       <VALUAssessmentJourney stage="full" />
       <div className="valu-full-heading">
         <div><div style={S.eyebrow}>YOUR VALU INDEX</div><p className="valu-full-prompt">A considered view of your professional capability.</p></div>
-        <span className="valu-full-save"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</span>
+        <span className="valu-full-save" role="status" aria-live="polite"><span aria-hidden="true">{progressSaveStatus === 'saved' ? '✓' : progressSaveStatus === 'failed' ? '!' : '…'}</span> {progressSaveStatus === 'saved' ? 'YOUR PROGRESS IS SAVED' : progressSaveStatus === 'failed' ? 'SAVE ISSUE — CHECK MESSAGE BELOW' : 'SAVING YOUR PROGRESS…'}</span>
       </div>
       <div className="valu-full-progress" role="progressbar" aria-label="Assessment progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div className="valu-full-context"><span>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</span><span>SELECT THE RESPONSE THAT BEST REFLECTS YOU</span></div>
@@ -596,6 +613,7 @@ export default function FullVALUAssessment() {
       <div style={S.options}>
         {question.options.map((option,i)=>{const selected=answers[ASSESSMENT_ORDER[current]]===i;return <button className="valu-option" key={i} type="button" aria-pressed={selected} disabled={saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected?'#C9A84C':'rgba(247,244,238,.1)',background:selected?'rgba(201,168,76,.14)':'#2E2E4A'}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>})}
       </div>
+      {progressSaveError && <div style={S.error} role="alert">{progressSaveError} Your answers remain on this device while this page stays open. Reopen the assessment from your dashboard after the connection is restored.</div>}
       <div className="valu-full-footer">
         {current>0?<button type="button" className="valu-assessment-back" disabled={saving} onClick={()=>{setCurrent(value=>Math.max(0,value-1));setStartedAt(Date.now());}}>← REVIEW PREVIOUS RESPONSE</button>:<span />}
         <span>Your responses are saved automatically.</span>
