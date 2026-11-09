@@ -45,6 +45,15 @@ describe("taster-progress requires registration before a new taster", () => {
   });
 });
 
+describe("full-assessment progress save feedback", () => {
+  test("failed remote saves are surfaced instead of claiming progress is saved", () => {
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    expect(component).toContain("setProgressSaveStatus('failed')");
+    expect(component).toContain("setProgressSaveError(err?.message");
+    expect(component).toContain("SAVE ISSUE");
+  });
+});
+
 describe("full-assessment progress is independent of taster progress", () => {
   const progressApi = readApi("assessment-progress.js");
   const submitApi = readApi("submit-assessment.js");
