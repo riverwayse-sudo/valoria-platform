@@ -594,7 +594,7 @@ export default function FullVALUAssessment() {
       <div className="valu-full-context"><span>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</span><span>SELECT THE RESPONSE THAT BEST REFLECTS YOU</span></div>
       <h1 style={S.question}>{question.q}</h1>
       <div style={S.options}>
-        {question.options.map((option,i)=><button className="valu-option" key={i} disabled={saving} onClick={()=>choose(i)} style={S.option}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>)}
+        {question.options.map((option,i)=>{const selected=answers[ASSESSMENT_ORDER[current]]===i;return <button className="valu-option" key={i} type="button" aria-pressed={selected} disabled={saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected?'#C9A84C':'rgba(247,244,238,.1)',background:selected?'rgba(201,168,76,.14)':'#2E2E4A'}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>})}
       </div>
       <div className="valu-full-footer">
         {current>0?<button type="button" className="valu-assessment-back" disabled={saving} onClick={()=>{setCurrent(value=>Math.max(0,value-1));setStartedAt(Date.now());}}>← REVIEW PREVIOUS RESPONSE</button>:<span />}
