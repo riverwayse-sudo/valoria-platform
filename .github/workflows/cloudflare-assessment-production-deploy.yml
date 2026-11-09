@@ -87,7 +87,7 @@ jobs:
             curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base$route" -o "$html"
             grep -q 'id="root"' "$html"
             grep -q 'Valoria Platform' "$html"
-            asset="$(grep -oE 'src="/valu/assessment/assets/[^"]+\\.js"' "$html" | head -n1 | cut -d '"' -f2)"
+            asset="$(grep -oE 'src="/valu/assessment/assets/[^"]+\.js"' "$html" | head -n1 | cut -d '"' -f2)"
             if [[ -z "$asset" ]]; then
               echo "Assessment route $route did not expose its built JavaScript asset."
               exit 1
