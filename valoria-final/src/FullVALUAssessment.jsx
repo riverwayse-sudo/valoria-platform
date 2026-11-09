@@ -613,7 +613,7 @@ export default function FullVALUAssessment() {
       <div style={S.options}>
         {question.options.map((option,i)=>{const selected=answers[ASSESSMENT_ORDER[current]]===i;return <button className="valu-option" key={i} type="button" aria-pressed={selected} disabled={saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected?'#C9A84C':'rgba(247,244,238,.1)',background:selected?'rgba(201,168,76,.14)':'#2E2E4A'}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>})}
       </div>
-      {progressSaveError && <div style={S.error} role="alert">{progressSaveError} Your answers remain on this device while this page stays open. Reopen the assessment from your dashboard after the connection is restored.</div>}
+      {progressSaveError && <div style={S.error} role="alert">{progressSaveError} Your answers remain on this device while this page stays open. Select your current response again after the connection is restored to retry the save. <button type="button" onClick={()=>persistCheckpoint(answers,timings,current)} style={S.dismiss}>RETRY SAVE</button></div>}
       <div className="valu-full-footer">
         {current>0?<button type="button" className="valu-assessment-back" disabled={saving} onClick={()=>{setCurrent(value=>Math.max(0,value-1));setStartedAt(Date.now());}}>← REVIEW PREVIOUS RESPONSE</button>:<span />}
         <span>Your responses are saved automatically.</span>
