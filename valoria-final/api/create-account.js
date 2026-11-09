@@ -124,9 +124,20 @@ export default async function handler(req) {
       method: "POST", headers: adminHeaders,
       body: JSON.stringify({ type: "signup", email: normalizedEmail, password, data: { full_name: name, role }, redirect_to: redirectUrl }),
     });
-    genData = await genRes.json();
+    genData = await genRes.json().catch(() => ({}));
   } catch { return json({ error: "Could not reach auth service." }, 502); }
-  if (!genRes.ok) return json({ error: "Could not create account." }, genRes.status >= 400 && genRes.status < 500 ? genRes.status : 502);
+  if (!genRes.ok) {
+    const providerCode = String(genData?.error_code || genData?.code || "").toLowerCase();
+    const providerMessage = String(genData?.msg || genData?.message || "");
+    if (genRes.status === 422 && (providerCode === "email_exists" || /already been registered|already registered/i.test(providerMessage))) {
+      return json({
+        error: "An account may already exist for this email. Sign in or reset your password to continue.",
+        code: "ACCOUNT_EXISTS",
+        actions: ["sign_in", "reset_password"],
+      }, 409);
+    }
+    return json({ error: "Could not create account." }, genRes.status >= 400 && genRes.status < 500 ? genRes.status : 502);
+  }
 
   const actionLink = genData.action_link || genData.properties?.action_link;
   if (!actionLink) return json({ warning: "Account created, but confirmation email could not be prepared. Contact support to resend." });

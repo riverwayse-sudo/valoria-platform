@@ -355,8 +355,13 @@ async function signUpWithSupabase(email, password, name, role) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password, name, role, identity_hash }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Signup failed.");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const error = new Error(data.error || "Signup failed.");
+    error.code = data.code || "";
+    error.status = res.status;
+    throw error;
+  }
   if (data.warning) {
     console.warn(data.warning);
   }
@@ -1303,6 +1308,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirm, setSignupConfirm]   = useState("");
   const [signupError, setSignupError]       = useState("");
+  const [accountExists, setAccountExists]   = useState(false);
   const [signupLoading, setSignupLoading]   = useState(false);
   const [signupDone, setSignupDone]         = useState(false);
   const [resendLoading, setResendLoading]   = useState(false);
@@ -1376,7 +1382,12 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
       setCompletionPopup(true);
       if (onSignupDone) onSignupDone(signupEmail.trim());
     } catch (e) {
-      setSignupError(e.message || "Something prevented this from completing. Try again shortly.");
+      if (e?.code === "ACCOUNT_EXISTS") {
+        setAccountExists(true);
+        setSignupError("");
+      } else {
+        setSignupError(e.message || "Something prevented this from completing. Try again shortly.");
+      }
     } finally {
       setSignupLoading(false);
     }
@@ -1489,7 +1500,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
             <div style={{ marginBottom:14 }}>
               <label style={labelBase} htmlFor="signup-email">Email Address</label>
               <input id="signup-email" type="email" placeholder="you@example.com" value={signupEmail}
-                onChange={e=>setSignupEmail(e.target.value)} style={inputBase}
+                onChange={e=>{setSignupEmail(e.target.value);setAccountExists(false);setSignupError("");}} style={inputBase}
                 onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
                 onBlur={e=>e.target.style.borderColor="rgba(247,244,238,0.1)"} />
             </div>
@@ -1514,6 +1525,14 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
                 onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
                 onBlur={e=>e.target.style.borderColor=signupConfirm && signupConfirm !== signupPassword ? "rgba(216,90,48,0.5)" : signupConfirm && signupConfirm === signupPassword ? "rgba(29,158,117,0.5)" : "rgba(247,244,238,0.1)"} />
             </div>
+            {accountExists && (
+              <div role="alert" style={{ marginBottom:14, padding:"16px 18px", background:"rgba(201,168,76,.07)", border:"1px solid rgba(201,168,76,.32)", borderRadius:T.radius.card }}>
+                <div style={{ color:T.parchment, fontSize:T.size.body, fontWeight:700, marginBottom:8, fontFamily:T.font.body }}>Continue with your existing Valoria account.</div>
+                <p style={{ color:T.text.secondary, fontSize:T.size.small, lineHeight:1.7, margin:"0 0 14px", fontFamily:T.font.body }}>We could not create a second account for this email. Sign in to connect this VALU result to your existing account. Your saved assessment has not been discarded.</p>
+                <a href={`https://valoriainstitute.com/login?identity_hash=${encodeURIComponent(computeFingerprint(name, role))}`} style={{ display:"inline-flex", justifyContent:"center", alignItems:"center", padding:"12px 20px", background:T.gold, color:T.dark, borderRadius:T.radius.pill, textDecoration:"none", fontSize:T.size.caption, fontWeight:800, letterSpacing:".1em", fontFamily:T.font.body }}>SIGN IN & CONTINUE →</a>
+                <p style={{ color:T.text.muted, fontSize:T.size.caption, lineHeight:1.6, margin:"12px 0 0", fontFamily:T.font.body }}>Forgot your password? Use “Forgot password?” on the sign-in page. If you cannot access your account, contact info@valoriainstitute.com.</p>
+              </div>
+            )}
             {signupError && (
               <div style={{ fontSize:T.size.small, color:T.coral, marginBottom:14, padding:"10px 14px", background:"rgba(216,90,48,0.06)", borderLeft:`2px solid rgba(216,90,48,0.6)`, borderRadius:`0 ${T.radius.chip}px ${T.radius.chip}px 0`, fontFamily:T.font.body }}>
                 {signupError}
