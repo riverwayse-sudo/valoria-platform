@@ -78,11 +78,22 @@ jobs:
         run: |
           set -euo pipefail
           base="https://assessment.valoriainstitute.com"
-          curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base/remaining" -o /tmp/valu-production-entry.html
-          grep -q 'VALU' /tmp/valu-production-entry.html
-          curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base/valu/assessment/" -o /tmp/valu-production-taster-entry.html
-          grep -qi 'VALU ASSESSMENT' /tmp/valu-production-taster-entry.html
-          grep -qi 'BEGIN MY TASTER' /tmp/valu-production-taster-entry.html
+          # This is a Vite SPA. curl sees the static shell, not text rendered
+          # later by React hydration; validate the shell and its real built assets
+          # instead of grepping for client-rendered headings and buttons.
+          for route in "/remaining" "/valu/assessment/"; do
+            slug="$(printf '%s' "$route" | tr '/.' '__')"
+            html="/tmp/valu-production-entry-${slug}.html"
+            curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base$route" -o "$html"
+            grep -q 'id="root"' "$html"
+            grep -q 'Valoria Platform' "$html"
+            asset="$(grep -oE 'src="/valu/assessment/assets/[^"]+\.js"' "$html" | head -n1 | cut -d '"' -f2)"
+            if [[ -z "$asset" ]]; then
+              echo "Assessment route $route did not expose its built JavaScript asset."
+              exit 1
+            fi
+            curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base$asset" -o /dev/null
+          done
           for spec in "GET /api/process-readiness-queue" "POST /api/sweep-unsent-reports"; do
             method="${spec%% *}"
             route="${spec#* }"
