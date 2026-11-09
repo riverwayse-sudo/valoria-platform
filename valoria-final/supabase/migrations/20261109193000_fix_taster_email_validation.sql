@@ -28,7 +28,7 @@ begin
 
     if v_fixed_definition is distinct from v_definition then
       execute v_fixed_definition;
-    elsif pg_catalog.position('[.]' in v_definition) = 0 then
+    elsif pg_catalog.strpos(v_definition, '[.]') = 0 then
       raise exception 'Expected legacy email-validation pattern was not found in %', v_signature;
     end if;
   end loop;
