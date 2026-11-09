@@ -125,6 +125,8 @@ export default function FullVALUAssessment() {
   const [startedAt,setStartedAt] = useState(Date.now());
   const [timings,setTimings] = useState([]);
   const [saving,setSaving] = useState(false);
+  const [progressSaveStatus,setProgressSaveStatus] = useState('checking');
+  const [progressSaveError,setProgressSaveError] = useState('');
   const [result,setResult] = useState(null);
   const [previewComplete,setPreviewComplete] = useState(false);
   const [error,setError] = useState('');
@@ -375,8 +377,15 @@ export default function FullVALUAssessment() {
         timings,
         session_seed:0,
       }).then(data => {
-        if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
-      }).catch(() => {});
+        if (!mountedRef.current) return;
+        if (data.resume_token) setResumeToken(data.resume_token);
+        setProgressSaveStatus('saved');
+        setProgressSaveError('');
+      }).catch(err => {
+        if (!mountedRef.current) return;
+        setProgressSaveStatus('failed');
+        setProgressSaveError(err?.message || 'Your latest response could not be saved to your Valoria account. Keep this page open and retry.');
+      });
     }, 250);
     return () => window.clearTimeout(timer);
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
@@ -402,7 +411,15 @@ export default function FullVALUAssessment() {
         session_seed:0,
       });
       if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
+      if (mountedRef.current) {
+        setProgressSaveStatus('saved');
+        setProgressSaveError('');
+      }
     } catch (err) {
+      if (mountedRef.current) {
+        setProgressSaveStatus('failed');
+        setProgressSaveError(err?.message || 'Your latest response could not be saved to your Valoria account. Keep this page open and retry.');
+      }
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
         try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
         setHandoffToken('');
@@ -595,8 +612,9 @@ export default function FullVALUAssessment() {
       </div>
       <div className="valu-full-footer">
         <span>{IS_PREVIEW ? 'Preview only · answers are not saved.' : 'Your responses are saved automatically.'}</span>
-        {!IS_PREVIEW && <span className="valu-full-save"><span>✓</span> {saving ? 'SAVING' : 'SAVED'}</span>}
+        {!IS_PREVIEW && <span className="valu-full-save" role="status" aria-live="polite"><span>{progressSaveStatus === 'saved' ? '✓' : progressSaveStatus === 'failed' ? '!' : '…'}</span> {progressSaveStatus === 'saved' ? 'SAVED' : progressSaveStatus === 'failed' ? 'SAVE ISSUE' : 'SAVING'}</span>}
       </div>
+      {progressSaveError && !IS_PREVIEW && <div style={S.error} role="alert">{progressSaveError} Your answers remain on this device while this page stays open. Reopen the assessment from your dashboard after the connection is restored.</div>}
       {current === ASSESSMENT_ORDER.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1]))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':IS_PREVIEW?'COMPLETE PREVIEW · NO SCORE →':'SUBMIT VALU ASSESSMENT →'}</button>}
       {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
       {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
