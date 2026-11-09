@@ -64,6 +64,7 @@ describe("full-assessment progress is independent of taster progress", () => {
     expect(component).toContain("setProgressSaveStatus('failed')");
     expect(component).toContain("setProgressSaveError(err?.message");
     expect(component).toContain("SAVE ISSUE — CHECK MESSAGE BELOW");
+    expect(component).toContain("RETRY SAVE");
   });
 
   test("assessment reminder emails never expose internal question counts", () => {
