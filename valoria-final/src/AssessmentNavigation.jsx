@@ -20,9 +20,11 @@ const LOGO_URL = 'https://valoriainstitute.com/logo.png';
 
 export default function AssessmentNavigation({ progress = null, label = 'VALU ASSESSMENT' }) {
   const siteUrl = getSiteUrl();
+  const isStagingPreview = typeof window !== 'undefined' && window.location.hostname.toLowerCase().includes('staging');
   return (
     <header style={styles.header} aria-label="Assessment navigation">
       <a className="assessment-skip-link" href="#main-content">Skip to assessment content</a>
+      {isStagingPreview && <div className="staging-site-banner" role="status" style={styles.stagingBanner}>STAGING PREVIEW · TEST ENVIRONMENT ONLY · DO NOT ENTER REAL PARTICIPANT INFORMATION</div>}
       <div className="assessment-nav-inner" style={styles.inner}>
         <a href={`${siteUrl}/`} style={styles.brand} aria-label="Return to Valoria Institute homepage">
           <img src={LOGO_URL} alt="Valoria Institute" className="assessment-nav-logo" style={styles.logo} />
@@ -40,6 +42,7 @@ export default function AssessmentNavigation({ progress = null, label = 'VALU AS
 }
 
 const styles = {
+  stagingBanner:{padding:'7px 12px',background:T.gold,color:T.dark,textAlign:'center',fontSize:9,fontWeight:800,letterSpacing:'.12em',lineHeight:1.4},
   header:{position:'sticky',top:0,zIndex:50,width:'100%',borderBottom:'1px solid rgba(201,168,76,.14)',background:'rgba(26,26,46,.94)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)'},
   inner:{width:'100%',maxWidth:1180,minHeight:64,margin:'0 auto',padding:'0 20px',display:'grid',gridTemplateColumns:'1fr auto 1fr',alignItems:'center',gap:18},
   brand:{display:'inline-flex',alignItems:'center',gap:9,width:'fit-content',color:T.parchment,textDecoration:'none'},
