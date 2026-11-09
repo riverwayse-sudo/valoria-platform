@@ -240,7 +240,7 @@ export default function VALUIndexV4GateNext(){
    </details>
    <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
     <input type="checkbox" required checked={privacyAcknowledged} onChange={e=>setPrivacyAcknowledged(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
-    <span>I acknowledge that Valoria will process these details to administer my assessment and manage my journey. Read the <a href={(SITE_BASE||'https://valoriainstitute.com')+'/privacy'} style={{color:GOLD,textDecoration:'underline'}}>Privacy Notice</a>.</span>
+    <span>I acknowledge that Valoria will process these details to administer my assessment and manage my journey. Read the <a href={(SITE_BASE||'https://valoriainstitute.com')+'/privacypolicy'} style={{color:GOLD,textDecoration:'underline'}}>Privacy Notice</a>.</span>
    </label>
    <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
     <input type="checkbox" checked={marketingConsent} onChange={e=>setMarketingConsent(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
