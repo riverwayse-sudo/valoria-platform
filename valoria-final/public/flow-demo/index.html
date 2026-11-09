@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Valoria — VALU Professional Journey Demo</title>
+<style>
+:root{--midnight:#1A1A2E;--blue:#24244b;--indigo:#2E2E4A;--gold:#C9A84C;--brass:#D4C9A8;--linen:#EDE8DC;--ivory:#FAFAF7;--muted:#A9ABC2;--line:rgba(212,201,168,.24);--success:#86b89a}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--midnight);color:var(--ivory)}
+body{background:radial-gradient(circle at 80% 0%,#30305a 0,#1A1A2E 42%,#11111f 100%)}
+button{font:inherit;cursor:pointer}.shell{min-height:100vh}.top{height:76px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 5vw;position:sticky;top:0;background:rgba(26,26,46,.92);backdrop-filter:blur(16px);z-index:20}.brand{font-weight:900;letter-spacing:.12em}.brand span{color:var(--gold)}.tag{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.main{max-width:1180px;margin:auto;padding:34px 5vw 70px}.screen{display:none}.screen.active{display:block}.eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:14px}.hero{min-height:calc(100vh - 145px);display:grid;grid-template-columns:1.15fr .85fr;gap:60px;align-items:center}.hero h1{font-size:clamp(44px,6vw,78px);line-height:.98;letter-spacing:-.045em;margin:0 0 24px;max-width:800px}.hero p{font-size:19px;line-height:1.65;color:#c7c8d7;max-width:680px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}.btn{border:1px solid var(--gold);background:var(--gold);color:var(--midnight);padding:14px 20px;border-radius:7px;font-weight:800}.btn.secondary{background:transparent;color:var(--ivory);border-color:var(--line)}.btn.ghost{background:transparent;border-color:transparent;color:var(--brass)}.card{background:rgba(46,46,74,.78);border:1px solid var(--line);border-radius:10px;padding:24px}.hero-card{padding:30px}.hero-card .score{font-size:68px;font-weight:900;line-height:1;color:var(--gold)}.small{font-size:13px;color:var(--muted);line-height:1.6}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid.two{grid-template-columns:repeat(2,1fr)}.grid.four{grid-template-columns:repeat(4,1fr)}h2{font-size:38px;letter-spacing:-.03em;margin:0 0 12px}h3{margin:0 0 8px}.sub{color:#c7c8d7;line-height:1.6}.bar{height:7px;background:#111122;border-radius:99px;overflow:hidden}.fill{height:100%;background:var(--gold);border-radius:99px;transition:width .3s}.metric{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px}.journey{display:flex;gap:5px;margin:22px 0 32px}.step{height:5px;flex:1;border-radius:99px;background:#3b3b59}.step.done{background:var(--gold)}.step.current{background:#807143}.question{max-width:850px;margin:34px auto}.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.12em}.question h2{font-size:34px;margin-top:26px}.answers{display:grid;gap:10px;margin-top:28px}.answer{padding:17px 19px;text-align:left;border:1px solid var(--line);background:rgba(17,17,34,.48);color:var(--ivory);border-radius:8px}.answer:hover,.answer.selected{border-color:var(--gold);background:rgba(201,168,76,.09)}.navrow{display:flex;justify-content:space-between;align-items:center;margin-top:28px}.pill{display:inline-flex;align-items:center;border:1px solid var(--line);padding:7px 10px;border-radius:99px;color:var(--brass);font-size:12px}.timeline{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:28px 0}.t{padding:13px 9px;border:1px solid var(--line);border-radius:8px;text-align:center;color:var(--muted);font-size:11px}.t.active{border-color:var(--gold);color:var(--ivory);background:rgba(201,168,76,.08)}.t.done{color:var(--success)}.cap{min-height:190px}.cap .status{margin-top:22px;color:var(--gold);font-size:12px;text-transform:uppercase;letter-spacing:.12em}.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.score-box{padding:18px;border:1px solid var(--line);border-radius:8px;text-align:center}.score-box strong{display:block;font-size:30px;margin-top:8px}.profile{display:grid;grid-template-columns:220px 1fr;gap:28px}.avatar{width:150px;height:150px;border-radius:50%;border:2px solid var(--gold);display:grid;place-items:center;font-size:46px;background:#272744}.listing{border:1px solid var(--gold);background:rgba(201,168,76,.07)}.notice{border-left:3px solid var(--gold);padding:14px 17px;background:rgba(201,168,76,.06);color:#dddccf;line-height:1.6}.footerbar{position:fixed;bottom:0;left:0;right:0;padding:10px 5vw;background:rgba(17,17,31,.94);border-top:1px solid var(--line);display:flex;justify-content:center;gap:8px;z-index:30;overflow:auto}.footerbar button{background:transparent;border:1px solid transparent;color:var(--muted);padding:7px 10px;border-radius:6px;font-size:11px;white-space:nowrap}.footerbar button.active{color:var(--ivory);border-color:var(--line)}@media(max-width:850px){.hero,.profile{grid-template-columns:1fr}.grid,.grid.two,.grid.four,.score-grid{grid-template-columns:1fr 1fr}.hero{min-height:auto;padding:50px 0}.timeline{grid-template-columns:repeat(4,1fr)}}@media(max-width:520px){.main{padding-left:18px;padding-right:18px}.top{padding:0 18px}.grid,.grid.two,.grid.four,.score-grid{grid-template-columns:1fr}.hero h1{font-size:48px}.footerbar{justify-content:flex-start}.hero-card .score{font-size:52px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="top"><div class="brand">VALORIA<span>.</span></div><div class="tag">Professional Value Registry</div></header>
+<main class="main">
+
+<section id="landing" class="screen active">
+<div class="hero">
+<div><div class="eyebrow">The VALU Journey</div><h1>Understand what makes you valuable.</h1><p>Start with a short snapshot. Save what you discover. Then build a professional record that can evolve from assessment to capability, verification and opportunity.</p><div class="actions"><button class="btn" onclick="go('snapshot')">Take the VALU Snapshot</button><button class="btn secondary" onclick="go('dashboard')">Explore the journey</button></div></div>
+<div class="card hero-card"><div class="eyebrow">15-question snapshot</div><div class="score">15</div><p class="sub">A directional first look across the PRIME dimensions.</p><div class="notice">Your snapshot is not the finish line. Save it to begin your professional identity and continue into the full VALU assessment.</div></div>
+</div></section>
+
+<section id="snapshot" class="screen">
+<div class="eyebrow">Step 01 · VALU Snapshot</div><h2>Start with a useful signal.</h2><p class="sub">15 questions. One at a time. Your progress is saved in this demo.</p><div class="journey" id="snapJourney"></div>
+<div class="question"><div class="qmeta"><span id="snapNum">Question 1 of 15</span><span>Snapshot</span></div><div class="bar"><div id="snapFill" class="fill" style="width:7%"></div></div><h2 id="snapQ"></h2><div id="snapAnswers" class="answers"></div><div class="navrow"><button class="btn secondary" onclick="go('landing')">Exit</button><button class="btn" onclick="snapNext()">Continue</button></div></div>
+</section>
+
+<section id="snapshot-result" class="screen">
+<div class="eyebrow">Your initial signal</div><h2>There is already something to work with.</h2><div class="grid two" style="margin-top:28px"><div class="card"><div class="eyebrow">VALU Snapshot</div><div class="score">72</div><p class="sub">Directional snapshot across Presence, Relationships, Intelligence, Mastery and Enterprise.</p></div><div class="card"><h3>What happens next?</h3><p class="sub">Save this result, establish your professional identity and continue the full assessment when you are ready.</p><button class="btn" onclick="go('signup')">Save my results</button></div></div>
+<div class="grid" style="margin-top:16px"><div class="card"><h3>Presence</h3><p class="small">How you show up, communicate and create confidence.</p></div><div class="card"><h3>Relationships</h3><p class="small">How you connect, collaborate and build trust.</p></div><div class="card"><h3>Intelligence</h3><p class="small">How you interpret information, reason and decide.</p></div></div>
+</section>
+
+<section id="signup" class="screen">
+<div class="eyebrow">Save your journey</div><h2>Create your professional identity.</h2><p class="sub">The account exists to preserve your snapshot, assessment progress and professional record.</p>
+<div class="grid two" style="margin-top:28px"><div class="card"><h3>What you keep</h3><div class="small">✓ Your 15-question snapshot<br/>✓ Your full assessment progress<br/>✓ Your professional profile<br/>✓ Your capability pathways<br/>✓ Evidence and eligibility status<br/>✓ Marketplace readiness</div></div><div class="card"><label class="small">Email address</label><input id="email" value="professional@example.com" style="width:100%;margin:8px 0 16px;padding:14px;border-radius:7px;border:1px solid var(--line);background:#111122;color:white"/><label class="small">Professional name</label><input value="Samuel Olabulo" style="width:100%;margin:8px 0 20px;padding:14px;border-radius:7px;border:1px solid var(--line);background:#111122;color:white"/><button class="btn" onclick="go('dashboard')">Create my Valoria identity</button></div></div>
+</section>
+
+<section id="dashboard" class="screen">
+<div class="eyebrow">Your Valoria journey</div><h2>Know what to do next.</h2><p class="sub">The platform keeps one professional identity and gives you a clear next action.</p>
+<div class="card" style="margin-top:26px"><div class="metric"><span>Journey progress</span><strong>34%</strong></div><div class="bar"><div class="fill" style="width:34%"></div></div><div class="timeline"><div class="t done">Snapshot<br/>Complete</div><div class="t done">Identity<br/>Saved</div><div class="t active">VALU<br/>34/58</div><div class="t">Profile</div><div class="t">Capability</div><div class="t">Eligibility</div><div class="t">Marketplace</div></div><div class="notice"><strong>Your next best action</strong><br/>Continue your VALU assessment. You have 24 questions remaining. Your progress is saved automatically.</div><div class="actions"><button class="btn" onclick="go('assessment')">Continue VALU</button><button class="btn secondary" onclick="go('profile')">View my profile</button></div></div>
+<div class="grid" style="margin-top:16px"><div class="card"><h3>Profile</h3><p class="small">Identity 80% complete</p></div><div class="card"><h3>Capabilities</h3><p class="small">Talent · Speaker · Facilitator</p></div><div class="card"><h3>Return signal</h3><p class="small">Reassessment becomes available as your professional record develops.</p></div></div>
+</section>
+
+<section id="assessment" class="screen">
+<div class="eyebrow">Step 02 · Official VALU Assessment</div><h2>Measure the full picture.</h2><p class="sub">58-question sequence. Each response contributes to a different part of the assessment framework. Progress is persistent.</p>
+<div class="question"><div class="qmeta"><span id="aNum">Question 35 of 58</span><span id="aDim">Mastery</span></div><div class="bar"><div id="aFill" class="fill" style="width:60%"></div></div><h2 id="aQ">When a familiar approach stops producing results, what do you tend to do first?</h2><div id="aAnswers" class="answers"></div><div class="navrow"><button class="btn secondary" onclick="go('dashboard')">Save & exit</button><button class="btn" onclick="assessmentNext()">Save & continue</button></div></div>
+</section>
+
+<section id="assessment-result" class="screen">
+<div class="eyebrow">Step 03 · Official VALU Index</div><h2>Your professional picture is becoming clearer.</h2><div class="card" style="margin-top:24px"><div class="grid two"><div><div class="eyebrow">VALU Index</div><div class="score">78<span style="font-size:20px">/100</span></div><p class="small">Illustrative demo result.</p></div><div><div class="eyebrow">Merit tier</div><h2 style="font-size:28px">Established</h2><p class="sub">A result is a starting point for development and capability evidence, not the end of the journey.</p></div></div><hr style="border:0;border-top:1px solid var(--line);margin:24px 0"/><div class="score-grid"><div class="score-box">Presence<strong>82</strong></div><div class="score-box">Relationships<strong>76</strong></div><div class="score-box">Intelligence<strong>84</strong></div><div class="score-box">Mastery<strong>71</strong></div><div class="score-box">Enterprise<strong>79</strong></div></div></div><div class="actions"><button class="btn" onclick="go('profile')">Build my professional profile</button><button class="btn secondary" onclick="go('dashboard')">Return to journey</button></div>
+</section>
+
+<section id="profile" class="screen">
+<div class="eyebrow">Step 04 · Professional Profile</div><h2>One identity. Multiple capabilities.</h2><div class="card profile" style="margin-top:25px"><div><div class="avatar">SO</div><p class="pill" style="margin-top:15px">VALU assessed</p></div><div><h2 style="font-size:30px">Samuel Olabulo</h2><p class="sub">Strategist · Speaker · Facilitator</p><p class="small">Your shared professional identity holds the person. Capabilities hold the specific pathways, evidence, assessment and marketplace status.</p><div class="grid two" style="margin-top:18px"><div class="card"><h3>Identity</h3><p class="small">Bio · contact · experience · avatar</p></div><div class="card"><h3>Profile completion</h3><div class="bar"><div class="fill" style="width:80%"></div></div><p class="small">80% · Add your professional evidence.</p></div></div></div></div><div class="actions"><button class="btn" onclick="go('capabilities')">Manage capabilities</button></div>
+</section>
+
+<section id="capabilities" class="screen">
+<div class="eyebrow">Step 05 · Capabilities</div><h2>Choose where your value can travel.</h2><p class="sub">Capabilities are pathways under the same professional profile.</p><div class="grid three" style="margin-top:25px"><div class="card cap"><h3>Talent</h3><p class="small">Professional opportunities and talent discovery.</p><div class="status">Eligible · evidence review</div></div><div class="card cap"><h3>Speaker</h3><p class="small">Speaking opportunities, topics and public profile.</p><div class="status">Developing · 2 steps</div></div><div class="card cap"><h3>Facilitator</h3><p class="small">Facilitation engagements and verified capability.</p><div class="status">Not yet eligible</div></div></div><div class="card" style="margin-top:16px"><h3>Your next capability action</h3><p class="sub">Add evidence to your Talent capability. Evidence moves the capability toward eligibility.</p><button class="btn" onclick="go('evidence')">Add evidence</button></div>
+</section>
+
+<section id="evidence" class="screen">
+<div class="eyebrow">Step 06 · Evidence & Development</div><h2>Turn potential into proof.</h2><div class="grid two" style="margin-top:25px"><div class="card"><h3>Talent evidence</h3><p class="small">3 of 5 evidence items complete</p><div class="bar" style="margin:15px 0"><div class="fill" style="width:60%"></div></div><div class="small">✓ Professional experience<br/>✓ Project outcome<br/>✓ Reference<br/>○ Certification<br/>○ Portfolio artifact</div></div><div class="card"><h3>Development priority</h3><p class="sub">Mastery is your current development focus.</p><div class="notice">Complete the recommended development pathway, then return to update your capability evidence.</div><button class="btn" style="margin-top:18px" onclick="go('eligibility')">Check eligibility</button></div></div>
+</section>
+
+<section id="eligibility" class="screen">
+<div class="eyebrow">Step 07 · Eligibility & Verification</div><h2>Readiness is earned capability by capability.</h2><div class="grid two" style="margin-top:25px"><div class="card"><h3>Talent readiness</h3><div class="metric"><span>Readiness</span><strong>38 / 35</strong></div><div class="bar"><div class="fill" style="width:100%"></div></div><p class="small">Eligibility threshold reached. Marketplace listing still requires verification.</p><p class="pill">Eligible</p></div><div class="card"><h3>Verification</h3><p class="sub">Valoria reviews the submitted evidence and capability record.</p><div class="notice">Verification is a governance step between eligibility and public listing.</div><button class="btn" style="margin-top:18px" onclick="go('marketplace')">View listing readiness</button></div></div>
+</section>
+
+<section id="marketplace" class="screen">
+<div class="eyebrow">Step 08 · Marketplace</div><h2>Become discoverable.</h2><p class="sub">The marketplace counts professionals, while each professional can be discoverable through multiple eligible capabilities.</p><div class="grid two" style="margin-top:25px"><div class="card listing"><span class="pill">Verified · Talent</span><h2 style="font-size:30px;margin-top:15px">Samuel Olabulo</h2><p class="sub">Strategy · Business Development · Professional Growth</p><p class="small">VALU 78 · Established · Evidence verified</p><button class="btn" onclick="go('opportunity')">Preview buyer journey</button></div><div class="card"><h3>Marketplace status</h3><div class="small">✓ Professional profile complete<br/>✓ VALU assessment complete<br/>✓ Talent eligible<br/>✓ Evidence reviewed<br/>✓ Listing active</div><div class="notice" style="margin-top:18px">Your profile remains alive after listing. New evidence, capabilities and reassessments can change what you can be discovered for.</div></div></div>
+</section>
+
+<section id="opportunity" class="screen">
+<div class="eyebrow">Step 09 · Opportunity</div><h2>Discovery creates a reason to return.</h2><div class="card" style="margin-top:25px"><span class="pill">New introduction</span><h2 style="font-size:30px;margin-top:16px">Strategy & Growth Facilitator</h2><p class="sub">An organization is looking for a professional who can facilitate a strategic planning session for a leadership team.</p><div class="grid three"><div class="card"><h3>Capability</h3><p class="small">Facilitator</p></div><div class="card"><h3>Format</h3><p class="small">In-person / hybrid</p></div><div class="card"><h3>Status</h3><p class="small">Respond by Friday</p></div></div><button class="btn" style="margin-top:18px" onclick="go('reassessment')">Continue professional journey</button></div>
+</section>
+
+<section id="reassessment" class="screen">
+<div class="eyebrow">Step 10 · Development Loop</div><h2>Your profile does not have to stay still.</h2><div class="grid two" style="margin-top:25px"><div class="card"><div class="eyebrow">VAL U trajectory</div><div style="font-size:48px;font-weight:900">78 → 84</div><p class="small">Illustrative future reassessment after development and new evidence.</p></div><div class="card"><h3>Reassessment available</h3><p class="sub">Your professional record has changed. Reassess to establish an updated view of your capabilities.</p><button class="btn" onclick="go('assessment')">Begin reassessment</button></div></div><div class="card" style="margin-top:16px"><h3>The loop</h3><p class="sub">Assess → understand → develop → demonstrate → verify → get discovered → return with new evidence → reassess.</p></div></section>
+
+</main>
+<nav class="footerbar" id="nav"></nav>
+</div>
+<script>
+const screens=['landing','snapshot','snapshot-result','signup','dashboard','assessment','assessment-result','profile','capabilities','evidence','eligibility','marketplace','opportunity','reassessment'];
+const labels={landing:'Start',snapshot:'Snapshot', 'snapshot-result':'Snapshot result',signup:'Save identity',dashboard:'Journey',assessment:'58 questions','assessment-result':'VALU Index',profile:'Profile',capabilities:'Capabilities',evidence:'Evidence',eligibility:'Eligibility',marketplace:'Marketplace',opportunity:'Opportunity',reassessment:'Reassess'};
+const snapQs=[
+'When you enter a room where expectations are unclear, what do you naturally do first?',
+'How do you respond when another person strongly disagrees with your approach?',
+'When faced with incomplete information, how do you make a decision?',
+'What most often helps you turn knowledge into reliable performance?',
+'When an opportunity appears unexpectedly, how do you evaluate it?',
+'How do you typically create confidence in people working with you?',
+'When a relationship becomes difficult, what do you tend to protect first?',
+'How do you distinguish useful information from noise?',
+'What do you do when a goal matters but the path is uncertain?',
+'How do you respond when your current level is no longer enough?',
+'How do you make your contribution visible without overstating it?',
+'When a team loses momentum, what role do you naturally take?',
+'How do you turn feedback into a change in behaviour?',
+'What makes you decide that an opportunity is worth pursuing?',
+'Which statement best describes how you currently think about your professional value?'
+];
+const snapAns=['I create clarity and establish direction','I listen, test the disagreement and adapt where useful','I identify what matters, then make the best decision available','I practise, apply and review outcomes','I examine fit, value and consequences before committing'];
+const assessQs=[
+['Presence','When a familiar approach stops producing results, what do you tend to do first?'],
+['Relationships','When a colleague challenges your decision publicly, what do you do?'],
+['Intelligence','Which information most changes your confidence in a decision?'],
+['Mastery','How do you know when you have genuinely improved at something?'],
+['Enterprise','How do you evaluate whether an opportunity creates durable value?']
+];
+let snapIndex=0, assessIndex=34;
+function nav(){document.getElementById('nav').innerHTML=screens.map(s=>'<button id="n-'+s+'" onclick="go(\''+s+'\')">'+labels[s]+'</button>').join('')}
+function go(id){screens.forEach(s=>document.getElementById(s).classList.toggle('active',s===id));document.querySelectorAll('.footerbar button').forEach(b=>b.classList.remove('active'));let b=document.getElementById('n-'+id);if(b)b.classList.add('active');window.scrollTo({top:0,behavior:'smooth'});if(id==='snapshot')renderSnap();if(id==='assessment')renderAssess()}
+function renderSnap(){document.getElementById('snapNum').textContent='Question '+(snapIndex+1)+' of 15';document.getElementById('snapFill').style.width=((snapIndex+1)/15*100)+'%';document.getElementById('snapQ').textContent=snapQs[snapIndex];document.getElementById('snapAnswers').innerHTML=snapAns.map((a,i)=>'<button class="answer '+(i===0?'selected':'')+'" onclick="this.parentNode.querySelectorAll(\'.answer\').forEach(x=>x.classList.remove(\'selected\'));this.classList.add(\'selected\')">'+a+'</button>').join('')}
+function snapNext(){if(snapIndex<14){snapIndex++;renderSnap()}else go('snapshot-result')}
+function renderAssess(){let q=assessQs[assessIndex%assessQs.length];document.getElementById('aNum').textContent='Question '+(assessIndex+1)+' of 58';document.getElementById('aDim').textContent=q[0];document.getElementById('aFill').style.width=((assessIndex+1)/58*100)+'%';document.getElementById('aQ').textContent=q[1];document.getElementById('aAnswers').innerHTML=snapAns.map(a=>'<button class="answer" onclick="this.parentNode.querySelectorAll(\'.answer\').forEach(x=>x.classList.remove(\'selected\'));this.classList.add(\'selected\')">'+a+'</button>').join('')}
+function assessmentNext(){if(assessIndex<57){assessIndex++;renderAssess()}else go('assessment-result')}
+nav();go('landing');
+</script>
+</body></html>
