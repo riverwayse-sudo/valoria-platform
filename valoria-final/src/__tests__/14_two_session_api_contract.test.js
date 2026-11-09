@@ -51,6 +51,7 @@ describe("full-assessment progress save feedback", () => {
     expect(component).toContain("setProgressSaveStatus('failed')");
     expect(component).toContain("setProgressSaveError(err?.message");
     expect(component).toContain("SAVE ISSUE");
+    expect(component).toContain("RETRY SAVE");
   });
 });
 
