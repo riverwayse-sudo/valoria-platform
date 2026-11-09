@@ -219,20 +219,25 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> YOUR DETAILS FIRST</div>
    <h1 className="valu-results-title" style={S.h1}>Start with your <em>details.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Register before beginning your taster. This saves your contact and professional details so your Valoria journey stays connected. You will secure your Valoria account after your taster.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your details connect your responses to you, so you can pause and return without losing your place. You will create your Valoria account after completing the taster.</p>
   </section>
   <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Tell us a little about yourself.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
-   <p style={S.formIntro}>Your details are used to save your progress and support relevant follow-up from Valoria.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
+   <p style={S.formIntro}>Complete the four required fields. Your answers stay connected to your registration. Optional details can be added below.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
-    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" maxLength={160}/></Field>
+    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>
    </div>
-   <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>
+   <div className="valu-entry-form-grid" style={S.grid}>
+    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" maxLength={160}/></Field>
+    <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
+   </div>
    <p style={S.note}>If you already have a Valoria account, use the email address associated with it so your taster can be connected to that account.</p>
-   <Field label="ORGANISATION (OPTIONAL)"><input style={S.input} value={organisation} onChange={e=>setOrganisation(e.target.value)} placeholder="Your organisation" autoComplete="organization" maxLength={180}/></Field>
-   <Field label="WHAT ARE YOU MOST INTERESTED IN? (OPTIONAL)"><select style={S.input} value={interest} onChange={e=>setInterest(e.target.value)}><option value="">Select an interest</option><option value="Professional visibility">Professional visibility</option><option value="Career and leadership opportunities">Career and leadership opportunities</option><option value="Speaking and facilitation">Speaking and facilitation</option><option value="Learning and development">Learning and development</option><option value="Other">Other</option></select></Field>
+   <details className="valu-optional-details">
+    <summary>Add optional professional details</summary>
+    <Field label="ORGANISATION (OPTIONAL)"><input style={S.input} value={organisation} onChange={e=>setOrganisation(e.target.value)} placeholder="Your organisation" autoComplete="organization" maxLength={180}/></Field>
+    <Field label="WHAT ARE YOU MOST INTERESTED IN? (OPTIONAL)"><select style={S.input} value={interest} onChange={e=>setInterest(e.target.value)}><option value="">Select an interest</option><option value="Professional visibility">Professional visibility</option><option value="Career and leadership opportunities">Career and leadership opportunities</option><option value="Speaking and facilitation">Speaking and facilitation</option><option value="Learning and development">Learning and development</option><option value="Other">Other</option></select></Field>
+   </details>
    <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
     <input type="checkbox" required checked={privacyAcknowledged} onChange={e=>setPrivacyAcknowledged(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
     <span>I acknowledge that Valoria will process these details to administer my assessment and manage my journey. Read the <a href={(SITE_BASE||'https://valoriainstitute.com')+'/privacy'} style={{color:GOLD,textDecoration:'underline'}}>Privacy Notice</a>.</span>
@@ -242,7 +247,7 @@ export default function VALUIndexV4GateNext(){
     <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
    </label>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'REGISTER & BEGIN MY TASTER →'}</button>
+   <button type="submit" disabled={!identityValid||saving} style={{...S.primary,opacity:(!identityValid||saving)?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU TASTER →'}</button>
    <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved taster.</div>
   </form>
  </Shell>;
