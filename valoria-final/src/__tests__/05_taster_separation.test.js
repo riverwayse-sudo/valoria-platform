@@ -8,6 +8,11 @@ const {
 } = require("../valuTaster");
 const { QUESTIONS } = require("../questions");
 const {
+  LEGACY_TASTER_QUESTIONS,
+  LEGACY_TASTER_VERSION,
+  computeLegacyTasterResult,
+} = require("../valuTasterLegacy");
+const {
   TOTAL_QUESTIONS,
   ASSESSMENT_ORDER,
   openingPositions,
@@ -21,6 +26,15 @@ describe("separate VALU taster and formal assessment contracts", () => {
     expect(TASTER_QUESTIONS.every(question => question.cluster === "I")).toBe(true);
     expect(TASTER_QUESTIONS.every(question => question.id.startsWith("T-"))).toBe(true);
     expect(VALU_VERSION).toBe("4.2");
+  });
+
+  test("existing v4.1 sessions retain their original question set for safe resume", () => {
+    expect(LEGACY_TASTER_VERSION).toBe("4.1");
+    expect(LEGACY_TASTER_QUESTIONS).toHaveLength(9);
+    const legacyAnswers = Object.fromEntries(LEGACY_TASTER_QUESTIONS.map((_, index) => [index, 3]));
+    const result = computeLegacyTasterResult(legacyAnswers);
+    expect(result.completedQuestions).toBe(9);
+    expect(Object.keys(result.points).sort()).toEqual(["E", "I", "M", "P", "R"]);
   });
 
   test("the Intelligence taster has the approved skill distribution", () => {
