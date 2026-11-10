@@ -261,12 +261,7 @@ export default function VALUIndexV4GateNext(){
    <div className="valu-intro-rule"><span/></div>
    <p className="valu-intro-overline">A CLEARER VIEW OF YOUR PROFESSIONAL CAPABILITY</p>
    <h1 id="valu-taster-intro-title" className="valu-intro-title">Your professional worth deserves to be <em>understood.</em></h1>
-   <p className="valu-intro-copy">Begin with a short reflection on how you work, relate and create value. Your responses help establish a starting point for your Valoria journey.</p>
-   <div className="valu-intro-benefits">
-    <div><span className="valu-intro-check">✓</span><span><strong>Simple, considered choices</strong><small>Choose the response that best reflects your experience.</small></span></div>
-    <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>You can leave and return without losing saved responses.</small></span></div>
-    <div><span className="valu-intro-check">✓</span><span><strong>A useful next step</strong><small>Your taster helps you understand where to continue.</small></span></div>
-   </div>
+   <p className="valu-intro-copy">A short reflection on how you work, connect and create value.</p>
    <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU TASTER <span>→</span></button>
    <p className="valu-intro-assurance">Your responses are handled securely and are not shown as a public profile.</p>
   </section>
@@ -277,43 +272,20 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your taster is <em>saved.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
-  </section>
-  <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
-   <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU taster</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
-   </div>
-   <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · YOU ARE HERE</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Create your account</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Add your details now. You’ll set your password and confirm your email in the next step.</p>
-   </div>
-   <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue with Valoria</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, then return to your dashboard to continue.</p>
-   </div>
-  </section>
-  <section aria-label="Assessment progress" style={S.scoreSection}>
-   <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
-    <div style={S.resultRow}><div style={S.dimensionCode}>YOUR TASTER</div><h2 style={S.scoreName}>Saved</h2><strong style={S.scoreValue}>✓</strong></div>
-    <div style={S.resultRow}><div style={S.dimensionCode}>NEXT STEP</div><h2 style={S.scoreName}>Account setup</h2><strong style={S.scoreValue}>→</strong></div>
-   </div>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your taster is saved. Create your account to continue.</p>
   </section>
   <section className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
    <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Secure your Valoria account.</h2></div><div style={S.formTime}>ACCOUNT SETUP</div></div>
-   <p style={S.formIntro}>Your registration details and taster are saved. Continue to create your Valoria account, confirm your email and access your dashboard.</p>
+   <p style={S.formIntro}>Your details and taster are saved. Create your account to continue.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED NAME</div><h2 style={S.scoreName}>{name}</h2></div>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED EMAIL</div><h2 style={{...S.scoreName,overflowWrap:'anywhere'}}>{email}</h2></div>
    </div>
    {error&&<div style={S.error} role="alert">{error}</div>}
    <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO ACCOUNT CREATION →'}</button>
-   <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
+   <div style={S.saveNote}><span>✓</span> Your taster is saved.</div>
   </section>
-  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
+  <p style={S.note}></p>
  </Shell>;
 
  return <Shell mode="taster">
@@ -324,7 +296,7 @@ export default function VALUIndexV4GateNext(){
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
   {current>0&&<button type="button" className="valu-assessment-back" disabled={saving||selected!==null} onClick={()=>setCurrent(value=>Math.max(0,value-1))}>← REVIEW PREVIOUS RESPONSE</button>}
   {error&&<div style={S.error}>{error}</div>}
-  <p style={S.note}>Your progress is saved as you go.</p>
+  <p style={S.note}></p>
  </Shell>;
 }
 function Field({label,children}){return <label style={S.label}>{label}{children}</label>}
@@ -332,8 +304,8 @@ function StepBar({active}){return null}
 function Shell({children,mode=''}){return <main id="main-content" tabIndex={-1} className={`valu-assessment-page ${mode ? `valu-assessment-${mode}` : ''}`} style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main>}
 
 const S={
- page:{minHeight:'calc(100dvh - 65px)',height:'auto',background:DARK,color:PARCH,padding:'28px 32px 34px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
- shell:{width:'100%',maxWidth:1160,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:'auto'},
+ page:{minHeight:'calc(100dvh - 65px)',height:'auto',background:DARK,color:PARCH,padding:'20px 24px 26px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'stretch',fontFamily:"'Raleway',sans-serif"},
+ shell:{width:'100%',maxWidth:980,margin:'0 auto',display:'flex',flexDirection:'column',minHeight:'auto'},
  eyebrow:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
  error:{padding:'12px 14px',border:'1px solid rgba(216,90,48,.3)',background:'rgba(216,90,48,.08)',borderRadius:8,color:'#F3A0A0',fontSize:12,lineHeight:1.5,marginBottom:12},
  steps:{display:'flex',justifyContent:'center',gap:28,margin:'0 0 42px',paddingBottom:18,borderBottom:'1px solid rgba(212,201,168,.16)'},
@@ -344,13 +316,13 @@ const S={
  counter:{fontSize:11,color:'rgba(250,250,247,.45)'},
  progress:{height:4,background:'rgba(250,250,247,.08)',margin:'14px 0 34px',borderRadius:99,overflow:'hidden'},
  fill:{height:'100%',borderRadius:99},
- question:{fontSize:'clamp(28px,4.5vw,44px)',fontWeight:500,lineHeight:1.16,letterSpacing:'-.025em',margin:'0 0 26px'},
- options:{display:'grid',gap:10},
- option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'34px 1fr',alignItems:'center',gap:14,textAlign:'left',padding:'17px 18px',border:'1px solid',borderRadius:9,color:PARCH,fontSize:14,lineHeight:1.55,cursor:'pointer',fontFamily:'inherit',transition:'border-color .18s,background .18s'},
+ question:{fontSize:'clamp(24px,3.1vw,36px)',fontWeight:500,lineHeight:1.18,letterSpacing:'-.025em',margin:'0 0 20px'},
+ options:{display:'grid',gap:12},
+ option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'34px 1fr',alignItems:'center',gap:14,textAlign:'left',padding:'14px 16px',border:'1px solid',borderRadius:8,color:PARCH,fontSize:13,lineHeight:1.5,cursor:'pointer',fontFamily:'inherit',transition:'border-color .18s,background .18s'},
  optionLetter:{width:30,height:30,border:'1px solid rgba(201,168,76,.42)',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',color:GOLD,fontSize:11,fontWeight:700},
- h1:{fontSize:'clamp(40px,7vw,64px)',fontWeight:500,lineHeight:1.04,letterSpacing:'-.035em',margin:'0 0 14px'},
+ h1:{fontSize:'clamp(32px,4vw,46px)',fontWeight:500,lineHeight:1.08,letterSpacing:'-.035em',margin:'0 0 14px'},
  p:{fontSize:13,lineHeight:1.75,color:DIM},
- formCard:{padding:'24px 28px',background:'rgba(46,46,74,.72)',border:'1px solid rgba(212,201,168,.2)',borderRadius:14,boxShadow:'0 20px 60px rgba(0,0,0,.22)'},
+ formCard:{padding:'22px 24px',background:'rgba(46,46,74,.72)',border:'1px solid rgba(212,201,168,.2)',borderRadius:14,boxShadow:'0 20px 60px rgba(0,0,0,.22)'},
  formTop:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:18,paddingBottom:18,borderBottom:'1px solid rgba(212,201,168,.14)'},
  formTime:{fontSize:8,fontWeight:900,lineHeight:1.7,letterSpacing:'.13em',textAlign:'right',color:BRASS},
  formTitle:{fontSize:23,fontWeight:600,letterSpacing:'-.025em',margin:'5px 0 0',lineHeight:1.15},
@@ -364,7 +336,7 @@ const S={
  resultsEyebrow:{display:'flex',alignItems:'center',gap:9,fontSize:9,fontWeight:800,letterSpacing:'.13em',color:BRASS,flexWrap:'wrap'},
  statusDot:{width:7,height:7,borderRadius:'50%',background:'#91B79A',display:'inline-block'},
  statusDivider:{opacity:.45},
- resultsIntro:{fontSize:14,lineHeight:1.75,color:DIM,maxWidth:690,margin:'0 0 24px'},
+ resultsIntro:{fontSize:13,lineHeight:1.55,color:DIM,maxWidth:690,margin:'0 0 24px'},
  scoreSection:{maxWidth:900,width:'100%',margin:'0 auto'},
  resultGrid:{display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:10,margin:'0 0 18px'},
  resultRow:{position:'relative',minWidth:0,padding:'18px 15px 15px',border:'1px solid rgba(212,201,168,.16)',background:SURFACE,borderRadius:10,textAlign:'left',fontSize:11,display:'flex',flexDirection:'column',gap:10,overflow:'hidden'},
