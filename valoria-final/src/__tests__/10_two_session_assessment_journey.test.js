@@ -81,9 +81,9 @@ describe("nine-question taster and account bridge", () => {
 
   test("taster completion leads to account creation and does not promise automatic Marketplace listing", () => {
     const source = gateSource();
-    expect(source).toContain("Your responses are safely saved. Create your account to continue your Valoria journey.");
-    expect(source).toContain("Completing the assessment does not grant marketplace listing.");
-    expect(source).toContain("Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.");
+    expect(source).toContain("Your taster is saved. Create your account to continue.");
+    expect(source).toContain("Marketplace listing is subject to eligibility checks.");
+    expect(source).not.toContain("Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.");
     expect(source).not.toContain("will not prefill or count toward it");
     expect(source).not.toContain("58 formal questions from Question 1");
     expect(source).not.toContain("remaining 49 questions");
