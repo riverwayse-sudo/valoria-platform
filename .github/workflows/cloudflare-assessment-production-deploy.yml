@@ -78,6 +78,11 @@ jobs:
         run: |
           set -euo pipefail
           base="https://valoriainstitute.com"
+          api_base="https://assessment.valoriainstitute.com"
+          # The public SPA is served from the site origin, while API handlers
+          # are registered at the root of the dedicated assessment Worker.
+          # Keep the two origins explicit so the smoke test matches API_BASE
+          # in VALUIndexV4GateNext.jsx and the Worker route table.
           # This is a Vite SPA. curl sees the static shell, not text rendered
           # later by React hydration; validate the shell and its real built assets
           # instead of grepping for client-rendered headings and buttons.
@@ -94,10 +99,10 @@ jobs:
             fi
             curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base$asset" -o /dev/null
           done
-          for spec in "GET /valu/assessment/api/process-readiness-queue" "POST /valu/assessment/api/sweep-unsent-reports"; do
+          for spec in "GET /api/process-readiness-queue" "POST /api/sweep-unsent-reports"; do
             method="${spec%% *}"
             route="${spec#* }"
-            status="$(curl -sS -o /tmp/valu-production-cron-response -w '%{http_code}' -X "$method" "$base$route")"
+            status="$(curl -sS -o /tmp/valu-production-cron-response -w '%{http_code}' -X "$method" "$api_base$route")"
             if [[ "$status" != "401" ]]; then
               echo "Expected unauthenticated cron route $route to return 401; got HTTP $status"
               cat /tmp/valu-production-cron-response || true
