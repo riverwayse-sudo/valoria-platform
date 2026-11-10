@@ -3,7 +3,7 @@
 // and presentation mappings, but it may not invent score-bearing options.
 // The canonical question bank remains the source of truth for scoring.
 
-import { computeResults } from '../src/scoringEngine.js';
+import { computeResults, getDesignation } from '../src/scoringEngine.js';
 import { QUESTIONS } from '../src/questions.js';
 import { computeFingerprint } from '../src/lockEngine.js';
 import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
@@ -75,9 +75,12 @@ async function findExistingAssessment(tasterId, fingerprint) {
   return (await response.json())?.[0] || null;
 }
 function existingResults(assessment) {
+  const score = Number(assessment.total_score);
   return {
     valuIndex: assessment.total_score,
-    desig: { name: assessment.designation || '' },
+    // Stored labels may predate the canonical v4 bands. Recompute from the
+    // authoritative points contract so an idempotent retry cannot revive them.
+    desig: Number.isFinite(score) ? getDesignation(score) : null,
     clusterScores: assessment.cluster_scores || {},
     skillScores: assessment.skill_scores || {},
   };
@@ -112,6 +115,23 @@ function createAssessmentSessionToken(userId, tasterId, nowSeconds = Math.floor(
   return `${encoded}.${signature}`;
 }
 
+async function exchangeDashboardHandoff(body, res) {
+  const code = body?.handoff_code;
+  if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{40,50}$/.test(code)) {
+    return json(res, 401, { ok: false, error: 'The dashboard handoff is missing or invalid.' });
+  }
+  const tokenHash = createHash('sha256').update(code).digest('hex');
+  const now = new Date().toISOString();
+  const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
+  const lookup = new URLSearchParams({
+    token: `eq.${tokenHash}`,
+    entry_point: 'eq.dashboard_assessment',
+    target_stage: 'eq.assess',
+    used_at: 'is.null',
+    expires_at: `gt.${now}`,
+    select: 'id,user_id,source_id,expires_at',
+    limit: '1',
+  });
 async function exchangeDashboardHandoff(body, res) {
   const code = body?.handoff_code;
   if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{40,50}$/.test(code)) {
