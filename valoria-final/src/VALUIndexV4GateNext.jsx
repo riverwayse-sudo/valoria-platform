@@ -307,7 +307,7 @@ export default function VALUIndexV4GateNext(){
    <div className="valu-intro-rule"><span/></div>
    <p className="valu-intro-overline">A CLEARER VIEW OF YOUR PROFESSIONAL CAPABILITY</p>
    <h1 id="valu-taster-intro-title" className="valu-intro-title">Your professional worth deserves to be <em>understood.</em></h1>
-   <p className="valu-intro-copy">Begin with a short reflection on how you work, relate and create value. Your responses help establish a starting point for your Valoria journey.</p>
+   <p className="valu-intro-copy">Begin with a short reflection on how you think, make strategic decisions, understand commercial value and work with AI. Your responses provide a starting point for your Valoria journey.</p>
    <div className="valu-intro-benefits">
     <div><span className="valu-intro-check">✓</span><span><strong>Simple, considered choices</strong><small>Choose the response that best reflects your experience.</small></span></div>
     <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>You can leave and return without losing saved responses.</small></span></div>
