@@ -3,6 +3,7 @@ name: Deploy approved Valoria assessment PR to isolated Cloudflare staging
 on:
   pull_request:
     branches:
+      - main
       - experience/staging-redesign-20261106
     types: [opened, synchronize, reopened]
     paths:
