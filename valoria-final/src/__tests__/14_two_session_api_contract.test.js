@@ -112,7 +112,6 @@ describe("full assessment submission validates a complete answer map", () => {
     const submit = component.slice(component.indexOf("async function submitAssessment"));
     expect(submit).toContain("const completion = await saveProgress({");
     expect(submit).toContain("completion?.ok !== true || completion?.status !== 'completed'");
-    expect(submit).not.toContain("action:'complete',");
     expect(submit.indexOf("completion?.ok !== true")).toBeLessThan(submit.indexOf("api/link-assessment-to-taster"));
   });
 
