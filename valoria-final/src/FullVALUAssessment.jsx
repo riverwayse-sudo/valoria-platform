@@ -383,7 +383,7 @@ export default function FullVALUAssessment() {
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
 
   async function persistCheckpoint(nextAnswers, nextTimings, nextCurrent) {
-    if (!sessionId || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete)) return;
+    if (!sessionId || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete)) return false;
     try {
       const data = await saveProgress({
         action:'save',
@@ -406,6 +406,7 @@ export default function FullVALUAssessment() {
         setProgressSaveStatus('saved');
         setProgressSaveError('');
       }
+      return true;
     } catch (err) {
       if (mountedRef.current) {
         setProgressSaveStatus('failed');
@@ -417,6 +418,7 @@ export default function FullVALUAssessment() {
         setHandoffStatus('account_required');
         setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
       }
+      return false;
     }
   }
 
@@ -447,7 +449,8 @@ export default function FullVALUAssessment() {
     setSaving(true);
     setError('');
     try {
-      await persistCheckpoint(answers, timings, ASSESSMENT_ORDER.length);
+      const checkpointSaved = await persistCheckpoint(answers, timings, ASSESSMENT_ORDER.length);
+      if (!checkpointSaved) throw new Error('Your latest responses could not be saved. Retry the save before submitting your assessment.');
       const scoreRes = await fetch(API_BASE + '/api/submit-assessment', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
