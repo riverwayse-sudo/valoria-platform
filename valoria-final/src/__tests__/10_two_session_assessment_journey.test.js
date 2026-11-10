@@ -93,6 +93,14 @@ describe("nine-question taster and account bridge", () => {
     expect(source).not.toContain("Question 10");
   });
 
+  test("transient resume failures preserve the participant's saved progress token", () => {
+    const source = gateSource();
+    expect(source).toContain("failure.status=response.status");
+    expect(source).toContain("err?.status===401||err?.status===404");
+    expect(source).toContain("setPhase('resume-error')");
+    expect(source).toContain("Transient network/server failures must never erase the only local");
+  });
+
   test("registration, answer saves and completion remain linked to the same lead", () => {
     const source = gateSource();
     expect(source).toContain("action:'register'");
