@@ -1,6 +1,7 @@
 export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
+import { canonicalDesignationName } from "./_canonicalDesignation.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -184,7 +185,7 @@ export default async function handler(req) {
           id: userId, display_name: assessment.name || name, headline: assessment.role || role,
           listing_status: "pending", profile_complete: false, visibility: "registered_only", active_tracks: ["candidate"],
           eligible_for_listing: false, availability_status: "unavailable", listed_at: null, valu_index: assessment.total_score,
-          cluster_scores: assessment.cluster_scores, skill_scores: assessment.skill_scores, designation: assessment.designation,
+          cluster_scores: assessment.cluster_scores, skill_scores: assessment.skill_scores, designation: canonicalDesignationName(assessment.total_score) || '',
           assessment_completed_at: assessment.completed_at, assessment_expires_at: assessment.expires_at,
         }),
       });
@@ -223,7 +224,7 @@ export default async function handler(req) {
           user_id: userId,
           event_key: journeyEventKey,
           assessment_id: assessment.id,
-          metadata: { score: assessment.total_score, designation: assessment.designation, listing_status: "pending", visibility: "registered_only" },
+          metadata: { score: assessment.total_score, designation: canonicalDesignationName(assessment.total_score), listing_status: "pending", visibility: "registered_only" },
         }),
       });
       if (!eventRes.ok) console.error("create-account: journey event failed", eventRes.status);
@@ -252,7 +253,7 @@ export default async function handler(req) {
             from: "Valoria Institute <hello@valoriainstitute.com>",
             to: normalizedEmail,
             subject: "Your VALU Assessment Is Saved — Here's What Happens Next",
-            html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation),
+            html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, canonicalDesignationName(assessment.total_score) || ''),
           }),
         });
         if (!journeyEmailRes.ok) console.error("create-account: journey email failed", journeyEmailRes.status);

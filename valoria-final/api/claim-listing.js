@@ -3,6 +3,8 @@
 // the professional profile. A 35+ VALU score is score eligibility only; actual
 // listing is decided separately by the server-side readiness/governance engine.
 
+import { canonicalDesignationName } from './_canonicalDesignation.js';
+
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const LISTING_THRESHOLD = 35;
@@ -114,7 +116,7 @@ export default async function handler(req) {
         valu_index: assessment.total_score,
         cluster_scores: assessment.cluster_scores,
         skill_scores: assessment.skill_scores,
-        designation: assessment.designation,
+        designation: canonicalDesignationName(assessment.total_score),
         assessment_completed_at: assessment.completed_at,
         assessment_expires_at: assessment.expires_at,
         listing_status: listingStatus,

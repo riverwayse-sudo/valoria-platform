@@ -4,6 +4,7 @@
 // The canonical question bank remains the source of truth for scoring.
 
 import { computeResults } from '../src/scoringEngine.js';
+import { canonicalDesignationName } from './_canonicalDesignation.js';
 import { QUESTIONS } from '../src/questions.js';
 import { computeFingerprint } from '../src/lockEngine.js';
 import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
@@ -75,9 +76,12 @@ async function findExistingAssessment(tasterId, fingerprint) {
   return (await response.json())?.[0] || null;
 }
 function existingResults(assessment) {
+  const designation = canonicalDesignationName(assessment.total_score);
   return {
     valuIndex: assessment.total_score,
-    desig: { name: assessment.designation || '' },
+    // Stored labels may predate the canonical v4 bands. Recompute from the
+    // authoritative points contract so an idempotent retry cannot revive them.
+    desig: designation ? { name: designation } : null,
     clusterScores: assessment.cluster_scores || {},
     skillScores: assessment.skill_scores || {},
   };
