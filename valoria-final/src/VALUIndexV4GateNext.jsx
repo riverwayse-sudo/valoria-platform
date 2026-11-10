@@ -285,7 +285,7 @@ export default function VALUIndexV4GateNext(){
    <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO ACCOUNT CREATION →'}</button>
    <div style={S.saveNote}><span>✓</span> Your taster is saved.</div>
   </section>
-  <p style={S.note}></p>
+  <p style={S.note}>Marketplace listing is subject to eligibility checks.</p>
  </Shell>;
 
  return <Shell mode="taster">
