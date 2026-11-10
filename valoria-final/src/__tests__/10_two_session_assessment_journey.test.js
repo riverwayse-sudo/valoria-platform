@@ -68,7 +68,10 @@ describe("separate taster and formal assessment contracts", () => {
 describe("nine-question taster and account bridge", () => {
   test("lead registration precedes the separate taster and no question counts are exposed", () => {
     const source = gateSource();
-    expect(source).toContain("TASTER_QUESTIONS.length");
+    expect(source).toContain("questionBank.length");
+    expect(source).toContain("const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS)");
+    expect(source).toContain("p.taster_version");
+    expect(source).toContain("legacy.LEGACY_TASTER_QUESTIONS");
     expect(source).toContain("VALUAssessmentJourney stage=\"registration\"");
     expect(source).toContain("VALUAssessmentJourney stage=\"taster\"");
     expect(source).toContain("YOUR PROGRESS IS SAVED");
