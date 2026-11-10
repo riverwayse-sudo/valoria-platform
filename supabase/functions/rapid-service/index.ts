@@ -11,12 +11,12 @@ const CORS_HEADERS = {
 };
 
 function deriveTier(score: number | null): string {
-  if (score === null || score === undefined) return "Assessment Follow-up";
-  if (score >= 90) return "Elite";
-  if (score >= 75) return "Distinguished";
-  if (score >= 55) return "Proficient";
-  if (score >= 35) return "Standard";
-  return "Assessment Follow-up";
+  if (score === null || score === undefined || !Number.isFinite(score) || score < 0 || score > 100) return "Assessment Follow-up";
+  if (score >= 80) return "Force to Align With";
+  if (score >= 65) return "Emerging Force";
+  if (score >= 50) return "Developing Professional";
+  if (score >= 35) return "Building Foundations";
+  return "At the Starting Point";
 }
 
 function getNextSteps(score: number | null): string {
@@ -27,36 +27,36 @@ function getNextSteps(score: number | null): string {
       <li>Basic marketplace access is a separate pathway based on a completed VALU taster.</li>
     `;
   }
-  if (score >= 90) {
+  if (score >= 80) {
     return `
-      <li>Your merit designation is <strong>Elite</strong>. Sustain the strengths demonstrated across your PRIME dimensions.</li>
+      <li>Your merit designation is <strong>Force to Align With</strong>. Sustain the strengths demonstrated across your PRIME dimensions.</li>
       <li>Full marketplace visibility remains subject to profile and capability eligibility checks.</li>
       <li>Basic marketplace access remains a separate pathway based on a completed VALU taster.</li>
     `;
   }
-  if (score >= 75) {
+  if (score >= 65) {
     return `
-      <li>Your merit designation is <strong>Distinguished</strong>. Build on the professional strengths reflected in your PRIME results.</li>
+      <li>Your merit designation is <strong>Emerging Force</strong>. Build on the professional strengths reflected in your PRIME results.</li>
       <li>Full marketplace visibility remains subject to profile and capability eligibility checks.</li>
       <li>Basic marketplace access remains a separate pathway based on a completed VALU taster.</li>
     `;
   }
-  if (score >= 55) {
+  if (score >= 50) {
     return `
-      <li>Your merit designation is <strong>Proficient</strong>. Strengthen the evidence behind your professional capabilities.</li>
+      <li>Your merit designation is <strong>Developing Professional</strong>. Strengthen the evidence behind your professional capabilities.</li>
       <li>Full marketplace visibility remains subject to profile and capability eligibility checks.</li>
       <li>Basic marketplace access remains a separate pathway based on a completed VALU taster.</li>
     `;
   }
   if (score >= 35) {
     return `
-      <li>Your merit designation is <strong>Standard</strong>. Review your PRIME dimension results and select a development priority.</li>
+      <li>Your merit designation is <strong>Building Foundations</strong>. Review your PRIME dimension results and select a development priority.</li>
       <li>This score meets the Full VALU assessment threshold; profile and capability requirements still apply to Full marketplace visibility.</li>
       <li>Basic marketplace access remains a separate pathway based on a completed VALU taster.</li>
     `;
   }
   return `
-    <li>Your Full VALU Index score is below 35 points, so no merit designation is assigned at this level.</li>
+    <li>Your merit designation is <strong>At the Starting Point</strong>. Your score is below the 35-point marketplace eligibility threshold.</li>
     <li>This score does not meet the Full marketplace assessment threshold. Basic marketplace access remains a separate pathway through a completed VALU taster.</li>
     <li>Review your PRIME dimension results and choose a focused development priority.</li>
   `;
@@ -141,7 +141,7 @@ function buildEmailHtml(params: {
           <table width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr><td style="padding:32px 0 0;">
               <p style="margin:0; font-size:15px; color:rgba(247,244,238,0.75); line-height:1.7;">Hi ${firstName},</p>
-              <p style="margin:16px 0 0; font-size:15px; color:rgba(247,244,238,0.75); line-height:1.7;">${score !== null ? `Thank you for completing the <strong style="color:#F7F4EE;">VALU Index</strong>. Your results have been recorded and your verified profile is now active on the Valoria marketplace.` : `Thank you for joining <strong style="color:#F7F4EE;">Valoria Institute</strong>. You're one step away from your verified professional standard.`}</p>
+              <p style="margin:16px 0 0; font-size:15px; color:rgba(247,244,238,0.75); line-height:1.7;">${score !== null ? `Thank you for completing the <strong style="color:#F7F4EE;">Full VALU assessment</strong>. Your results have been recorded. Marketplace visibility remains subject to profile, capability, evidence and consent requirements.` : `Thank you for joining <strong style="color:#F7F4EE;">Valoria Institute</strong>. You can continue your VALU journey from your dashboard.`}</p>
             </td></tr>
             ${score !== null ? `
             <tr><td style="padding:28px 0 0;">
@@ -155,7 +155,7 @@ function buildEmailHtml(params: {
                   <td style="padding:28px 32px; text-align:center; width:50%;">
                     <p style="margin:0 0 4px; font-size:10px; font-weight:700; color:#C9A84C; letter-spacing:2px; text-transform:uppercase;">Merit designation</p>
                     <p style="margin:0; font-size:28px; font-weight:800; color:#C9A84C; line-height:1;">${tier}</p>
-                    <p style="margin:4px 0 0; font-size:11px; color:rgba(247,244,238,0.35);">Valoria Standard</p>
+                    <p style="margin:4px 0 0; font-size:11px; color:rgba(247,244,238,0.35);">Valoria Institute</p>
                   </td>
                 </tr>
               </table>
@@ -177,8 +177,8 @@ function buildEmailHtml(params: {
           </table>
         </td></tr>
         <tr><td style="padding:24px 48px; background:#07070F; border-top:1px solid rgba(201,168,76,0.1);">
-          <p style="margin:0; font-size:12px; color:rgba(247,244,238,0.2); line-height:1.7;">&copy; 2026 African Talent Bureau Ltd &middot; Valoria Institute is a trading name &middot; Lagos, Nigeria</p>
-          <p style="margin:8px 0 0; font-size:11px; font-style:italic; color:rgba(201,168,76,0.3);">Worth, Built.</p>
+          <p style="margin:0; font-size:12px; color:rgba(247,244,238,0.2); line-height:1.7;">&copy; 2026 Valoria Institute</p>
+          <p style="margin:8px 0 0; font-size:11px; font-style:italic; color:rgba(201,168,76,0.3);">Worth. Built.</p>
         </td></tr>
       </table>
     </td><tr>

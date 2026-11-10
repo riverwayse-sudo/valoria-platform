@@ -89,12 +89,14 @@ async function markFailed(identityHash, failureCode) {
 }
 
 function canonicalDesignation(score) {
+  if (score === null || score === undefined || score === "") return "Assessment Follow-up";
   const points = Number(score);
-  if (!Number.isFinite(points) || points < 35 || points > 100) return "Assessment Follow-up";
-  if (points >= 90) return "Elite";
-  if (points >= 75) return "Distinguished";
-  if (points >= 55) return "Proficient";
-  return "Standard";
+  if (!Number.isFinite(points) || points < 0 || points > 100) return "Assessment Follow-up";
+  if (points >= 80) return "Force to Align With";
+  if (points >= 65) return "Emerging Force";
+  if (points >= 50) return "Developing Professional";
+  if (points >= 35) return "Building Foundations";
+  return "At the Starting Point";
 }
 
 function reportMatchesCanonicalAssessment(reportText, assessment) {

@@ -163,25 +163,28 @@ describe("computeWeightedIndex", () => {
 // ── SECTION 3: getDesignation ─────────────────────────────────────────────
 describe("getDesignation", () => {
   const cases = [
-    [100, "Elite"], [90, "Elite"],
-    [89, "Distinguished"], [75, "Distinguished"],
-    [74, "Proficient"], [55, "Proficient"],
-    [54, "Standard"], [35, "Standard"],
+    [100, "Force to Align With"], [80, "Force to Align With"],
+    [79, "Emerging Force"], [65, "Emerging Force"],
+    [64, "Developing Professional"], [50, "Developing Professional"],
+    [49, "Building Foundations"], [35, "Building Foundations"],
+    [34, "At the Starting Point"], [0, "At the Starting Point"],
   ];
 
   test.each(cases)("score %i points → %s", (score, expectedName) => {
     expect(getDesignation(score).name).toBe(expectedName);
   });
 
-  test("scores below the 35-point eligibility threshold have no merit designation", () => {
-    expect(getDesignation(34)).toBeNull();
-    expect(getDesignation(0)).toBeNull();
+  test("scores below 35 receive the starting-point designation but are not marketplace eligible", () => {
+    expect(getDesignation(34).name).toBe("At the Starting Point");
+    expect(getDesignation(0).name).toBe("At the Starting Point");
+    expect(getDesignation(-1)).toBeNull();
+    expect(getDesignation(null)).toBeNull();
   });
 
   test("returns a designation object with its minimum points boundary", () => {
     const designation = getDesignation(72);
-    expect(designation).toHaveProperty("min", 55);
-    expect(designation).toHaveProperty("name", "Proficient");
+    expect(designation).toHaveProperty("min", 65);
+    expect(designation).toHaveProperty("name", "Emerging Force");
   });
 });
 
