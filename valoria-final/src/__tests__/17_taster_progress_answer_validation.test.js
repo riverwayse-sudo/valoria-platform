@@ -72,8 +72,8 @@ describe("taster progress answer-key validation", () => {
     const res = makeRes();
     await loadHandler()(makeRequest({ "0": 2 }), res);
 
-    expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ saved: true, submission_key: null });
+    expect(res.statusCode).toBe(200);
     const patch = calls.find(call => call.options.method === "PATCH");
     expect(patch).toBeDefined();
     expect(JSON.parse(patch.options.body).answers).toEqual({ "0": 2 });
