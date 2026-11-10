@@ -70,7 +70,11 @@ export default function VALUIndexV4GateNext(){
  async function postProgress(body){
   const response=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const payload=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(payload.error||'Your progress could not be saved.');
+  if(!response.ok){
+   const failure=new Error(payload.error||'Your progress could not be saved.');
+   failure.status=response.status;
+   throw failure;
+  }
   return payload;
  }
 
@@ -127,8 +131,19 @@ export default function VALUIndexV4GateNext(){
      setCurrent(Math.min(Number(p.current_question)||0,restoredBank.length-1));
      setPhase('registration');
      return;
-    }catch{
-     try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
+    }catch(err){
+     if(cancelled)return;
+     if(err?.status===401||err?.status===404){
+      try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
+      setPhase('registration');
+      return;
+     }
+     // Transient network/server failures must never erase the only local
+     // reference to a participant's saved progress.
+     setProgressToken(stored);
+     setError('Your saved responses remain stored. We could not reach your session just now. Check your connection and try again.');
+     setPhase('resume-error');
+     return;
     }
    }
    if(!cancelled)setPhase('registration');
@@ -228,6 +243,15 @@ export default function VALUIndexV4GateNext(){
    setSaving(false);
   }
  }
+
+ if(phase==='resume-error')return <Shell>
+  <section className="valu-results-header" style={S.resultsHeader}>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> SAVED PROGRESS</div>
+   <h1 className="valu-results-title" style={S.h1}>Your progress is <em>safe.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>{error}</p>
+   <button type="button" onClick={()=>window.location.reload()} style={S.primary}>TRY AGAIN</button>
+  </section>
+ </Shell>;
 
  if(phase==='unsupported')return <Shell>
   <section className="valu-results-header" style={S.resultsHeader}>
