@@ -616,8 +616,8 @@ export default function FullVALUAssessment() {
 function Shell({children}) { return <main id="main-content" tabIndex={-1} className="valu-assessment-page valu-assessment-full" style={S.page}><div className="valu-assessment-shell" style={S.shell}>{children}</div></main> }
 
 const S = {
-  page:{minHeight:'100dvh',height:'auto',background:T.dark,color:T.parchment,fontFamily:"'Raleway',sans-serif",padding:'22px 20px 32px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'flex-start'},
-  shell:{width:'100%',maxWidth:760,margin:'0 auto'},
+  page:{minHeight:'100dvh',height:'auto',background:T.dark,color:T.parchment,fontFamily:"'Raleway',sans-serif",padding:'18px 20px 26px',overflowX:'hidden',overflowY:'auto',display:'flex',alignItems:'flex-start'},
+  shell:{width:'100%',maxWidth:820,margin:'0 auto'},
   top:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:20},
   eyebrow:{fontSize:10,fontWeight:700,letterSpacing:'.18em',color:'rgba(201,168,76,.75)'},
   h1:{fontSize:'clamp(28px,4vw,40px)',fontWeight:300,lineHeight:1.15,margin:'16px 0',color:T.parchment},
@@ -626,9 +626,9 @@ const S = {
   progress:{height:3,background:'rgba(255,255,255,.06)',margin:'12px 0 28px'},
   progressFill:{height:'100%',background:T.gold,transition:'width .2s ease'},
   cluster:{fontSize:9.5,letterSpacing:'.12em',textTransform:'uppercase',color:T.gold,marginBottom:10},
-  question:{fontSize:'clamp(23px,3.2vw,34px)',fontWeight:300,lineHeight:1.14,letterSpacing:'-.025em',margin:'0 0 22px',maxWidth:720},
-  options:{display:'grid',gap:8},
-  option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'32px 1fr',gap:12,alignItems:'center',textAlign:'left',padding:'12px 15px',border:'1px solid rgba(247,244,238,.1)',borderRadius:7,background:'#2E2E4A',color:T.parchment,fontSize:12.5,lineHeight:1.4,cursor:'pointer',minHeight:52},
+  question:{fontSize:'clamp(22px,2.8vw,32px)',fontWeight:400,lineHeight:1.2,letterSpacing:'-.025em',margin:'0 0 18px',maxWidth:720},
+  options:{display:'grid',gap:12},
+  option:{appearance:"none",WebkitAppearance:"none",MozAppearance:"none",display:'grid',gridTemplateColumns:'32px 1fr',gap:12,alignItems:'center',textAlign:'left',padding:'14px 16px',border:'1px solid rgba(247,244,238,.1)',borderRadius:8,background:'#2E2E4A',color:T.parchment,fontSize:13,lineHeight:1.5,cursor:'pointer',minHeight:52},
   optionLetter:{width:26,height:26,borderRadius:'50%',border:'1px solid rgba(201,168,76,.3)',display:'flex',alignItems:'center',justifyContent:'center',color:T.gold,fontSize:10},
   footer:{display:'flex',justifyContent:'space-between',gap:16,color:T.faint,fontSize:10,marginTop:14},
   saving:{marginTop:18,color:T.gold,fontSize:12},
