@@ -28,7 +28,16 @@
   },
   "env": {
     "staging": {
-      "name": "valoria-staging-assessment"
+      "name": "valoria-staging-assessment",
+      "vars": {
+        "SUPABASE_URL": "https://yccxgjdqworgcbircnvn.supabase.co",
+        "VALORIA_SITE_URL": "https://valoria-staging-site.riverwayse.workers.dev",
+        "VALU_PREVIEW": "1",
+        "VALU_PREVIEW_ASSESSMENT_ORIGIN": "https://valoria-staging-assessment.riverwayse.workers.dev",
+        "VALU_PREVIEW_SITE_ORIGIN": "https://valoria-staging-site.riverwayse.workers.dev",
+        "VALU_PRODUCTION_SUPABASE_URL": "https://sbkgpisgkuhbalsxqkdr.supabase.co",
+        "VALU_STAGING_API_ENABLED": "1"
+      }
     }
   }
 }
