@@ -25,5 +25,10 @@
       "SUPABASE_URL": "https://sbkgpisgkuhbalsxqkdr.supabase.co",
       "VALU_PRODUCTION_SUPABASE_URL": "https://sbkgpisgkuhbalsxqkdr.supabase.co"
     }
+  },
+  "env": {
+    "staging": {
+      "name": "valoria-staging-assessment"
+    }
   }
 }
