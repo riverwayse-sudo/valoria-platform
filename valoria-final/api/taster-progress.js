@@ -47,8 +47,8 @@ function questionBankForVersion(version) {
 export function validPartialAnswers(value, questionBank) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || !questionBank) return false;
   return Object.entries(value).every(([key, answer]) => {
-    if (!/^\\d+$/.test(key)) return false;
     const index = Number(key);
+    if (!Number.isInteger(index) || String(index) !== key) return false;
     return index >= 0 && index < questionBank.length
       && Number.isInteger(answer) && answer >= 0 && answer < questionBank[index].options.length;
   });
