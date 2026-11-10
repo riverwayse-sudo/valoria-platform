@@ -103,3 +103,22 @@ jobs:
             grep -q "^${KEY}=" .env.example || { echo "ERROR: ${KEY} is missing from .env.example"; exit 1; }
             echo "${KEY} documented ✓"
           done
+
+  production-dependency-audit:
+    name: Production Dependency Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: valoria-final
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Setup Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: valoria-final/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
