@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "jest"
+    "test": "jest",
+    "lint:critical": "npx --yes eslint@8.57.1 --no-eslintrc --env browser,node,es2021 --parser-options '{\"ecmaVersion\":\"latest\",\"sourceType\":\"module\",\"ecmaFeatures\":{\"jsx\":true}}' --rule 'no-undef:error' src/main.jsx src/VALUIndexV4App.jsx src/VALUIndexV4GateNext.jsx src/FullVALUAssessment.jsx"
   },
   "dependencies": {
     "react": "^18.2.0",
