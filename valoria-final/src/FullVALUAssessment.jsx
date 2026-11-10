@@ -393,6 +393,7 @@ export default function FullVALUAssessment() {
         session_seed:0,
       });
       if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
+      return true;
     } catch (err) {
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
         try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
@@ -400,6 +401,7 @@ export default function FullVALUAssessment() {
         setHandoffStatus('account_required');
         setHandoffError(err?.message || 'Reopen the assessment from your Valoria account.');
       }
+      return false;
     }
   }
 
@@ -430,7 +432,8 @@ export default function FullVALUAssessment() {
     setSaving(true);
     setError('');
     try {
-      await persistCheckpoint(answers, timings, ASSESSMENT_ORDER.length);
+      const checkpointSaved = await persistCheckpoint(answers, timings, ASSESSMENT_ORDER.length);
+      if (!checkpointSaved) throw new Error('Your final responses could not be confirmed as saved. Please retry; your answers remain on this page.');
       const scoreRes = await fetch(API_BASE + '/api/submit-assessment', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -448,7 +451,7 @@ export default function FullVALUAssessment() {
       const scoreData = await scoreRes.json().catch(() => ({}));
       if (!scoreRes.ok) throw new Error(scoreData.error || 'The assessment could not be scored.');
 
-      await saveProgress({
+      const completion = await saveProgress({
         action:'complete',
         handoff_token:handoffToken,
         session_id:sessionId,
@@ -463,7 +466,10 @@ export default function FullVALUAssessment() {
         answers,
         timings,
         session_seed:0,
-      }).catch(() => {});
+      });
+      if (completion?.ok !== true || completion?.status !== 'completed') {
+        throw new Error('Your VALU score is saved, but we could not confirm the assessment completion state. Please retry from this page.');
+      }
 
       const linkRes = await fetch(API_BASE + '/api/link-assessment-to-taster', {
         method:'POST',
