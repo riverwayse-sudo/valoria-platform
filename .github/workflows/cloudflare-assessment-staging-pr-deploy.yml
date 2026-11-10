@@ -98,3 +98,13 @@ jobs:
           fi
           grep -iq '^access-control-allow-origin: https://valoria-staging-site.riverwayse.workers.dev' /tmp/valu-cors-headers
           grep -iq '^access-control-allow-headers: Content-Type, Idempotency-Key' /tmp/valu-cors-headers
+
+          api_status="$(curl -sS -o /tmp/valu-api-runtime-response -w '%{http_code}' -X POST "$base/api/taster-progress" \
+            -H 'Origin: https://valoria-staging-site.riverwayse.workers.dev' \
+            -H 'Content-Type: application/json' \
+            --data '{"action":"__staging_runtime_probe__"}')"
+          if [[ "$api_status" != "400" ]] || ! grep -q 'Unsupported progress action' /tmp/valu-api-runtime-response; then
+            echo "Assessment API runtime probe failed with HTTP $api_status"
+            cat /tmp/valu-api-runtime-response || true
+            exit 1
+          fi
