@@ -1,8 +1,6 @@
 -- Re-align stored VALU designations to the approved five-band standard.
 -- This changes only derived designation text. Scores, assessment answers, validity,
 -- eligibility, consent and listing states are not modified.
-begin;
-
 update public.valu_assessments
 set designation = case
   when total_score >= 80 then 'Force to Align With'
@@ -73,4 +71,3 @@ where valu_index between 0 and 100
     else 'At the Starting Point'
   end;
 
-commit;
