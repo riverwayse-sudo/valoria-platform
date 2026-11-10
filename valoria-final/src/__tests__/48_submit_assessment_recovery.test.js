@@ -122,6 +122,8 @@ describe("Full assessment data recovery", () => {
     expect(res2.statusCode).toBe(200);
     expect(res2.body.report_token).toBe(REPORT_TOKEN);
     expect(res2.body.alreadyCompleted).toBe(true);
+    expect(res2.body.results.desig.name).toBe("Proficient");
+    expect(res2.body.results.desig.name).not.toBe("Strategist");
     expect(db.inserts).toBe(1); // still one insert: the retry did not duplicate
     expect(db.rows).toHaveLength(1);
   });
