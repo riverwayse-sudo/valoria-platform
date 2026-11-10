@@ -141,7 +141,7 @@ function buildEmailHtml(params: {
           <table width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr><td style="padding:32px 0 0;">
               <p style="margin:0; font-size:15px; color:rgba(247,244,238,0.75); line-height:1.7;">Hi ${firstName},</p>
-              <p style="margin:16px 0 0; font-size:15px; color:rgba(247,244,238,0.75); line-height:1.7;">${score !== null ? `Thank you for completing the <strong style="color:#F7F4EE;">VALU Index</strong>. Your results have been recorded and your verified profile is now active on the Valoria marketplace.` : `Thank you for joining <strong style="color:#F7F4EE;">Valoria Institute</strong>. You're one step away from your verified professional standard.`}</p>
+              <p style="margin:16px 0 0; font-size:15px; color:rgba(247,244,238,0.75); line-height:1.7;">${score !== null ? `Thank you for completing the <strong style="color:#F7F4EE;">Full VALU assessment</strong>. Your results have been recorded. Marketplace visibility remains subject to profile, capability, evidence and consent requirements.` : `Thank you for joining <strong style="color:#F7F4EE;">Valoria Institute</strong>. You can continue your VALU journey from your dashboard.`}</p>
             </td></tr>
             ${score !== null ? `
             <tr><td style="padding:28px 0 0;">
@@ -177,8 +177,8 @@ function buildEmailHtml(params: {
           </table>
         </td></tr>
         <tr><td style="padding:24px 48px; background:#07070F; border-top:1px solid rgba(201,168,76,0.1);">
-          <p style="margin:0; font-size:12px; color:rgba(247,244,238,0.2); line-height:1.7;">&copy; 2026 African Talent Bureau Ltd &middot; Valoria Institute is a trading name &middot; Lagos, Nigeria</p>
-          <p style="margin:8px 0 0; font-size:11px; font-style:italic; color:rgba(201,168,76,0.3);">Worth, Built.</p>
+          <p style="margin:0; font-size:12px; color:rgba(247,244,238,0.2); line-height:1.7;">&copy; 2026 Valoria Institute</p>
+          <p style="margin:8px 0 0; font-size:11px; font-style:italic; color:rgba(201,168,76,0.3);">Worth. Built.</p>
         </td></tr>
       </table>
     </td><tr>
