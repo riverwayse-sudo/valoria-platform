@@ -74,6 +74,8 @@ describe("nine-question taster and account bridge", () => {
     expect(source).toContain("legacy.LEGACY_TASTER_QUESTIONS");
     expect(source).toContain("VALUAssessmentJourney stage=\"registration\"");
     expect(source).toContain("VALUAssessmentJourney stage=\"taster\"");
+    expect(source).toContain("how you think, make strategic decisions, understand commercial value and work with AI");
+    expect(source).not.toContain("how you work, relate and create value");
     expect(source).toContain("YOUR PROGRESS IS SAVED");
     expect(source).toContain("privacy_acknowledged:privacyAcknowledged");
     expect(source).toContain("marketing_consent:marketingConsent");
