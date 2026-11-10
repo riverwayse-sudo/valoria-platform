@@ -75,4 +75,14 @@ describe("VALU assessment left-alignment contract", () => {
     expect(navigation).toContain("justifyContent:'flex-start'");
     expect(navigation).toContain("textAlign:'left'");
   });
+
+  test("assessment layouts use a restrained content width and consistent compact spacing", () => {
+    const css = read("assessment.css");
+    expect(css).toContain("max-width: 760px");
+    expect(css).toContain("min-height: 52px !important");
+    expect(css).toContain("gap: 10px !important");
+    expect(css).toContain("font-size: clamp(25px, 2.7vw, 34px) !important");
+    expect(css).toContain(".valu-intro-benefits small");
+    expect(css).toContain("display: none");
+  });
 });
