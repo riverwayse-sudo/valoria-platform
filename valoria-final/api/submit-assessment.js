@@ -76,13 +76,12 @@ async function findExistingAssessment(tasterId, fingerprint) {
   return (await response.json())?.[0] || null;
 }
 function existingResults(assessment) {
+  const designation = canonicalDesignationName(assessment.total_score);
   return {
     valuIndex: assessment.total_score,
     // Stored labels may predate the canonical v4 bands. Recompute from the
     // authoritative points contract so an idempotent retry cannot revive them.
-    desig: canonicalDesignationName(assessment.total_score)
-      ? { name: canonicalDesignationName(assessment.total_score) }
-      : null,
+    desig: designation ? { name: designation } : null,
     clusterScores: assessment.cluster_scores || {},
     skillScores: assessment.skill_scores || {},
   };
