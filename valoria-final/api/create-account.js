@@ -224,7 +224,7 @@ export default async function handler(req) {
           user_id: userId,
           event_key: journeyEventKey,
           assessment_id: assessment.id,
-          metadata: { score: assessment.total_score, designation: assessment.designation, listing_status: "pending", visibility: "registered_only" },
+          metadata: { score: assessment.total_score, designation: canonicalDesignationName(assessment.total_score), listing_status: "pending", visibility: "registered_only" },
         }),
       });
       if (!eventRes.ok) console.error("create-account: journey event failed", eventRes.status);
