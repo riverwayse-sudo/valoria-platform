@@ -16,8 +16,8 @@
 | Observability and recovery | NOT VERIFIED | Backup and health workflows exist; complete alerting, restore-test and recovery-runbook audit not performed | Engineering | Verify backup restore, alert delivery, queue retry/dead-letter handling and runbooks |
 
 ## Verified CI evidence
-- Standards PR #177 merged at ￼dfb66308634e8a1e454d8428fe7a243d8c1d556d.
-- PR #181 head ￼610a10d70f66e7dacc6e5fece7d06d389c686dd1 added lint:critical; its ESLint check passed.
+- Standards PR #177 merged at dfb66308634e8a1e454d8428fe7a243d8c1d556d.
+- PR #181 head 610a10d70f66e7dacc6e5fece7d06d389c686dd1 added the lint:critical script; its ESLint check passed.
 - GitHub Actions Valoria CI run #1326 passed: critical-path static analysis, unit tests, production build, secret scan, environment parity and production dependency audit.
 - Valoria platform tests run #777 passed.
 - Cloudflare assessment Worker validation run #280 passed; it built and bundled assets without deploying.
