@@ -87,12 +87,14 @@ export default async function handler(req, res) {
 
 
   const results = computeTasterResult(answers);
-  const clusterScores = results.points;
-  const clusterIds = ['P', 'R', 'I', 'M', 'E'];
-  if (!clusterScores || typeof clusterScores !== 'object' || clusterIds.some(id => !Number.isFinite(clusterScores[id]))) {
-    // Fail loudly instead of posting a body whose cluster scores serialize away,
-    // which the RPC rejects as a signature mismatch and misreports as a save failure.
-    console.error('submit-taster: cluster scores unavailable for submission', submission_key);
+  // Only Intelligence is assessed by the separate taster. Null means the
+  // other four PRIME clusters were not measured; zero would falsely imply a score.
+  const clusterScores = { P: null, R: null, I: results.intelligenceScore, M: null, E: null };
+  const skillKeys = ['Critical Thinking', 'Strategic Thinking', 'Business Acumen', 'AI Fluency ★'];
+  if (!Number.isFinite(clusterScores.I)
+    || !results.normalisedSkills
+    || skillKeys.some(skill => !Number.isFinite(results.normalisedSkills[skill]))) {
+    console.error('submit-taster: Intelligence skill scores unavailable for submission', submission_key);
     return json(res, 500, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
   }
   try {
@@ -107,8 +109,8 @@ export default async function handler(req, res) {
         p_email: normalizedEmail,
         p_answers: answers,
         p_cluster_scores: clusterScores,
-        p_strongest_cluster: results.strongest.id,
-        p_weakest_cluster: results.weakest.id,
+        p_strongest_cluster: 'I',
+        p_weakest_cluster: 'I',
         p_taster_version: String(VALU_VERSION),
         p_lead_capture_id: progress.lead_capture_id,
       }),
