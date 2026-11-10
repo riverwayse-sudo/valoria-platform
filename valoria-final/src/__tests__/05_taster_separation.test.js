@@ -83,7 +83,7 @@ describe("separate VALU taster and formal assessment contracts", () => {
   test("new sessions use v4.2 while existing v4.1 sessions retain their original bank", () => {
     const progressApi = fs.readFileSync(path.join(__dirname, "../../api/taster-progress.js"), "utf8");
     const submitApi = fs.readFileSync(path.join(__dirname, "../../api/submit-taster.js"), "utf8");
-    const migration = fs.readFileSync(path.join(__dirname, "../../supabase/migrations/20261110200000_set_taster_version_42_default.sql"), "utf8");
+    const migration = fs.readFileSync(path.join(__dirname, "../../supabase/migrations/20261110083803_set_taster_version_42_default.sql"), "utf8");
     expect(progressApi).toContain("questionBankForVersion(progress.taster_version)");
     expect(progressApi).toContain("taster_version: progress.taster_version");
     expect(submitApi).toContain("computeLegacyTasterResult(answers)");
