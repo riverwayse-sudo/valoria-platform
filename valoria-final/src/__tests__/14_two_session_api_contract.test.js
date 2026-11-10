@@ -98,6 +98,23 @@ describe("full assessment submission validates a complete answer map", () => {
     expect(api).not.toContain("timings.length !== MAX_TIMINGS_LENGTH");
   });
 
+
+  test("final submission stops when the last progress checkpoint is not confirmed", () => {
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    const submit = component.slice(component.indexOf("async function submitAssessment"));
+    expect(submit).toContain("const checkpointSaved = await persistCheckpoint");
+    expect(submit).toContain("if (!checkpointSaved) throw new Error(");
+    expect(submit.indexOf("if (!checkpointSaved) throw new Error(")).toBeLessThan(submit.indexOf("fetch(API_BASE + '/api/submit-assessment'"));
+  });
+
+  test("the formal assessment only advances to report handoff after completion is confirmed", () => {
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    const submit = component.slice(component.indexOf("async function submitAssessment"));
+    expect(submit).toContain("const completion = await saveProgress({");
+    expect(submit).toContain("completion?.ok !== true || completion?.status !== 'completed'");
+    expect(submit.indexOf("completion?.ok !== true")).toBeLessThan(submit.indexOf("api/link-assessment-to-taster"));
+  });
+
   test("the scoring engine receives exactly the submitted full-assessment answers", () => {
     expect(api).toContain("const completeAnswers = answers");
     expect(api).toContain("computeResults(completeAnswers, timings, shuffleMap, QUESTIONS)");
