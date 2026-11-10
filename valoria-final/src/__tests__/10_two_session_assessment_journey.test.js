@@ -100,6 +100,14 @@ describe("nine-question taster and account bridge", () => {
     expect(source).not.toContain("action:'identify'");
   });
 
+  test("account handoff waits for confirmed taster completion before redirecting", () => {
+    const source = gateSource();
+    expect(source).toContain("const completion=await postProgress({action:'complete'");
+    expect(source).toContain("if(completion?.completed!==true)throw new Error(");
+    const handoff = source.slice(source.indexOf("async function createAccount"));
+    expect(handoff.indexOf("if(completion?.completed!==true)")).toBeLessThan(handoff.indexOf("window.location.assign"));
+  });
+
   test("the taster never computes or presents an official VALU Index", () => {
     const source = gateSource();
     expect(source).not.toContain("computeTasterResult");
