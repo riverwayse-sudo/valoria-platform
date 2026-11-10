@@ -44,7 +44,7 @@ function questionBankForVersion(version) {
   return null;
 }
 
-function validPartialAnswers(value, questionBank) {
+export function validPartialAnswers(value, questionBank) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || !questionBank) return false;
   return Object.entries(value).every(([key, answer]) => {
     if (!/^\\d+$/.test(key)) return false;
