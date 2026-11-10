@@ -53,6 +53,8 @@ export default function VALUIndexV4GateNext(){
  const [marketingConsent,setMarketingConsent]=useState(false),[privacyAcknowledged,setPrivacyAcknowledged]=useState(false);
  const [registrationKey,setRegistrationKey]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
+ const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS);
+ const [tasterVersion,setTasterVersion]=useState(VALU_VERSION);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
@@ -60,8 +62,8 @@ export default function VALUIndexV4GateNext(){
  const startedRef=useRef(false);
  const timer=useRef(null);
 
- const q=TASTER_QUESTIONS[current];
- const sessionProgress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
+ const q=questionBank[current];
+ const sessionProgress=Math.round(((current+1)/questionBank.length)*100);
  const placeInAssessment=current+1;
 
  useEffect(()=>()=>{timer.current&&clearTimeout(timer.current)},[]);
@@ -92,6 +94,21 @@ export default function VALUIndexV4GateNext(){
      const loaded=await postProgress({action:'load',resume_token:stored});
      if(cancelled)return;
      const p=loaded.progress||{};
+     const version=String(p.taster_version||'4.1');
+     let restoredBank=null;
+     if(version===VALU_VERSION){
+      restoredBank=TASTER_QUESTIONS;
+     }else if(version==='4.1'){
+      const legacy=await import('./valuTasterLegacy.js');
+      restoredBank=legacy.LEGACY_TASTER_QUESTIONS;
+     }else{
+      setProgressToken(stored);
+      setError('Your saved session needs assistance before it can continue. Your responses remain saved. Please contact Valoria support.');
+      setPhase('unsupported');
+      return;
+     }
+     setQuestionBank(restoredBank);
+     setTasterVersion(version);
      setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
      setProgressToken(stored);
      setPrivacyAcknowledged(Boolean(p.lead_capture_id));
@@ -99,17 +116,17 @@ export default function VALUIndexV4GateNext(){
      setAnswers(savedAnswers);
      setSubmissionKey(p.submission_key||'');
      const answeredCount=Object.keys(savedAnswers).length;
-     const complete=Number(p.current_question)===TASTER_QUESTIONS.length&&answeredCount===TASTER_QUESTIONS.length&&!!p.submission_key;
+     const complete=Number(p.current_question)===restoredBank.length&&answeredCount===restoredBank.length&&!!p.submission_key;
      if(p.lead_capture_id){
-      if(complete){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
-      setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
+      if(complete){setCurrent(restoredBank.length-1);setPhase('break');return}
+      setCurrent(Math.min(Number(p.current_question)||0,restoredBank.length-1));
       setPhase('session1');
       return;
      }
      // Legacy in-progress sessions are preserved. Their owner registers once
      // before continuing, which attaches the existing progress to a lead ID.
      try{setRegistrationKey(localStorage.getItem(SIGNUP_KEY_KEY)||'')}catch{}
-     setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
+     setCurrent(Math.min(Number(p.current_question)||0,questionBank.length-1));
      setPhase('registration');
      return;
     }catch{
@@ -128,12 +145,12 @@ export default function VALUIndexV4GateNext(){
   setSaving(true);
   setError('');
   try{
-   const isLast=current===TASTER_QUESTIONS.length-1;
+   const isLast=current===questionBank.length-1;
    const response=await postProgress({
     action:'save',
     resume_token:progressToken,
     answers:next,
-    current_question:isLast?TASTER_QUESTIONS.length:current+1,
+    current_question:isLast?questionBank.length:current+1,
     ...(isLast&&submissionKey?{submission_key:submissionKey}:{}),
    });
    if(response.submission_key&&!submissionKey)setSubmissionKey(response.submission_key);
@@ -178,7 +195,7 @@ export default function VALUIndexV4GateNext(){
    });
    if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU journey. Please retry.');
    const answeredCount=Object.keys(answers).length;
-   const complete=current===TASTER_QUESTIONS.length-1&&answeredCount===TASTER_QUESTIONS.length&&!!submissionKey;
+   const complete=current===questionBank.length-1&&answeredCount===questionBank.length&&!!submissionKey;
    setPhase(complete?'break':answeredCount?'session1':'intro');
   }catch(err){
    setError(err?.message||'We could not save your registration. Please retry.');
@@ -196,7 +213,7 @@ export default function VALUIndexV4GateNext(){
    const key=submissionKey||(typeof window.crypto!=='undefined'&&window.crypto.randomUUID?window.crypto.randomUUID():'');
    if(!key)throw new Error('Your browser could not create a secure submission reference. Refresh the page and try again.');
    setSubmissionKey(key);
-   const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:TASTER_QUESTIONS.length,submission_key:key});
+   const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:questionBank.length,submission_key:key});
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
    const data=await response.json().catch(()=>({}));
@@ -213,6 +230,14 @@ export default function VALUIndexV4GateNext(){
    setSaving(false);
   }
  }
+
+ if(phase==='unsupported')return <Shell>
+  <section className="valu-results-header" style={S.resultsHeader}>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> SAVED SESSION</div>
+   <h1 className="valu-results-title" style={S.h1}>Your session is <em>safe.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>{error}</p>
+  </section>
+ </Shell>;
 
  if(phase==='registration')return <Shell>
   <VALUAssessmentJourney stage="registration" />
