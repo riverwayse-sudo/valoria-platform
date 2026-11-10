@@ -38,13 +38,19 @@ async function consumeRegistrationRateLimit(req) {
   const result = await response.json();
   return Array.isArray(result) ? result[0] : result;
 }
-function validPartialAnswers(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+function questionBankForVersion(version) {
+  if (version === VALU_VERSION) return TASTER_QUESTIONS;
+  if (version === LEGACY_TASTER_VERSION) return LEGACY_TASTER_QUESTIONS;
+  return null;
+}
+
+function validPartialAnswers(value, questionBank) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || !questionBank) return false;
   return Object.entries(value).every(([key, answer]) => {
-    if (!/^\d+$/.test(key)) return false;
+    if (!/^\\d+$/.test(key)) return false;
     const index = Number(key);
-    return index >= 0 && index < TASTER_QUESTIONS.length
-      && Number.isInteger(answer) && answer >= 0 && answer < TASTER_QUESTIONS[index].options.length;
+    return index >= 0 && index < questionBank.length
+      && Number.isInteger(answer) && answer >= 0 && answer < questionBank[index].options.length;
   });
 }
 async function getProgress(tokenHash) {
