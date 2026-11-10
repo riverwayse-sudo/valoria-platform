@@ -184,7 +184,9 @@ describe("Assessment integrity contracts", () => {
   test("taster submission records server-stamped version provenance", () => {
     const source = readApi("submit-taster.js");
     expect(source).toContain("VALU_VERSION");
-    expect(source).toContain("p_taster_version: String(VALU_VERSION)");
+    expect(source).toContain("p_taster_version: tasterVersion");
+    expect(source).toContain("tasterVersion === VALU_VERSION");
+    expect(source).toContain("LEGACY_TASTER_VERSION");
     expect(source).toContain("submit_taster_with_identity_candidate");
   });
 
