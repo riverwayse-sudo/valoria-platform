@@ -133,23 +133,6 @@ async function exchangeDashboardHandoff(body, res) {
     select: 'id,user_id,source_id,expires_at',
     limit: '1',
   });
-async function exchangeDashboardHandoff(body, res) {
-  const code = body?.handoff_code;
-  if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{40,50}$/.test(code)) {
-    return json(res, 401, { ok: false, error: 'The dashboard handoff is missing or invalid.' });
-  }
-  const tokenHash = createHash('sha256').update(code).digest('hex');
-  const now = new Date().toISOString();
-  const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
-  const lookup = new URLSearchParams({
-    token: `eq.${tokenHash}`,
-    entry_point: 'eq.dashboard_assessment',
-    target_stage: 'eq.assess',
-    used_at: 'is.null',
-    expires_at: `gt.${now}`,
-    select: 'id,user_id,source_id,expires_at',
-    limit: '1',
-  });
   const linkResponse = await fetch(`${SUPABASE_URL}/rest/v1/valoria_reentry_links?${lookup}`, { headers, cache: 'no-store' });
   if (!linkResponse.ok) {
     const diagnostic = await linkResponse.text().catch(() => '');
