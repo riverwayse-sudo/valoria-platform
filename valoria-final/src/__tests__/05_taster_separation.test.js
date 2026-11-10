@@ -7,6 +7,8 @@ const {
   computeTasterResult,
 } = require("../valuTaster");
 const { QUESTIONS } = require("../questions");
+const fs = require("fs");
+const path = require("path");
 const {
   LEGACY_TASTER_QUESTIONS,
   LEGACY_TASTER_VERSION,
@@ -76,6 +78,22 @@ describe("separate VALU taster and formal assessment contracts", () => {
     expect(result.completedQuestions).toBe(9);
     expect(result).not.toHaveProperty("valuIndex");
     expect(result).not.toHaveProperty("clusterScores");
+  });
+
+  test("new sessions use v4.2 while existing v4.1 sessions retain their original bank", () => {
+    const progressApi = fs.readFileSync(path.join(__dirname, "../../api/taster-progress.js"), "utf8");
+    const submitApi = fs.readFileSync(path.join(__dirname, "../../api/submit-taster.js"), "utf8");
+    const migration = fs.readFileSync(path.join(__dirname, "../../supabase/migrations/20261110200000_set_taster_version_42_default.sql"), "utf8");
+    expect(progressApi).toContain("questionBankForVersion(progress.taster_version)");
+    expect(progressApi).toContain("taster_version: progress.taster_version");
+    expect(submitApi).toContain("computeLegacyTasterResult(answers)");
+    expect(submitApi).toContain("p_taster_version: tasterVersion");
+    expect(migration).toContain("alter column taster_version set default '4.2'");
+  });
+
+  test("retired taster versions are not silently remapped to the new question bank", () => {
+    const progressApi = fs.readFileSync(path.join(__dirname, "../../api/taster-progress.js"), "utf8");
+    expect(progressApi).toContain("This saved taster session uses a retired format");
   });
 
   test("an empty taster answer map does not create NaN skill scores", () => {
