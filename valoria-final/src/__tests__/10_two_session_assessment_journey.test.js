@@ -68,9 +68,14 @@ describe("separate taster and formal assessment contracts", () => {
 describe("nine-question taster and account bridge", () => {
   test("lead registration precedes the separate taster and no question counts are exposed", () => {
     const source = gateSource();
-    expect(source).toContain("TASTER_QUESTIONS.length");
+    expect(source).toContain("questionBank.length");
+    expect(source).toContain("const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS)");
+    expect(source).toContain("p.taster_version");
+    expect(source).toContain("legacy.LEGACY_TASTER_QUESTIONS");
     expect(source).toContain("VALUAssessmentJourney stage=\"registration\"");
     expect(source).toContain("VALUAssessmentJourney stage=\"taster\"");
+    expect(source).toContain("how you think, make strategic decisions, understand commercial value and work with AI");
+    expect(source).not.toContain("how you work, relate and create value");
     expect(source).toContain("YOUR PROGRESS IS SAVED");
     expect(source).toContain("privacy_acknowledged:privacyAcknowledged");
     expect(source).toContain("marketing_consent:marketingConsent");
@@ -88,6 +93,14 @@ describe("nine-question taster and account bridge", () => {
     expect(source).not.toContain("58 formal questions from Question 1");
     expect(source).not.toContain("remaining 49 questions");
     expect(source).not.toContain("Question 10");
+  });
+
+  test("transient resume failures preserve the participant's saved progress token", () => {
+    const source = gateSource();
+    expect(source).toContain("failure.status=response.status");
+    expect(source).toContain("err?.status===401||err?.status===404");
+    expect(source).toContain("setPhase('resume-error')");
+    expect(source).toContain("Transient network/server failures must never erase the only local");
   });
 
   test("registration, answer saves and completion remain linked to the same lead", () => {

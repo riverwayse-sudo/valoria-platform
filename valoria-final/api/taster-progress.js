@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
-import { EXPERIENCE_BANDS, TASTER_QUESTIONS } from '../src/valuTaster.js';
+import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
+import { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION } from '../src/valuTasterLegacy.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -37,13 +38,19 @@ async function consumeRegistrationRateLimit(req) {
   const result = await response.json();
   return Array.isArray(result) ? result[0] : result;
 }
-function validPartialAnswers(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+function questionBankForVersion(version) {
+  if (version === VALU_VERSION) return TASTER_QUESTIONS;
+  if (version === LEGACY_TASTER_VERSION) return LEGACY_TASTER_QUESTIONS;
+  return null;
+}
+
+export function validPartialAnswers(value, questionBank) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || !questionBank) return false;
   return Object.entries(value).every(([key, answer]) => {
-    if (!/^\d+$/.test(key)) return false;
     const index = Number(key);
-    return index >= 0 && index < TASTER_QUESTIONS.length
-      && Number.isInteger(answer) && answer >= 0 && answer < TASTER_QUESTIONS[index].options.length;
+    if (!Number.isInteger(index) || String(index) !== key) return false;
+    return index >= 0 && index < questionBank.length
+      && Number.isInteger(answer) && answer >= 0 && answer < questionBank[index].options.length;
   });
 }
 async function getProgress(tokenHash) {
@@ -51,7 +58,7 @@ async function getProgress(tokenHash) {
     resume_token_hash: `eq.${tokenHash}`,
     status: 'eq.in_progress',
     expires_at: `gt.${new Date().toISOString()}`,
-    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,lead_capture_id',
+    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,lead_capture_id,taster_version,total_questions',
     limit: '1',
   });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, { headers: headers() });
@@ -140,14 +147,19 @@ export default async function handler(req, res) {
     if (!progress) return json(res, 404, { error: 'This session has expired or is no longer resumable.' });
 
     if (action === 'load') {
-      return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, lead_capture_id: progress.lead_capture_id || null, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null } });
+      return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, lead_capture_id: progress.lead_capture_id || null, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null, taster_version: progress.taster_version, total_questions: progress.total_questions } });
+    }
+
+    const questionBank = questionBankForVersion(progress.taster_version);
+    if (!questionBank) {
+      return json(res, 409, { error: 'This saved taster session uses a retired format and needs support before it can continue.' });
     }
 
     if (action === 'save') {
       const answers = body.answers;
       const currentQuestion = body.current_question;
       const submissionKey = body.submission_key || null;
-      if (!validPartialAnswers(answers) || !Number.isInteger(currentQuestion) || currentQuestion < 0 || currentQuestion > TASTER_QUESTIONS.length
+      if (!validPartialAnswers(answers, questionBank) || !Number.isInteger(currentQuestion) || currentQuestion < 0 || currentQuestion > questionBank.length
         || Object.keys(answers).some(key => Number(key) >= currentQuestion)) {
         return json(res, 400, { error: 'Taster progress is incomplete or invalid.' });
       }
@@ -187,7 +199,7 @@ export default async function handler(req, res) {
     const params = new URLSearchParams({ id: `eq.${progress.id}`, status: 'eq.in_progress', select: 'id' });
     const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, {
       method: 'PATCH', headers: { ...headers(), Prefer: 'return=representation' },
-      body: JSON.stringify({ status: 'completed', taster_id: tasterId, current_question: TASTER_QUESTIONS.length, updated_at: new Date().toISOString() }),
+      body: JSON.stringify({ status: 'completed', taster_id: tasterId, current_question: questionBank.length, updated_at: new Date().toISOString() }),
     });
     if (!response.ok) return json(res, 502, { error: 'Taster saved, but recovery status needs a retry.' });
     return json(res, 200, { completed: Boolean((await response.json())?.[0]?.id) });
