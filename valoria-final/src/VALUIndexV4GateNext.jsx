@@ -54,7 +54,6 @@ export default function VALUIndexV4GateNext(){
  const [registrationKey,setRegistrationKey]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
  const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS);
- const [tasterVersion,setTasterVersion]=useState(VALU_VERSION);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
@@ -108,7 +107,6 @@ export default function VALUIndexV4GateNext(){
       return;
      }
      setQuestionBank(restoredBank);
-     setTasterVersion(version);
      setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
      setProgressToken(stored);
      setPrivacyAcknowledged(Boolean(p.lead_capture_id));
@@ -126,7 +124,7 @@ export default function VALUIndexV4GateNext(){
      // Legacy in-progress sessions are preserved. Their owner registers once
      // before continuing, which attaches the existing progress to a lead ID.
      try{setRegistrationKey(localStorage.getItem(SIGNUP_KEY_KEY)||'')}catch{}
-     setCurrent(Math.min(Number(p.current_question)||0,questionBank.length-1));
+     setCurrent(Math.min(Number(p.current_question)||0,restoredBank.length-1));
      setPhase('registration');
      return;
     }catch{
