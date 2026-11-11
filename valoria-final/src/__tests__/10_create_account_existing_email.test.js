@@ -14,7 +14,7 @@ function makeReq(payload = {}) {
     headers: { get: name => name === "x-forwarded-for" ? "203.0.113.7" : "" },
     json: async () => ({
       email: EXISTING_EMAIL,
-      password: "correct-horse-battery",
+      password: "Correct-Horse-Battery-9!",
       name: "Sample User",
       role: "Programme Manager",
       ...payload,
@@ -48,9 +48,9 @@ function installFetch({ generateLink = { status: 200, payload: {} }, rateLimited
   return calls;
 }
 
-async function run(options) {
+async function run(options, payload = {}) {
   const calls = installFetch(options);
-  const res = await loadHandler()(makeReq());
+  const res = await loadHandler()(makeReq(payload));
   return { res, body: await res.json(), calls };
 }
 
@@ -58,6 +58,25 @@ describe("create-account: existing email guidance", () => {
   afterEach(() => {
     delete global.fetch;
     jest.restoreAllMocks();
+  });
+
+  test.each([
+    "short",
+    "alllowercasepassword9!",
+    "ALLUPPERCASEPASSWORD9!",
+    "NoNumberPassword!",
+    "NoSymbolPassword9",
+    "password123!",
+  ])("rejects passwords outside the shared Valoria policy", async password => {
+    const { res, body, calls } = await run({}, { password });
+    expect(res.status).toBe(400);
+    expect(body.error).toContain("12–128 characters");
+    expect(calls.some(call => call.url.includes("auth/v1/admin/generate_link"))).toBe(false);
+  });
+
+  test("accepts a password that satisfies the shared Valoria policy", async () => {
+    const { res } = await run({}, { password: "Correct-Horse-Battery-9!" });
+    expect(res.status).toBe(200);
   });
 
   test("maps provider email_exists to a stable sign-in response", async () => {
