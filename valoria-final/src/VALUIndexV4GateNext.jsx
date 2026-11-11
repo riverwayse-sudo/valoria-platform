@@ -42,10 +42,10 @@ const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS=
 const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 
-// Entry flow for the VALU Index Taster.
-// Participants begin with the VALU Index Taster before account setup.
+// Entry flow for the VALU journey.
+// Participants begin with the VALU taster before account setup.
 // Taster responses are stored and scored independently; they never populate
-// the formal VALU Index response record.
+// the formal VALU assessment response record.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
@@ -176,7 +176,7 @@ export default function VALUIndexV4GateNext(){
     organisation:organisation.trim(),interest,
     marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
    });
-   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to the VALU Index Taster. Please retry.');
+   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU journey. Please retry.');
    const answeredCount=Object.keys(answers).length;
    const complete=current===TASTER_QUESTIONS.length-1&&answeredCount===TASTER_QUESTIONS.length&&!!submissionKey;
    setPhase(complete?'break':answeredCount?'session1':'intro');
@@ -198,14 +198,23 @@ export default function VALUIndexV4GateNext(){
    setSubmissionKey(key);
    const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:TASTER_QUESTIONS.length,submission_key:key});
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
-   const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
+   let data;
+   if(saved.completed===true&&saved.taster_id){
+    // A previous completion may have committed even if its HTTP response was lost.
+    // Reuse the verified taster reference instead of submitting a duplicate.
+    data={taster_id:saved.taster_id};
+   }else{
+    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
+    data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
+   }
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
    setTasterId(data.taster_id);
-   try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    const completion=await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
    if(completion?.completed!==true)throw new Error('Your taster is saved, but we could not confirm the completion step. Please retry.');
+   // Only mark the taster as pending account linkage after completion is confirmed.
+   // If confirmation fails, the resume token remains available for a safe retry.
+   try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
@@ -223,7 +232,7 @@ export default function VALUIndexV4GateNext(){
    <p className="valu-results-intro" style={S.resultsIntro}>Your details connect your responses to you, so you can pause and return without losing your place. You will create your Valoria account after completing the taster.</p>
   </section>
   <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU Index Taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
+   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
    <p style={S.formIntro}>Complete the required details and acknowledge the Privacy Notice. Your answers stay connected to your registration. Optional details can be added below.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
@@ -248,7 +257,7 @@ export default function VALUIndexV4GateNext(){
     <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
    </label>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="submit" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU INDEX TASTER →'}</button>
+   <button type="submit" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU TASTER →'}</button>
    <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved taster.</div>
   </form>
  </Shell>;
@@ -257,7 +266,7 @@ export default function VALUIndexV4GateNext(){
 
  if(phase==='intro')return <Shell>
   <section className="valu-assessment-intro" aria-labelledby="valu-taster-intro-title">
-   <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU INDEX TASTER</div>
+   <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU TASTER</div>
    <div className="valu-intro-rule"><span/></div>
    <p className="valu-intro-overline">A CLEARER VIEW OF YOUR PROFESSIONAL CAPABILITY</p>
    <h1 id="valu-taster-intro-title" className="valu-intro-title">Your professional worth deserves to be <em>understood.</em></h1>
@@ -267,7 +276,7 @@ export default function VALUIndexV4GateNext(){
     <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>You can leave and return without losing saved responses.</small></span></div>
     <div><span className="valu-intro-check">✓</span><span><strong>A useful next step</strong><small>Your taster helps you understand where to continue.</small></span></div>
    </div>
-   <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU INDEX TASTER <span>→</span></button>
+   <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU TASTER <span>→</span></button>
    <p className="valu-intro-assurance">Your responses are handled securely and are not shown as a public profile.</p>
   </section>
  </Shell>;
@@ -282,7 +291,7 @@ export default function VALUIndexV4GateNext(){
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU Index Taster</h3>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU taster</h3>
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
@@ -313,12 +322,12 @@ export default function VALUIndexV4GateNext(){
    <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO ACCOUNT CREATION →'}</button>
    <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
   </section>
-  <p style={S.note}>Completing the VALU Index Taster does not automatically grant marketplace listing. Listing eligibility depends on the full VALU Index, professional profile, capabilities, and applicable eligibility checks.</p>
+  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
 
  return <Shell mode="taster">
   <VALUAssessmentJourney stage="taster" currentQuestion={placeInAssessment} />
-  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU INDEX TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div className="valu-taster-save-state"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</div></div>
+  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div className="valu-taster-save-state"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</div></div>
   <div className="valu-taster-progress" role="progressbar" aria-label="Taster progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={sessionProgress} style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
