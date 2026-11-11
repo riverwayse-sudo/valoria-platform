@@ -3,7 +3,6 @@ const ALLOWED_SITE_ORIGINS = new Set([
   "https://www.valoriainstitute.com",
   "https://staging.valoriainstitute.com",
   "https://valoria-staging-site.riverwayse.workers.dev",
-  "https://valoria-current-site-audit-staging.riverwayse.workers.dev",
 ]);
 
 export function getSiteOrigin(req) {
