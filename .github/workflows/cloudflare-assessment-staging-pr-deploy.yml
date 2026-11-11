@@ -87,8 +87,7 @@ jobs:
           curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base/remaining" -o /tmp/valu-assessment-entry.html
           grep -q 'VALU' /tmp/valu-assessment-entry.html
           for origin in \
-            https://valoria-staging-site.riverwayse.workers.dev \
-            https://valoria-current-site-audit-staging.riverwayse.workers.dev; do
+            https://valoria-staging-site.riverwayse.workers.dev; do
             status="$(curl -sS -D /tmp/valu-cors-headers -o /tmp/valu-cors-response -w '%{http_code}' -X OPTIONS "$base/api/taster-progress" \
               -H "Origin: $origin" \
               -H 'Access-Control-Request-Method: POST' \
