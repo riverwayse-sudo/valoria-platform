@@ -2,11 +2,11 @@ export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
 import { canonicalDesignationName } from "./_canonicalDesignation.js";
+import { getSiteOrigin } from "./_siteOrigin.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const VALORIA_SITE_URL = "https://valoriainstitute.com";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -133,7 +133,8 @@ export default async function handler(req) {
     if (assessment.user_id) return json({ error: "This assessment is already linked to an account." }, 409);
   }
 
-  const redirectUrl = identity_hash ? `${VALORIA_SITE_URL}/auth/callback?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${VALORIA_SITE_URL}/auth/callback`;
+  const siteOrigin = getSiteOrigin(req);
+  const redirectUrl = identity_hash ? `${siteOrigin}/auth/callback?identity_hash=${encodeURIComponent(identity_hash)}&report_token=${encodeURIComponent(assessment.report_token)}` : `${siteOrigin}/auth/callback`;
   let genRes, genData;
   try {
     genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
