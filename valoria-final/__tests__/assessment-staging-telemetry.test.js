@@ -11,6 +11,15 @@ describe('assessment staging telemetry and indexing isolation', () => {
     expect(html).not.toContain('valoriainstitute.com/logo.png');
   });
 
+  test('Cloudflare staging deploy targets the secret-configured staging Worker and stage Supabase', () => {
+    const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'wrangler.jsonc'), 'utf8'));
+    expect(config.name).toBe('valoria-assessment');
+    expect(config.env.staging.name).toBe('valoria-staging-assessment');
+    expect(config.env.staging.vars.SUPABASE_URL).toBe('https://yccxgjdqworgcbircnvn.supabase.co');
+    expect(config.env.staging.vars.VALU_STAGING_API_ENABLED).toBe('1');
+    expect(config.env.staging.vars.VALU_PREVIEW).toBe('1');
+  });
+
   test('preview builds display a staging banner and never load production analytics', () => {
     const main = read('src/main.jsx');
     const css = read('src/assessment.css');
