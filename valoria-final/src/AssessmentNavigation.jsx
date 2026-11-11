@@ -1,22 +1,40 @@
 import React from 'react';
 
 const T = { parchment:'#F7F4EE', gold:'#C9A84C', faint:'rgba(247,244,238,.28)', dark:'#1A1A2E' };
+const ALLOWED_SITE_ORIGINS = new Set([
+  'https://valoriainstitute.com',
+  'https://www.valoriainstitute.com',
+  'https://staging.valoriainstitute.com',
+  'https://valoria-staging-site.riverwayse.workers.dev',
+]);
 function getSiteUrl() {
-  if (typeof window !== 'undefined') {
-    try {
-      const requested = new URLSearchParams(window.location.search).get('site_origin');
-      const parsed = new URL(requested || '');
-      if (parsed.protocol === 'https:' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(parsed.hostname)) {
-        window.sessionStorage.setItem('valu-site-origin', parsed.origin);
-        return parsed.origin;
-      }
-      const saved = new URL(window.sessionStorage.getItem('valu-site-origin') || '');
-      if (saved.protocol === 'https:' && ['valoriainstitute.com', 'www.valoriainstitute.com'].includes(saved.hostname)) return saved.origin;
-    } catch {}
-  }
-  return 'https://valoriainstitute.com';
+  if (typeof window === 'undefined') return 'https://valoriainstitute.com';
+  const host = window.location.hostname.toLowerCase();
+  const environmentDefault =
+    host === 'valoria-staging-assessment.riverwayse.workers.dev' ||
+    host === 'valoria-staging-site.riverwayse.workers.dev' ||
+    host === 'assessment-staging.valoriainstitute.com'
+      ? 'https://valoria-staging-site.riverwayse.workers.dev'
+      : host === 'staging.valoriainstitute.com'
+        ? 'https://staging.valoriainstitute.com'
+        : host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com'
+          ? 'https://valoriainstitute.com'
+          : window.location.origin;
+  try {
+    const requested = new URLSearchParams(window.location.search).get('site_origin');
+    const parsed = new URL(requested || '');
+    if (parsed.protocol === 'https:' && ALLOWED_SITE_ORIGINS.has(parsed.origin)) {
+      window.sessionStorage.setItem('valu-site-origin', parsed.origin);
+      return parsed.origin;
+    }
+  } catch {}
+  try {
+    const saved = new URL(window.sessionStorage.getItem('valu-site-origin') || '');
+    if (saved.protocol === 'https:' && ALLOWED_SITE_ORIGINS.has(saved.origin)) return saved.origin;
+  } catch {}
+  return ALLOWED_SITE_ORIGINS.has(environmentDefault) || environmentDefault.startsWith('https://') ? environmentDefault : 'https://valoriainstitute.com';
 }
-const LOGO_URL = 'https://valoriainstitute.com/logo.png';
+const LOGO_URL = `${getSiteUrl()}/logo.png`;
 
 export default function AssessmentNavigation({ progress = null, label = 'VALU ASSESSMENT' }) {
   const siteUrl = getSiteUrl();
