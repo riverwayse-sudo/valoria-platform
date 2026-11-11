@@ -32,6 +32,7 @@ describe("VALU assessment left-alignment contract", () => {
     const navigation = read("AssessmentNavigation.jsx");
     const full = read("FullVALUAssessment.jsx");
     const taster = read("VALUIndexV4GateNext.jsx");
+    const reportPrompt = read("PRIMEAssessment.jsx");
     const css = read("assessment.css");
     expect(navigation).toContain('href="#main-content"');
     expect(full).toContain('id="main-content" tabIndex={-1}');
@@ -48,6 +49,8 @@ describe("VALU assessment left-alignment contract", () => {
     expect(full).toContain("SUBMIT VALU INDEX");
     expect(taster).toContain("VALU INDEX TASTER");
     expect(taster).not.toContain("VALU TASTER");
+    expect(reportPrompt).not.toContain("VALU Index assessment");
+    expect(reportPrompt).toContain("just completed the VALU Index");
   });
 
   test("assessment screens respect reduced-motion preferences", () => {
