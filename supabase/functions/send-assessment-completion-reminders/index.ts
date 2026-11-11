@@ -51,7 +51,7 @@ async function sendEmail(candidate) {
   } else if (missingAssessment) {
     subject = "Complete your VALU Index"
     headline = "You started.<br><em>Now complete your VALU Index.</em>"
-    body = "Your Valoria account is ready, but your VALU Index is not yet complete. Finish the assessment so your professional record can move forward."
+    body = "Your Valoria account is ready, but your VALU Index is not yet complete. Complete the VALU Index so your professional record can move forward."
   } else if (missingProfile) {
     subject = "Your Valoria professional profile is incomplete"
     headline = "Your VALU Index is complete.<br><em>Now finish your profile.</em>"
