@@ -89,6 +89,7 @@ describe("registration-first taster API payload", () => {
     const calls = [];
     global.fetch = async (url, options = {}) => {
       calls.push({ url, options });
+      if (url.includes("rpc/consume_rate_limit")) return response(200, [{ allowed: true, remaining: 179 }]);
       if (url.includes("rest/v1/taster_progress?")) {
         if (!options.method || options.method === "GET") return response(200, [{
           id: PROGRESS_ID, name: "Staging Test Participant", role: "Operations Director",
