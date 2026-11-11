@@ -108,6 +108,21 @@ describe("nine-question taster and account bridge", () => {
     expect(handoff.indexOf("if(completion?.completed!==true)")).toBeLessThan(handoff.indexOf("window.location.assign"));
   });
 
+  test("a failed completion confirmation keeps the resumable session instead of redirecting as a pending account handoff", () => {
+    const source = gateSource();
+    const handoff = source.slice(source.indexOf("async function createAccount"));
+    const completion = handoff.indexOf("const completion=await postProgress({action:'complete'");
+    const confirmed = handoff.indexOf("if(completion?.completed!==true)");
+    const pending = handoff.indexOf("localStorage.setItem('pending_taster_id',data.taster_id)");
+    const clearResume = handoff.indexOf("localStorage.removeItem(RESUME_TOKEN_KEY)");
+    const redirect = handoff.indexOf("window.location.assign");
+    expect(completion).toBeGreaterThanOrEqual(0);
+    expect(confirmed).toBeGreaterThan(completion);
+    expect(pending).toBeGreaterThan(confirmed);
+    expect(clearResume).toBeGreaterThan(pending);
+    expect(redirect).toBeGreaterThan(clearResume);
+  });
+
   test("the taster never computes or presents an official VALU Index", () => {
     const source = gateSource();
     expect(source).not.toContain("computeTasterResult");
