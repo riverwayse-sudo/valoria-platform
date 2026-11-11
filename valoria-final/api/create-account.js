@@ -28,9 +28,9 @@ function journeyEmailHtml(name, score, designation) {
     <body style="margin:0;padding:0;background:#1A1A2E;font-family:Arial,sans-serif;color:#F7F4EE;">
       <div style="max-width:600px;margin:0 auto;padding:48px 32px;">
         <div style="text-align:center;margin-bottom:36px;"><img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:42px;"></div>
-        <p style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700;">VALU INDEX · ASSESSMENT COMPLETE</p>
+        <p style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700;">VALU INDEX · RESULT READY</p>
         <h1 style="font-size:30px;line-height:1.2;font-weight:600;color:#F7F4EE;">Your Valoria journey has moved forward.</h1>
-        <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU Index is complete and your assessment is saved. Your professional record remains private while you confirm your email and complete the required profile and eligibility checks.</p>
+        <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU Index is complete and your result is saved. Your professional record remains private while you confirm your email and complete the required profile and eligibility checks.</p>
         <div style="margin:28px 0;padding:24px;border:1px solid rgba(201,168,76,.25);background:rgba(201,168,76,.06);border-radius:10px;text-align:center;">
           <div style="font-size:48px;font-weight:700;color:#C9A84C;">${escapeHtml(score)}</div>
           <div style="font-size:11px;letter-spacing:.14em;color:rgba(247,244,238,.55);">VALU INDEX</div>
