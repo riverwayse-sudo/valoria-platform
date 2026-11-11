@@ -45,7 +45,7 @@ const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 // Entry flow for the VALU journey.
 // Participants begin with the VALU taster before account setup.
 // Taster responses are stored and scored independently; they never populate
-// the formal VALU assessment response record.
+// the formal VALU Index response record.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
@@ -313,7 +313,7 @@ export default function VALUIndexV4GateNext(){
    <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO ACCOUNT CREATION →'}</button>
    <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
   </section>
-  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
+  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full VALU Index, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
 
  return <Shell mode="taster">
