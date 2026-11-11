@@ -198,9 +198,16 @@ export default function VALUIndexV4GateNext(){
    setSubmissionKey(key);
    const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:TASTER_QUESTIONS.length,submission_key:key});
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
-   const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
+   let data;
+   if(saved.completed===true&&saved.taster_id){
+    // A previous completion may have committed even if its HTTP response was lost.
+    // Reuse the verified taster reference instead of submitting a duplicate.
+    data={taster_id:saved.taster_id};
+   }else{
+    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
+    data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
+   }
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
    setTasterId(data.taster_id);
    const completion=await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
