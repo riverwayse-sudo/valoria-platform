@@ -86,25 +86,29 @@ jobs:
           base="https://valoria-staging-assessment.riverwayse.workers.dev"
           curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base/remaining" -o /tmp/valu-assessment-entry.html
           grep -q 'VALU' /tmp/valu-assessment-entry.html
-          status="$(curl -sS -D /tmp/valu-cors-headers -o /tmp/valu-cors-response -w '%{http_code}' -X OPTIONS "$base/api/taster-progress" \
-            -H 'Origin: https://valoria-staging-site.riverwayse.workers.dev' \
-            -H 'Access-Control-Request-Method: POST' \
-            -H 'Access-Control-Request-Headers: content-type,idempotency-key')"
-          if [[ "$status" != "204" ]]; then
-            echo "Assessment API CORS preflight returned HTTP $status"
-            cat /tmp/valu-cors-response || true
-            cat /tmp/valu-cors-headers || true
-            exit 1
-          fi
-          grep -iq '^access-control-allow-origin: https://valoria-staging-site.riverwayse.workers.dev' /tmp/valu-cors-headers
-          grep -iq '^access-control-allow-headers: Content-Type, Idempotency-Key' /tmp/valu-cors-headers
+          for origin in \
+            https://valoria-staging-site.riverwayse.workers.dev \
+            https://valoria-current-site-audit-staging.riverwayse.workers.dev; do
+            status="$(curl -sS -D /tmp/valu-cors-headers -o /tmp/valu-cors-response -w '%{http_code}' -X OPTIONS "$base/api/taster-progress" \
+              -H "Origin: $origin" \
+              -H 'Access-Control-Request-Method: POST' \
+              -H 'Access-Control-Request-Headers: content-type,idempotency-key')"
+            if [[ "$status" != "204" ]]; then
+              echo "Assessment API CORS preflight returned HTTP $status for $origin"
+              cat /tmp/valu-cors-response || true
+              cat /tmp/valu-cors-headers || true
+              exit 1
+            fi
+            grep -Fiq "access-control-allow-origin: $origin" /tmp/valu-cors-headers
+            grep -iq '^access-control-allow-headers: Content-Type, Idempotency-Key' /tmp/valu-cors-headers
 
-          api_status="$(curl -sS -o /tmp/valu-api-runtime-response -w '%{http_code}' -X POST "$base/api/taster-progress" \
-            -H 'Origin: https://valoria-staging-site.riverwayse.workers.dev' \
-            -H 'Content-Type: application/json' \
-            --data '{"action":"__staging_runtime_probe__"}')"
-          if [[ "$api_status" != "400" ]] || ! grep -q 'Unsupported progress action' /tmp/valu-api-runtime-response; then
-            echo "Assessment API runtime probe failed with HTTP $api_status"
-            cat /tmp/valu-api-runtime-response || true
-            exit 1
-          fi
+            api_status="$(curl -sS -o /tmp/valu-api-runtime-response -w '%{http_code}' -X POST "$base/api/taster-progress" \
+              -H "Origin: $origin" \
+              -H 'Content-Type: application/json' \
+              --data '{"action":"__staging_runtime_probe__"}')"
+            if [[ "$api_status" != "400" ]] || ! grep -q 'Unsupported progress action' /tmp/valu-api-runtime-response; then
+              echo "Assessment API runtime probe failed with HTTP $api_status for $origin"
+              cat /tmp/valu-api-runtime-response || true
+              exit 1
+            fi
+          done
