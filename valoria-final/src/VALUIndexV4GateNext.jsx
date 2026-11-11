@@ -21,15 +21,34 @@ const API_BASE = (() => {
 })();
 
 const SITE_BASE = (() => {
+  if (typeof window === 'undefined') return '';
+  const host = window.location.hostname.toLowerCase();
+  const allowedOrigins = new Set([
+    'https://valoriainstitute.com',
+    'https://www.valoriainstitute.com',
+    'https://staging.valoriainstitute.com',
+    'https://valoria-staging-site.riverwayse.workers.dev',
+    'https://valoria-current-site-audit-staging.riverwayse.workers.dev',
+  ]);
+  // A direct assessment-host visit may be paired to one exact, approved site
+  // origin. This is used by staging acceptance and never accepts arbitrary hosts.
+  try {
+    const requested = new URLSearchParams(window.location.search).get('site_origin');
+    const parsed = new URL(requested || '');
+    if (parsed.protocol === 'https:' && allowedOrigins.has(parsed.origin)) return parsed.origin;
+  } catch {}
+  // When the assessment is reverse-proxied by a site Worker, return to that
+  // same site environment rather than a hard-coded production/staging domain.
+  if (allowedOrigins.has(window.location.origin) && !host.includes('assessment')) return window.location.origin;
+  if (host === 'assessment.valoriainstitute.com') return 'https://valoriainstitute.com';
   const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
-  if (configuredOrigin) return configuredOrigin;
-  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  if (configuredOrigin) {
+    try {
+      const parsed = new URL(configuredOrigin);
+      if (parsed.protocol === 'https:' && allowedOrigins.has(parsed.origin)) return parsed.origin;
+    } catch {}
+  }
   if (host === 'valoria-staging-assessment.riverwayse.workers.dev') return 'https://valoria-staging-site.riverwayse.workers.dev';
-  if (host.endsWith('.workers.dev')) return typeof window !== 'undefined' ? window.location.origin : '';
-  if (host.includes('staging')) return 'https://staging.valoriainstitute.com';
-  if (host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com') return 'https://valoriainstitute.com';
-  // Preview deployments must be paired with their site origin explicitly;
-  // never silently route preview authentication into production.
   return '';
 })();
 
