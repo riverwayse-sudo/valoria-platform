@@ -23,7 +23,7 @@ function buildPrompt({ name, role, total_score, cluster_scores, skill_scores, de
     .map(([s, sc]) => `  - ${s}: ${sc} points`)
     .join("\n");
 
-  return `You are writing a personalised professional development report for ${name}, a ${role} who completed the VALU Index assessment.
+  return `You are writing a personalised professional development report for ${name}, a ${role} who completed the VALU Index.
 WRITING RULES:
 1. Write like a trusted senior colleague who tells the truth.
 2. Plain, direct language. No jargon: never use journey, leverage (as verb), holistic, impactful, synergy, empower, transformative, game-changer, paradigm, unlock, actionable.

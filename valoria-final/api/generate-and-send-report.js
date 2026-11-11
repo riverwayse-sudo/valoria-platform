@@ -113,7 +113,7 @@ function reportMatchesCanonicalAssessment(reportText, assessment) {
 async function generateAiReport({ name, role, valuIndex, designation, clusterScores, skillScores }) {
   const sortedSkills = Object.entries(skillScores || {}).filter(([s]) => s !== "Validity").sort(([,a],[,b]) => b - a);
   const topSkills = sortedSkills.slice(0, 3), bottomSkills = sortedSkills.slice(-3).reverse();
-  const prompt = `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index assessment.
+  const prompt = `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index.
 YOUR WRITING RULES:
 1. Write like a trusted senior colleague who tells the truth.
 2. Use plain, direct language.
