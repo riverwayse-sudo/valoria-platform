@@ -158,7 +158,7 @@ async function exchangeDashboardHandoff(body, res) {
     limit: '1',
   });
   const tasterResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, { headers, cache: 'no-store' });
-  if (!tasterResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your saved VALU snapshot.' });
+  if (!tasterResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your saved VALU Index Taster.' });
   const taster = (await tasterResponse.json())?.[0];
   if (!taster?.completed_at || taster.user_id !== link.user_id) {
     return json(res, 403, { ok: false, error: 'This snapshot is not linked to the dashboard account.' });
@@ -225,10 +225,10 @@ async function verifyHandoffRequest(body, res) {
   const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
   const params = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role,experience,completed_at', limit: '1' });
   const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${params}`, { headers });
-  if (!tasterRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the VALU snapshot.' });
+  if (!tasterRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the VALU Index Taster.' });
   const taster = (await tasterRes.json())?.[0];
-  if (!taster) return json(res, 404, { ok: false, error: 'VALU snapshot not found.' });
-  if (!taster.completed_at) return json(res, 409, { ok: false, error: 'Complete your VALU snapshot first.' });
+  if (!taster) return json(res, 404, { ok: false, error: 'VALU Index Taster record not found.' });
+  if (!taster.completed_at) return json(res, 409, { ok: false, error: 'Complete the VALU Index Taster first.' });
   if (taster.user_id !== handoff.sub) return json(res, 403, { ok: false, error: 'This handoff does not match the snapshot owner.' });
   const normalise = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   if ((body?.name && normalise(taster.name) !== normalise(body.name))
@@ -353,7 +353,7 @@ export default async function handler(req, res) {
   if (taster.user_id !== handoff.sub) return json(res, 403, { error: 'This secure assessment handoff does not belong to the linked account.' });
   if (String(taster.name || '').trim().toLowerCase() !== name.trim().toLowerCase() ||
       String(taster.role || '').trim().toLowerCase() !== role.trim().toLowerCase()) {
-    return json(res, 403, { error: 'Assessment identity does not match the VALU snapshot.' });
+    return json(res, 403, { error: 'Your VALU Index Taster identity does not match this account.' });
   }
   resolvedUserId = taster.user_id;
   const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${resolvedUserId}`, {
