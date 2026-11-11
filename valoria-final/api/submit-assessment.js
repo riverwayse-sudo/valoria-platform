@@ -177,9 +177,9 @@ async function exchangeDashboardHandoff(body, res) {
     limit: '1',
   });
   const existingAssessmentResponse = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${existingAssessmentParams}`, { headers, cache: 'no-store' });
-  if (!existingAssessmentResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your VALU assessment status.' });
+  if (!existingAssessmentResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your VALU Index status.' });
   if ((await existingAssessmentResponse.json())?.length) {
-    return json(res, 409, { ok: false, error: 'Your full VALU assessment is already complete. Return to your dashboard to view your results.' });
+    return json(res, 409, { ok: false, error: 'Your full VALU Index is already complete. Return to your dashboard to view your results.' });
   }
 
   // Atomic compare-and-set: exactly one request can consume this handoff code.
@@ -313,7 +313,7 @@ export default async function handler(req, res) {
   if (body.action === 'verify-handoff') return verifyHandoffRequest(body, res);
   const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId, handoff_token: handoffToken } = body;
   if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
-    return json(res, 400, { error: 'Open the full VALU assessment from your completed VALU snapshot. A valid snapshot reference is required.' });
+    return json(res, 400, { error: 'Open the full VALU Index from your completed VALU snapshot. A valid snapshot reference is required.' });
   }
   const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason => {
     console.warn('[submit-assessment] handoff rejected', { action: 'submit', reason });
@@ -325,7 +325,7 @@ export default async function handler(req, res) {
   // The formal instrument is independent: every submission must contain all
   // 58 formal answers. No answer is read from or copied from the taster record.
   if (!validateAnswers(answers)) {
-    return json(res, 400, { error: 'Complete the full VALU assessment before submitting.' });
+    return json(res, 400, { error: 'Complete the full VALU Index before submitting.' });
   }
   // Each formal question has its own timing record. Timings are diagnostics,
   // never score inputs.
@@ -348,8 +348,8 @@ export default async function handler(req, res) {
   if (!tasterRes.ok) return json(res, 502, { error: 'Could not verify the VALU journey.' });
   taster = (await tasterRes.json())?.[0];
   if (!taster) return json(res, 404, { error: 'VALU snapshot not found. Return to the VALU journey and complete your snapshot first.' });
-  if (!taster.completed_at) return json(res, 409, { error: 'Complete your VALU snapshot before starting the full assessment.' });
-  if (!taster.user_id) return json(res, 409, { error: 'Sign in to your Valoria account and link your VALU snapshot before starting the full assessment.' });
+  if (!taster.completed_at) return json(res, 409, { error: 'Complete your VALU snapshot before starting the full VALU Index.' });
+  if (!taster.user_id) return json(res, 409, { error: 'Sign in to your Valoria account and link your VALU snapshot before starting the full VALU Index.' });
   if (taster.user_id !== handoff.sub) return json(res, 403, { error: 'This secure assessment handoff does not belong to the linked account.' });
   if (String(taster.name || '').trim().toLowerCase() !== name.trim().toLowerCase() ||
       String(taster.role || '').trim().toLowerCase() !== role.trim().toLowerCase()) {
@@ -361,7 +361,7 @@ export default async function handler(req, res) {
   });
   if (!userRes.ok) return json(res, 502, { error: 'Could not verify the Valoria account.' });
   const user = await userRes.json();
-  if (!user.email_confirmed_at) return json(res, 403, { error: 'Confirm your Valoria account email before submitting the full VALU assessment.' });
+  if (!user.email_confirmed_at) return json(res, 403, { error: 'Confirm your Valoria account email before submitting the full VALU Index.' });
   resolvedEmail = String(user.email || '').trim().toLowerCase() || null;
 
   // The taster record is used only to verify account ownership and journey

@@ -82,8 +82,8 @@ describe("nine-question taster and account bridge", () => {
   test("taster completion leads to account creation and does not promise automatic Marketplace listing", () => {
     const source = gateSource();
     expect(source).toContain("Your responses are safely saved. Create your account to continue your Valoria journey.");
-    expect(source).toContain("Completing the assessment does not grant marketplace listing.");
-    expect(source).toContain("Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.");
+    expect(source).toContain("Completing the VALU Index Taster does not automatically grant marketplace listing.");
+    expect(source).toContain("Listing eligibility depends on the full VALU Index, professional profile, capabilities, and applicable eligibility checks.");
     expect(source).not.toContain("will not prefill or count toward it");
     expect(source).not.toContain("58 formal questions from Question 1");
     expect(source).not.toContain("remaining 49 questions");
@@ -142,7 +142,7 @@ describe("independent 58-question formal assessment", () => {
 
   test("formal submission requires all 58 answers and never reads taster answer values", () => {
     const api = readApi("submit-assessment.js");
-    expect(api).toContain("Complete the full VALU assessment before submitting");
+    expect(api).toContain("Complete the full VALU Index before submitting");
     expect(api).toContain("const completeAnswers = answers");
     expect(api).toContain("assessment_version: FULL_ASSESSMENT_VERSION");
     expect(api).not.toContain("taster_answers");

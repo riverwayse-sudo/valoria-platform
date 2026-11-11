@@ -22,9 +22,9 @@ function deriveTier(score: number | null): string {
 function getNextSteps(score: number | null): string {
   if (score === null) {
     return `
-      <li>Complete your VALU Index assessment to receive your official points score.</li>
+      <li>Complete the VALU Index to receive your official points score.</li>
       <li>Return to your dashboard to continue your professional profile.</li>
-      <li>Marketplace visibility follows the full assessment, profile and capability eligibility checks.</li>
+      <li>Marketplace visibility follows the full VALU Index, profile and capability eligibility checks.</li>
     `;
   }
   if (score >= 80) {
@@ -229,7 +229,7 @@ serve(async (req: Request) => {
     console.error("RESEND_API_KEY not set");
     return new Response(JSON.stringify({ error: "Email service not configured" }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
   }
-  const subject = score !== null ? `Your VALU Index results — ${resolvedTier} (${score} points)` : "Welcome to Valoria Institute — complete your VALU assessment";
+  const subject = score !== null ? `Your VALU Index results — ${resolvedTier} (${score} points)` : "Welcome to Valoria Institute — complete your VALU Index";
   const resendResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },

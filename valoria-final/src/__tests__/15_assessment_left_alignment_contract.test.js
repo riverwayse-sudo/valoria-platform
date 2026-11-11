@@ -39,6 +39,17 @@ describe("VALU assessment left-alignment contract", () => {
     expect(css).toContain(".assessment-skip-link");
   });
 
+  test("participant-facing assessment navigation and stages use VALU Index naming", () => {
+    const navigation = read("AssessmentNavigation.jsx");
+    const full = read("FullVALUAssessment.jsx");
+    const taster = read("VALUIndexV4GateNext.jsx");
+    expect(navigation).toContain("label = 'VALU INDEX'");
+    expect(full).not.toContain("VALU ASSESSMENT");
+    expect(full).toContain("SUBMIT VALU INDEX");
+    expect(taster).toContain("VALU INDEX TASTER");
+    expect(taster).not.toContain("VALU TASTER");
+  });
+
   test("assessment screens respect reduced-motion preferences", () => {
     const css = read("assessment.css");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
@@ -54,7 +65,7 @@ describe("VALU assessment left-alignment contract", () => {
   test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
     const full = read("FullVALUAssessment.jsx");
     expect(full).toContain("Your VALU Index is complete.");
-    expect(full).toContain("Your Full VALU assessment is complete.");
+    expect(full).toContain("Your Full VALU Index is complete.");
     expect(full).toContain("COMPLETE MY PROFILE");
     expect(full).toContain("RETURN TO DASHBOARD");
     expect(full).not.toContain("Basic · Incomplete");

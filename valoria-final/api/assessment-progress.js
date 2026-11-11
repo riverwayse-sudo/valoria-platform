@@ -101,7 +101,7 @@ async function getProgressByTasterId(tasterId) {
     limit: "1",
   });
   const res = await supabase(`valu_assessment_progress?${params}`);
-  if (!res.ok) throw new Error("Could not retrieve the saved VALU assessment.");
+  if (!res.ok) throw new Error("Could not retrieve the saved VALU Index.");
   return (await res.json())?.[0] || null;
 }
 
@@ -111,7 +111,7 @@ async function sendReminder(row, reminderNumber) {
   const dashboardUrl = getDashboardUrl();
   if (!dashboardUrl) return false;
   const subject = reminderNumber === 1
-    ? "Your VALU assessment is waiting for you"
+    ? "Your VALU Index is waiting for you"
     : "Continue your VALU journey";
 
   const html = `<!doctype html><html><body style="margin:0;background:#1A1A2E;color:#F7F4EE;font-family:Arial,sans-serif">
@@ -119,7 +119,7 @@ async function sendReminder(row, reminderNumber) {
     <div style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700">VALORIA INSTITUTE · VALU</div>
     <h1 style="font-weight:400;font-size:34px;line-height:1.15;margin:26px 0 16px">You can continue where you stopped.</h1>
     <p style="color:rgba(247,244,238,.7);font-size:15px;line-height:1.8">
-      ${row.name || "Your"} VALU assessment is still in progress. Your answers have been saved, so you do not need to start again.
+      ${row.name || "Your"} VALU Index is still in progress. Your answers have been saved, so you do not need to start again.
     </p>
     <div style="margin:28px 0;padding:20px;border:1px solid rgba(201,168,76,.22);background:rgba(201,168,76,.06);border-radius:8px">
       <div style="font-size:11px;letter-spacing:.14em;color:#C9A84C;font-weight:700">YOUR PROGRESS</div>
@@ -145,11 +145,11 @@ async function sendReminder(row, reminderNumber) {
 
 async function createNotification(row) {
   if (!row.user_id) return;
-  const body = "Your VALU assessment is still in progress. Sign in to your Valoria dashboard to see your progress and continue securely.";
+  const body = "Your VALU Index is still in progress. Sign in to your Valoria dashboard to see your progress and continue securely.";
   const payload = {
     user_id: row.user_id,
     type: "assessment_abandoned",
-    title: "Your VALU assessment is waiting",
+    title: "Your VALU Index is waiting",
     body,
     action_label: "Open dashboard",
     action_url: '/dashboard',
@@ -268,7 +268,7 @@ async function baseHandler(req) {
     try {
       // Restore only the separate full-assessment progress record.
       // The 9-question taster remains in taster_progress/taster_sessions and is
-      // never read, merged or scored as part of the 58-question full assessment.
+      // never read, merged or scored as part of the 58-question full VALU Index.
       const progress = await getProgressByTasterId(tasterId);
       if (!progress) return json({ ok: true, progress: null });
       if (Number(progress.total_questions) !== QUESTIONS.length) {
@@ -294,7 +294,7 @@ async function baseHandler(req) {
         progress.user_id = resolvedIdentity.user_id;
       }
       // Taster answers are stored separately. This response contains only the
-      // participant's saved answers to the independent full assessment.
+      // participant's saved answers to the independent full VALU Index.
       return json({ ok: true, progress });
     } catch (err) {
       return json({ error: err.message || "Could not restore saved VALU progress." }, 502);
