@@ -74,6 +74,14 @@ describe("create-account: existing email guidance", () => {
     expect(calls.some(call => call.url.includes("auth/v1/admin/generate_link"))).toBe(false);
   });
 
+  test("rejects passwords longer than 128 characters", async () => {
+    const password = "A".repeat(125) + "a1!x";
+    const { res, body, calls } = await run({}, { password });
+    expect(res.status).toBe(400);
+    expect(body.error).toContain("12–128 characters");
+    expect(calls.some(call => call.url.includes("auth/v1/admin/generate_link"))).toBe(false);
+  });
+
   test("accepts a password that satisfies the shared Valoria policy", async () => {
     const { res } = await run({}, { password: "Correct-Horse-Battery-9!" });
     expect(res.status).toBe(200);
