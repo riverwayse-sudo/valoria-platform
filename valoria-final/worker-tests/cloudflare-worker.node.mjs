@@ -177,3 +177,10 @@ test("account confirmation redirects honor only exact allowed site request origi
   assert.equal(getSiteOrigin({ headers: { origin: "https://staging.valoriainstitute.com" } }), "https://staging.valoriainstitute.com");
   assert.equal(getSiteOrigin({ headers: { origin: "https://attacker.example" } }), "https://valoria-staging-site.riverwayse.workers.dev");
 });
+
+test("assessment app is never indexed and production analytics is disabled in staging builds", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(html, /name="robots" content="noindex,nofollow"/);
+  assert.doesNotMatch(html, /<script async src="https:\/\/www\.googletagmanager\.com/);
+  assert.match(html, /VITE_VALU_STAGING !== '1'/);
+});
