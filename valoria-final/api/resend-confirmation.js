@@ -1,12 +1,12 @@
 export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
+import { getSiteOrigin } from "./_siteOrigin.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const VALORIA_SITE_URL = "https://valoriainstitute.com";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -64,7 +64,8 @@ export default async function handler(req) {
 
   // Re-issue a signup confirmation, not a magic-link sign-in. The canonical callback
   // establishes the session and links the assessment only after email verification.
-  const redirectUrl = `${VALORIA_SITE_URL}/auth/callback?identity_hash=${encodeURIComponent(identityHash)}&report_token=${encodeURIComponent(row.report_token)}`;
+  const siteOrigin = getSiteOrigin(req);
+  const redirectUrl = `${siteOrigin}/auth/callback?identity_hash=${encodeURIComponent(identityHash)}&report_token=${encodeURIComponent(row.report_token)}`;
   // If the account is already confirmed, avoid sending another signup link.
   if (row.user_id) {
     try {
