@@ -49,9 +49,9 @@ function validPartialAnswers(value) {
 async function getProgress(tokenHash) {
   const params = new URLSearchParams({
     resume_token_hash: `eq.${tokenHash}`,
-    status: 'eq.in_progress',
+    status: 'in.(in_progress,completed)',
     expires_at: `gt.${new Date().toISOString()}`,
-    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,lead_capture_id',
+    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,lead_capture_id,taster_id',
     limit: '1',
   });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, { headers: headers() });
@@ -140,7 +140,7 @@ export default async function handler(req, res) {
     if (!progress) return json(res, 404, { error: 'This session has expired or is no longer resumable.' });
 
     if (action === 'load') {
-      return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, lead_capture_id: progress.lead_capture_id || null, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null } });
+      return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, lead_capture_id: progress.lead_capture_id || null, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null, status: progress.status, taster_id: progress.taster_id || null } });
     }
 
     if (action === 'save') {
@@ -156,6 +156,15 @@ export default async function handler(req, res) {
       }
       if (progress.submission_key && submissionKey && progress.submission_key !== submissionKey) {
         return json(res, 409, { error: 'This taster already has a different submission reference. Reload your saved progress.' });
+      }
+      if (progress.status === 'completed') {
+        const sameAnswers = Object.keys(progress.answers || {}).length === Object.keys(answers).length
+          && Object.entries(answers).every(([key, value]) => progress.answers?.[key] === value);
+        if (currentQuestion !== TASTER_QUESTIONS.length || !progress.taster_id
+          || !progress.submission_key || progress.submission_key !== submissionKey || !sameAnswers) {
+          return json(res, 409, { error: 'This taster is already completed and cannot be changed.' });
+        }
+        return json(res, 200, { saved: true, completed: true, taster_id: progress.taster_id, submission_key: progress.submission_key });
       }
       const patch = {
         answers,
@@ -184,6 +193,10 @@ export default async function handler(req, res) {
     const tasterResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, { headers: headers() });
     if (!tasterResponse.ok) return json(res, 502, { error: 'Could not verify the completed taster reference.' });
     if (!(await tasterResponse.json())?.[0]?.id) return json(res, 409, { error: 'The taster reference does not match this saved submission.' });
+    if (progress.status === 'completed') {
+      if (progress.taster_id !== tasterId) return json(res, 409, { error: 'This taster was completed with a different saved reference.' });
+      return json(res, 200, { completed: true, already_completed: true });
+    }
     const params = new URLSearchParams({ id: `eq.${progress.id}`, status: 'eq.in_progress', select: 'id' });
     const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, {
       method: 'PATCH', headers: { ...headers(), Prefer: 'return=representation' },
