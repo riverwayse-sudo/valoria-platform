@@ -85,6 +85,46 @@ describe("registration-first taster API payload", () => {
     expect(calls.some(call => call.url.endsWith("/rest/v1/taster_progress"))).toBe(false);
   });
 
+  test("completed progress can be retried idempotently without mutating the saved taster", async () => {
+    const calls = [];
+    global.fetch = async (url, options = {}) => {
+      calls.push({ url, options });
+      if (url.includes("rpc/consume_rate_limit")) return response(200, [{ allowed: true, remaining: 179 }]);
+      if (url.includes("rest/v1/taster_progress?")) {
+        if (!options.method || options.method === "GET") return response(200, [{
+          id: PROGRESS_ID, name: "Staging Test Participant", role: "Operations Director",
+          experience: EXPERIENCE_BANDS[0].id, email: "participant@example.invalid",
+          current_question: 9, answers: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 },
+          submission_key: "44444444-4444-4444-8444-444444444444",
+          status: "completed", expires_at: "2099-01-01T00:00:00.000Z",
+          lead_capture_id: LEAD_CAPTURE_ID, taster_id: "55555555-5555-4555-8555-555555555555"
+        }]);
+        throw new Error("completed progress must not be patched");
+      }
+      if (url.includes("rest/v1/taster_sessions?")) return response(200, [{ id: "55555555-5555-4555-8555-555555555555" }]);
+      throw new Error("unexpected fetch: " + url);
+    };
+    const handler = loadHandler();
+    const req = request("save");
+    req.body = {
+      action: "save", resume_token: RESUME_TOKEN,
+      answers: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 },
+      current_question: 9, submission_key: "44444444-4444-4444-8444-444444444444"
+    };
+    const saveRes = makeRes();
+    await handler(req, saveRes);
+    expect(saveRes.statusCode).toBe(200);
+    expect(saveRes.body).toMatchObject({ saved: true, completed: true, taster_id: "55555555-5555-4555-8555-555555555555" });
+    expect(calls.some(call => call.options.method === "PATCH")).toBe(false);
+
+    const completeReq = { ...req, body: { ...req.body, action: "complete", taster_id: "55555555-5555-4555-8555-555555555555" } };
+    const completeRes = makeRes();
+    await handler(completeReq, completeRes);
+    expect(completeRes.statusCode).toBe(200);
+    expect(completeRes.body).toMatchObject({ completed: true, already_completed: true });
+    expect(calls.some(call => call.options.method === "PATCH")).toBe(false);
+  });
+
   test("rejects the old anonymous init action", async () => {
     const calls = installFetch();
     const res = makeRes();
