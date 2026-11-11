@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-process.env.VALU_PREVIEW_SITE_ORIGIN = "https://site-preview.example";
+process.env.VALU_PREVIEW_SITE_ORIGIN = "https://site-preview.example,https://site-preview-two.example";
 process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN = "https://assessment-preview.example";
 process.env.SUPABASE_URL = "https://staging-db.invalid";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-only-service-role-key";
@@ -63,6 +63,7 @@ test("assessment API preflight allows the production site and exact preview orig
   for (const origin of [
     "https://www.valoriainstitute.com",
     "https://site-preview.example",
+    "https://site-preview-two.example",
     "https://assessment-preview.example",
   ]) {
     const response = await worker.fetch(new Request("https://assessment.example/api/taster-progress", {
@@ -158,4 +159,21 @@ test("unsent report sweep endpoint is registered and requires cron authenticatio
   assert.equal(response.status, 401);
   assert.match(await response.text(), /Unauthorized/);
   assert.deepEqual(env.seen, []);
+});
+
+test("staging Wrangler environment targets the existing staging Worker and staging database only", () => {
+  const config = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
+  assert.equal(config.env.staging.name, "valoria-staging-assessment");
+  assert.equal(config.env.staging.vars.SUPABASE_URL, "https://yccxgjdqworgcbircnvn.supabase.co");
+  assert.equal(config.env.staging.vars.VALU_PRODUCTION_SUPABASE_URL, undefined);
+  assert.equal(config.previews.vars.VALU_PRODUCTION_SUPABASE_URL, undefined);
+  assert.match(config.env.staging.vars.VALU_PREVIEW_SITE_ORIGIN, /valoria-current-site-audit-staging/);
+});
+
+test("account confirmation redirects honor only exact allowed site request origins", async () => {
+  const { getSiteOrigin } = await import("../api/_siteOrigin.js");
+  process.env.VALORIA_SITE_URL = "https://valoria-staging-site.riverwayse.workers.dev";
+  assert.equal(getSiteOrigin({ headers: { origin: "https://valoria-current-site-audit-staging.riverwayse.workers.dev" } }), "https://valoria-current-site-audit-staging.riverwayse.workers.dev");
+  assert.equal(getSiteOrigin({ headers: { origin: "https://staging.valoriainstitute.com" } }), "https://staging.valoriainstitute.com");
+  assert.equal(getSiteOrigin({ headers: { origin: "https://attacker.example" } }), "https://valoria-staging-site.riverwayse.workers.dev");
 });
