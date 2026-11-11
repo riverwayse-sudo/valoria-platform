@@ -22,7 +22,7 @@ function deriveTier(score: number | null): string {
 function getNextSteps(score: number | null): string {
   if (score === null) {
     return `
-      <li>Complete your VALU Index assessment to receive your official points score.</li>
+      <li>Complete the VALU Index to receive your official points score.</li>
       <li>Return to your dashboard to continue your professional profile.</li>
       <li>Marketplace visibility follows the full VALU Index, profile and capability eligibility checks.</li>
     `;
