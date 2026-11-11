@@ -511,18 +511,18 @@ export default function FullVALUAssessment() {
     }
   }
 
-  if (resumeLoading) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>Your progress is being retrieved securely.</p></Shell>;
+  if (resumeLoading) return <Shell><div style={S.eyebrow}>VALU INDEX JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>Your progress is being retrieved securely.</p></Shell>;
 
-  if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
+  if (resumeError) return <Shell><div style={S.eyebrow}>VALU INDEX JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
   // The initial identity is intentionally empty until the dashboard handoff
   // is exchanged. Render verification first; otherwise the empty-identity
   // guard masks the real handoff response and falsely reports "unavailable".
-  if (handoffStatus === 'checking') return <Shell><div style={S.eyebrow}>SECURE VALU JOURNEY</div><h1 style={S.h1}>Verifying your account…</h1><p style={S.p}>We are confirming that this assessment belongs to your Valoria account before you continue.</p></Shell>;
+  if (handoffStatus === 'checking') return <Shell><div style={S.eyebrow}>SECURE VALU INDEX JOURNEY</div><h1 style={S.h1}>Verifying your account…</h1><p style={S.p}>We are confirming that this assessment belongs to your Valoria account before you continue.</p></Shell>;
 
   if (handoffStatus !== 'ready') {
     return <Shell>
-      <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
+      <div style={S.eyebrow}>SECURE VALU INDEX JOURNEY</div>
       <h1 style={S.h1}>Return to your Valoria dashboard.</h1>
       <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved taster and answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
@@ -532,7 +532,7 @@ export default function FullVALUAssessment() {
 
   if (!canUse) return <Shell><h1 style={S.h1}>Full VALU Index unavailable.</h1><p style={S.p}>The secure dashboard handoff was verified, but the saved assessment identity is incomplete. Return to your dashboard and contact Valoria support if this continues.</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
-  if (!identity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
+  if (!identity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU INDEX JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
 
   if (result) {
     const score = result.valuIndex ?? result.total_score ?? result.score;

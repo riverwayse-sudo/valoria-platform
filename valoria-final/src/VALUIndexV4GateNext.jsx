@@ -42,7 +42,7 @@ const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS=
 const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 
-// Entry flow for the VALU journey.
+// Entry flow for the VALU Index Taster.
 // Participants begin with the VALU Index Taster before account setup.
 // Taster responses are stored and scored independently; they never populate
 // the formal VALU Index response record.
@@ -176,7 +176,7 @@ export default function VALUIndexV4GateNext(){
     organisation:organisation.trim(),interest,
     marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
    });
-   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU journey. Please retry.');
+   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to the VALU Index Taster. Please retry.');
    const answeredCount=Object.keys(answers).length;
    const complete=current===TASTER_QUESTIONS.length-1&&answeredCount===TASTER_QUESTIONS.length&&!!submissionKey;
    setPhase(complete?'break':answeredCount?'session1':'intro');
