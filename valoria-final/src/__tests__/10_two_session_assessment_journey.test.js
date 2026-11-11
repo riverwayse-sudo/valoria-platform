@@ -108,6 +108,13 @@ describe("nine-question taster and account bridge", () => {
     expect(handoff.indexOf("if(completion?.completed!==true)")).toBeLessThan(handoff.indexOf("window.location.assign"));
   });
 
+  test("completion retries reuse the already completed taster instead of resubmitting it", () => {
+    const source = gateSource();
+    expect(source).toContain("if(saved.completed===true&&saved.taster_id)");
+    expect(source).toContain("data={taster_id:saved.taster_id}");
+    expect(source).toContain("instead of submitting a duplicate");
+  });
+
   test("a failed completion confirmation keeps the resumable session instead of redirecting as a pending account handoff", () => {
     const source = gateSource();
     const handoff = source.slice(source.indexOf("async function createAccount"));
