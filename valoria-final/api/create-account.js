@@ -28,9 +28,9 @@ function journeyEmailHtml(name, score, designation) {
     <body style="margin:0;padding:0;background:#1A1A2E;font-family:Arial,sans-serif;color:#F7F4EE;">
       <div style="max-width:600px;margin:0 auto;padding:48px 32px;">
         <div style="text-align:center;margin-bottom:36px;"><img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:42px;"></div>
-        <p style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700;">VALU INDEX · RESULT READY</p>
+        <p style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700;">VALU INDEX · ASSESSMENT COMPLETE</p>
         <h1 style="font-size:30px;line-height:1.2;font-weight:600;color:#F7F4EE;">Your Valoria journey has moved forward.</h1>
-        <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU Index is complete and your result is saved. Your professional record remains private while you confirm your email and complete the required profile and eligibility checks.</p>
+        <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU assessment is complete and your assessment is saved. Your professional record remains private while you confirm your email and complete the required profile and eligibility checks.</p>
         <div style="margin:28px 0;padding:24px;border:1px solid rgba(201,168,76,.25);background:rgba(201,168,76,.06);border-radius:10px;text-align:center;">
           <div style="font-size:48px;font-weight:700;color:#C9A84C;">${escapeHtml(score)}</div>
           <div style="font-size:11px;letter-spacing:.14em;color:rgba(247,244,238,.55);">VALU INDEX</div>
@@ -100,7 +100,22 @@ export default async function handler(req) {
   const normalizedEmail = email.trim().toLowerCase();
   const emailLimit = await checkRateLimit(req, { namespace: "account-create-email", limit: 3, windowSeconds: 3600, subject: normalizedEmail });
   if (!emailLimit.allowed) return emailLimit.response;
-  if (!password || typeof password !== "string" || password.length < 8 || password.length > 128) return json({ error: "Password must be 8–128 characters." }, 400);
+  const commonPasswords = new Set([
+    "password123!", "password123", "password!", "qwerty123!", "qwerty123",
+    "123456789012", "1234567890!", "valoria123!", "valoria123", "welcome123!",
+    "admin123!", "letmein123!", "changeme123!",
+  ]);
+  const passwordValid = typeof password === "string"
+    && password.length >= 12
+    && password.length <= 128
+    && /[A-Z]/.test(password)
+    && /[a-z]/.test(password)
+    && /[0-9]/.test(password)
+    && /[^A-Za-z0-9]/.test(password)
+    && !commonPasswords.has(password.toLowerCase());
+  if (!passwordValid) return json({
+    error: "Use 12–128 characters with uppercase, lowercase, a number and a symbol. Avoid common passwords.",
+  }, 400);
   if (identity_hash !== undefined && identity_hash !== null && (typeof identity_hash !== "string" || !/^fp_[a-z0-9]{1,128}$/i.test(identity_hash))) return json({ error: "Invalid identity reference." }, 400);
 
   const adminHeaders = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" };
@@ -235,8 +250,8 @@ export default async function handler(req) {
         body: JSON.stringify({
           user_id: userId,
           type: "assessment_complete",
-          title: "Your VALU Index is complete",
-          body: "Your VALU Index is saved. Confirm your email and complete your professional profile; your record remains private until eligibility checks are complete.",
+          title: "Your VALU assessment is complete",
+          body: "Your VALU assessment is saved. Confirm your email and complete your professional profile; your record remains private until eligibility checks are complete.",
           action_label: "Open your dashboard",
           action_url: "/dashboard",
         }),
@@ -252,7 +267,7 @@ export default async function handler(req) {
           body: JSON.stringify({
             from: "Valoria Institute <hello@valoriainstitute.com>",
             to: normalizedEmail,
-            subject: "Your VALU Index Is Saved — Here's What Happens Next",
+            subject: "Your VALU Assessment Is Saved — Here's What Happens Next",
             html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, canonicalDesignationName(assessment.total_score) || ''),
           }),
         });

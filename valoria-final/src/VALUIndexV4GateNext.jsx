@@ -42,10 +42,10 @@ const DARK='#1A1A2E', SURFACE='#2E2E4A', PARCH='#FAFAF7', GOLD='#C9A84C', BRASS=
 const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 
-// Entry flow for the VALU Index Taster.
-// Participants begin with the VALU Index Taster before account setup.
+// Entry flow for the VALU journey.
+// Participants begin with the VALU taster before account setup.
 // Taster responses are stored and scored independently; they never populate
-// the formal VALU Index response record.
+// the formal VALU assessment response record.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
@@ -176,7 +176,7 @@ export default function VALUIndexV4GateNext(){
     organisation:organisation.trim(),interest,
     marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
    });
-   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to the VALU Index Taster. Please retry.');
+   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU Index journey. Please retry.');
    const answeredCount=Object.keys(answers).length;
    const complete=current===TASTER_QUESTIONS.length-1&&answeredCount===TASTER_QUESTIONS.length&&!!submissionKey;
    setPhase(complete?'break':answeredCount?'session1':'intro');
@@ -198,14 +198,23 @@ export default function VALUIndexV4GateNext(){
    setSubmissionKey(key);
    const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:TASTER_QUESTIONS.length,submission_key:key});
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
-   const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
+   let data;
+   if(saved.completed===true&&saved.taster_id){
+    // A previous completion may have committed even if its HTTP response was lost.
+    // Reuse the verified taster reference instead of submitting a duplicate.
+    data={taster_id:saved.taster_id};
+   }else{
+    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
+    data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
+   }
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
    setTasterId(data.taster_id);
-   try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    const completion=await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
    if(completion?.completed!==true)throw new Error('Your taster is saved, but we could not confirm the completion step. Please retry.');
+   // Only mark the taster as pending account linkage after completion is confirmed.
+   // If confirmation fails, the resume token remains available for a safe retry.
+   try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
@@ -275,7 +284,7 @@ export default function VALUIndexV4GateNext(){
  if(phase==='break')return <Shell>
   <VALUAssessmentJourney stage="account" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU INDEX v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your taster is <em>saved.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
   </section>
@@ -313,7 +322,7 @@ export default function VALUIndexV4GateNext(){
    <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO ACCOUNT CREATION →'}</button>
    <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
   </section>
-  <p style={S.note}>Completing the VALU Index Taster does not automatically grant marketplace listing. Listing eligibility depends on the full VALU Index, professional profile, capabilities, and applicable eligibility checks.</p>
+  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
 
  return <Shell mode="taster">
