@@ -672,7 +672,7 @@ function buildReportPrompt(scoreProfile) {
     const skills = sortedSkills.filter(([s]) => SKILL_CLUSTER[s] === c.id);
     return `${c.name} (${clusterScores[c.id]} points):\n` + skills.map(([s,sc]) => `  - ${s}: ${sc} points`).join("\n");
   }).join("\n\n");
-  return `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index assessment.
+  return `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index.
 YOUR WRITING RULES:
 1. Write like a trusted senior colleague who tells the truth.
 2. Use plain, direct language.
