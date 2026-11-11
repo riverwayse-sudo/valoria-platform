@@ -54,7 +54,7 @@ describe("VALU assessment left-alignment contract", () => {
   test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
     const full = read("FullVALUAssessment.jsx");
     expect(full).toContain("Your VALU Index is complete.");
-    expect(full).toContain("Your Full VALU assessment is complete.");
+    expect(full).toContain("Your Full VALU Index is complete.");
     expect(full).toContain("COMPLETE MY PROFILE");
     expect(full).toContain("RETURN TO DASHBOARD");
     expect(full).not.toContain("Basic · Incomplete");
