@@ -100,7 +100,22 @@ export default async function handler(req) {
   const normalizedEmail = email.trim().toLowerCase();
   const emailLimit = await checkRateLimit(req, { namespace: "account-create-email", limit: 3, windowSeconds: 3600, subject: normalizedEmail });
   if (!emailLimit.allowed) return emailLimit.response;
-  if (!password || typeof password !== "string" || password.length < 8 || password.length > 128) return json({ error: "Password must be 8–128 characters." }, 400);
+  const commonPasswords = new Set([
+    "password123!", "password123", "password!", "qwerty123!", "qwerty123",
+    "123456789012", "1234567890!", "valoria123!", "valoria123", "welcome123!",
+    "admin123!", "letmein123!", "changeme123!",
+  ]);
+  const passwordValid = typeof password === "string"
+    && password.length >= 12
+    && password.length <= 128
+    && /[A-Z]/.test(password)
+    && /[a-z]/.test(password)
+    && /[0-9]/.test(password)
+    && /[^A-Za-z0-9]/.test(password)
+    && !commonPasswords.has(password.toLowerCase());
+  if (!passwordValid) return json({
+    error: "Use 12–128 characters with uppercase, lowercase, a number and a symbol. Avoid common passwords.",
+  }, 400);
   if (identity_hash !== undefined && identity_hash !== null && (typeof identity_hash !== "string" || !/^fp_[a-z0-9]{1,128}$/i.test(identity_hash))) return json({ error: "Invalid identity reference." }, 400);
 
   const adminHeaders = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" };
