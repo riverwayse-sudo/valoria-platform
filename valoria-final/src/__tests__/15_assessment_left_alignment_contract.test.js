@@ -4,10 +4,21 @@ const fs = require("fs");
 const path = require("path");
 
 const read = relative => fs.readFileSync(path.join(__dirname, "..", relative), "utf8");
+const readRoot = relative => fs.readFileSync(path.join(__dirname, "..", "..", relative), "utf8");
 
 describe("VALU assessment left-alignment contract", () => {
   test("the shared assessment stylesheet is loaded by the application entry point", () => {
     expect(read("main.jsx")).toContain("import './assessment.css'");
+  });
+
+  test("participant-facing report and waitlist copy use VALU Index as the product name", () => {
+    const report = readRoot("run-report.js");
+    const sendEmail = readRoot("api/send-email.js");
+    const generatedReport = readRoot("api/generate-and-send-report.js");
+    const waitlist = readRoot("public/Waitlist.html");
+    expect([report, sendEmail, generatedReport, waitlist].join("\\n")).not.toMatch(/VALU\\s+Index\\s+assessment/i);
+    expect(sendEmail).toContain("Your VALU Index is complete.");
+    expect(waitlist).toContain("begin the VALU Index.");
   });
 
   test("the full assessment shell receives the same page class as the taster", () => {
