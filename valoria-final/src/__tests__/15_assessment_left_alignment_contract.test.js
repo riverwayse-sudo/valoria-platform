@@ -16,7 +16,7 @@ describe("VALU assessment left-alignment contract", () => {
     const sendEmail = readRoot("api/send-email.js");
     const generatedReport = readRoot("api/generate-and-send-report.js");
     const waitlist = readRoot("public/Waitlist.html");
-    expect([report, sendEmail, generatedReport, waitlist].join("\\n")).not.toMatch(/VALU\\s+Index\\s+assessment/i);
+    expect([report, sendEmail, generatedReport, waitlist].join("\\n")).not.toMatch(/VALU\s+Index\s+assessment/i);
     expect(sendEmail).toContain("Your VALU Index is complete.");
     expect(waitlist).toContain("begin the VALU Index.");
   });
