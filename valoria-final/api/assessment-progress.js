@@ -112,7 +112,7 @@ async function sendReminder(row, reminderNumber) {
   if (!dashboardUrl) return false;
   const subject = reminderNumber === 1
     ? "Your VALU Index is waiting for you"
-    : "Continue your VALU journey";
+    : "Continue your VALU Index";
 
   const html = `<!doctype html><html><body style="margin:0;background:#1A1A2E;color:#F7F4EE;font-family:Arial,sans-serif">
   <div style="max-width:620px;margin:0 auto;padding:48px 28px">
