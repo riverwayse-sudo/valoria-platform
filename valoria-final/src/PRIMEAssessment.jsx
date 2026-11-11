@@ -717,7 +717,7 @@ function CompletionJourneyModal({ open, score, onClose }) {
     <div style={{ position:"fixed", inset:0, zIndex:1200, background:"rgba(15,15,26,.78)", backdropFilter:"blur(10px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ width:"100%", maxWidth:520, background:T.midnight, border:"1px solid rgba(201,168,76,.35)", borderRadius:18, padding:"34px 30px", boxShadow:"0 24px 80px rgba(0,0,0,.4)" }}>
         <div style={{ width:52, height:52, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(201,168,76,.1)", border:"1px solid rgba(201,168,76,.35)", color:T.gold, fontSize:24, marginBottom:20 }}>✓</div>
-        <div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:".18em", marginBottom:10, fontFamily:T.font.label }}>VALU JOURNEY · NEXT STAGE</div>
+        <div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:".18em", marginBottom:10, fontFamily:T.font.label }}>VALU INDEX · NEXT STAGE</div>
         <h2 style={{ fontSize:28, lineHeight:1.2, fontWeight:500, color:T.parchment, margin:"0 0 12px", fontFamily:T.font.display }}>Your assessment is complete.</h2>
         <p style={{ fontSize:14, lineHeight:1.8, color:T.text.secondary, margin:"0 0 22px", fontFamily:T.font.body }}>
           Your VALU Index of <strong style={{color:T.gold}}>{score} points</strong> has been recorded and your professional marketplace placement has been initiated.
