@@ -203,9 +203,11 @@ export default function VALUIndexV4GateNext(){
    if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
    setTasterId(data.taster_id);
-   try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    const completion=await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
    if(completion?.completed!==true)throw new Error('Your taster is saved, but we could not confirm the completion step. Please retry.');
+   // Only mark the taster as pending account linkage after completion is confirmed.
+   // If confirmation fails, the resume token remains available for a safe retry.
+   try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
    try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
