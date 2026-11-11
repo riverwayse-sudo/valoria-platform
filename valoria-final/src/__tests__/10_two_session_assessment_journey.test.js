@@ -164,7 +164,7 @@ describe("independent 58-question formal assessment", () => {
 
   test("formal submission requires all 58 answers and never reads taster answer values", () => {
     const api = readApi("submit-assessment.js");
-    expect(api).toContain("Complete the full VALU assessment before submitting");
+    expect(api).toContain("Complete the full VALU Index before submitting");
     expect(api).toContain("const completeAnswers = answers");
     expect(api).toContain("assessment_version: FULL_ASSESSMENT_VERSION");
     expect(api).not.toContain("taster_answers");
@@ -184,7 +184,7 @@ describe("independent 58-question formal assessment", () => {
     expect(source).toContain("title: 'Taster'");
     expect(source).toContain("title: 'Account'");
     expect(source).toContain("title: 'Assessment'");
-    expect(source).toContain("YOUR VALU JOURNEY");
+    expect(source).toContain("YOUR VALU INDEX JOURNEY");
     expect(source).not.toContain("9 questions");
     expect(source).not.toContain("58 questions");
     expect(source).not.toContain("QUESTION ${currentQuestion} OF");
