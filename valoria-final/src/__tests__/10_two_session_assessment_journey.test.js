@@ -82,8 +82,8 @@ describe("nine-question taster and account bridge", () => {
   test("taster completion leads to account creation and does not promise automatic Marketplace listing", () => {
     const source = gateSource();
     expect(source).toContain("Your responses are safely saved. Create your account to continue your Valoria journey.");
-    expect(source).toContain("Completing the VALU Index Taster does not automatically grant marketplace listing.");
-    expect(source).toContain("Listing eligibility depends on the full VALU Index, professional profile, capabilities, and applicable eligibility checks.");
+    expect(source).toContain("Completing the assessment does not grant marketplace listing.");
+    expect(source).toContain("Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.");
     expect(source).not.toContain("will not prefill or count toward it");
     expect(source).not.toContain("58 formal questions from Question 1");
     expect(source).not.toContain("remaining 49 questions");
@@ -106,6 +106,28 @@ describe("nine-question taster and account bridge", () => {
     expect(source).toContain("if(completion?.completed!==true)throw new Error(");
     const handoff = source.slice(source.indexOf("async function createAccount"));
     expect(handoff.indexOf("if(completion?.completed!==true)")).toBeLessThan(handoff.indexOf("window.location.assign"));
+  });
+
+  test("completion retries reuse the already completed taster instead of resubmitting it", () => {
+    const source = gateSource();
+    expect(source).toContain("if(saved.completed===true&&saved.taster_id)");
+    expect(source).toContain("data={taster_id:saved.taster_id}");
+    expect(source).toContain("instead of submitting a duplicate");
+  });
+
+  test("a failed completion confirmation keeps the resumable session instead of redirecting as a pending account handoff", () => {
+    const source = gateSource();
+    const handoff = source.slice(source.indexOf("async function createAccount"));
+    const completion = handoff.indexOf("const completion=await postProgress({action:'complete'");
+    const confirmed = handoff.indexOf("if(completion?.completed!==true)");
+    const pending = handoff.indexOf("localStorage.setItem('pending_taster_id',data.taster_id)");
+    const clearResume = handoff.indexOf("localStorage.removeItem(RESUME_TOKEN_KEY)");
+    const redirect = handoff.indexOf("window.location.assign");
+    expect(completion).toBeGreaterThanOrEqual(0);
+    expect(confirmed).toBeGreaterThan(completion);
+    expect(pending).toBeGreaterThan(confirmed);
+    expect(clearResume).toBeGreaterThan(pending);
+    expect(redirect).toBeGreaterThan(clearResume);
   });
 
   test("the taster never computes or presents an official VALU Index", () => {
@@ -142,7 +164,7 @@ describe("independent 58-question formal assessment", () => {
 
   test("formal submission requires all 58 answers and never reads taster answer values", () => {
     const api = readApi("submit-assessment.js");
-    expect(api).toContain("Complete the full VALU Index before submitting");
+    expect(api).toContain("Complete the full VALU assessment before submitting");
     expect(api).toContain("const completeAnswers = answers");
     expect(api).toContain("assessment_version: FULL_ASSESSMENT_VERSION");
     expect(api).not.toContain("taster_answers");
@@ -162,7 +184,7 @@ describe("independent 58-question formal assessment", () => {
     expect(source).toContain("title: 'Taster'");
     expect(source).toContain("title: 'Account'");
     expect(source).toContain("title: 'Assessment'");
-    expect(source).toContain("YOUR VALU INDEX JOURNEY");
+    expect(source).toContain("YOUR VALU JOURNEY");
     expect(source).not.toContain("9 questions");
     expect(source).not.toContain("58 questions");
     expect(source).not.toContain("QUESTION ${currentQuestion} OF");
