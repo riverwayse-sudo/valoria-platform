@@ -313,7 +313,7 @@ export default async function handler(req, res) {
   if (body.action === 'verify-handoff') return verifyHandoffRequest(body, res);
   const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId, handoff_token: handoffToken } = body;
   if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
-    return json(res, 400, { error: 'Open the full VALU Index from your completed VALU snapshot. A valid snapshot reference is required.' });
+    return json(res, 400, { error: 'Open the full VALU Index from your completed VALU Index Taster. A valid snapshot reference is required.' });
   }
   const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason => {
     console.warn('[submit-assessment] handoff rejected', { action: 'submit', reason });
@@ -345,11 +345,11 @@ export default async function handler(req, res) {
   const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, {
     headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
   });
-  if (!tasterRes.ok) return json(res, 502, { error: 'Could not verify the VALU journey.' });
+  if (!tasterRes.ok) return json(res, 502, { error: 'Could not verify the VALU Index.' });
   taster = (await tasterRes.json())?.[0];
-  if (!taster) return json(res, 404, { error: 'VALU snapshot not found. Return to the VALU journey and complete your snapshot first.' });
-  if (!taster.completed_at) return json(res, 409, { error: 'Complete your VALU snapshot before starting the full VALU Index.' });
-  if (!taster.user_id) return json(res, 409, { error: 'Sign in to your Valoria account and link your VALU snapshot before starting the full VALU Index.' });
+  if (!taster) return json(res, 404, { error: 'VALU Index Taster record not found. Return to the VALU Index Taster and complete it first.' });
+  if (!taster.completed_at) return json(res, 409, { error: 'Complete the VALU Index Taster before starting the full VALU Index.' });
+  if (!taster.user_id) return json(res, 409, { error: 'Sign in to your Valoria account and link your VALU Index Taster before starting the full VALU Index.' });
   if (taster.user_id !== handoff.sub) return json(res, 403, { error: 'This secure assessment handoff does not belong to the linked account.' });
   if (String(taster.name || '').trim().toLowerCase() !== name.trim().toLowerCase() ||
       String(taster.role || '').trim().toLowerCase() !== role.trim().toLowerCase()) {
