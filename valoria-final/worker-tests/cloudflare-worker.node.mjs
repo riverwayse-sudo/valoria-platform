@@ -167,13 +167,20 @@ test("staging Wrangler environment targets the existing staging Worker and stagi
   assert.equal(config.env.staging.vars.SUPABASE_URL, "https://yccxgjdqworgcbircnvn.supabase.co");
   assert.equal(config.env.staging.vars.VALU_PRODUCTION_SUPABASE_URL, undefined);
   assert.equal(config.previews.vars.VALU_PRODUCTION_SUPABASE_URL, undefined);
-  assert.equal(config.env.staging.vars.VALU_PREVIEW_SITE_ORIGIN, "https://valoria-staging-site.riverwayse.workers.dev");
+  assert.deepEqual(
+    config.env.staging.vars.VALU_PREVIEW_SITE_ORIGIN.split(","),
+    [
+      "https://valoria-staging-site.riverwayse.workers.dev",
+      "https://valoria-redesign-staging-site.riverwayse.workers.dev",
+    ],
+  );
 });
 
 test("account confirmation redirects honor only exact allowed site request origins", async () => {
   const { getSiteOrigin } = await import("../api/_siteOrigin.js");
   process.env.VALORIA_SITE_URL = "https://valoria-staging-site.riverwayse.workers.dev";
   assert.equal(getSiteOrigin({ headers: { origin: "https://valoria-staging-site.riverwayse.workers.dev" } }), "https://valoria-staging-site.riverwayse.workers.dev");
+  assert.equal(getSiteOrigin({ headers: { origin: "https://valoria-redesign-staging-site.riverwayse.workers.dev" } }), "https://valoria-redesign-staging-site.riverwayse.workers.dev");
   assert.equal(getSiteOrigin({ headers: { origin: "https://staging.valoriainstitute.com" } }), "https://staging.valoriainstitute.com");
   assert.equal(getSiteOrigin({ headers: { origin: "https://attacker.example" } }), "https://valoria-staging-site.riverwayse.workers.dev");
 });
