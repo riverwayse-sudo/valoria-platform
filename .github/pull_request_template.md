@@ -35,3 +35,19 @@
 - [ ] All required CI checks pass (no skipped/cancelled required checks)
 - [ ] Exact deployment commit/version and rollback path identified
 - [ ] Change complies with `ENGINEERING_STANDARD.md`
+
+## Component change-control (required for behavior changes)
+- **Target component(s) / status / baseline commit:**
+- **Requested outcome and in-scope behavior:**
+- **Explicitly out of scope:**
+- **Affected dependencies / neighboring components:**
+- **Protected components inspected:**
+- **Rollback / recovery:**
+
+- [ ] Change is limited to named component(s), or cross-component impact is explicitly mapped
+- [ ] No unrelated cleanup, redesign, dependency upgrade or behavior change is bundled
+- [ ] Protected neighboring components remain unchanged, or reason and tests are documented
+- [ ] Boundary and dependent-component regression tests are included
+- [ ] Participant data, identity links, assessment answers/scores and consent remain unchanged unless explicitly authorized
+- [ ] Real participant/owner accounts and real email recipients were not used without explicit authorization
+- [ ] Component status and evidence will be updated in the quality register
