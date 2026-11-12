@@ -1,27 +1,35 @@
 // Shared CORS policy for public assessment endpoints.
 //
-// The VALU assessment UI is served from assessment.valoriainstitute.com and,
-// during migration, proxied under valoriainstitute.com/valu/assessment/. Both
+// The VALU assessment UI is served from assessment.valoriainstitute.com or the
+// isolated assessment-staging.valoriainstitute.com host and can also be proxied
+// under valoriainstitute.com/valu/assessment/. Both
 // surfaces call the API at the assessment deployment root, so those POSTs are
 // cross-origin and require an explicit preflight response. Without it the
 // browser blocks every taster request with a CORS error even though the handler
 // itself would have succeeded.
-function configuredHttpsOrigin(value) {
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' ? url.origin : null;
-  } catch {
-    return null;
-  }
+function configuredHttpsOrigins(value) {
+  if (!value) return [];
+  return String(value).split(',').map((candidate) => {
+    const exact = candidate.trim();
+    if (!exact) return null;
+    try {
+      const url = new URL(exact);
+      return url.protocol === 'https:' && (url.origin === exact || `${url.origin}/` === exact)
+        ? url.origin
+        : null;
+    } catch {
+      return null;
+    }
+  }).filter(Boolean);
 }
 
-// Preview origins are exact Worker Preview URLs configured in the preview
-// environment. Never wildcard *.workers.dev or accept caller-provided origins.
+// Preview origins are exact Worker URLs configured in the environment.
+// Multiple explicit site origins are allowed for isolated staging candidates.
+// Never wildcard *.workers.dev or accept caller-provided origins.
 const previewOrigins = [
-  typeof process !== 'undefined' ? process.env.VALU_PREVIEW_SITE_ORIGIN : null,
-  typeof process !== 'undefined' ? process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN : null,
-].map(configuredHttpsOrigin).filter(Boolean);
+  ...configuredHttpsOrigins(typeof process !== 'undefined' ? process.env.VALU_PREVIEW_SITE_ORIGIN : null),
+  ...configuredHttpsOrigins(typeof process !== 'undefined' ? process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN : null),
+];
 
 const ALLOWED_ORIGINS = new Set([
   'https://valoriainstitute.com',

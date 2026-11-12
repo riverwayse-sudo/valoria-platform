@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-process.env.VALU_PREVIEW_SITE_ORIGIN = "https://site-preview.example";
-process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN = "https://assessment-preview.example";
+process.env.VALU_PREVIEW_SITE_ORIGIN = "https://staging.valoriainstitute.com";
+process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN = "https://assessment-staging.valoriainstitute.com";
 process.env.SUPABASE_URL = "https://staging-db.invalid";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-only-service-role-key";
 process.env.CRON_SECRET = "test-only-cron-secret";
@@ -62,8 +62,8 @@ test("assessment API preflight allows the production site and exact preview orig
   const env = makeEnv();
   for (const origin of [
     "https://www.valoriainstitute.com",
-    "https://site-preview.example",
-    "https://assessment-preview.example",
+    "https://staging.valoriainstitute.com",
+    "https://assessment-staging.valoriainstitute.com",
   ]) {
     const response = await worker.fetch(new Request("https://assessment.example/api/taster-progress", {
       method: "OPTIONS",
@@ -158,4 +158,34 @@ test("unsent report sweep endpoint is registered and requires cron authenticatio
   assert.equal(response.status, 401);
   assert.match(await response.text(), /Unauthorized/);
   assert.deepEqual(env.seen, []);
+});
+
+test("staging Wrangler environment targets the existing staging Worker and staging database only", () => {
+  const config = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
+  assert.equal(config.env.staging.name, "valoria-staging-assessment");
+  assert.equal(config.env.staging.vars.SUPABASE_URL, "https://yccxgjdqworgcbircnvn.supabase.co");
+  assert.equal(config.env.staging.vars.VALU_PRODUCTION_SUPABASE_URL, undefined);
+  assert.equal(config.previews.vars.VALU_PRODUCTION_SUPABASE_URL, undefined);
+  assert.deepEqual(
+    config.env.staging.vars.VALU_PREVIEW_SITE_ORIGIN.split(","),
+    [
+      "https://staging.valoriainstitute.com",
+    ],
+  );
+});
+
+test("account confirmation redirects honor only exact allowed site request origins", async () => {
+  const { getSiteOrigin } = await import("../api/_siteOrigin.js");
+  process.env.VALORIA_SITE_URL = "https://staging.valoriainstitute.com";
+  assert.equal(getSiteOrigin({ headers: { origin: "https://staging.valoriainstitute.com" } }), "https://staging.valoriainstitute.com");
+  assert.equal(getSiteOrigin({ headers: { origin: "https://attacker.example" } }), "https://staging.valoriainstitute.com");
+});
+
+test("assessment app is never indexed and production analytics is disabled in staging builds", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(html, /name="robots" content="noindex,nofollow"/);
+  assert.doesNotMatch(html, /<script async src="https:\/\/www\.googletagmanager\.com/);
+  const main = readFileSync(new URL("../src/main.jsx", import.meta.url), "utf8");
+  assert.match(main, /import\.meta\.env\.PROD/);
+  assert.match(main, /if \(!import\.meta\.env\.PROD \|\| isPreview\) return/);
 });

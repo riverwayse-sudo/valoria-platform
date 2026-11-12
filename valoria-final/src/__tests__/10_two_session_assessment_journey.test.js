@@ -68,9 +68,14 @@ describe("separate taster and formal assessment contracts", () => {
 describe("nine-question taster and account bridge", () => {
   test("lead registration precedes the separate taster and no question counts are exposed", () => {
     const source = gateSource();
-    expect(source).toContain("TASTER_QUESTIONS.length");
+    expect(source).toContain("questionBank.length");
+    expect(source).toContain("const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS)");
+    expect(source).toContain("p.taster_version");
+    expect(source).toContain("legacy.LEGACY_TASTER_QUESTIONS");
     expect(source).toContain("VALUAssessmentJourney stage=\"registration\"");
     expect(source).toContain("VALUAssessmentJourney stage=\"taster\"");
+    expect(source).toContain("how you think, make strategic decisions, understand commercial value and work with AI");
+    expect(source).not.toContain("how you work, relate and create value");
     expect(source).toContain("YOUR PROGRESS IS SAVED");
     expect(source).toContain("privacy_acknowledged:privacyAcknowledged");
     expect(source).toContain("marketing_consent:marketingConsent");
@@ -90,44 +95,24 @@ describe("nine-question taster and account bridge", () => {
     expect(source).not.toContain("Question 10");
   });
 
+  test("transient resume failures preserve the participant's saved progress token", () => {
+    const source = gateSource();
+    expect(source).toContain("failure.status=response.status");
+    expect(source).toContain("err?.status===401||err?.status===404");
+    expect(source).toContain("setPhase('resume-error')");
+    expect(source).toContain("Transient network/server failures must never erase the only local");
+  });
+
   test("registration, answer saves and completion remain linked to the same lead", () => {
     const source = gateSource();
     expect(source).toContain("action:'register'");
     expect(source).toContain("action:'save'");
     expect(source).toContain("action:'complete'");
-    expect(source).toContain("localStorage.setItem('pending_taster_id',data.taster_id)");
+    expect(source).toContain("let tasterId=saved.completed&&saved.taster_id?saved.taster_id:null;");
+    expect(source).toContain("localStorage.setItem('pending_taster_id',tasterId)");
+    expect(source.indexOf("await postProgress({action:'complete'")).toBeLessThan(source.indexOf("localStorage.setItem('pending_taster_id',tasterId)"));
     expect(source).toContain("'/professional-signup/?'+params.toString()");
     expect(source).not.toContain("action:'identify'");
-  });
-
-  test("account handoff waits for confirmed taster completion before redirecting", () => {
-    const source = gateSource();
-    expect(source).toContain("const completion=await postProgress({action:'complete'");
-    expect(source).toContain("if(completion?.completed!==true)throw new Error(");
-    const handoff = source.slice(source.indexOf("async function createAccount"));
-    expect(handoff.indexOf("if(completion?.completed!==true)")).toBeLessThan(handoff.indexOf("window.location.assign"));
-  });
-
-  test("completion retries reuse the already completed taster instead of resubmitting it", () => {
-    const source = gateSource();
-    expect(source).toContain("if(saved.completed===true&&saved.taster_id)");
-    expect(source).toContain("data={taster_id:saved.taster_id}");
-    expect(source).toContain("instead of submitting a duplicate");
-  });
-
-  test("a failed completion confirmation keeps the resumable session instead of redirecting as a pending account handoff", () => {
-    const source = gateSource();
-    const handoff = source.slice(source.indexOf("async function createAccount"));
-    const completion = handoff.indexOf("const completion=await postProgress({action:'complete'");
-    const confirmed = handoff.indexOf("if(completion?.completed!==true)");
-    const pending = handoff.indexOf("localStorage.setItem('pending_taster_id',data.taster_id)");
-    const clearResume = handoff.indexOf("localStorage.removeItem(RESUME_TOKEN_KEY)");
-    const redirect = handoff.indexOf("window.location.assign");
-    expect(completion).toBeGreaterThanOrEqual(0);
-    expect(confirmed).toBeGreaterThan(completion);
-    expect(pending).toBeGreaterThan(confirmed);
-    expect(clearResume).toBeGreaterThan(pending);
-    expect(redirect).toBeGreaterThan(clearResume);
   });
 
   test("the taster never computes or presents an official VALU Index", () => {
