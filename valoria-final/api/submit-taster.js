@@ -65,9 +65,9 @@ export default async function handler(req, res) {
   const tokenHash = createHash('sha256').update(resume_token).digest('hex');
   const progressParams = new URLSearchParams({
     resume_token_hash: `eq.${tokenHash}`,
-    status: 'eq.in_progress',
+    status: 'in.(in_progress,completed)',
     expires_at: `gt.${new Date().toISOString()}`,
-    select: 'name,role,experience,email,current_question,answers,submission_key,lead_capture_id,taster_version,total_questions',
+    select: 'name,role,experience,email,current_question,answers,submission_key,lead_capture_id,taster_version,total_questions,status,taster_id',
     limit: '1',
   });
   const progressRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${progressParams}`, {
@@ -88,6 +88,23 @@ export default async function handler(req, res) {
       ? LEGACY_TASTER_QUESTIONS
       : null;
   if (!questionBank) return json(res, 409, { error: 'This saved taster session uses a retired format and cannot be submitted automatically.' });
+  if (progress.status === 'completed') {
+    if (!progress.taster_id) return json(res, 409, { error: 'The completed taster reference is missing. Contact Valoria support.' });
+    const existingParams = new URLSearchParams({
+      id: `eq.${progress.taster_id}`,
+      submission_key: `eq.${submission_key}`,
+      lead_capture_id: `eq.${progress.lead_capture_id}`,
+      select: 'id',
+      limit: '1',
+    });
+    const existingRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${existingParams}`, {
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    });
+    if (!existingRes.ok) return json(res, 502, { error: 'Could not verify your completed taster.' });
+    if (!(await existingRes.json())?.[0]?.id) return json(res, 409, { error: 'The completed taster reference does not match this session.' });
+    const existingResults = tasterVersion === VALU_VERSION ? computeTasterResult(answers) : computeLegacyTasterResult(answers);
+    return json(res, 200, { results: existingResults, taster_id: progress.taster_id, created: false, already_completed: true });
+  }
   if (progress.current_question !== questionBank.length || !validAnswers(answers, questionBank)) {
     return json(res, 400, { error: 'Finish and save all taster answers before submitting.' });
   }
