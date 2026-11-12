@@ -5,6 +5,9 @@ const ASSESSMENT_ORIGIN = process.env.STAGING_ASSESSMENT_URL || 'https://assessm
 const SITE_ORIGIN = process.env.STAGING_SITE_URL || 'https://staging.valoriainstitute.com';
 const TASTER_ID = '55555555-5555-4555-8555-555555555555';
 const LEAD_CAPTURE_ID = '66666666-6666-4666-8666-666666666666';
+const TASTER_START_CODE = 'staging-confirmed-account-handoff-code';
+const TASTER_START_TOKEN = 'staging-confirmed-account-session-token';
+let handoffExchangeCalls = 0;
 
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -65,6 +68,10 @@ await page.route('**/api/taster-progress*', async route => {
     const body = route.request().postDataJSON() || {};
     actions.push(body.action);
     if (body.action === 'register') {
+      assert.equal(body.taster_start_token, TASTER_START_TOKEN, 'new Taster registration must carry the confirmed-account token');
+      assert.equal(body.email, 'retry-audit@example.invalid');
+      assert.equal(body.role, 'Staging QA');
+      assert.equal(body.experience, '0-3');
       await json(route, 200, { lead_capture_id: LEAD_CAPTURE_ID });
       return;
     }
@@ -107,6 +114,29 @@ await page.route('**/api/taster-progress*', async route => {
   }
 });
 
+await page.route('**/api/submit-assessment*', async route => {
+  try {
+    const body = route.request().postDataJSON() || {};
+    assert.equal(body.action, 'exchange-taster-start-handoff');
+    assert.equal(body.handoff_code, TASTER_START_CODE);
+    handoffExchangeCalls += 1;
+    await json(route, 200, {
+      ok: true,
+      session_token: TASTER_START_TOKEN,
+      identity: {
+        email: 'retry-audit@example.invalid',
+        display_name: 'Valoria Automated Retry Test',
+        role: 'Staging QA',
+        experience: '0-3',
+        privacy_acknowledged: true,
+      },
+    });
+  } catch (error) {
+    routeErrors.push(error.message);
+    await json(route, 500, { error: 'Taster-start handoff mock failed.' });
+  }
+});
+
 await page.route('**/api/submit-taster*', async route => {
   try {
     submitCalls += 1;
@@ -135,13 +165,19 @@ await page.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith('/
 try {
   const entry = new URL('/', ASSESSMENT_ORIGIN);
   entry.searchParams.set('site_origin', SITE_ORIGIN);
+  entry.hash = new URLSearchParams({ taster_start_code: TASTER_START_CODE }).toString();
   await page.goto(entry.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-  await page.getByPlaceholder('Your full professional name').fill('Valoria Automated Retry Test');
-  await page.getByPlaceholder('you@example.com').fill('retry-audit@example.invalid');
-  await page.getByPlaceholder('e.g. Product Manager').fill('Staging QA');
-  await page.locator('select').first().selectOption({ index: 1 });
-  await page.locator('input[type="checkbox"]').first().check();
+  await page.locator('input[autocomplete="name"]').waitFor({ state: 'visible', timeout: 20000 });
+  assert.equal(await page.locator('input[autocomplete="name"]').inputValue(), 'Valoria Automated Retry Test');
+  assert.equal(await page.locator('input[autocomplete="email"]').inputValue(), 'retry-audit@example.invalid');
+  assert.equal(await page.locator('input[autocomplete="organization-title"]').inputValue(), 'Staging QA');
+  assert.equal(await page.locator('select').first().inputValue(), '0-3');
+  assert.equal(await page.locator('input[type="checkbox"]').first().isChecked(), true);
+  assert.equal(await page.locator('input[autocomplete="name"]').isEditable(), false);
+  assert.equal(await page.locator('input[autocomplete="organization-title"]').isEditable(), false);
+  assert.equal(await page.locator('select').first().isDisabled(), true);
+  assert.equal(await page.locator('input[type="checkbox"]').first().isDisabled(), true);
   await page.getByRole('button', { name: /CONTINUE TO MY VALU INDEX TASTER/i }).click();
 
   await page.getByRole('button', { name: /BEGIN MY VALU INDEX TASTER/i }).waitFor({ state: 'visible', timeout: 20000 });
