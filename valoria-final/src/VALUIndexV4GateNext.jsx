@@ -282,7 +282,7 @@ export default function VALUIndexV4GateNext(){
    setTasterId(tasterId);
    try{localStorage.setItem('pending_taster_id',tasterId)}catch{}
    try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
-   const params=new URLSearchParams({taster_id:tasterId,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
+   const params=new URLSearchParams({taster_id:tasterId,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),account_first:tasterStartToken?'1':'0'});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
   }catch(err){
    setError(err?.message||'Your taster could not be saved yet. Your registered details and responses remain intact — please retry.');
