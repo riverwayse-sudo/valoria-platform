@@ -44,10 +44,10 @@ function questionBankForVersion(version) {
   return null;
 }
 
-function validPartialAnswers(value, questionBank) {
+export function validPartialAnswers(value, questionBank) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || !questionBank) return false;
   return Object.entries(value).every(([key, answer]) => {
-    if (!/^\\d+$/.test(key)) return false;
+    if (!/^\d+$/.test(key)) return false;
     const index = Number(key);
     return index >= 0 && index < questionBank.length
       && Number.isInteger(answer) && answer >= 0 && answer < questionBank[index].options.length;
