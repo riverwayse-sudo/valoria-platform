@@ -56,7 +56,7 @@ export function validPartialAnswers(value, questionBank) {
 async function getProgress(tokenHash) {
   const params = new URLSearchParams({
     resume_token_hash: `eq.${tokenHash}`,
-    status: 'eq.in_progress',
+    status: 'in.(in_progress,completed)',
     expires_at: `gt.${new Date().toISOString()}`,
     select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,lead_capture_id,taster_id,taster_version,total_questions',
     limit: '1',
@@ -147,7 +147,7 @@ export default async function handler(req, res) {
     if (!progress) return json(res, 404, { error: 'This session has expired or is no longer resumable.' });
 
     if (action === 'load') {
-      return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, lead_capture_id: progress.lead_capture_id || null, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null, taster_version: progress.taster_version, total_questions: progress.total_questions } });
+      return json(res, 200, { progress: { name: progress.name, role: progress.role, experience: progress.experience, email: progress.email, lead_capture_id: progress.lead_capture_id || null, current_question: progress.current_question, answers: progress.answers || {}, submission_key: progress.submission_key || null, taster_version: progress.taster_version, total_questions: progress.total_questions, status: progress.status, taster_id: progress.taster_id || null } });
     }
 
     const questionBank = questionBankForVersion(progress.taster_version);
@@ -157,6 +157,25 @@ export default async function handler(req, res) {
 
     if (action === 'save') {
       const answers = body.answers;
+      if (progress.status === 'completed') {
+        const sameAnswers = progress.answers && questionBank.every((_, index) => progress.answers[index] === answers?.[index]);
+        if (!progress.submission_key || body.submission_key !== progress.submission_key
+          || !progress.taster_id || progress.current_question !== questionBank.length
+          || !sameAnswers || !validPartialAnswers(answers, questionBank)) {
+          return json(res, 409, { error: 'This taster is already complete and cannot be changed.' });
+        }
+        const completedParams = new URLSearchParams({
+          id: `eq.${progress.taster_id}`,
+          submission_key: `eq.${progress.submission_key}`,
+          lead_capture_id: `eq.${progress.lead_capture_id}`,
+          select: 'id',
+          limit: '1',
+        });
+        const completedResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${completedParams}`, { headers: headers() });
+        if (!completedResponse.ok) return json(res, 502, { error: 'Could not verify the completed taster reference.' });
+        if (!(await completedResponse.json())?.[0]?.id) return json(res, 409, { error: 'The completed taster reference does not match this session.' });
+        return json(res, 200, { saved: true, completed: true, already_completed: true, taster_id: progress.taster_id, submission_key: progress.submission_key });
+      }
       const currentQuestion = body.current_question;
       const submissionKey = body.submission_key || null;
       if (!validPartialAnswers(answers, questionBank) || !Number.isInteger(currentQuestion) || currentQuestion < 0 || currentQuestion > questionBank.length
@@ -195,6 +214,23 @@ export default async function handler(req, res) {
     }
 
     const tasterId = body.taster_id;
+    if (progress.status === 'completed') {
+      if (typeof tasterId !== 'string' || tasterId !== progress.taster_id
+        || !progress.submission_key || (body.submission_key && body.submission_key !== progress.submission_key)) {
+        return json(res, 409, { error: 'This taster has already been completed with a different reference.' });
+      }
+      const completedParams = new URLSearchParams({
+        id: `eq.${progress.taster_id}`,
+        submission_key: `eq.${progress.submission_key}`,
+        lead_capture_id: `eq.${progress.lead_capture_id}`,
+        select: 'id',
+        limit: '1',
+      });
+      const completedResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${completedParams}`, { headers: headers() });
+      if (!completedResponse.ok) return json(res, 502, { error: 'Could not verify the completed taster reference.' });
+      if (!(await completedResponse.json())?.[0]?.id) return json(res, 409, { error: 'The completed taster reference does not match this session.' });
+      return json(res, 200, { completed: true, already_completed: true, taster_id: progress.taster_id });
+    }
     if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
       return json(res, 400, { error: 'A valid saved taster reference is required.' });
     }
