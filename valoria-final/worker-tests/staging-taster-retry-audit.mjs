@@ -12,6 +12,7 @@ const page = await context.newPage();
 
 const actions = [];
 const storageEvents = [];
+const timeline = [];
 const pageErrors = [];
 const forbiddenRequests = [];
 const routeErrors = [];
@@ -25,7 +26,7 @@ let redirectStorage = null;
 let resolveRedirectHandled;
 const redirectHandled = new Promise(resolve => { resolveRedirectHandled = resolve; });
 
-await context.exposeBinding('auditStorage', (_source, event) => storageEvents.push(event));
+await context.exposeBinding('auditStorage', (_source, event) => { storageEvents.push(event); timeline.push({ type: 'storage', ...event }); });
 await page.addInitScript(() => {
   localStorage.clear();
   sessionStorage.clear();
@@ -97,6 +98,7 @@ await page.route('**/api/taster-progress*', async route => {
         await json(route, 502, { error: 'Simulated response loss after completion commit.' });
         return;
       }
+      timeline.push({ type: 'completion-response-confirmed' });
       await json(route, 200, { completed: true, already_completed: true });
       return;
     }
@@ -189,6 +191,10 @@ try {
   assert.ok(redirectUrl?.startsWith(SITE_ORIGIN + '/professional-signup/'), `handoff must return to the originating redesign site; received ${redirectUrl || 'no intercepted URL'}`);
   assert.ok(redirectUrl.includes('taster_id=' + TASTER_ID), 'handoff must carry the verified taster reference');
   assert.ok(storageEvents.some(event => event.action === 'set' && event.key === 'pending_taster_id' && event.value === TASTER_ID), 'pending taster ID must be written only after confirmed completion');
+  const completionConfirmedIndex = timeline.findIndex(event => event.type === 'completion-response-confirmed');
+  const pendingHandoffIndex = timeline.findIndex(event => event.type === 'storage' && event.action === 'set' && event.key === 'pending_taster_id');
+  assert.ok(completionConfirmedIndex >= 0 && pendingHandoffIndex > completionConfirmedIndex,
+    'pending taster ID must be persisted after the successful completion response, never before it');
   assert.ok(storageEvents.some(event => event.action === 'remove' && event.key === 'valu_taster_resume_token'), 'resume token must be cleared after confirmed completion');
   assert.ok(storageEvents.some(event => event.action === 'remove' && event.key === 'valu_taster_signup_key'), 'signup key must be cleared after confirmed completion');
   assert.equal(routeErrors.length, 0, routeErrors.join('; '));
