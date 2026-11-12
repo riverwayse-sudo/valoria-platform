@@ -1,10 +1,8 @@
 "use strict";
 
-import { createHash } from "node:crypto";
 import { EXPERIENCE_BANDS } from "../valuTaster.js";
 
 const RESUME_TOKEN = "A".repeat(43);
-const SIGNUP_KEY = "11111111-1111-4111-8111-111111111111";
 const LEAD_CAPTURE_ID = "22222222-2222-4222-8222-222222222222";
 const PROGRESS_ID = "33333333-3333-4333-8333-333333333333";
 
@@ -58,7 +56,7 @@ function installFetch() {
   return calls;
 }
 
-describe("registration-first taster API payload", () => {
+describe("account-first taster API contract", () => {
   afterEach(() => {
     delete global.fetch;
     delete process.env.SUPABASE_URL;
@@ -66,23 +64,14 @@ describe("registration-first taster API payload", () => {
     jest.restoreAllMocks();
   });
 
-  test("creates the lead and resumable progress through the atomic RPC", async () => {
+  test("rejects direct anonymous registration; the confirmed-account site bootstrap is the sole creator", async () => {
     const calls = installFetch();
     const res = makeRes();
-    await loadHandler()(request(), res);
+    await loadHandler()(request("register"), res);
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ registered: true, lead_capture_id: LEAD_CAPTURE_ID, progress_id: PROGRESS_ID });
-    const rpc = calls.find(call => call.url.includes("rpc/begin_valu_taster_signup"));
-    expect(rpc).toBeDefined();
-    const body = JSON.parse(rpc.options.body);
-    expect(body.p_signup_key).toBe(SIGNUP_KEY);
-    expect(body.p_resume_token_hash).toBe(createHash("sha256").update(RESUME_TOKEN).digest("hex"));
-    expect(body.p_email).toBe("participant@example.invalid");
-    expect(body.p_experience).toBe(EXPERIENCE_BANDS[0].id);
-    expect(body.p_marketing_consent).toBe(false);
-    expect(body.p_privacy_acknowledged).toBe(true);
-    expect(calls.some(call => call.url.endsWith("/rest/v1/taster_progress"))).toBe(false);
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toContain("Create and confirm your Valoria account");
+    expect(calls.some(call => call.url.includes("rpc/begin_valu_taster_signup"))).toBe(false);
   });
 
   test("completed progress can be retried idempotently without mutating the saved taster", async () => {
