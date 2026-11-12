@@ -108,7 +108,9 @@ describe("nine-question taster and account bridge", () => {
     expect(source).toContain("action:'register'");
     expect(source).toContain("action:'save'");
     expect(source).toContain("action:'complete'");
-    expect(source).toContain("localStorage.setItem('pending_taster_id',data.taster_id)");
+    expect(source).toContain("let tasterId=saved.completed&&saved.taster_id?saved.taster_id:null;");
+    expect(source).toContain("localStorage.setItem('pending_taster_id',tasterId)");
+    expect(source.indexOf("await postProgress({action:'complete'")).toBeLessThan(source.indexOf("localStorage.setItem('pending_taster_id',tasterId)"));
     expect(source).toContain("'/professional-signup/?'+params.toString()");
     expect(source).not.toContain("action:'identify'");
   });
