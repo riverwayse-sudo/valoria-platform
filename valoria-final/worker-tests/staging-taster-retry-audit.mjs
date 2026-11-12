@@ -22,6 +22,8 @@ let submitCalls = 0;
 let completeCalls = 0;
 let redirectUrl = null;
 let redirectStorage = null;
+let resolveRedirectHandled;
+const redirectHandled = new Promise(resolve => { resolveRedirectHandled = resolve; });
 
 await context.exposeBinding('auditStorage', (_source, event) => storageEvents.push(event));
 await page.addInitScript(() => {
@@ -129,7 +131,11 @@ await page.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith('/
   } catch (error) {
     redirectStorage = { captureError: error.message };
   }
-  await route.abort();
+  try {
+    await route.abort();
+  } finally {
+    resolveRedirectHandled();
+  }
 });
 
 try {
@@ -181,11 +187,12 @@ try {
   }, { timeout: 20000 });
   await continueButton.click();
   await redirectRequest;
+  await redirectHandled;
 
   assert.equal(submitCalls, 1, 'retry must reuse the completed taster instead of submitting a duplicate');
   assert.equal(completeCalls, 2, 'the completion transition must be safely retried');
   assert.equal(committed, true);
-  assert.ok(redirectUrl?.startsWith(SITE_ORIGIN + '/professional-signup/'), 'handoff must return to the originating redesign site');
+  assert.ok(redirectUrl?.startsWith(SITE_ORIGIN + '/professional-signup/'), `handoff must return to the originating redesign site; received ${redirectUrl || 'no intercepted URL'}`);
   assert.ok(redirectUrl.includes('taster_id=' + TASTER_ID), 'handoff must carry the verified taster reference');
   assert.ok(storageEvents.some(event => event.action === 'set' && event.key === 'pending_taster_id' && event.value === TASTER_ID), 'pending taster ID must be written only after confirmed completion');
   assert.ok(storageEvents.some(event => event.action === 'remove' && event.key === 'valu_taster_resume_token'), 'resume token must be cleared after confirmed completion');
