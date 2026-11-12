@@ -60,9 +60,9 @@ const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 
 // Entry flow for the VALU journey.
-// Participants begin with the VALU taster before account setup.
-// Taster responses are stored and scored independently; they never populate
-// the formal VALU assessment response record.
+// Participants confirm their Valoria account before entering the separate Taster.
+// Taster responses are stored independently; they never populate the formal
+// 58-question VALU Index response record.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
