@@ -72,6 +72,9 @@ describe("signup-first taster start security contract", () => {
 
   test("taster-start exchange is isolated from the dashboard full-assessment handoff", () => {
     expect(submitApi).toContain("entry_point: 'eq.taster_start'");
+    expect(submitApi).toContain("const accountMetadata = user.app_metadata || {}");
+    expect(submitApi).toContain("accountMetadata.privacy_acknowledged !== true");
+    expect(submitApi).not.toContain("user.user_metadata?.privacy_acknowledged");
     expect(submitApi).toContain("target_stage: 'eq.taster'");
     expect(submitApi).toContain("action === 'exchange-taster-start-handoff'");
     expect(submitApi).toContain("action === 'exchange-dashboard-handoff'");
