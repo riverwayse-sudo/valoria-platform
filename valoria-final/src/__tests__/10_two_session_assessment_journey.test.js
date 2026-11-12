@@ -72,7 +72,8 @@ describe("nine-question taster and account bridge", () => {
     expect(source).toContain("const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS)");
     expect(source).toContain("p.taster_version");
     expect(source).toContain("legacy.LEGACY_TASTER_QUESTIONS");
-    expect(source).toContain("VALUAssessmentJourney stage=\"registration\"");
+    expect(source).toContain("/api/valu-taster/bootstrap");
+    expect(source).not.toContain("VALUAssessmentJourney stage=\"registration\"");
     expect(source).toContain("VALUAssessmentJourney stage=\"taster\"");
     expect(source).toContain("how you think, make strategic decisions, understand commercial value and work with AI");
     expect(source).not.toContain("how you work, relate and create value");
