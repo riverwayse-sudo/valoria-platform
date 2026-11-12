@@ -65,14 +65,18 @@ describe("separate taster and formal assessment contracts", () => {
   });
 });
 
-describe("nine-question taster and account bridge", () => {
-  test("lead registration precedes the separate taster and no question counts are exposed", () => {
+describe("confirmed-account nine-question Taster and dashboard bridge", () => {
+  test("confirmed account handoff precedes the separate taster and no question counts are exposed", () => {
     const source = gateSource();
     expect(source).toContain("questionBank.length");
     expect(source).toContain("const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS)");
     expect(source).toContain("p.taster_version");
     expect(source).toContain("legacy.LEGACY_TASTER_QUESTIONS");
     expect(source).toContain("VALUAssessmentJourney stage=\"registration\"");
+    expect(source).toContain("exchange-taster-start-handoff");
+    expect(source).toContain("payload.identity?.role");
+    expect(source).toContain("payload.identity?.experience");
+    expect(source).toContain("readOnly={Boolean(tasterStartToken)}");
     expect(source).toContain("VALUAssessmentJourney stage=\"taster\"");
     expect(source).toContain("how you think, make strategic decisions, understand commercial value and work with AI");
     expect(source).not.toContain("how you work, relate and create value");
@@ -84,11 +88,12 @@ describe("nine-question taster and account bridge", () => {
     expect(source).not.toContain("TOTAL_QUESTIONS");
   });
 
-  test("taster completion leads to account creation and does not promise automatic Marketplace listing", () => {
+  test("taster completion links the saved snapshot to the confirmed account and returns to the dashboard", () => {
     const source = gateSource();
-    expect(source).toContain("Your responses are safely saved. Create your account to continue your Valoria journey.");
-    expect(source).toContain("Completing the assessment does not grant marketplace listing.");
-    expect(source).toContain("Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.");
+    expect(source).toContain("Your Valoria account is confirmed and your Taster is saved.");
+    expect(source).toContain("Connect the Taster to your account, then continue from your dashboard.");
+    expect(source).toContain("SAVE TASTER & CONTINUE TO DASHBOARD");
+    expect(source).toContain("Your full VALU Index is ready to begin from your dashboard.");
     expect(source).not.toContain("will not prefill or count toward it");
     expect(source).not.toContain("58 formal questions from Question 1");
     expect(source).not.toContain("remaining 49 questions");
@@ -163,12 +168,12 @@ describe("independent 58-question formal assessment", () => {
     expect(api).not.toContain("assessment_version");
   });
 
-  test("the shared journey indicator distinguishes registration, taster, account and full assessment", () => {
+  test("the shared journey indicator distinguishes account, Taster, dashboard and full VALU Index", () => {
     const source = readSource("VALUAssessmentJourney.jsx");
-    expect(source).toContain("title: 'Register'");
-    expect(source).toContain("title: 'Taster'");
     expect(source).toContain("title: 'Account'");
-    expect(source).toContain("title: 'Assessment'");
+    expect(source).toContain("title: 'Taster'");
+    expect(source).toContain("title: 'Dashboard'");
+    expect(source).toContain("title: 'Full VALU Index'");
     expect(source).toContain("YOUR VALU INDEX JOURNEY");
     expect(source).not.toContain("9 questions");
     expect(source).not.toContain("58 questions");
