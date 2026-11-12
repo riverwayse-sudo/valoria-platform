@@ -253,9 +253,11 @@ async function exchangeTasterStartHandoff(body, res) {
   const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${link.user_id}`, { headers, cache: 'no-store' });
   if (!userResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your Valoria account.' });
   const user = await userResponse.json();
-  const role = String(user.user_metadata?.role || '').trim();
-  const experience = String(user.user_metadata?.experience || '').trim();
-  if (!user?.email_confirmed_at || !user?.email || !role || !EXPERIENCE_BANDS.has(experience) || user.user_metadata?.privacy_acknowledged !== true) {
+  const accountMetadata = user.app_metadata || {};
+  const role = String(accountMetadata.role || '').trim();
+  const experience = String(accountMetadata.experience || '').trim();
+  if (!user?.email_confirmed_at || !user?.email || accountMetadata.valu_taster_signup !== true ||
+      !role || !EXPERIENCE_BANDS.has(experience) || accountMetadata.privacy_acknowledged !== true) {
     return json(res, 403, { ok: false, error: 'Complete and confirm your Valoria professional account before starting the taster.' });
   }
 
