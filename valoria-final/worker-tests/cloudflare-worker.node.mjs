@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-process.env.VALU_PREVIEW_SITE_ORIGIN = "https://site-preview.example,https://site-preview-two.example";
-process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN = "https://assessment-preview.example";
+process.env.VALU_PREVIEW_SITE_ORIGIN = "https://staging.valoriainstitute.com";
+process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN = "https://assessment-staging.valoriainstitute.com";
 process.env.SUPABASE_URL = "https://staging-db.invalid";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-only-service-role-key";
 process.env.CRON_SECRET = "test-only-cron-secret";
@@ -170,19 +170,17 @@ test("staging Wrangler environment targets the existing staging Worker and stagi
   assert.deepEqual(
     config.env.staging.vars.VALU_PREVIEW_SITE_ORIGIN.split(","),
     [
-      "https://valoria-staging-site.riverwayse.workers.dev",
-      "https://valoria-redesign-staging-site.riverwayse.workers.dev",
+      "https://staging.valoriainstitute.com",
     ],
   );
 });
 
 test("account confirmation redirects honor only exact allowed site request origins", async () => {
   const { getSiteOrigin } = await import("../api/_siteOrigin.js");
-  process.env.VALORIA_SITE_URL = "https://valoria-staging-site.riverwayse.workers.dev";
-  assert.equal(getSiteOrigin({ headers: { origin: "https://valoria-staging-site.riverwayse.workers.dev" } }), "https://valoria-staging-site.riverwayse.workers.dev");
-  assert.equal(getSiteOrigin({ headers: { origin: "https://valoria-redesign-staging-site.riverwayse.workers.dev" } }), "https://valoria-redesign-staging-site.riverwayse.workers.dev");
+  process.env.VALORIA_SITE_URL = "https://staging.valoriainstitute.com";
   assert.equal(getSiteOrigin({ headers: { origin: "https://staging.valoriainstitute.com" } }), "https://staging.valoriainstitute.com");
-  assert.equal(getSiteOrigin({ headers: { origin: "https://attacker.example" } }), "https://valoria-staging-site.riverwayse.workers.dev");
+  assert.equal(getSiteOrigin({ headers: { origin: "https://staging.valoriainstitute.com" } }), "https://staging.valoriainstitute.com");
+  assert.equal(getSiteOrigin({ headers: { origin: "https://attacker.example" } }), "https://staging.valoriainstitute.com");
 });
 
 test("assessment app is never indexed and production analytics is disabled in staging builds", () => {
