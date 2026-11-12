@@ -112,3 +112,15 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Install pinned Playwright for staging browser retry audit
+        run: npm install --no-save playwright@1.56.1
+
+      - name: Install Chromium for staging browser retry audit
+        run: npx playwright install --with-deps chromium
+
+      - name: Simulate a lost taster-completion response and safe browser retry
+        run: node ./worker-tests/staging-taster-retry-audit.mjs
+        env:
+          STAGING_ASSESSMENT_URL: https://valoria-staging-assessment.riverwayse.workers.dev
+          STAGING_SITE_URL: https://valoria-redesign-staging-site.riverwayse.workers.dev
