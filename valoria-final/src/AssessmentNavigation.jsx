@@ -31,7 +31,7 @@ export default function AssessmentNavigation({ progress = null, label = 'VALU IN
           <span style={styles.label}>{label}</span>
           {progress != null && <span style={styles.progress}>{progress}%</span>}
         </div>
-        <a className="assessment-nav-exit" href={`${siteUrl}/dashboard`} style={styles.exit} aria-label="Return to your Valoria dashboard">
+        <a className="assessment-nav-exit" href={`${siteUrl}/dashboard`} style={styles.exit} aria-label="Return to dashboard">
           <span>RETURN TO DASHBOARD</span><span aria-hidden="true">↗</span>
         </a>
       </div>
@@ -47,5 +47,5 @@ const styles = {
   center:{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:10,whiteSpace:'nowrap',textAlign:'left'},
   label:{fontSize:10,fontWeight:700,letterSpacing:'.16em',color:T.gold},
   progress:{fontSize:10,color:T.faint,letterSpacing:'.08em'},
-  exit:{justifySelf:'end',display:'inline-flex',alignItems:'center',gap:7,minHeight:44,color:T.faint,textDecoration:'none',fontSize:9,fontWeight:600,letterSpacing:'.12em'},
+  exit:{justifySelf:'end',display:'inline-flex',alignItems:'center',gap:7,minHeight:44,color:'#D4C9A8',textDecoration:'none',fontSize:9,fontWeight:600,letterSpacing:'.12em'},
 };
