@@ -65,9 +65,6 @@ const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
- const [organisation,setOrganisation]=useState(''),[interest,setInterest]=useState('');
- const [marketingConsent,setMarketingConsent]=useState(false),[privacyAcknowledged,setPrivacyAcknowledged]=useState(false);
- const [registrationKey,setRegistrationKey]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
  const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
@@ -152,7 +149,6 @@ export default function VALUIndexV4GateNext(){
     }
     setQuestionBank(restoredBank);
     setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
-    setPrivacyAcknowledged(true);
     setProgressToken(token);
     const savedAnswers=p.answers&&typeof p.answers==='object'?p.answers:{};
     setAnswers(savedAnswers);
@@ -209,40 +205,6 @@ export default function VALUIndexV4GateNext(){
 
  function choose(index){if(selected!==null||saving)return;setSelected(index);timer.current=setTimeout(()=>answer(index),120)}
 
- const identityValid=!!(name.trim()&&role.trim()&&experience&&email.trim()&&privacyAcknowledged);
-
- async function registerForTaster(e){
-  e.preventDefault();
-  if(saving)return;
-  setSaving(true);
-  setError('');
-  try{
-   const token=progressToken||(()=>{
-    const bytes=new Uint8Array(32);
-    window.crypto.getRandomValues(bytes);
-    return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-   })();
-   const signupKey=registrationKey||window.crypto.randomUUID();
-   setProgressToken(token);
-   setRegistrationKey(signupKey);
-   try{localStorage.setItem(RESUME_TOKEN_KEY,token);localStorage.setItem(SIGNUP_KEY_KEY,signupKey)}catch{}
-   const data=await postProgress({
-    action:'register',resume_token:token,signup_key:signupKey,
-    name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),
-    organisation:organisation.trim(),interest,
-    marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
-   });
-   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU journey. Please retry.');
-   const answeredCount=Object.keys(answers).length;
-   const complete=current===questionBank.length-1&&answeredCount===questionBank.length&&!!submissionKey;
-   setPhase(complete?'break':answeredCount?'session1':'intro');
-  }catch(err){
-   setError(err?.message||'We could not save your registration. Please retry.');
-  }finally{
-   setSaving(false);
-  }
- }
-
  async function createAccount(e){
   e.preventDefault();
   if(!progressToken||saving)return;
@@ -289,44 +251,6 @@ export default function VALUIndexV4GateNext(){
    <h1 className="valu-results-title" style={S.h1}>Your session is <em>safe.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>{error}</p>
   </section>
- </Shell>;
-
- if(phase==='registration')return <Shell>
-  <VALUAssessmentJourney stage="registration" />
-  <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> YOUR DETAILS FIRST</div>
-   <h1 className="valu-results-title" style={S.h1}>Start with your <em>details.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your details connect your responses to you, so you can pause and return without losing your place. You will create your Valoria account after completing the taster.</p>
-  </section>
-  <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
-   <p style={S.formIntro}>Complete the required details and acknowledge the Privacy Notice. Your answers stay connected to your registration. Optional details can be added below.</p>
-   <div className="valu-entry-form-grid" style={S.grid}>
-    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
-    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>
-   </div>
-   <div className="valu-entry-form-grid" style={S.grid}>
-    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" maxLength={160}/></Field>
-    <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
-   </div>
-   <p style={S.note}>If you already have a Valoria account, use the email address associated with it so your taster can be connected to that account.</p>
-   <details className="valu-optional-details">
-    <summary>Add optional professional details</summary>
-    <Field label="ORGANISATION (OPTIONAL)"><input style={S.input} value={organisation} onChange={e=>setOrganisation(e.target.value)} placeholder="Your organisation" autoComplete="organization" maxLength={180}/></Field>
-    <Field label="WHAT ARE YOU MOST INTERESTED IN? (OPTIONAL)"><select style={S.input} value={interest} onChange={e=>setInterest(e.target.value)}><option value="">Select an interest</option><option value="Professional visibility">Professional visibility</option><option value="Career and leadership opportunities">Career and leadership opportunities</option><option value="Speaking and facilitation">Speaking and facilitation</option><option value="Learning and development">Learning and development</option><option value="Other">Other</option></select></Field>
-   </details>
-   <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
-    <input type="checkbox" required checked={privacyAcknowledged} onChange={e=>setPrivacyAcknowledged(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
-    <span>I acknowledge that Valoria will process these details to administer my assessment and manage my journey. Read the <a href={(SITE_BASE||'https://valoriainstitute.com')+'/privacypolicy'} style={{color:GOLD,textDecoration:'underline'}}>Privacy Notice</a>.</span>
-   </label>
-   <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
-    <input type="checkbox" checked={marketingConsent} onChange={e=>setMarketingConsent(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
-    <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
-   </label>
-   {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="submit" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU INDEX TASTER →'}</button>
-   <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved taster.</div>
-  </form>
  </Shell>;
 
  if(phase==='loading')return <Shell><div style={S.eyebrow}>VALU</div><h1 style={S.h1}>Preparing your taster…</h1><p style={S.p}>We are getting your session ready.</p></Shell>;
