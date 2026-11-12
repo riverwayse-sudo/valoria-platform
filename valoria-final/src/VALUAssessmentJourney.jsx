@@ -13,7 +13,7 @@ export default function VALUAssessmentJourney({ stage = 'taster' }) {
   return (
     <section aria-label="VALU Index progress" style={{ margin: '0 0 28px', textAlign:'left' }}>
       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:6, marginBottom:12, textAlign:'left' }}>
-        <span style={{ color:'#C9A84C', fontSize:9, fontWeight:800, letterSpacing:'.16em' }}>YOUR VALU JOURNEY</span>
+        <span style={{ color:'#C9A84C', fontSize:9, fontWeight:800, letterSpacing:'.16em' }}>YOUR VALU INDEX JOURNEY</span>
         <span style={{ color:'rgba(247,244,238,.68)', fontSize:10, textAlign:'left' }}>{statusLabel}</span>
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(88px,1fr))', gap:8 }}>
