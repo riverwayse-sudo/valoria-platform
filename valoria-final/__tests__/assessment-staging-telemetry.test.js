@@ -20,7 +20,14 @@ describe('assessment staging telemetry and indexing isolation', () => {
     expect(config.env.staging.vars.VALU_PREVIEW).toBe('1');
     expect(config.env.staging.vars.VALU_PREVIEW_SITE_ORIGIN).toBe('https://staging.valoriainstitute.com');
     expect(config.env.staging.vars.VALU_PREVIEW_ASSESSMENT_ORIGIN).toBe('https://assessment-staging.valoriainstitute.com');
-    expect(config.env.staging.vars.VALORIA_SITE_URL).toBe('https://staging.valoriainstitute.com');
+    expect(config.env.staging.vars.VALORIA_SITE_URL).toBe('https://staging.valoriainstitute.com')
+    const navigation = read('src/AssessmentNavigation.jsx')
+    const gate = read('src/VALUIndexV4GateNext.jsx')
+    expect(navigation).toContain("host === 'assessment-staging.valoriainstitute.com'")
+    expect(navigation).toContain("ALLOWED_SITE_ORIGINS.has(environmentDefault)")
+    expect(navigation).not.toContain("environmentDefault.startsWith('https://')")
+    expect(gate).toContain("host === 'assessment-staging.valoriainstitute.com'")
+    expect(gate).toContain("'https://staging.valoriainstitute.com'");
     expect(config.env.staging.vars.VALU_PREVIEW_SITE_ORIGIN).toBe('https://staging.valoriainstitute.com');
     expect(config.env.staging.vars.VALU_PREVIEW_ASSESSMENT_ORIGIN).toBe('https://assessment-staging.valoriainstitute.com');
     expect(config.env.staging.vars.VALORIA_SITE_URL).toBe('https://staging.valoriainstitute.com');
