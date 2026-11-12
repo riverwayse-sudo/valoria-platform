@@ -93,6 +93,7 @@ describe("confirmed-account nine-question Taster and dashboard bridge", () => {
     expect(source).toContain("Your Valoria account is confirmed and your Taster is saved.");
     expect(source).toContain("Connect the Taster to your account, then continue from your dashboard.");
     expect(source).toContain("SAVE TASTER & CONTINUE TO DASHBOARD");
+    expect(source).toContain("account_first:tasterStartToken?'1':'0'");
     expect(source).toContain("Your full VALU Index is ready to begin from your dashboard.");
     expect(source).not.toContain("will not prefill or count toward it");
     expect(source).not.toContain("58 formal questions from Question 1");
