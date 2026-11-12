@@ -35,6 +35,8 @@ describe("Public marketplace roster RPC security contract", () => {
   test("roster writer never projects registered-only profiles and requires explicit consent", () => {
     expect(migration).toContain("public_consent_ok");
     expect(migration).toContain("private.has_public_profile_consent(p_professional_id)");
-    expect(migration).not.toContain("registered_only");
+    expect(migration).toContain("p.visibility in ('public','marketplace','registered_only')");
+    expect(migration).toContain("p.visibility in ('public','marketplace')");
+    expect(migration).toContain("Expected exactly two public-roster visibility gates");
   });
 });
