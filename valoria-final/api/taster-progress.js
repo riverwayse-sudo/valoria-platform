@@ -56,9 +56,8 @@ export function validPartialAnswers(value, questionBank) {
 async function getProgress(tokenHash) {
   const params = new URLSearchParams({
     resume_token_hash: `eq.${tokenHash}`,
-    status: 'eq.in_progress',
     expires_at: `gt.${new Date().toISOString()}`,
-    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,lead_capture_id,taster_version,total_questions',
+    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,lead_capture_id,taster_id,taster_version,total_questions',
     limit: '1',
   });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, { headers: headers() });
@@ -156,6 +155,9 @@ export default async function handler(req, res) {
     }
 
     if (action === 'save') {
+      if (progress.status === 'completed' && progress.taster_id) {
+        return json(res, 200, { saved: true, completed: true, taster_id: progress.taster_id, already_completed: true });
+      }
       const answers = body.answers;
       const currentQuestion = body.current_question;
       const submissionKey = body.submission_key || null;
@@ -185,6 +187,9 @@ export default async function handler(req, res) {
     }
 
     const tasterId = body.taster_id;
+    if (progress.status === 'completed' && progress.taster_id === tasterId) {
+      return json(res, 200, { completed: true, already_completed: true, taster_id: tasterId });
+    }
     if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
       return json(res, 400, { error: 'A valid saved taster reference is required.' });
     }
