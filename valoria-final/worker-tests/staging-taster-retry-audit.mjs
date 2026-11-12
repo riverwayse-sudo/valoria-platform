@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const ASSESSMENT_ORIGIN = process.env.STAGING_ASSESSMENT_URL || 'https://valoria-staging-assessment.riverwayse.workers.dev';
-const SITE_ORIGIN = process.env.STAGING_SITE_URL || 'https://valoria-redesign-staging-site.riverwayse.workers.dev';
+const ASSESSMENT_ORIGIN = process.env.STAGING_ASSESSMENT_URL || 'https://assessment-staging.valoriainstitute.com';
+const SITE_ORIGIN = process.env.STAGING_SITE_URL || 'https://staging.valoriainstitute.com';
 const TASTER_ID = '55555555-5555-4555-8555-555555555555';
 const LEAD_CAPTURE_ID = '66666666-6666-4666-8666-666666666666';
 
