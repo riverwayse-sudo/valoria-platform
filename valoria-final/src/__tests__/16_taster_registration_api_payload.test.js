@@ -15,6 +15,7 @@ function tasterStartToken() {
     v: 1, typ: "taster_start_session", aud: "valu-taster-start",
     sub: "66666666-6666-4666-8666-666666666666",
     email: "participant@example.invalid", display_name: "Staging Test Participant",
+    role: "Operations Director", experience: EXPERIENCE_BANDS[0].id, privacy_acknowledged: true,
     iat: now, exp: now + 900, jti: "staging-test-jti-1234567890"
   };
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -138,6 +139,19 @@ describe("registration-first taster API payload", () => {
     expect(completeRes.statusCode).toBe(200);
     expect(completeRes.body).toMatchObject({ completed: true, already_completed: true });
     expect(calls.some(call => call.options.method === "PATCH")).toBe(false);
+  });
+
+  test("rejects role or experience that differs from the confirmed account token", async () => {
+    for (const override of [{ role: "Finance Director" }, { experience: EXPERIENCE_BANDS[1].id }]) {
+      const calls = installFetch();
+      const req = request();
+      Object.assign(req.body, override);
+      const res = makeRes();
+      await loadHandler()(req, res);
+      expect(res.statusCode).toBe(403);
+      expect(res.body.error).toContain("professional role and experience");
+      expect(calls.some(call => call.url.includes("rpc/begin_valu_taster_signup"))).toBe(false);
+    }
   });
 
   test("rejects a new taster registration without a confirmed-account token", async () => {
