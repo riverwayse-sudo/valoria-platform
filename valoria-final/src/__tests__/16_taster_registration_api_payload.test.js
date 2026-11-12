@@ -26,7 +26,7 @@ function request(action = "register") {
     headers: { "x-forwarded-for": "203.0.113.7", "cf-connecting-ip": "203.0.113.7" },
     socket: {},
     body: {
-      action, resume_token: RESUME_TOKEN, signup_key: SIGNUP_KEY,
+      action, resume_token: RESUME_TOKEN,
       name: "Staging Test Participant", email: "participant@example.invalid",
       role: "Operations Director", experience: EXPERIENCE_BANDS[0].id,
       organisation: "Example Organisation", interest: "Professional visibility",
