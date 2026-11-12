@@ -29,6 +29,22 @@ describe("Public marketplace roster RPC security contract", () => {
     expect(migration).toContain("controls.admin_revoked");
   });
 
+  test("legacy public roster RPC keeps internal assessment-access classification server-only", () => {
+    const accessMigration = fs.readFileSync(
+      path.join(__dirname, "../../supabase/migrations/20261112150000_restrict_public_marketplace_roster_rpc_to_service_role.sql"),
+      "utf8"
+    );
+    expect(accessMigration).toContain(
+      "REVOKE ALL ON FUNCTION public.get_marketplace_public_roster_v1(uuid, text) FROM PUBLIC, anon, authenticated"
+    );
+    expect(accessMigration).toContain(
+      "GRANT EXECUTE ON FUNCTION public.get_marketplace_public_roster_v1(uuid, text) TO service_role"
+    );
+    expect(accessMigration).toContain("assessment-access fields");
+    expect(accessMigration).toContain("has_function_privilege('anon'");
+    expect(accessMigration).toContain("has_function_privilege('authenticated'");
+  });
+
   test("private roster helper is not directly executable by client roles", () => {
     expect(migration).toContain(
       "REVOKE ALL ON FUNCTION private.get_marketplace_public_roster_v1_impl(uuid, text) FROM PUBLIC, anon, authenticated"
