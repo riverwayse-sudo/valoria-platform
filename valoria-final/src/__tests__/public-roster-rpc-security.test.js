@@ -34,10 +34,11 @@ describe("Public marketplace roster RPC security contract", () => {
       path.join(__dirname, "../../supabase/migrations/20261112150000_restrict_public_marketplace_roster_rpc_to_service_role.sql"),
       "utf8"
     );
-    expect(accessMigration).toContain(
+    const normalizedMigration = accessMigration.replace(/\\s+/g, " ");
+    expect(normalizedMigration).toContain(
       "REVOKE ALL ON FUNCTION public.get_marketplace_public_roster_v1(uuid, text) FROM PUBLIC, anon, authenticated"
     );
-    expect(accessMigration).toContain(
+    expect(normalizedMigration).toContain(
       "GRANT EXECUTE ON FUNCTION public.get_marketplace_public_roster_v1(uuid, text) TO service_role"
     );
     expect(accessMigration).toContain("assessment-access fields");
