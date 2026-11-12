@@ -56,58 +56,6 @@ export default async function handler(req, res) {
   const action = body.action;
   if (!['load', 'save', 'complete'].includes(action)) return json(res, 400, { error: 'Unsupported progress action. Create and confirm your Valoria account before beginning the Taster.' });
 
-  if (!validToken(body.resume_token)) return json(res, 401, { error: 'A secure registration session could not be verified. Please retry.' });
-    if (!validSignupKey(body.signup_key)) return json(res, 400, { error: 'Your registration reference is invalid. Please refresh and try again.' });
-    if (!name || name.length > 200 || !role || role.length > 160 || !validEmail(email)
-      || !EXPERIENCE_BANDS.some(item => item.id === experience)
-      || organisation.length > 180 || interest.length > 120 || body.privacy_acknowledged !== true) {
-      return json(res, 400, { error: 'Complete the required registration details and acknowledge the Privacy Notice before continuing.' });
-    }
-    try {
-      const limit = await consumeRegistrationRateLimit(req);
-      if (!limit?.allowed) {
-        if (limit?.retry_after_seconds) res.setHeader('Retry-After', String(limit.retry_after_seconds));
-        return json(res, 429, { error: 'Too many registration attempts. Please try again later.' });
-      }
-    } catch (err) {
-      console.error('taster-progress: registration rate limiter failed', err?.message || err);
-      return json(res, 503, { error: 'Registration is temporarily unavailable. Please try again shortly.' });
-    }
-    try {
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/begin_valu_taster_signup`, {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify({
-          p_signup_key: body.signup_key,
-          p_resume_token_hash: hashToken(body.resume_token),
-          p_name: name,
-          p_email: email,
-          p_role: role,
-          p_experience: experience,
-          p_organisation: organisation || null,
-          p_interest: interest || null,
-          p_marketing_consent: body.marketing_consent === true,
-          p_privacy_acknowledged: body.privacy_acknowledged === true,
-          p_utm_source: typeof body.utm_source === 'string' ? body.utm_source.slice(0, 200) : null,
-          p_utm_medium: typeof body.utm_medium === 'string' ? body.utm_medium.slice(0, 200) : null,
-          p_utm_campaign: typeof body.utm_campaign === 'string' ? body.utm_campaign.slice(0, 200) : null,
-        }),
-      });
-      if (!response.ok) {
-        const detail = await response.text().catch(() => '');
-        console.error('taster-progress: registration transaction failed', response.status, detail.slice(0, 500));
-        return json(res, 502, { error: 'We could not securely save your registration. Your details have not been submitted; please retry.' });
-      }
-      const payload = await response.json();
-      const record = Array.isArray(payload) ? payload[0] : payload;
-      if (!record?.lead_capture_id || !record?.progress_id) return json(res, 502, { error: 'Your registration could not be confirmed. Please retry.' });
-      return json(res, 200, { registered: true, lead_capture_id: record.lead_capture_id, progress_id: record.progress_id });
-    } catch (err) {
-      console.error('taster-progress: registration network error', err?.message || 'unknown');
-      return json(res, 502, { error: 'Your registration could not be confirmed. Please retry.' });
-    }
-  }
-
   if (!validToken(body.resume_token)) return json(res, 401, { error: 'This resume link is invalid. Start a new session or contact Valoria support.' });
   const tokenHash = hashToken(body.resume_token);
 
