@@ -60,9 +60,8 @@ const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 
 // Entry flow for the VALU journey.
-// Participants begin with the VALU taster before account setup.
-// Taster responses are stored and scored independently; they never populate
-// the formal VALU assessment response record.
+// A confirmed Valoria account is required before the independent nine-question Taster.
+// Taster responses remain separate from the formal 58-question VALU assessment.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
@@ -95,7 +94,8 @@ export default function VALUIndexV4GateNext(){
   return payload;
  }
 
- // Restore a registered session, or require registration before any new taster begins.
+ // The site bootstrap verifies a confirmed Valoria account and creates or
+ // resumes the independent Taster record. No assessment begins anonymously.
  useEffect(()=>{
   if(startedRef.current)return;
   startedRef.current=true;
@@ -109,61 +109,70 @@ export default function VALUIndexV4GateNext(){
    }
    let stored='';
    try{stored=localStorage.getItem(RESUME_TOKEN_KEY)||''}catch{}
-   if(stored){
+   try{
+    const siteOrigin=SITE_BASE||window.location.origin;
+    const bootstrapResponse=await fetch(siteOrigin+'/api/valu-taster/bootstrap',{
+     method:'POST',
+     credentials:'include',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({resume_token:stored||undefined}),
+    });
+    const bootstrap=await bootstrapResponse.json().catch(()=>({}));
+    if(!bootstrapResponse.ok){
+     if(bootstrapResponse.status===401||bootstrapResponse.status===403||bootstrapResponse.status===409){
+      window.location.replace(siteOrigin+'/valu/register/');
+      return;
+     }
+     throw new Error(bootstrap.error||'Your account could not prepare the saved Taster session.');
+    }
+    const token=bootstrap.resume_token;
+    if(typeof token!=='string'||token.length<40)throw new Error('The secure Taster session could not be verified.');
     try{
-     const loaded=await postProgress({action:'load',resume_token:stored});
-     if(cancelled)return;
-     const p=loaded.progress||{};
-     const version=String(p.taster_version||'4.1');
-     let restoredBank=null;
-     if(version===VALU_VERSION){
-      restoredBank=TASTER_QUESTIONS;
-     }else if(version==='4.1'){
-      const legacy=await import('./valuTasterLegacy.js');
-      restoredBank=legacy.LEGACY_TASTER_QUESTIONS;
-     }else{
-      setProgressToken(stored);
-      setError('Your saved session needs assistance before it can continue. Your responses remain saved. Please contact Valoria support.');
-      setPhase('unsupported');
-      return;
-     }
-     setQuestionBank(restoredBank);
-     setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
-     setProgressToken(stored);
-     setPrivacyAcknowledged(Boolean(p.lead_capture_id));
-     const savedAnswers=p.answers&&typeof p.answers==='object'?p.answers:{};
-     setAnswers(savedAnswers);
-     setSubmissionKey(p.submission_key||'');
-     const answeredCount=Object.keys(savedAnswers).length;
-     const complete=Number(p.current_question)===restoredBank.length&&answeredCount===restoredBank.length&&!!p.submission_key;
-     if(p.lead_capture_id){
-      if(complete){setCurrent(restoredBank.length-1);setPhase('break');return}
-      setCurrent(Math.min(Number(p.current_question)||0,restoredBank.length-1));
-      setPhase('session1');
-      return;
-     }
-     // Legacy in-progress sessions are preserved. Their owner registers once
-     // before continuing, which attaches the existing progress to a lead ID.
-     try{setRegistrationKey(localStorage.getItem(SIGNUP_KEY_KEY)||'')}catch{}
-     setCurrent(Math.min(Number(p.current_question)||0,restoredBank.length-1));
-     setPhase('registration');
-     return;
-    }catch(err){
-     if(cancelled)return;
-     if(err?.status===401||err?.status===404){
-      try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
-      setPhase('registration');
-      return;
-     }
-     // Transient network/server failures must never erase the only local
-     // reference to a participant's saved progress.
-     setProgressToken(stored);
-     setError('Your saved responses remain stored. We could not reach your session just now. Check your connection and try again.');
-     setPhase('resume-error');
+     localStorage.setItem(RESUME_TOKEN_KEY,token);
+     localStorage.setItem(SIGNUP_KEY_KEY,bootstrap.signup_key||'');
+    }catch{}
+    const loaded=await postProgress({action:'load',resume_token:token});
+    if(cancelled)return;
+    const p=loaded.progress||{};
+    const version=String(p.taster_version||'4.1');
+    let restoredBank=null;
+    if(version===VALU_VERSION){
+     restoredBank=TASTER_QUESTIONS;
+    }else if(version==='4.1'){
+     const legacy=await import('./valuTasterLegacy.js');
+     restoredBank=legacy.LEGACY_TASTER_QUESTIONS;
+    }else{
+     setProgressToken(token);
+     setError('Your saved session needs assistance before it can continue. Your responses remain saved. Please contact Valoria support.');
+     setPhase('unsupported');
      return;
     }
+    if(!p.lead_capture_id){
+     throw new Error('Your account was verified, but the Taster registration is incomplete. Please return to registration and retry.');
+    }
+    setQuestionBank(restoredBank);
+    setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
+    setPrivacyAcknowledged(true);
+    setProgressToken(token);
+    const savedAnswers=p.answers&&typeof p.answers==='object'?p.answers:{};
+    setAnswers(savedAnswers);
+    setSubmissionKey(p.submission_key||'');
+    const answeredCount=Object.keys(savedAnswers).length;
+    const complete=Number(p.current_question)===restoredBank.length&&answeredCount===restoredBank.length&&!!p.submission_key;
+    if(complete){
+     setCurrent(restoredBank.length-1);
+     setPhase('break');
+     return;
+    }
+    const nextQuestion=Math.min(Number(p.current_question)||0,restoredBank.length-1);
+    setCurrent(nextQuestion);
+    setPhase(answeredCount?'session1':'intro');
+   }catch(err){
+    if(cancelled)return;
+    setProgressToken(stored);
+    setError(err?.message||'We could not prepare your Taster. Your saved responses have not been deleted.');
+    setPhase('resume-error');
    }
-   if(!cancelled)setPhase('registration');
   }
   begin();
   return ()=>{cancelled=true};
@@ -340,11 +349,11 @@ export default function VALUIndexV4GateNext(){
  </Shell>;
 
  if(phase==='break')return <Shell>
-  <VALUAssessmentJourney stage="account" />
+  <VALUAssessmentJourney stage="full" />
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your taster is <em>saved.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Continue to your dashboard to begin the separate full VALU Index when you are ready.</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
@@ -353,14 +362,14 @@ export default function VALUIndexV4GateNext(){
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · YOU ARE HERE</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Create your account</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Add your details now. You’ll set your password and confirm your email in the next step.</p>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · COMPLETED</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your Valoria account</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your account is confirmed. Your Taster is saved and connected to your account.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
     <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue with Valoria</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, then return to your dashboard to continue.</p>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Continue from your dashboard to the separate full VALU Index.</p>
    </div>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
@@ -370,14 +379,14 @@ export default function VALUIndexV4GateNext(){
    </div>
   </section>
   <section className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Secure your Valoria account.</h2></div><div style={S.formTime}>ACCOUNT SETUP</div></div>
-   <p style={S.formIntro}>Your registration details and taster are saved. Continue to create your Valoria account, confirm your email and access your dashboard.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Continue your Valoria journey.</h2></div><div style={S.formTime}>ACCOUNT SETUP</div></div>
+   <p style={S.formIntro}>Your confirmed account and Taster are connected. Continue to your dashboard to begin the separate full VALU Index.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED NAME</div><h2 style={S.scoreName}>{name}</h2></div>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED EMAIL</div><h2 style={{...S.scoreName,overflowWrap:'anywhere'}}>{email}</h2></div>
    </div>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO ACCOUNT CREATION →'}</button>
+   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO MY DASHBOARD →'}</button>
    <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
   </section>
   <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
