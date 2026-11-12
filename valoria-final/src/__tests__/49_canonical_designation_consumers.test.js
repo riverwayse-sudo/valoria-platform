@@ -26,6 +26,28 @@ describe("canonical VALU designation consumers", () => {
     }
   );
 
+  test("the app and rapid-service consume one shared, versioned VALU contract", () => {
+    const appContract = read("valoria-final/src/valuV4Contract.js");
+    const sharedContract = read("supabase/functions/_shared/valuV4Contract.js");
+    const edgeFunction = read("supabase/functions/rapid-service/index.ts");
+    expect(appContract).toContain("../../supabase/functions/_shared/valuV4Contract.js");
+    expect(sharedContract).toContain("MARKETPLACE_SCORE_THRESHOLD = 35");
+    expect(edgeFunction).toContain('from "../_shared/valuV4Contract.js"');
+    expect(edgeFunction).toContain("getDesignation(score)");
+  });
+
+  test("rapid-service rejects caller-supplied designations and validates score boundaries", () => {
+    const edgeFunction = read("supabase/functions/rapid-service/index.ts");
+    expect(edgeFunction).not.toContain("tier?: string");
+    expect(edgeFunction).not.toContain("body.tier");
+    expect(edgeFunction).toContain("Number.isInteger(score)");
+    expect(edgeFunction).toContain("score < 0 || score > 100");
+    expect(edgeFunction).not.toContain("Platinum");
+    expect(edgeFunction).not.toContain("Gold");
+    expect(edgeFunction).not.toContain("Force to Align With");
+    expect(edgeFunction).not.toContain("/100");
+  });
+
   test("participant-facing API consumers derive labels from canonical points", () => {
     for (const file of [
       "api/submit-assessment.js",
