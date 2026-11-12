@@ -5,6 +5,7 @@ import { EXPERIENCE_BANDS } from "../valuTaster.js";
 
 const RESUME_TOKEN = "A".repeat(43);
 const SIGNUP_KEY = "11111111-1111-4111-8111-111111111111";
+const ACCOUNT_ID = "66666666-6666-4666-8666-666666666666";
 const LEAD_CAPTURE_ID = "22222222-2222-4222-8222-222222222222";
 const PROGRESS_ID = "33333333-3333-4333-8333-333333333333";
 const TEST_SECRET = "test-staging-service-role-key";
@@ -13,7 +14,7 @@ function tasterStartToken() {
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     v: 1, typ: "taster_start_session", aud: "valu-taster-start",
-    sub: "66666666-6666-4666-8666-666666666666",
+    sub: ACCOUNT_ID,
     email: "participant@example.invalid", display_name: "Staging Test Participant",
     role: "Operations Director", experience: EXPERIENCE_BANDS[0].id, privacy_acknowledged: true,
     iat: now, exp: now + 900, jti: "staging-test-jti-1234567890"
@@ -92,7 +93,7 @@ describe("registration-first taster API payload", () => {
     const rpc = calls.find(call => call.url.includes("rpc/begin_valu_taster_signup"));
     expect(rpc).toBeDefined();
     const body = JSON.parse(rpc.options.body);
-    expect(body.p_signup_key).toBe(SIGNUP_KEY);
+    expect(body.p_signup_key).toBe(ACCOUNT_ID);
     expect(body.p_resume_token_hash).toBe(createHash("sha256").update(RESUME_TOKEN).digest("hex"));
     expect(body.p_email).toBe("participant@example.invalid");
     expect(body.p_experience).toBe(EXPERIENCE_BANDS[0].id);
