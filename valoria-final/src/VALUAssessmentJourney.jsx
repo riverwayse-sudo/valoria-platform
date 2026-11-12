@@ -1,15 +1,22 @@
 import React from 'react';
 
 const STEPS = [
-  { key: 'registration', title: 'Register', detail: 'Your details are connected' },
+  { key: 'account', title: 'Account', detail: 'Email confirmed' },
   { key: 'taster', title: 'Taster', detail: 'A guided starting point' },
-  { key: 'account', title: 'Account', detail: 'Secure your Valoria access' },
-  { key: 'full', title: 'Assessment', detail: 'Continue when ready' },
+  { key: 'dashboard', title: 'Dashboard', detail: 'Your next step' },
+  { key: 'full', title: 'Full VALU Index', detail: 'Your official result' },
 ];
 
 export default function VALUAssessmentJourney({ stage = 'taster' }) {
-  const statusLabel = stage === 'registration' ? 'REGISTER TO SAVE YOUR JOURNEY' : stage === 'account' ? 'YOUR TASTER IS SAVED' : stage === 'full' ? 'CONTINUE WHEN READY' : 'YOUR PROGRESS IS SAVED';
-  const activeIndex = Math.max(0, STEPS.findIndex(step => step.key === stage));
+  const normalizedStage = stage === 'registration' ? 'taster' : stage === 'account' ? 'dashboard' : stage;
+  const statusLabel = stage === 'registration'
+    ? 'ACCOUNT CONFIRMED'
+    : stage === 'account'
+      ? 'TASTER SAVED · READY FOR YOUR DASHBOARD'
+      : stage === 'full'
+        ? 'CONTINUE YOUR FULL VALU INDEX'
+        : 'YOUR PROGRESS IS SAVED';
+  const activeIndex = Math.max(0, STEPS.findIndex(step => step.key === normalizedStage));
   return (
     <section aria-label="VALU Index progress" style={{ margin: '0 0 28px', textAlign:'left' }}>
       <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:6, marginBottom:12, textAlign:'left' }}>
