@@ -7,22 +7,21 @@ const path = require("path");
 
 const readApi = name => fs.readFileSync(path.join(__dirname, "../../api", name), "utf8");
 
-describe("taster-progress requires registration before a new taster", () => {
+describe("taster-progress requires confirmed-account bootstrap before a new taster", () => {
   const api = readApi("taster-progress.js");
 
-  test("registration creates the lead and resumable progress through one RPC", () => {
-    expect(api).toContain("action === 'register'");
-    expect(api).toContain("rpc/begin_valu_taster_signup");
-    expect(api).toContain("p_resume_token_hash: hashToken(body.resume_token)");
-    expect(api).toContain("p_privacy_acknowledged: body.privacy_acknowledged === true");
+  test("anonymous registration is rejected; the site bootstrap owns creation", () => {
+    expect(api).not.toContain("action === 'register'");
+    expect(api).not.toContain("rpc/begin_valu_taster_signup");
+    expect(api).toContain("Create and confirm your Valoria account before beginning the Taster");
     expect(api).not.toContain("action === 'init'");
     expect(api).not.toContain("action === 'identify'");
   });
 
-  test("new sessions cannot be initialized anonymously and registration is rate limited", () => {
-    expect(api).toContain("['register', 'load', 'save', 'complete']");
-    expect(api).toContain("consumeRegistrationRateLimit(req)");
-    expect(api).toContain("p_limit: 12");
+  test("only a high-entropy resume token can load, save or complete an existing session", () => {
+    expect(api).toContain("['load', 'save', 'complete']");
+    expect(api).toContain("validToken(body.resume_token)");
+    expect(api).toContain("hashToken(body.resume_token)");
   });
 
   test("resume reads preserve the direct lead identity link", () => {
