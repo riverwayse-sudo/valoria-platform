@@ -33,6 +33,10 @@ export async function verifyTasterStartTokenEdge(token, onFailure) {
     if (payload?.aud !== AUDIENCE) return reject('token_audience_invalid');
     if (typeof payload?.sub !== 'string' || !payload.sub) return reject('token_subject_invalid');
     if (typeof payload?.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return reject('token_email_invalid');
+    if (typeof payload?.display_name !== 'string' || !payload.display_name.trim() || payload.display_name.length > 200) return reject('token_name_invalid');
+    if (typeof payload?.role !== 'string' || !payload.role.trim() || payload.role.length > 160) return reject('token_role_invalid');
+    if (!EXPERIENCE_BANDS.has(payload?.experience)) return reject('token_experience_invalid');
+    if (payload?.privacy_acknowledged !== true) return reject('token_privacy_acknowledgement_missing');
     if (!Number.isInteger(payload?.iat) || !Number.isInteger(payload?.exp)) return reject('token_timestamps_invalid');
     if (payload.iat > now + 60 || payload.exp <= now || payload.exp - payload.iat > 4 * 60 * 60) return reject('token_expired_or_ttl_invalid');
     if (typeof payload?.jti !== 'string' || payload.jti.length < 16) return reject('token_id_invalid');
