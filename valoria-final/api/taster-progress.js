@@ -103,7 +103,7 @@ export default async function handler(req, res) {
         console.warn('taster-progress: new taster start rejected', { reason });
       });
       if (!startSession) return json(res, 401, { error: 'Create and confirm your Valoria account before starting the taster.' });
-      const norm = value => String(value || '').trim().toLowerCase().replace(/\\s+/g, ' ');
+      const norm = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
       if (norm(startSession.email) !== norm(email)) {
         return json(res, 403, { error: 'Use the same confirmed email address as your Valoria account.' });
       }
