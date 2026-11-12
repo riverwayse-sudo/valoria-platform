@@ -10,8 +10,8 @@ const API_BASE = (() => {
   // /valu/assessment/ asset base. The latter produces POSTs to a path that
   // falls through to index.html and returns 405.
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
-  if (host === 'valoria-staging-site.riverwayse.workers.dev') return 'https://valoria-staging-assessment.riverwayse.workers.dev';
-  if (host === 'valoria-staging-assessment.riverwayse.workers.dev') return typeof window !== 'undefined' ? window.location.origin : '';
+  if (host === 'staging.valoriainstitute.com') return 'https://assessment-staging.valoriainstitute.com';
+  if (host === 'assessment-staging.valoriainstitute.com') return typeof window !== 'undefined' ? window.location.origin : '';
   if (host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com' || host === 'assessment.valoriainstitute.com') {
     return 'https://assessment.valoriainstitute.com';
   }
@@ -27,8 +27,6 @@ const SITE_BASE = (() => {
     'https://valoriainstitute.com',
     'https://www.valoriainstitute.com',
     'https://staging.valoriainstitute.com',
-    'https://valoria-staging-site.riverwayse.workers.dev',
-  'https://valoria-redesign-staging-site.riverwayse.workers.dev',
   ]);
   // A direct assessment-host visit may be paired to one exact, approved site
   // origin. This is used by staging acceptance and never accepts arbitrary hosts.
@@ -40,6 +38,7 @@ const SITE_BASE = (() => {
   // When the assessment is reverse-proxied by a site Worker, return to that
   // same site environment rather than a hard-coded production/staging domain.
   if (allowedOrigins.has(window.location.origin) && !host.includes('assessment')) return window.location.origin;
+  if (host === 'assessment-staging.valoriainstitute.com') return 'https://staging.valoriainstitute.com';
   if (host === 'assessment.valoriainstitute.com') return 'https://valoriainstitute.com';
   const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) {
@@ -48,7 +47,7 @@ const SITE_BASE = (() => {
       if (parsed.protocol === 'https:' && allowedOrigins.has(parsed.origin)) return parsed.origin;
     } catch {}
   }
-  if (host === 'valoria-staging-assessment.riverwayse.workers.dev') return 'https://valoria-staging-site.riverwayse.workers.dev';
+  if (host === 'assessment-staging.valoriainstitute.com') return 'https://staging.valoriainstitute.com';
   return '';
 })();
 
