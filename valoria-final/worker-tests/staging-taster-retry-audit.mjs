@@ -169,6 +169,7 @@ try {
     signup: localStorage.getItem('valu_taster_signup_key'),
   }));
   assert.equal(firstFailureStorage.pending, null, 'pending taster ID must not be written before completion is confirmed');
+  assert.equal(storageEvents.filter(event => event.action === 'set' && event.key === 'pending_taster_id').length, 0, 'no dashboard handoff write may occur before the successful completion response');
   assert.ok(firstFailureStorage.resume, 'resume token must remain available after the lost response');
   assert.ok(firstFailureStorage.signup, 'signup key must remain available after the lost response');
   assert.equal(submitCalls, 1, 'the initial taster must be submitted exactly once');
