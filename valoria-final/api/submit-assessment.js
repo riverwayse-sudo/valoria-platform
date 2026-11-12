@@ -208,6 +208,84 @@ async function exchangeDashboardHandoff(body, res) {
   });
 }
 
+function createTasterStartSessionToken(userId, email, displayName, nowSeconds = Math.floor(Date.now() / 1000)) {
+  const payload = {
+    v: 1,
+    typ: 'taster_start_session',
+    aud: 'valu-taster-start',
+    sub: userId,
+    email: String(email || '').trim().toLowerCase(),
+    display_name: String(displayName || '').trim().slice(0, MAX_NAME_LENGTH),
+    iat: nowSeconds,
+    exp: nowSeconds + 4 * 60 * 60,
+    jti: randomBytes(16).toString('base64url'),
+  };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = createHmac('sha256', SERVICE_ROLE_KEY).update(encoded).digest('base64url');
+  return `${encoded}.${signature}`;
+}
+
+async function exchangeTasterStartHandoff(body, res) {
+  const code = body?.handoff_code;
+  if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{40,50}$/.test(code)) {
+    return json(res, 401, { ok: false, error: 'The taster-start handoff is missing or invalid.' });
+  }
+  const tokenHash = createHash('sha256').update(code).digest('hex');
+  const now = new Date().toISOString();
+  const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
+  const lookup = new URLSearchParams({
+    token: `eq.${tokenHash}`,
+    entry_point: 'eq.taster_start',
+    target_stage: 'eq.taster',
+    used_at: 'is.null',
+    expires_at: `gt.${now}`,
+    select: 'id,user_id,expires_at',
+    limit: '1',
+  });
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/valoria_reentry_links?${lookup}`, { headers, cache: 'no-store' });
+  if (!response.ok) return json(res, 502, { ok: false, error: 'Could not verify your account handoff. Please return to Valoria and try again.' });
+  const link = (await response.json())?.[0];
+  if (!link?.id || !link?.user_id) return json(res, 401, { ok: false, error: 'This taster-start link has expired or has already been used.' });
+
+  const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${link.user_id}`, { headers, cache: 'no-store' });
+  if (!userResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your Valoria account.' });
+  const user = await userResponse.json();
+  if (!user?.email_confirmed_at || !user?.email) {
+    return json(res, 403, { ok: false, error: 'Confirm your Valoria account email before starting the taster.' });
+  }
+
+  const consumeParams = new URLSearchParams({
+    id: `eq.${link.id}`,
+    used_at: 'is.null',
+    expires_at: `gt.${now}`,
+  });
+  const consumedResponse = await fetch(`${SUPABASE_URL}/rest/v1/valoria_reentry_links?${consumeParams}`, {
+    method: 'PATCH',
+    headers: { ...headers, Prefer: 'return=representation' },
+    body: JSON.stringify({ used_at: now }),
+    cache: 'no-store',
+  });
+  if (!consumedResponse.ok) return json(res, 502, { ok: false, error: 'Could not securely activate your taster session.' });
+  const consumed = await consumedResponse.json();
+  if (!Array.isArray(consumed) || consumed.length !== 1) {
+    return json(res, 409, { ok: false, error: 'This taster-start link has already been used. Return to Valoria to open a fresh session.' });
+  }
+
+  const sessionToken = createTasterStartSessionToken(
+    user.id,
+    user.email,
+    user.user_metadata?.display_name || user.user_metadata?.full_name || ''
+  );
+  return json(res, 200, {
+    ok: true,
+    session_token: sessionToken,
+    identity: {
+      email: String(user.email).trim().toLowerCase(),
+      display_name: String(user.user_metadata?.display_name || user.user_metadata?.full_name || '').trim(),
+    },
+  });
+}
+
 async function verifyHandoffRequest(body, res) {
   // The signed token is the only identity-bearing handoff value. Its payload
   // supplies an untrusted lookup key that is authenticated before data is returned.
@@ -291,6 +369,15 @@ export default async function handler(req, res) {
   // auxiliary limiter must not prevent an authenticated participant from
   // opening saved questions. The normal assessment submission path remains
   // rate-limited below.
+  if (body.action === 'exchange-taster-start-handoff') {
+    try {
+      return await exchangeTasterStartHandoff(body, res);
+    } catch (error) {
+      console.error('submit-assessment: taster-start handoff exchange failed', error?.message || error);
+      return json(res, 503, { ok: false, error: 'Secure taster access is temporarily unavailable. Return to Valoria and try again.' });
+    }
+  }
+
   if (body.action === 'exchange-dashboard-handoff') {
     try {
       return await exchangeDashboardHandoff(body, res);
