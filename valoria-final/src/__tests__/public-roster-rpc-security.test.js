@@ -30,8 +30,13 @@ describe("Public marketplace roster RPC security contract", () => {
   });
 
   test("legacy public roster RPC keeps internal assessment-access classification server-only", () => {
+    const migrationsDirectory = path.join(__dirname, "../../supabase/migrations");
+    const accessMigrationFiles = fs.readdirSync(migrationsDirectory)
+      .filter(name => /^\d+_restrict_internal_marketplace_roster_rpc_to_service_role\.sql$/.test(name))
+      .sort();
+    expect(accessMigrationFiles.length).toBeGreaterThan(0);
     const accessMigration = fs.readFileSync(
-      path.join(__dirname, "../../supabase/migrations/20261112150000_restrict_public_marketplace_roster_rpc_to_service_role.sql"),
+      path.join(migrationsDirectory, accessMigrationFiles[accessMigrationFiles.length - 1]),
       "utf8"
     );
     const normalizedMigration = accessMigration.replace(/\s+/g, " ");
