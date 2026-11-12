@@ -388,14 +388,14 @@ export default function VALUIndexV4GateNext(){
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · YOU ARE HERE</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Create your account</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Add your details now. You’ll set your password and confirm your email in the next step.</p>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · COMPLETED</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your Valoria account</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your account and email are already confirmed.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue with Valoria</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, then return to your dashboard to continue.</p>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your dashboard</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your full VALU Index is ready to begin from your dashboard.</p>
    </div>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
