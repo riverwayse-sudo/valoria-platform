@@ -7,6 +7,7 @@ const {
   computeTasterResult,
 } = require("../valuTaster");
 const { QUESTIONS } = require("../questions");
+const { validPartialAnswers } = require("../../api/taster-progress");
 const fs = require("fs");
 const path = require("path");
 const {
@@ -23,6 +24,12 @@ const {
 } = require("../assessmentJourney");
 
 describe("separate VALU taster and formal assessment contracts", () => {
+  test("partial-answer validation accepts numeric question indexes and rejects malformed keys", () => {
+    expect(validPartialAnswers({ 0: 1, 8: 2 }, TASTER_QUESTIONS)).toBe(true);
+    expect(validPartialAnswers({ "not-an-index": 1 }, TASTER_QUESTIONS)).toBe(false);
+    expect(validPartialAnswers({ 9: 1 }, TASTER_QUESTIONS)).toBe(false);
+  });
+
   test("the taster is an independent nine-question Intelligence instrument", () => {
     expect(TASTER_QUESTIONS).toHaveLength(9);
     expect(TASTER_QUESTIONS.every(question => question.cluster === "I")).toBe(true);
