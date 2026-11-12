@@ -1,4 +1,5 @@
 const AUDIENCE = 'valu-taster-start';
+const EXPERIENCE_BANDS = new Set(['0-3', '4-8', '9-15', '15+']);
 
 function decodeBase64Url(value) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
