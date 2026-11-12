@@ -208,7 +208,7 @@ async function exchangeDashboardHandoff(body, res) {
   });
 }
 
-function createTasterStartSessionToken(userId, email, displayName, nowSeconds = Math.floor(Date.now() / 1000)) {
+function createTasterStartSessionToken(userId, email, displayName, role, experience, nowSeconds = Math.floor(Date.now() / 1000)) {
   const payload = {
     v: 1,
     typ: 'taster_start_session',
@@ -216,6 +216,9 @@ function createTasterStartSessionToken(userId, email, displayName, nowSeconds = 
     sub: userId,
     email: String(email || '').trim().toLowerCase(),
     display_name: String(displayName || '').trim().slice(0, MAX_NAME_LENGTH),
+    role: String(role || '').trim().slice(0, MAX_ROLE_LENGTH),
+    experience: String(experience || '').trim(),
+    privacy_acknowledged: true,
     iat: nowSeconds,
     exp: nowSeconds + 4 * 60 * 60,
     jti: randomBytes(16).toString('base64url'),
@@ -250,8 +253,10 @@ async function exchangeTasterStartHandoff(body, res) {
   const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${link.user_id}`, { headers, cache: 'no-store' });
   if (!userResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your Valoria account.' });
   const user = await userResponse.json();
-  if (!user?.email_confirmed_at || !user?.email) {
-    return json(res, 403, { ok: false, error: 'Confirm your Valoria account email before starting the taster.' });
+  const role = String(user.user_metadata?.role || '').trim();
+  const experience = String(user.user_metadata?.experience || '').trim();
+  if (!user?.email_confirmed_at || !user?.email || !role || !EXPERIENCE_BANDS.has(experience) || user.user_metadata?.privacy_acknowledged !== true) {
+    return json(res, 403, { ok: false, error: 'Complete and confirm your Valoria professional account before starting the taster.' });
   }
 
   const consumeParams = new URLSearchParams({
@@ -274,7 +279,9 @@ async function exchangeTasterStartHandoff(body, res) {
   const sessionToken = createTasterStartSessionToken(
     user.id,
     user.email,
-    user.user_metadata?.display_name || user.user_metadata?.full_name || ''
+    user.user_metadata?.display_name || user.user_metadata?.full_name || '',
+    role,
+    experience
   );
   return json(res, 200, {
     ok: true,
@@ -282,6 +289,9 @@ async function exchangeTasterStartHandoff(body, res) {
     identity: {
       email: String(user.email).trim().toLowerCase(),
       display_name: String(user.user_metadata?.display_name || user.user_metadata?.full_name || '').trim(),
+      role,
+      experience,
+      privacy_acknowledged: true,
     },
   });
 }
