@@ -1,7 +1,8 @@
 // Shared CORS policy for public assessment endpoints.
 //
-// The VALU assessment UI is served from assessment.valoriainstitute.com and,
-// during migration, proxied under valoriainstitute.com/valu/assessment/. Both
+// The VALU assessment UI is served from assessment.valoriainstitute.com or the
+// isolated assessment-staging.valoriainstitute.com host and can also be proxied
+// under valoriainstitute.com/valu/assessment/. Both
 // surfaces call the API at the assessment deployment root, so those POSTs are
 // cross-origin and require an explicit preflight response. Without it the
 // browser blocks every taster request with a CORS error even though the handler
