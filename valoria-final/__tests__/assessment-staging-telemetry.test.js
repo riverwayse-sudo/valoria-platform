@@ -21,6 +21,9 @@ describe('assessment staging telemetry and indexing isolation', () => {
     expect(config.env.staging.vars.VALU_PREVIEW_SITE_ORIGIN).toBe('https://staging.valoriainstitute.com');
     expect(config.env.staging.vars.VALU_PREVIEW_ASSESSMENT_ORIGIN).toBe('https://assessment-staging.valoriainstitute.com');
     expect(config.env.staging.vars.VALORIA_SITE_URL).toBe('https://staging.valoriainstitute.com');
+    expect(config.env.staging.vars.VALU_PREVIEW_SITE_ORIGIN).toBe('https://staging.valoriainstitute.com');
+    expect(config.env.staging.vars.VALU_PREVIEW_ASSESSMENT_ORIGIN).toBe('https://assessment-staging.valoriainstitute.com');
+    expect(config.env.staging.vars.VALORIA_SITE_URL).toBe('https://staging.valoriainstitute.com');
   });
 
   test('preview builds display a staging banner and never load production analytics', () => {
