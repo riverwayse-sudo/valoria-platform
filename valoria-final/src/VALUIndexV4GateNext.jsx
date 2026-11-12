@@ -303,11 +303,11 @@ export default function VALUIndexV4GateNext(){
     <Field label="WHAT ARE YOU MOST INTERESTED IN? (OPTIONAL)"><select style={S.input} value={interest} onChange={e=>setInterest(e.target.value)}><option value="">Select an interest</option><option value="Professional visibility">Professional visibility</option><option value="Career and leadership opportunities">Career and leadership opportunities</option><option value="Speaking and facilitation">Speaking and facilitation</option><option value="Learning and development">Learning and development</option><option value="Other">Other</option></select></Field>
    </details>
    <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
-    <input type="checkbox" required checked={privacyAcknowledged} onChange={e=>setPrivacyAcknowledged(e.target.checked)} style={{marginTop:0,width:24,height:24,minWidth:24,minHeight:24,flex:'0 0 24px',accentColor:GOLD}}/>
+    <input type="checkbox" required checked={privacyAcknowledged} onChange={e=>setPrivacyAcknowledged(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
     <span>I acknowledge that Valoria will process these details to administer my assessment and manage my journey. Read the <a href={(SITE_BASE||'https://valoriainstitute.com')+'/privacypolicy'} style={{color:GOLD,textDecoration:'underline'}}>Privacy Notice</a>.</span>
    </label>
    <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
-    <input type="checkbox" checked={marketingConsent} onChange={e=>setMarketingConsent(e.target.checked)} style={{marginTop:0,width:24,height:24,minWidth:24,minHeight:24,flex:'0 0 24px',accentColor:GOLD}}/>
+    <input type="checkbox" checked={marketingConsent} onChange={e=>setMarketingConsent(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
     <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
    </label>
    {error&&<div style={S.error} role="alert">{error}</div>}
@@ -354,7 +354,7 @@ export default function VALUIndexV4GateNext(){
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Add your details now. You’ll set your password and confirm your email in the next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.72)'}}>03 · UP NEXT</div>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
     <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue with Valoria</h3>
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, then return to your dashboard to continue.</p>
    </div>
@@ -400,11 +400,11 @@ const S={
  eyebrow:{fontSize:8,fontWeight:800,letterSpacing:'.15em',color:BRASS},
  error:{padding:'12px 14px',border:'1px solid rgba(216,90,48,.3)',background:'rgba(216,90,48,.08)',borderRadius:8,color:'#F3A0A0',fontSize:12,lineHeight:1.5,marginBottom:12},
  steps:{display:'flex',justifyContent:'center',gap:28,margin:'0 0 42px',paddingBottom:18,borderBottom:'1px solid rgba(212,201,168,.16)'},
- step:{display:'flex',alignItems:'center',gap:8,fontSize:9,fontWeight:700,letterSpacing:'.14em',color:'rgba(250,250,247,.72)'},
+ step:{display:'flex',alignItems:'center',gap:8,fontSize:9,fontWeight:700,letterSpacing:'.14em',color:'rgba(250,250,247,.55)'},
  stepDot:{width:24,height:24,borderRadius:'50%',border:'1px solid rgba(201,168,76,.45)',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,color:PARCH},
  top:{display:'flex',justifyContent:'space-between',alignItems:'flex-end'},
- cluster:{fontSize:11,color:'rgba(250,250,247,.72)',marginTop:5},
- counter:{fontSize:11,color:'rgba(250,250,247,.72)'},
+ cluster:{fontSize:11,color:'rgba(250,250,247,.5)',marginTop:5},
+ counter:{fontSize:11,color:'rgba(250,250,247,.45)'},
  progress:{height:4,background:'rgba(250,250,247,.08)',margin:'14px 0 34px',borderRadius:99,overflow:'hidden'},
  fill:{height:'100%',borderRadius:99},
  question:{fontSize:'clamp(28px,4.5vw,44px)',fontWeight:500,lineHeight:1.16,letterSpacing:'-.025em',margin:'0 0 26px'},
@@ -417,12 +417,12 @@ const S={
  formTop:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:18,paddingBottom:18,borderBottom:'1px solid rgba(212,201,168,.14)'},
  formTime:{fontSize:8,fontWeight:900,lineHeight:1.7,letterSpacing:'.13em',textAlign:'right',color:BRASS},
  formTitle:{fontSize:23,fontWeight:600,letterSpacing:'-.025em',margin:'5px 0 0',lineHeight:1.15},
- formIntro:{fontSize:11,lineHeight:1.45,color:'rgba(250,250,247,.72)',margin:'12px 0 16px',maxWidth:420},
+ formIntro:{fontSize:11,lineHeight:1.45,color:'rgba(250,250,247,.52)',margin:'12px 0 16px',maxWidth:420},
  grid:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12},
  label:{display:'grid',gap:6,fontSize:7.5,fontWeight:800,letterSpacing:'.14em',color:'rgba(250,250,247,.62)',marginBottom:11},
  input:{width:'100%',boxSizing:'border-box',padding:'10px 12px',background:'#23233A',border:'1px solid rgba(212,201,168,.2)',borderRadius:7,color:PARCH,fontSize:12.5,fontFamily:'inherit',outline:'none',minHeight:40},
  primary:{width:'100%',padding:'13px 18px',border:0,borderRadius:7,background:GOLD,color:DARK,fontWeight:900,letterSpacing:'.1em',fontSize:9.5,cursor:'pointer',fontFamily:'inherit',marginTop:3,minHeight:44},
- saveNote:{display:'flex',justifyContent:'center',gap:7,alignItems:'center',fontSize:9.5,color:'rgba(250,250,247,.78)',marginTop:13},
+ saveNote:{display:'flex',justifyContent:'center',gap:7,alignItems:'center',fontSize:9.5,color:'rgba(250,250,247,.42)',marginTop:13},
  resultsHeader:{maxWidth:790,margin:'0 auto',width:'100%'},
  resultsEyebrow:{display:'flex',alignItems:'center',gap:9,fontSize:9,fontWeight:800,letterSpacing:'.13em',color:BRASS,flexWrap:'wrap'},
  statusDot:{width:7,height:7,borderRadius:'50%',background:'#91B79A',display:'inline-block'},
@@ -434,6 +434,6 @@ const S={
  dimensionCode:{fontSize:8,fontWeight:900,letterSpacing:'.14em',lineHeight:1.4,color:GOLD,marginBottom:1},
  scoreName:{fontSize:16,fontWeight:800,lineHeight:1.3,letterSpacing:'-.02em',color:PARCH,overflowWrap:'anywhere',margin:0},
  scoreValue:{fontSize:27,fontWeight:700,lineHeight:1.1,letterSpacing:'-.04em',color:PARCH,marginTop:'auto'},
- scoreOutOf:{fontSize:10,fontWeight:500,letterSpacing:0,color:'rgba(250,250,247,.78)',marginLeft:3},
- note:{fontSize:10,lineHeight:1.65,color:'rgba(250,250,247,.72)',maxWidth:900,margin:'14px auto 0',width:'100%'}
+ scoreOutOf:{fontSize:10,fontWeight:500,letterSpacing:0,color:'rgba(250,250,247,.42)',marginLeft:3},
+ note:{fontSize:10,lineHeight:1.65,color:'rgba(250,250,247,.48)',maxWidth:900,margin:'14px auto 0',width:'100%'}
 };
