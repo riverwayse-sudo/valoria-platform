@@ -1,5 +1,6 @@
 const AUDIENCE = 'valu-taster-start';
 const EXPERIENCE_BANDS = new Set(['0-3', '4-8', '9-15', '15+']);
+const USER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function decodeBase64Url(value) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -31,7 +32,7 @@ export async function verifyTasterStartTokenEdge(token, onFailure) {
     if (payload?.v !== 1) return reject('token_version_invalid');
     if (payload?.typ !== 'taster_start_session') return reject('token_type_invalid');
     if (payload?.aud !== AUDIENCE) return reject('token_audience_invalid');
-    if (typeof payload?.sub !== 'string' || !payload.sub) return reject('token_subject_invalid');
+    if (typeof payload?.sub !== 'string' || !USER_ID_PATTERN.test(payload.sub)) return reject('token_subject_invalid');
     if (typeof payload?.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return reject('token_email_invalid');
     if (typeof payload?.display_name !== 'string' || !payload.display_name.trim() || payload.display_name.length > 200) return reject('token_name_invalid');
     if (typeof payload?.role !== 'string' || !payload.role.trim() || payload.role.length > 160) return reject('token_role_invalid');
