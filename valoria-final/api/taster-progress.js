@@ -58,7 +58,7 @@ async function getProgress(tokenHash) {
     resume_token_hash: `eq.${tokenHash}`,
     status: 'eq.in_progress',
     expires_at: `gt.${new Date().toISOString()}`,
-    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,lead_capture_id,taster_version,total_questions',
+    select: 'id,name,role,experience,email,current_question,answers,submission_key,status,expires_at,lead_capture_id,taster_id,taster_version,total_questions',
     limit: '1',
   });
   const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, { headers: headers() });
@@ -166,6 +166,16 @@ export default async function handler(req, res) {
       if (submissionKey && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(submissionKey)) {
         return json(res, 400, { error: 'Invalid submission reference.' });
       }
+      if (progress.status === 'completed') {
+        if (!progress.taster_id || !progress.submission_key || (submissionKey && submissionKey !== progress.submission_key)) {
+          return json(res, 409, { error: 'This completed taster does not match the saved submission reference.' });
+        }
+        const completedParams = new URLSearchParams({ id: `eq.${progress.taster_id}`, submission_key: `eq.${progress.submission_key}`, lead_capture_id: `eq.${progress.lead_capture_id}`, select: 'id', limit: '1' });
+        const completedResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${completedParams}`, { headers: headers() });
+        if (!completedResponse.ok) return json(res, 502, { error: 'Could not verify the completed taster reference.' });
+        if (!(await completedResponse.json())?.[0]?.id) return json(res, 409, { error: 'The completed taster reference could not be reconciled.' });
+        return json(res, 200, { saved: true, completed: true, taster_id: progress.taster_id, submission_key: progress.submission_key });
+      }
       if (progress.submission_key && submissionKey && progress.submission_key !== submissionKey) {
         return json(res, 409, { error: 'This taster already has a different submission reference. Reload your saved progress.' });
       }
@@ -196,6 +206,11 @@ export default async function handler(req, res) {
     const tasterResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, { headers: headers() });
     if (!tasterResponse.ok) return json(res, 502, { error: 'Could not verify the completed taster reference.' });
     if (!(await tasterResponse.json())?.[0]?.id) return json(res, 409, { error: 'The taster reference does not match this saved submission.' });
+    if (progress.status === 'completed') {
+      if (progress.taster_id !== tasterId) return json(res, 409, { error: 'This progress record is already completed with a different taster reference.' });
+      return json(res, 200, { completed: true, already_completed: true });
+    }
+    if (progress.status !== 'in_progress') return json(res, 409, { error: 'This taster progress record cannot be completed from its current state.' });
     const params = new URLSearchParams({ id: `eq.${progress.id}`, status: 'eq.in_progress', select: 'id' });
     const response = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${params}`, {
       method: 'PATCH', headers: { ...headers(), Prefer: 'return=representation' },
