@@ -163,28 +163,44 @@ describe("computeWeightedIndex", () => {
 // ── SECTION 3: getDesignation ─────────────────────────────────────────────
 describe("getDesignation", () => {
   const cases = [
-    [100, "Elite"], [90, "Elite"],
-    [89, "Distinguished"], [75, "Distinguished"],
-    [74, "Proficient"], [55, "Proficient"],
-    [54, "Standard"], [35, "Standard"],
+    [100, "Elite"],
+    [90,  "Elite"],
+    [89,  "Distinguished"],
+    [75,  "Distinguished"],
+    [74,  "Proficient"],
+    [55,  "Proficient"],
+    [54,  "Standard"],
+    [35,  "Standard"],
+    [34,  "Standard"],
+    [0,   "Standard"],
   ];
 
-  test.each(cases)("score %i points → %s", (score, expectedName) => {
+  test.each(cases)("score %i → %s", (score, expectedName) => {
     expect(getDesignation(score).name).toBe(expectedName);
   });
 
-  test("scores below the 35-point eligibility threshold have no merit designation", () => {
-    expect(getDesignation(34)).toBeNull();
-    expect(getDesignation(0)).toBeNull();
+  test("designation boundary at 90 is Elite; 89 is Distinguished", () => {
+    expect(getDesignation(90).name).toBe("Elite");
+    expect(getDesignation(89).name).toBe("Distinguished");
+    expect(getDesignation(75).name).toBe("Distinguished");
+    expect(getDesignation(74).name).toBe("Proficient");
+    expect(getDesignation(55).name).toBe("Proficient");
+    expect(getDesignation(54).name).toBe("Standard");
   });
 
-  test("returns a designation object with its minimum points boundary", () => {
-    const designation = getDesignation(72);
-    expect(designation).toHaveProperty("min", 55);
-    expect(designation).toHaveProperty("name", "Proficient");
+  test("boundary at exactly 35 is Standard not Standard", () => {
+    expect(getDesignation(35).name).toBe("Standard");
+    expect(getDesignation(34).name).toBe("Standard");
+  });
+
+  test("returns object with min property", () => {
+    const d = getDesignation(72);
+    expect(d).toHaveProperty("min");
+    expect(d).toHaveProperty("name");
   });
 });
 
+// ── SECTION 4: getPathway ─────────────────────────────────────────────────
 describe("getPathway", () => {
   const cases = [
     [100, "Advanced Development Pathway"],

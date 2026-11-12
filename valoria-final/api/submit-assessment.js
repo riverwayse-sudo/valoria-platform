@@ -4,7 +4,6 @@
 // The canonical question bank remains the source of truth for scoring.
 
 import { computeResults } from '../src/scoringEngine.js';
-import { canonicalDesignationName } from './_canonicalDesignation.js';
 import { QUESTIONS } from '../src/questions.js';
 import { computeFingerprint } from '../src/lockEngine.js';
 import { verifyValuHandoffTokenEdge } from '../lib/valu-handoff-token-edge.js';
@@ -15,7 +14,6 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MAX_NAME_LENGTH = 200;
 const MAX_ROLE_LENGTH = 160;
 const MAX_TIMINGS_LENGTH = QUESTIONS.length;
-const FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER";
 const MAX_SHUFFLE_KEYS = QUESTIONS.length;
 const EXPERIENCE_BANDS = new Set(['0-3', '4-8', '9-15', '15+']);
 const RATE_LIMIT = 10;
@@ -65,7 +63,6 @@ async function findExistingAssessment(tasterId, fingerprint) {
   const params = new URLSearchParams({
     taster_id: `eq.${tasterId}`,
     identity_hash: `eq.${fingerprint}`,
-    assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`,
     select: 'id,user_id,taster_id,total_score,designation,cluster_scores,skill_scores,completed_at,report_token',
     limit: '1',
   });
@@ -76,12 +73,9 @@ async function findExistingAssessment(tasterId, fingerprint) {
   return (await response.json())?.[0] || null;
 }
 function existingResults(assessment) {
-  const designation = canonicalDesignationName(assessment.total_score);
   return {
     valuIndex: assessment.total_score,
-    // Stored labels may predate the canonical v4 bands. Recompute from the
-    // authoritative points contract so an idempotent retry cannot revive them.
-    desig: designation ? { name: designation } : null,
+    desig: { name: assessment.designation || '' },
     clusterScores: assessment.cluster_scores || {},
     skillScores: assessment.skill_scores || {},
   };
@@ -134,18 +128,7 @@ async function exchangeDashboardHandoff(body, res) {
     limit: '1',
   });
   const linkResponse = await fetch(`${SUPABASE_URL}/rest/v1/valoria_reentry_links?${lookup}`, { headers, cache: 'no-store' });
-  if (!linkResponse.ok) {
-    const diagnostic = await linkResponse.text().catch(() => '');
-    // Record only the upstream status and bounded error text. Never log the
-    // handoff code, its hash, account ID, snapshot ID, or participant data.
-    console.error('dashboard handoff lookup failed', {
-      status: linkResponse.status,
-      response: diagnostic.slice(0, 500),
-      supabaseConfigured: Boolean(SUPABASE_URL),
-      serviceRoleConfigured: Boolean(SERVICE_ROLE_KEY),
-    });
-    return json(res, 502, { ok: false, error: 'Could not verify dashboard access. Please return to your dashboard.' });
-  }
+  if (!linkResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify dashboard access. Please return to your dashboard.' });
   const link = (await linkResponse.json())?.[0];
   if (!link?.user_id || !link?.source_id) return json(res, 401, { ok: false, error: 'This dashboard handoff has expired or has already been used.' });
 
@@ -158,7 +141,7 @@ async function exchangeDashboardHandoff(body, res) {
     limit: '1',
   });
   const tasterResponse = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, { headers, cache: 'no-store' });
-  if (!tasterResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your saved VALU Index Taster.' });
+  if (!tasterResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your saved VALU snapshot.' });
   const taster = (await tasterResponse.json())?.[0];
   if (!taster?.completed_at || taster.user_id !== link.user_id) {
     return json(res, 403, { ok: false, error: 'This snapshot is not linked to the dashboard account.' });
@@ -172,14 +155,13 @@ async function exchangeDashboardHandoff(body, res) {
   const existingAssessmentParams = new URLSearchParams({
     or: `(user_id.eq.${link.user_id},taster_id.eq.${taster.id})`,
     completed_at: 'not.is.null',
-    assessment_version: `eq.${FULL_ASSESSMENT_VERSION}`,
     select: 'id',
     limit: '1',
   });
   const existingAssessmentResponse = await fetch(`${SUPABASE_URL}/rest/v1/valu_assessments?${existingAssessmentParams}`, { headers, cache: 'no-store' });
-  if (!existingAssessmentResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your VALU Index status.' });
+  if (!existingAssessmentResponse.ok) return json(res, 502, { ok: false, error: 'Could not verify your VALU assessment status.' });
   if ((await existingAssessmentResponse.json())?.length) {
-    return json(res, 409, { ok: false, error: 'Your full VALU Index is already complete. Return to your dashboard to view your results.' });
+    return json(res, 409, { ok: false, error: 'Your full VALU assessment is already complete. Return to your dashboard to view your results.' });
   }
 
   // Atomic compare-and-set: exactly one request can consume this handoff code.
@@ -225,10 +207,10 @@ async function verifyHandoffRequest(body, res) {
   const headers = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
   const params = new URLSearchParams({ id: `eq.${tasterId}`, select: 'id,user_id,name,role,experience,completed_at', limit: '1' });
   const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${params}`, { headers });
-  if (!tasterRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the VALU Index Taster.' });
+  if (!tasterRes.ok) return json(res, 502, { ok: false, error: 'Could not verify the VALU snapshot.' });
   const taster = (await tasterRes.json())?.[0];
-  if (!taster) return json(res, 404, { ok: false, error: 'VALU Index Taster record not found.' });
-  if (!taster.completed_at) return json(res, 409, { ok: false, error: 'Complete the VALU Index Taster first.' });
+  if (!taster) return json(res, 404, { ok: false, error: 'VALU snapshot not found.' });
+  if (!taster.completed_at) return json(res, 409, { ok: false, error: 'Complete your VALU snapshot first.' });
   if (taster.user_id !== handoff.sub) return json(res, 403, { ok: false, error: 'This handoff does not match the snapshot owner.' });
   const normalise = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   if ((body?.name && normalise(taster.name) !== normalise(body.name))
@@ -251,7 +233,6 @@ const ALLOWED_ORIGINS = new Set([
   'https://valoriainstitute.com',
   'https://www.valoriainstitute.com',
   'https://assessment.valoriainstitute.com',
-  'https://valoria-assessment.riverwayse.workers.dev',
 ]);
 
 function applyCors(req, res) {
@@ -283,23 +264,6 @@ export default async function handler(req, res) {
 
   const forwarded = req.headers['x-forwarded-for'];
   const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
-  const body = req.body || {};
-
-  // Dashboard handoffs are protected by a 256-bit random code, a 60-second
-  // expiry, and an atomic single-use database consume. Keep this exchange
-  // independent of the shared submission rate-limit RPC: an outage in that
-  // auxiliary limiter must not prevent an authenticated participant from
-  // opening saved questions. The normal assessment submission path remains
-  // rate-limited below.
-  if (body.action === 'exchange-dashboard-handoff') {
-    try {
-      return await exchangeDashboardHandoff(body, res);
-    } catch (error) {
-      console.error('submit-assessment: dashboard handoff exchange failed', error?.message || error);
-      return json(res, 503, { ok: false, error: 'Secure assessment access is temporarily unavailable. Return to your dashboard and try again.' });
-    }
-  }
-
   try {
     const limit = await consumeRateLimit(ip);
     if (!limit?.allowed) {
@@ -310,10 +274,20 @@ export default async function handler(req, res) {
     console.error('submit-assessment: shared rate limiter failed', err?.message || err);
     return json(res, 503, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
   }
+
+  const body = req.body || {};
+  if (body.action === 'exchange-dashboard-handoff') {
+    try {
+      return await exchangeDashboardHandoff(body, res);
+    } catch (error) {
+      console.error('submit-assessment: dashboard handoff exchange failed', error?.message || error);
+      return json(res, 503, { ok: false, error: 'Secure assessment access is temporarily unavailable. Return to your dashboard and try again.' });
+    }
+  }
   if (body.action === 'verify-handoff') return verifyHandoffRequest(body, res);
   const { name, role, experience, answers, timings, shuffleMap, taster_id: tasterId, handoff_token: handoffToken } = body;
   if (typeof tasterId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
-    return json(res, 400, { error: 'Open the full VALU Index from your completed VALU Index Taster. A valid snapshot reference is required.' });
+    return json(res, 400, { error: 'Open the full VALU assessment from your completed VALU snapshot. A valid snapshot reference is required.' });
   }
   const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason => {
     console.warn('[submit-assessment] handoff rejected', { action: 'submit', reason });
@@ -322,15 +296,16 @@ export default async function handler(req, res) {
   if (typeof name !== 'string' || !name.trim() || name.trim().length > MAX_NAME_LENGTH) return json(res, 400, { error: 'Name is required and must be 200 characters or fewer.' });
   if (typeof role !== 'string' || !role.trim() || role.trim().length > MAX_ROLE_LENGTH) return json(res, 400, { error: 'Role is required and must be 160 characters or fewer.' });
   if (!EXPERIENCE_BANDS.has(experience)) return json(res, 400, { error: 'Select a valid experience band.' });
-  // The formal instrument is independent: every submission must contain all
-  // 58 formal answers. No answer is read from or copied from the taster record.
-  if (!validateAnswers(answers)) {
-    return json(res, 400, { error: 'Complete the full VALU Index before submitting.' });
-  }
-  // Each formal question has its own timing record. Timings are diagnostics,
-  // never score inputs.
-  if (!Array.isArray(timings) || timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json(res, 400, { error: 'Invalid formal assessment timings.' });
+  if (!validateAnswers(answers)) return json(res, 400, { error: 'Assessment answers are incomplete or invalid.' });
+  // Timings are integrity diagnostics only — they never enter the score. A
+  // two-session completion legitimately carries fewer than 58 timings (the
+  // opening nine are answered in session 1), so accept any non-empty subset.
+  if (!Array.isArray(timings) || timings.length < 1 || timings.length > MAX_TIMINGS_LENGTH || timings.some(value => !Number.isFinite(value) || value < 0 || value > 86_400_000)) return json(res, 400, { error: 'Invalid assessment timings.' });
   if (!validateShuffleMap(shuffleMap) || Object.keys(shuffleMap).length > MAX_SHUFFLE_KEYS) return json(res, 400, { error: 'Invalid assessment presentation mapping.' });
+
+  let results;
+  try { results = computeResults(answers, timings, shuffleMap, QUESTIONS); }
+  catch (err) { console.error('submit-assessment: scoring failed', err); return json(res, 400, { error: 'Could not score this submission.' }); }
 
   const fingerprint = computeFingerprint(name, role);
   const completedAt = new Date().toISOString();
@@ -345,15 +320,15 @@ export default async function handler(req, res) {
   const tasterRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_sessions?${tasterParams}`, {
     headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
   });
-  if (!tasterRes.ok) return json(res, 502, { error: 'Could not verify the VALU Index.' });
+  if (!tasterRes.ok) return json(res, 502, { error: 'Could not verify the VALU journey.' });
   taster = (await tasterRes.json())?.[0];
-  if (!taster) return json(res, 404, { error: 'VALU Index Taster record not found. Return to the VALU Index Taster and complete it first.' });
-  if (!taster.completed_at) return json(res, 409, { error: 'Complete the VALU Index Taster before starting the full VALU Index.' });
-  if (!taster.user_id) return json(res, 409, { error: 'Sign in to your Valoria account and link your VALU Index Taster before starting the full VALU Index.' });
+  if (!taster) return json(res, 404, { error: 'VALU snapshot not found. Return to the VALU journey and complete your snapshot first.' });
+  if (!taster.completed_at) return json(res, 409, { error: 'Complete your VALU snapshot before starting the full assessment.' });
+  if (!taster.user_id) return json(res, 409, { error: 'Sign in to your Valoria account and link your VALU snapshot before starting the full assessment.' });
   if (taster.user_id !== handoff.sub) return json(res, 403, { error: 'This secure assessment handoff does not belong to the linked account.' });
   if (String(taster.name || '').trim().toLowerCase() !== name.trim().toLowerCase() ||
       String(taster.role || '').trim().toLowerCase() !== role.trim().toLowerCase()) {
-    return json(res, 403, { error: 'Your VALU Index Taster identity does not match this account.' });
+    return json(res, 403, { error: 'Assessment identity does not match the VALU snapshot.' });
   }
   resolvedUserId = taster.user_id;
   const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${resolvedUserId}`, {
@@ -361,16 +336,8 @@ export default async function handler(req, res) {
   });
   if (!userRes.ok) return json(res, 502, { error: 'Could not verify the Valoria account.' });
   const user = await userRes.json();
-  if (!user.email_confirmed_at) return json(res, 403, { error: 'Confirm your Valoria account email before submitting the full VALU Index.' });
+  if (!user.email_confirmed_at) return json(res, 403, { error: 'Confirm your Valoria account email before submitting the full VALU assessment.' });
   resolvedEmail = String(user.email || '').trim().toLowerCase() || null;
-
-  // The taster record is used only to verify account ownership and journey
-  // provenance. Its answer payload is deliberately never fetched or merged.
-  const completeAnswers = answers;
-
-  let results;
-  try { results = computeResults(completeAnswers, timings, shuffleMap, QUESTIONS); }
-  catch (err) { console.error('submit-assessment: scoring failed', err); return json(res, 400, { error: 'Could not score this submission.' }); }
 
   const row = {
     name: name.trim(), role: role.trim(), experience,
@@ -378,7 +345,7 @@ export default async function handler(req, res) {
     designation: results.desig?.name || '', cluster_scores: results.clusterScores,
     skill_scores: results.skillScores, completed_at: completedAt, expires_at: expiresAt, ai_report: null,
     taster_id: tasterId, user_id: resolvedUserId, email: resolvedEmail,
-    answers: completeAnswers, timings, shuffle_map: shuffleMap, assessment_version: FULL_ASSESSMENT_VERSION,
+    answers, timings, shuffle_map: shuffleMap, assessment_version: 'FULL_VALU_V1',
   };
 
   try {

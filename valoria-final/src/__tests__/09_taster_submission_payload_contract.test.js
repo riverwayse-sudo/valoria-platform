@@ -22,7 +22,6 @@ function deterministicUuid(label) {
 const SUBMISSION_KEY = deterministicUuid("snapshot-submission-key");
 const OTHER_SUBMISSION_KEY = deterministicUuid("other-submission-key");
 const TASTER_ID = deterministicUuid("taster-id");
-const LEAD_CAPTURE_ID = deterministicUuid("lead-capture-id");
 
 function validAnswers() {
   return Object.fromEntries(TASTER_QUESTIONS.map((question, index) => [index, 0]));
@@ -76,7 +75,6 @@ function installFetch({ progress = {}, submit = {} } = {}) {
         current_question: TASTER_QUESTIONS.length,
         answers: validAnswers(),
         submission_key: SUBMISSION_KEY,
-        lead_capture_id: LEAD_CAPTURE_ID,
         ...progress,
       }]);
     }
@@ -122,7 +120,6 @@ describe("Snapshot submission RPC payload contract", () => {
     expect(body.p_answers).toEqual(validAnswers());
     expect(body.p_email).toBe("temitayo@example.com");
     expect(body.p_submission_key).toBe(SUBMISSION_KEY);
-    expect(body.p_lead_capture_id).toBe(LEAD_CAPTURE_ID);
     expect(body.p_taster_version).toBeTruthy();
   });
 
@@ -147,7 +144,7 @@ describe("Snapshot submission RPC payload contract", () => {
     await loadHandler()(makeReq(), res);
 
     expect(res.statusCode).toBe(502);
-    expect(res.body.error).toBe("We could not securely save your taster and recovery record together. Please retry.");
+    expect(res.body.error).toBe("We could not securely save your snapshot and recovery record together. Please retry.");
     expect(res.body.taster_id).toBeUndefined();
   });
 
@@ -166,7 +163,7 @@ describe("Snapshot submission RPC payload contract", () => {
     await loadHandler()(makeReq(), res);
 
     expect(res.statusCode).toBe(400);
-    expect(res.body.error).toContain("Finish and save all taster answers");
+    expect(res.body.error).toContain("Finish and save all snapshot answers");
     expect(calls.some(call => call.url.includes("submit_taster_with_identity_candidate"))).toBe(false);
   });
 });

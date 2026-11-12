@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
   const authorization = String(req.headers?.authorization || '');
   const match = authorization.match(/^Bearer\s+(.+)$/i);
-  if (!match) return json(res, 401, { error: 'Sign in to claim your previous VALU Index Taster.' });
+  if (!match) return json(res, 401, { error: 'Sign in to claim your previous VALU snapshot.' });
 
   let user;
   try {

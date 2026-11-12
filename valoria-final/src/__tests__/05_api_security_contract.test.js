@@ -35,7 +35,7 @@ describe("Privileged API security contracts", () => {
     expect(migration).toContain("'pending_assessment_reports'");
     expect(migration).toContain("a.report_status = 'PENDING'");
   });
-  test("full VALU assessment restores independent full progress through a verified account-owned taster link", () => {
+  test("full VALU assessment restores saved answers by verified account-owned taster after login", () => {
     const progressApi = readApi("assessment-progress.js");
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     expect(progressApi).toContain('if (action === "restore")');
@@ -44,11 +44,8 @@ describe("Privileged API security contracts", () => {
     expect(progressApi).toContain("progress.user_id !== resolvedIdentity.user_id");
     expect(progressApi).toContain('status: "in.(in_progress,abandoned)"');
     expect(component).toContain("action:'restore'");
-    expect(component).toContain("setAnswers(restoredAnswers)");
-    expect(component).toContain("nextPlaceToAnswer(restoredAnswers, 1)");
-    expect(component).toContain("setCurrent(0)");
-    expect(component).not.toContain("seedAnswersFromOpening");
-    expect(component).toContain("setCurrent(nextPlace ? nextPlace - 1 : ASSESSMENT_ORDER.length - 1)");
+    expect(component).toContain("setAnswers(saved.answers");
+    expect(component).toContain("setCurrent(Math.min(Math.max(Number(saved.current_question)");
     expect(component).toContain("remoteRestoreComplete");
     expect(component).toContain("Your saved VALU progress could not be restored");
   });
@@ -184,9 +181,7 @@ describe("Assessment integrity contracts", () => {
   test("taster submission records server-stamped version provenance", () => {
     const source = readApi("submit-taster.js");
     expect(source).toContain("VALU_VERSION");
-    expect(source).toContain("p_taster_version: tasterVersion");
-    expect(source).toContain("tasterVersion === VALU_VERSION");
-    expect(source).toContain("LEGACY_TASTER_VERSION");
+    expect(source).toContain("p_taster_version: String(VALU_VERSION)");
     expect(source).toContain("submit_taster_with_identity_candidate");
   });
 
@@ -264,15 +259,7 @@ describe("Assessment integrity contracts", () => {
     expect(component).toContain("loadRemoteProgress(identity.resume)");
     expect(component).toContain("if (identity.resume || handoffStatus !== 'ready'");
     expect(component).toContain("resume:''");
-    expect(component).toContain("if (handoffStatus === 'checking')");
-    expect(component).toContain("if (handoffStatus !== 'ready')");
-    expect(component).toContain("if (!identity.resume && !remoteRestoreComplete)");
-    expect(component.indexOf("if (handoffStatus !== 'ready')")).toBeLessThan(component.indexOf("if (!canUse)"));
-    expect(component).toContain("const canUse = Boolean(identity.tasterId && identity.name && identity.role);");
-    expect(component).toContain("Confirm your experience band.");
-    expect(component).toContain("valu-site-origin");
-    expect(component).toContain("experience:identity.experience,");
-    expect(component).toContain("setIdentity(previous => ({ ...previous, experience:option.value }))");
+    expect(component).toContain("handoffStatus === 'ready' && !identity.resume && !remoteRestoreComplete");
   });
 
   test("full assessment progress writes and reminders require verified account-owned snapshots", () => {

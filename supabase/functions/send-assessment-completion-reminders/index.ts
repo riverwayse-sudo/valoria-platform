@@ -50,12 +50,12 @@ async function sendEmail(candidate) {
     body = "You started the Valoria journey, but your professional record is not yet complete. Start with the VALU Index, then finish your professional profile."
   } else if (missingAssessment) {
     subject = "Complete your VALU Index"
-    headline = "You started.<br><em>Now complete your VALU Index.</em>"
-    body = "Your Valoria account is ready, but your VALU Index is not yet complete. Complete the VALU Index so your professional record can move forward."
+    headline = "You started.<br><em>Now complete your assessment.</em>"
+    body = "Your Valoria account is ready, but your VALU Index is not yet complete. Finish the assessment so your professional record can move forward."
   } else if (missingProfile) {
     subject = "Your Valoria professional profile is incomplete"
-    headline = "Your VALU Index is complete.<br><em>Now finish your profile.</em>"
-    body = "Your VALU Index is complete. The next step is to finish your professional profile so your capability can be properly represented and considered for the relevant marketplace pathway."
+    headline = "Your assessment is complete.<br><em>Now finish your profile.</em>"
+    body = "Your VALU assessment is complete. The next step is to finish your professional profile so your capability can be properly represented and considered for the relevant marketplace pathway."
   }
 
   const checklist = [

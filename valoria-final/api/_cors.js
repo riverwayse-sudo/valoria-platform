@@ -1,42 +1,15 @@
 // Shared CORS policy for public assessment endpoints.
 //
-// The VALU assessment UI is served from assessment.valoriainstitute.com or the
-// isolated assessment-staging.valoriainstitute.com host and can also be proxied
-// under valoriainstitute.com/valu/assessment/. Both
+// The VALU assessment UI is served from assessment.valoriainstitute.com and,
+// during migration, proxied under valoriainstitute.com/valu/assessment/. Both
 // surfaces call the API at the assessment deployment root, so those POSTs are
 // cross-origin and require an explicit preflight response. Without it the
 // browser blocks every taster request with a CORS error even though the handler
 // itself would have succeeded.
-function configuredHttpsOrigins(value) {
-  if (!value) return [];
-  return String(value).split(',').map((candidate) => {
-    const exact = candidate.trim();
-    if (!exact) return null;
-    try {
-      const url = new URL(exact);
-      return url.protocol === 'https:' && (url.origin === exact || `${url.origin}/` === exact)
-        ? url.origin
-        : null;
-    } catch {
-      return null;
-    }
-  }).filter(Boolean);
-}
-
-// Preview origins are exact Worker URLs configured in the environment.
-// Multiple explicit site origins are allowed for isolated staging candidates.
-// Never wildcard *.workers.dev or accept caller-provided origins.
-const previewOrigins = [
-  ...configuredHttpsOrigins(typeof process !== 'undefined' ? process.env.VALU_PREVIEW_SITE_ORIGIN : null),
-  ...configuredHttpsOrigins(typeof process !== 'undefined' ? process.env.VALU_PREVIEW_ASSESSMENT_ORIGIN : null),
-];
-
 const ALLOWED_ORIGINS = new Set([
   'https://valoriainstitute.com',
   'https://www.valoriainstitute.com',
   'https://assessment.valoriainstitute.com',
-  'https://valoria-assessment.riverwayse.workers.dev',
-  ...previewOrigins,
 ]);
 
 function isAllowedOrigin(origin) {
@@ -62,7 +35,7 @@ function applyCors(req, res) {
 function handlePreflight(req, res) {
   if (req.method !== 'OPTIONS') return false;
   res.setHeader('Cache-Control', 'no-store');
-  if (req.headers?.origin && !res.getHeader('Access-Control-Allow-Origin')) {
+  if (req.headers?.origin !== undefined && res.getHeader('Access-Control-Allow-Origin') === undefined) {
     res.status(403).json({ error: 'Origin not allowed.' });
     return true;
   }

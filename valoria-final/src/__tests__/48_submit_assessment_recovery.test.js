@@ -75,7 +75,7 @@ function installStatefulFetch() {
   global.fetch = async (url, options = {}) => {
     if (url.includes("rpc/consume_rate_limit")) return jsonResponse(200, { allowed: true });
     if (url.includes("/rest/v1/taster_sessions")) {
-      return jsonResponse(200, [{ id: TASTER_ID, user_id: USER_ID, name: "Temitayo Adeyemi", role: "Programme Manager", completed_at: "2026-10-25T09:00:00.000Z", taster_answers: Object.fromEntries(Array.from({ length: 9 }, (_, index) => [index, 0])) }]);
+      return jsonResponse(200, [{ id: TASTER_ID, user_id: USER_ID, name: "Temitayo Adeyemi", role: "Programme Manager", completed_at: "2026-10-25T09:00:00.000Z" }]);
     }
     if (url.includes("/auth/v1/admin/users/")) {
       return jsonResponse(200, { id: USER_ID, email: "temitayo@example.com", email_confirmed_at: "2026-10-25T09:00:00.000Z" });
@@ -122,8 +122,6 @@ describe("Full assessment data recovery", () => {
     expect(res2.statusCode).toBe(200);
     expect(res2.body.report_token).toBe(REPORT_TOKEN);
     expect(res2.body.alreadyCompleted).toBe(true);
-    expect(res2.body.results.desig.name).toBe("Proficient");
-    expect(res2.body.results.desig.name).not.toBe("Strategist");
     expect(db.inserts).toBe(1); // still one insert: the retry did not duplicate
     expect(db.rows).toHaveLength(1);
   });

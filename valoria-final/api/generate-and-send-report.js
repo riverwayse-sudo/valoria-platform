@@ -88,32 +88,23 @@ async function markFailed(identityHash, failureCode) {
   catch { console.error("[generate-and-send-report] failed to persist failure state"); }
 }
 
-function canonicalDesignation(score) {
-  const points = Number(score);
-  if (!Number.isFinite(points) || points < 35 || points > 100) return "Assessment Follow-up";
-  if (points >= 90) return "Elite";
-  if (points >= 75) return "Distinguished";
-  if (points >= 55) return "Proficient";
-  return "Standard";
-}
-
 function reportMatchesCanonicalAssessment(reportText, assessment) {
   if (typeof reportText !== "string" || !reportText.trim()) return false;
   const expectedScore = Number(assessment.total_score);
-  const expectedTier = canonicalDesignation(expectedScore).toUpperCase();
-  const header = reportText.match(/##\s*YOUR SCORE:\s*(\d{1,3})\s*points?\s*[—-]\s*([^\r\n]+)/i);
+  const expectedTier = String(assessment.designation || "").trim().replace(/\s+/g, " ").toUpperCase();
+  const header = reportText.match(/##\s*YOUR SCORE:\s*(\d{1,3})\s*\/\s*100\s*[—-]\s*([^\r\n]+)/i);
   if (!header || Number(header[1]) !== expectedScore) return false;
   if (header[2].trim().replace(/\*+/g, "").replace(/\s+/g, " ").toUpperCase() !== expectedTier) return false;
   const afterHeader = reportText.slice(header.index + header[0].length);
   const opening = afterHeader.split(/(?:^|\n)\s*(?:---+|##\s)/m)[0];
-  const claims = Array.from(opening.matchAll(/\b(\d{1,3})\s*(?:points?|\/\s*100|out of 100)\b/gi));
+  const claims = Array.from(opening.matchAll(/\b(\d{1,3})\s*(?:\/\s*100|out of 100)\b/gi));
   const indexClaims = Array.from(opening.matchAll(/\bVALU Index(?:\s+(?:score\s+)?(?:sits at|is|of))\s*(\d{1,3})\b/gi));
   return [...claims, ...indexClaims].every(match => Number(match[1]) === expectedScore);
 }
 async function generateAiReport({ name, role, valuIndex, designation, clusterScores, skillScores }) {
   const sortedSkills = Object.entries(skillScores || {}).filter(([s]) => s !== "Validity").sort(([,a],[,b]) => b - a);
   const topSkills = sortedSkills.slice(0, 3), bottomSkills = sortedSkills.slice(-3).reverse();
-  const prompt = `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index.
+  const prompt = `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index assessment.
 YOUR WRITING RULES:
 1. Write like a trusted senior colleague who tells the truth.
 2. Use plain, direct language.
@@ -127,13 +118,13 @@ YOUR WRITING RULES:
 10. In the opening interpretation, never state a different aggregate VALU Index score.
 11. PRIME dimension scores are not the aggregate VALU Index score. Do not confuse them.
 THEIR SCORE DATA:
-VALU Index: ${valuIndex} points — ${designation}
-SKILL SCORES: ${Object.entries(clusterScores || {}).map(([k,v]) => `${k}: ${v} points`).join(", ")}
-TOP SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
-BOTTOM SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
+VALU Index: ${valuIndex}/100 — ${designation}
+SKILL SCORES: ${Object.entries(clusterScores || {}).map(([k,v]) => `${k}: ${v}/100`).join(", ")}
+TOP SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc}/100)`).join(", ")}
+BOTTOM SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc}/100)`).join(", ")}
 WRITE THE REPORT IN THESE EXACT SECTIONS:
 ---
-## YOUR SCORE: ${valuIndex} points — ${designation.toUpperCase()}
+## YOUR SCORE: ${valuIndex}/100 — ${designation.toUpperCase()}
 ## WHAT YOU ARE GOOD AT
 ## WHERE YOU ARE LOSING GROUND
 ## WHAT THIS COSTS YOU IN THE NEXT 12 MONTHS
@@ -211,7 +202,7 @@ export default async function handler(req, res) {
 
     let reportText = assessment.ai_report;
     if (!reportMatchesCanonicalAssessment(reportText, assessment)) {
-      reportText = await generateAiReport({ name: assessment.name, role: assessment.role, valuIndex: assessment.total_score, designation: canonicalDesignation(assessment.total_score), clusterScores: assessment.cluster_scores, skillScores: assessment.skill_scores });
+      reportText = await generateAiReport({ name: assessment.name, role: assessment.role, valuIndex: assessment.total_score, designation: assessment.designation, clusterScores: assessment.cluster_scores, skillScores: assessment.skill_scores });
       if (!reportMatchesCanonicalAssessment(reportText, assessment)) {
         throw new Error("Generated report conflicts with canonical VALU score or designation");
       }

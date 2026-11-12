@@ -1,0 +1,43 @@
+name: Deploy Valoria Assessment to Vercel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "valoria-final/**"
+      - ".github/workflows/vercel-production.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: valoria-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: valoria-final
+    env:
+      VERCEL_ORG_ID: team_WNHL3GSlhevjZ7WEY9r9ALUw
+      VERCEL_PROJECT_ID: prj_mjjA8XoInf4vRcoRXTMTk6MOqemj
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull production configuration
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build production artifact
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy production artifact
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"

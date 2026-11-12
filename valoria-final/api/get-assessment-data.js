@@ -1,7 +1,5 @@
 export const config = { runtime: "edge" };
 
-import { canonicalDesignationName } from "./_canonicalDesignation.js";
-
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -33,7 +31,7 @@ export default async function handler(req) {
 
   const params = new URLSearchParams({
     identity_hash: `eq.${identityHash}`,
-    select: "name,role,email,total_score,cluster_scores,skill_scores,ai_report,report_email_sent_at",
+    select: "name,role,email,total_score,cluster_scores,skill_scores,designation,ai_report,report_email_sent_at",
     limit: "1",
   });
 
@@ -46,7 +44,7 @@ export default async function handler(req) {
   const row = rows?.[0];
   if (!row) return new Response(JSON.stringify({ error: "No assessment found." }), { status: 404 });
 
-  return new Response(JSON.stringify({ ok: true, row: { ...row, designation: canonicalDesignationName(row.total_score) } }), {
+  return new Response(JSON.stringify({ ok: true, row }), {
     status: 200,
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });

@@ -12,8 +12,7 @@ const migration = fs.readFileSync(
 
 describe("Assessment version provenance contract", () => {
   test("new full VALU submissions explicitly persist the assessment instrument version", () => {
-    expect(submit).toContain('const FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER"');
-    expect(submit).toContain('assessment_version: FULL_ASSESSMENT_VERSION');
+    expect(submit).toContain("assessment_version: 'FULL_VALU_V1'");
   });
 
   test("historical unknown versions are labelled honestly instead of inferred from scoring version", () => {

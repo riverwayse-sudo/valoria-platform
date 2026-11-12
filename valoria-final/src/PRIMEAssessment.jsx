@@ -1,5 +1,3 @@
-// DEPRECATED LEGACY COMPONENT — the active assessment is VALUIndexV4App.jsx.
-// Retained only for backwards compatibility; do not route new users here.
 // PRIMEAssessment.jsx — v2.3
 // Changes from v2.2:
 //  - BREAKING: computeResults, seededShuffle, CLUSTERS, DESIGNATIONS, SKILL_MAX_RAW
@@ -23,7 +21,7 @@ import {
 // ── CANONICAL SCORING IMPORTS — do not redefine these anywhere ────────────
 import {
   CLUSTERS,
-  getDesignation,
+  DESIGNATIONS,
   SKILL_MAX_RAW,
   seededShuffle,
   computeResults as _computeResults,
@@ -34,25 +32,11 @@ import {
 // against the exact same question set.
 import { QUESTIONS } from "./questions.js";
 
-const FOLLOW_UP_DESIGNATION = {
-  min: 0,
-  name: "Assessment Follow-up",
-  stars: "",
-  color: "#2E2E4A",
-  bg: "#1A1A2E",
-  desc: "Your current score is below the merit designation threshold. Review your PRIME results and continue developing your evidence.",
-};
-
-function resolveDesignation(points) {
-  return getDesignation(points) || FOLLOW_UP_DESIGNATION;
-}
-
 // Wrap to inject QUESTIONS (defined later in this file after question bank).
 // This keeps the scoringEngine pure (no direct import of ALL_QUESTIONS).
 // Called identically by both client and any future server/DB function.
 function computeResults(answers, timings, shuffleMap) {
-  const result = _computeResults(answers, timings, shuffleMap, QUESTIONS);
-  return { ...result, desig: resolveDesignation(result.valuIndex) };
+  return _computeResults(answers, timings, shuffleMap, QUESTIONS);
 }
 
 // ── FONT INJECTION — once at module level ─────────────────────────────────
@@ -61,7 +45,7 @@ if (typeof document !== "undefined") {
   if (!document.getElementById(FONT_ID)) {
     const s = document.createElement("style");
     s.id = FONT_ID;
-    s.textContent = `
+    s.textContent = `@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,200;0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Mono:wght@400&display=swap');
     *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     input, select, textarea { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
     input::placeholder { color: rgba(247,244,238,0.2) !important; }
@@ -184,7 +168,7 @@ const pillBtn = (variant = "primary") => ({
 });
 
 // ── PAGE NUMBER ────────────────────────────────────────────────────────────
-function PageNumber() {
+function PageNumber({ current, total }) {
   return (
     <div style={{
       fontFamily: T.font.label,
@@ -196,7 +180,7 @@ function PageNumber() {
       whiteSpace: "nowrap",
       userSelect: "none",
     }}>
-      VALU INDEX
+      {current} <span style={{ color: T.text.ghost }}>/ {total}</span>
     </div>
   );
 }
@@ -355,13 +339,8 @@ async function signUpWithSupabase(email, password, name, role) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password, name, role, identity_hash }),
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const error = new Error(data.error || "Signup failed.");
-    error.code = data.code || "";
-    error.status = res.status;
-    throw error;
-  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Signup failed.");
   if (data.warning) {
     console.warn(data.warning);
   }
@@ -390,7 +369,7 @@ async function fetchAssessmentByEmail(email) {
       name: row.name, role: row.role,
       results: {
         valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
-        desig: resolveDesignation(valuIndex),
+        desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
         futureReadyScore: Math.round(CLUSTERS_UI.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS_UI.length),
         strongest: sorted[0], weakest: sorted[sorted.length - 1],
         consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
@@ -426,7 +405,7 @@ async function fetchAssessmentByFingerprint(fingerprint) {
       aiReport: row.ai_report || null,
       results: {
         valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
-        desig: resolveDesignation(valuIndex),
+        desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
         futureReadyScore: Math.round(CLUSTERS_UI.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS_UI.length),
         strongest: sorted[0], weakest: sorted[sorted.length - 1],
         consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
@@ -457,7 +436,7 @@ async function fetchAssessmentByFingerprintServer(fingerprint) {
       aiReport: row.ai_report || null,
       results: {
         valuIndex, clusterScores, skillScores: row.skill_scores ?? {},
-        desig: resolveDesignation(valuIndex),
+        desig: DESIGNATIONS.find(d => valuIndex >= d.min) || DESIGNATIONS[DESIGNATIONS.length - 1],
         futureReadyScore: Math.round(CLUSTERS_UI.reduce((s, c) => s + (clusterScores[c.id] ?? 0), 0) / CLUSTERS_UI.length),
         strongest: sorted[0], weakest: sorted[sorted.length - 1],
         consistencyFlags: {}, gamingDetected: false, anchorFlags: 0,
@@ -541,7 +520,7 @@ function ClusterStrip({ clusterScores, skillScores, compact = false }) {
                 fontFamily: T.font.body,
               }}>{c.id}</div>
               <span style={{ fontSize:T.size.small, color:c.color, fontWeight:600, fontFamily:T.font.body }}>{clusterScores[c.id]}</span>
-              <span style={{ fontSize:T.size.caption, color:T.text.ghost, fontFamily:T.font.body }}>points</span>
+              <span style={{ fontSize:T.size.caption, color:T.text.ghost, fontFamily:T.font.body }}>/100</span>
             </div>
             {weakestSkill && !compact && (
               <div style={{ fontSize:T.size.caption, color:T.text.muted, lineHeight:1.4, fontFamily:T.font.body }}>
@@ -594,7 +573,7 @@ function ScoreHeader({ name, role, valuIndex, clusterScores, skillScores, desig,
           <div style={{ display:"flex", alignItems:"center", gap:20 }}>
             <div style={{ textAlign:"right" }}>
               <div style={{ fontFamily:T.font.display, fontSize:T.size.display, fontWeight:300, color:T.gold, lineHeight:1 }}>{valuIndex}</div>
-              <div style={{ fontSize:T.size.micro, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>POINTS</div>
+              <div style={{ fontSize:T.size.micro, color:T.text.ghost, letterSpacing:"0.1em", fontFamily:T.font.body }}>OUT OF 100</div>
             </div>
             <Radar scores={clusterScores} size={100} />
           </div>
@@ -670,9 +649,9 @@ function buildReportPrompt(scoreProfile) {
   const primaryProgramme    = PRIME_PROGRAMMES[primaryProgrammeKey];
   const clusterSkillDetail = CLUSTERS_UI.map(c => {
     const skills = sortedSkills.filter(([s]) => SKILL_CLUSTER[s] === c.id);
-    return `${c.name} (${clusterScores[c.id]} points):\n` + skills.map(([s,sc]) => `  - ${s}: ${sc} points`).join("\n");
+    return `${c.name} (${clusterScores[c.id]}/100):\n` + skills.map(([s,sc]) => `  - ${s}: ${sc}/100`).join("\n");
   }).join("\n\n");
-  return `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index.
+  return `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index assessment.
 YOUR WRITING RULES:
 1. Write like a trusted senior colleague who tells the truth.
 2. Use plain, direct language.
@@ -683,20 +662,20 @@ YOUR WRITING RULES:
 7. Do not praise them for completing the assessment.
 8. Speak directly to them as "you."
 THEIR SCORE DATA:
-VALU Index: ${valuIndex} points — ${desig.name}
+VALU Index: ${valuIndex}/100 — ${desig.name}
 Listed on platform: ${listed ? "Yes" : "No — needs score of 35+"}
-Future-Ready score: ${futureReadyScore} points
+Future-Ready score: ${futureReadyScore}/100
 SKILL SCORES:\n${clusterSkillDetail}
-THEIR STRONGEST SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
-THEIR WEAKEST SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc} points)`).join(", ")}
-PRIMARY GAP SKILL: ${primaryGapSkill} (${skillScores?.[primaryGapSkill]} points)
-SECONDARY GAP SKILL: ${secondaryGapSkill} (${skillScores?.[secondaryGapSkill]} points)
+THEIR STRONGEST SKILLS: ${topSkills.map(([s,sc]) => `${s} (${sc}/100)`).join(", ")}
+THEIR WEAKEST SKILLS: ${bottomSkills.map(([s,sc]) => `${s} (${sc}/100)`).join(", ")}
+PRIMARY GAP SKILL: ${primaryGapSkill} (${skillScores?.[primaryGapSkill]}/100)
+SECONDARY GAP SKILL: ${secondaryGapSkill} (${skillScores?.[secondaryGapSkill]}/100)
 RECOMMENDED PROGRAMME: ${primaryProgramme.name} (${primaryProgramme.duration}, ${primaryProgramme.price})
 IMMEDIATE WEEKLY ACTION for ${primaryGapSkill}: "${SKILL_ACTIONS[primaryGapSkill] || "Start by naming the exact gap in your own words."}"
-${!listed ? `IMPORTANT: ${name} scored ${valuIndex} points which is below the 35-point listing minimum. The PRIME Sprint is the direct path to getting listed.` : ""}
+${!listed ? `IMPORTANT: ${name} scored ${valuIndex}/100 which is below the 35-point listing minimum. The PRIME Sprint is the direct path to getting listed.` : ""}
 WRITE THE REPORT IN THESE EXACT SECTIONS:
 ---
-## YOUR SCORE: ${valuIndex} points — ${desig.name.toUpperCase()}
+## YOUR SCORE: ${valuIndex}/100 — ${desig.name.toUpperCase()}
 ## WHAT YOU ARE GOOD AT
 ## WHERE YOU ARE LOSING GROUND
 ## WHAT THIS COSTS YOU IN THE NEXT 12 MONTHS
@@ -717,10 +696,10 @@ function CompletionJourneyModal({ open, score, onClose }) {
     <div style={{ position:"fixed", inset:0, zIndex:1200, background:"rgba(15,15,26,.78)", backdropFilter:"blur(10px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ width:"100%", maxWidth:520, background:T.midnight, border:"1px solid rgba(201,168,76,.35)", borderRadius:18, padding:"34px 30px", boxShadow:"0 24px 80px rgba(0,0,0,.4)" }}>
         <div style={{ width:52, height:52, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(201,168,76,.1)", border:"1px solid rgba(201,168,76,.35)", color:T.gold, fontSize:24, marginBottom:20 }}>✓</div>
-        <div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:".18em", marginBottom:10, fontFamily:T.font.label }}>VALU INDEX · NEXT STAGE</div>
+        <div style={{ fontSize:11, fontWeight:700, color:T.gold, letterSpacing:".18em", marginBottom:10, fontFamily:T.font.label }}>VALU JOURNEY · NEXT STAGE</div>
         <h2 style={{ fontSize:28, lineHeight:1.2, fontWeight:500, color:T.parchment, margin:"0 0 12px", fontFamily:T.font.display }}>Your assessment is complete.</h2>
         <p style={{ fontSize:14, lineHeight:1.8, color:T.text.secondary, margin:"0 0 22px", fontFamily:T.font.body }}>
-          Your VALU Index of <strong style={{color:T.gold}}>{score} points</strong> has been recorded and your professional marketplace placement has been initiated.
+          Your VALU Index of <strong style={{color:T.gold}}>{score}/100</strong> has been recorded and your professional marketplace placement has been initiated.
         </p>
         <div style={{ display:"grid", gap:10, marginBottom:24 }}>
           {[
@@ -885,7 +864,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
                 Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
               </h1>
               <p style={{ fontSize:16, fontWeight:300, color:T.text.tertiary, lineHeight:1.75, margin:"0 0 40px", maxWidth:460, fontFamily:T.font.body }}>
-                The VALU Index assesses professional capability across the five PRIME clusters. It is designed to surface how you work — not simply what you aspire to do.
+                55 questions across five PRIME clusters. Designed to surface what you genuinely do — not what you aspire to do.
               </p>
               <div style={{ display:"flex", background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:T.radius.chip, overflow:"hidden", marginBottom:40, maxWidth:400 }}>
                 {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Always",v:"Free"}].map((s,i)=>(
@@ -923,7 +902,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
               <h1 style={{ fontFamily:T.font.display, fontSize:"clamp(34px,8vw,48px)", fontWeight:200, lineHeight:1.05, color:T.parchment, margin:"0 0 12px" }}>
                 Know exactly<br/>where you <em style={{ fontStyle:"italic", color:T.gold }}>stand.</em>
               </h1>
-              <p style={{ fontSize:T.size.body, color:T.text.tertiary, lineHeight:1.65, margin:"0 0 24px", fontFamily:T.font.body }}>The VALU Index assesses professional capability across the five PRIME clusters.</p>
+              <p style={{ fontSize:T.size.body, color:T.text.tertiary, lineHeight:1.65, margin:"0 0 24px", fontFamily:T.font.body }}>55 questions across five PRIME clusters.</p>
               <div style={{ display:"flex", marginBottom:28, background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:T.radius.chip, overflow:"hidden" }}>
                 {[{l:"Questions",v:"55"},{l:"Minutes",v:"18–28"},{l:"Free",v:"Always"}].map((s,i)=>(
                   <div key={i} style={{ flex:1, padding:"12px 6px", textAlign:"center", borderRight:i<2?"1px solid rgba(255,255,255,0.06)":"none" }}>
@@ -938,7 +917,7 @@ function IntroScreen({ onBegin, assessmentIsLocked, expiryDateFormatted, checkpo
             <div style={{ marginBottom:16, padding:"14px 18px", background:"rgba(55,138,221,0.06)", border:"1px solid rgba(55,138,221,0.25)", borderRadius:T.radius.chip }}>
               <div style={{ fontSize:T.size.caption, fontWeight:700, color:"#D4C9A8", letterSpacing:"0.14em", marginBottom:6, fontFamily:T.font.body }}>SESSION IN PROGRESS</div>
               <p style={{ fontSize:T.size.small, color:T.text.tertiary, lineHeight:1.7, margin:"0 0 10px" }}>
-                You have an assessment in progress. Your saved responses are ready to resume.
+                You have a session in progress at question {checkpoint.currentQ + 1} of {TOTAL}.
               </p>
               <button
                 onClick={() => onBegin({ name: checkpoint.name, role: checkpoint.role, resume: true })}
@@ -1308,7 +1287,6 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirm, setSignupConfirm]   = useState("");
   const [signupError, setSignupError]       = useState("");
-  const [accountExists, setAccountExists]   = useState(false);
   const [signupLoading, setSignupLoading]   = useState(false);
   const [signupDone, setSignupDone]         = useState(false);
   const [resendLoading, setResendLoading]   = useState(false);
@@ -1382,12 +1360,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
       setCompletionPopup(true);
       if (onSignupDone) onSignupDone(signupEmail.trim());
     } catch (e) {
-      if (e?.code === "ACCOUNT_EXISTS") {
-        setAccountExists(true);
-        setSignupError("");
-      } else {
-        setSignupError(e.message || "Something prevented this from completing. Try again shortly.");
-      }
+      setSignupError(e.message || "Something prevented this from completing. Try again shortly.");
     } finally {
       setSignupLoading(false);
     }
@@ -1414,7 +1387,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
       <div style={{ maxWidth:720, margin:"0 auto", padding:"32px 24px 80px" }}>
         {saveError && (
           <div style={{ marginBottom:16, padding:"12px 16px", background:"rgba(216,90,48,0.08)", border:"1px solid rgba(216,90,48,0.3)", borderRadius:T.radius.chip, fontSize:T.size.small, color:T.coral, fontFamily:T.font.body }}>
-            Score could not be saved: {saveError}. Contact info@valoriainstitute.com with your result ({valuIndex} points).
+            Score could not be saved: {saveError}. Contact info@valoriainstitute.com with your result ({valuIndex}/100).
           </div>
         )}
         <div style={{ marginBottom:24, padding:"24px", background:"rgba(22,22,36,0.6)", border:"1px solid rgba(201,168,76,0.1)", borderRadius:T.radius.card }}>
@@ -1472,7 +1445,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
               A confirmation link has been sent to <strong style={{color:T.parchment}}>{signupEmail}</strong>.
             </p>
             <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:"0 0 24px", fontFamily:T.font.body }}>
-              Your VALU Index of <strong style={{color:T.gold}}>{valuIndex} points</strong> has been saved. Confirm your email first; your account will then return to Valoria so you can continue your journey without signing in again. Marketplace visibility remains off until the required checks are complete.
+              Your VALU Index of <strong style={{color:T.gold}}>{valuIndex}/100</strong> has been saved. Confirm your email first; your account will then return to Valoria so you can continue your journey without signing in again. Marketplace visibility remains off until the required checks are complete.
             </p>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               <button type="button" onClick={handleResendConfirmation} disabled={resendLoading} style={{ ...pillBtn(resendLoading ? "disabled" : "primary"), width:"100%" }}>
@@ -1500,7 +1473,7 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
             <div style={{ marginBottom:14 }}>
               <label style={labelBase} htmlFor="signup-email">Email Address</label>
               <input id="signup-email" type="email" placeholder="you@example.com" value={signupEmail}
-                onChange={e=>{setSignupEmail(e.target.value);setAccountExists(false);setSignupError("");}} style={inputBase}
+                onChange={e=>setSignupEmail(e.target.value)} style={inputBase}
                 onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
                 onBlur={e=>e.target.style.borderColor="rgba(247,244,238,0.1)"} />
             </div>
@@ -1525,14 +1498,6 @@ function ResultsScreen({ name, role, results, shuffleMap, answers, timings, onRe
                 onFocus={e=>e.target.style.borderColor="rgba(201,168,76,0.4)"}
                 onBlur={e=>e.target.style.borderColor=signupConfirm && signupConfirm !== signupPassword ? "rgba(216,90,48,0.5)" : signupConfirm && signupConfirm === signupPassword ? "rgba(29,158,117,0.5)" : "rgba(247,244,238,0.1)"} />
             </div>
-            {accountExists && (
-              <div role="alert" style={{ marginBottom:14, padding:"16px 18px", background:"rgba(201,168,76,.07)", border:"1px solid rgba(201,168,76,.32)", borderRadius:T.radius.card }}>
-                <div style={{ color:T.parchment, fontSize:T.size.body, fontWeight:700, marginBottom:8, fontFamily:T.font.body }}>Continue with your existing Valoria account.</div>
-                <p style={{ color:T.text.secondary, fontSize:T.size.small, lineHeight:1.7, margin:"0 0 14px", fontFamily:T.font.body }}>We could not create a second account for this email. Sign in to connect this VALU result to your existing account. Your saved assessment has not been discarded.</p>
-                <a href={`https://valoriainstitute.com/login?identity_hash=${encodeURIComponent(computeFingerprint(name, role))}`} style={{ display:"inline-flex", justifyContent:"center", alignItems:"center", padding:"12px 20px", background:T.gold, color:T.dark, borderRadius:T.radius.pill, textDecoration:"none", fontSize:T.size.caption, fontWeight:800, letterSpacing:".1em", fontFamily:T.font.body }}>SIGN IN & CONTINUE →</a>
-                <p style={{ color:T.text.muted, fontSize:T.size.caption, lineHeight:1.6, margin:"12px 0 0", fontFamily:T.font.body }}>Forgot your password? Use “Forgot password?” on the sign-in page. If you cannot access your account, contact info@valoriainstitute.com.</p>
-              </div>
-            )}
             {signupError && (
               <div style={{ fontSize:T.size.small, color:T.coral, marginBottom:14, padding:"10px 14px", background:"rgba(216,90,48,0.06)", borderLeft:`2px solid rgba(216,90,48,0.6)`, borderRadius:`0 ${T.radius.chip}px ${T.radius.chip}px 0`, fontFamily:T.font.body }}>
                 {signupError}
@@ -1755,7 +1720,7 @@ function ReportScreen({ name, role, results, confirmedEmail, onRetake, initialRe
               {reportError || "An error occurred. Your score has been saved."}
             </p>
             <p style={{ fontSize:T.size.small, color:T.text.muted, lineHeight:1.7, margin:0, fontFamily:T.font.body }}>
-              Your VALU Index is <strong style={{color:T.gold}}>{valuIndex} points</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact info@valoriainstitute.com for your full report.
+              Your VALU Index is <strong style={{color:T.gold}}>{valuIndex}/100</strong> — <strong style={{color:desig.color}}>{desig.name}</strong>. Contact info@valoriainstitute.com for your full report.
             </p>
             <button onClick={generateAIReport} style={{...pillBtn("gold-ghost"), marginTop:16, padding:"11px 24px", fontSize:T.size.caption}}>
               TRY AGAIN

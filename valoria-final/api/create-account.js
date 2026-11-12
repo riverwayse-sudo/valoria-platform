@@ -1,7 +1,6 @@
 export const config = { runtime: "edge" };
 
 import { checkRateLimit } from "./_rateLimit.js";
-import { canonicalDesignationName } from "./_canonicalDesignation.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -30,7 +29,7 @@ function journeyEmailHtml(name, score, designation) {
         <div style="text-align:center;margin-bottom:36px;"><img src="https://valoriainstitute.com/logo.png" alt="Valoria Institute" style="height:42px;"></div>
         <p style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700;">VALU INDEX · ASSESSMENT COMPLETE</p>
         <h1 style="font-size:30px;line-height:1.2;font-weight:600;color:#F7F4EE;">Your Valoria journey has moved forward.</h1>
-        <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU Index is complete and your result is saved. Your professional record remains private while you confirm your email and complete the required profile and eligibility checks.</p>
+        <p style="font-size:15px;line-height:1.8;color:rgba(247,244,238,.72);">Hello ${escapeHtml(name)}, your VALU assessment is complete and your assessment is saved. Your professional record remains private while you confirm your email and complete the required profile and eligibility checks.</p>
         <div style="margin:28px 0;padding:24px;border:1px solid rgba(201,168,76,.25);background:rgba(201,168,76,.06);border-radius:10px;text-align:center;">
           <div style="font-size:48px;font-weight:700;color:#C9A84C;">${escapeHtml(score)}</div>
           <div style="font-size:11px;letter-spacing:.14em;color:rgba(247,244,238,.55);">VALU INDEX</div>
@@ -38,7 +37,7 @@ function journeyEmailHtml(name, score, designation) {
         </div>
         <h2 style="font-size:18px;color:#F7F4EE;">What happens next</h2>
         <p style="font-size:14px;line-height:1.8;color:rgba(247,244,238,.7);">1. Confirm your email address.<br>2. Return to Valoria securely.<br>3. Complete your professional profile.<br>4. Any marketplace listing is considered only after eligibility checks.</p>
-        <div style="text-align:center;margin:34px 0;"><a href="https://valoriainstitute.com/dashboard" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">RETURN TO YOUR DASHBOARD →</a></div>
+        <div style="text-align:center;margin:34px 0;"><a href="https://valoriainstitute.com/profile/edit" style="display:inline-block;padding:15px 30px;background:#C9A84C;color:#1A1A2E;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.14em;border-radius:999px;">COMPLETE YOUR PROFILE →</a></div>
         <p style="font-size:11px;line-height:1.6;color:rgba(247,244,238,.35);text-align:center;">Valoria Institute · Worth. Built.<br>Questions? info@valoriainstitute.com</p>
       </div>
     </body></html>`;
@@ -100,22 +99,7 @@ export default async function handler(req) {
   const normalizedEmail = email.trim().toLowerCase();
   const emailLimit = await checkRateLimit(req, { namespace: "account-create-email", limit: 3, windowSeconds: 3600, subject: normalizedEmail });
   if (!emailLimit.allowed) return emailLimit.response;
-  const commonPasswords = new Set([
-    "password123!", "password123", "password!", "qwerty123!", "qwerty123",
-    "123456789012", "1234567890!", "valoria123!", "valoria123", "welcome123!",
-    "admin123!", "letmein123!", "changeme123!",
-  ]);
-  const passwordValid = typeof password === "string"
-    && password.length >= 12
-    && password.length <= 128
-    && /[A-Z]/.test(password)
-    && /[a-z]/.test(password)
-    && /[0-9]/.test(password)
-    && /[^A-Za-z0-9]/.test(password)
-    && !commonPasswords.has(password.toLowerCase());
-  if (!passwordValid) return json({
-    error: "Use 12–128 characters with uppercase, lowercase, a number and a symbol. Avoid common passwords.",
-  }, 400);
+  if (!password || typeof password !== "string" || password.length < 8 || password.length > 128) return json({ error: "Password must be 8–128 characters." }, 400);
   if (identity_hash !== undefined && identity_hash !== null && (typeof identity_hash !== "string" || !/^fp_[a-z0-9]{1,128}$/i.test(identity_hash))) return json({ error: "Invalid identity reference." }, 400);
 
   const adminHeaders = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" };
@@ -140,20 +124,9 @@ export default async function handler(req) {
       method: "POST", headers: adminHeaders,
       body: JSON.stringify({ type: "signup", email: normalizedEmail, password, data: { full_name: name, role }, redirect_to: redirectUrl }),
     });
-    genData = await genRes.json().catch(() => ({}));
+    genData = await genRes.json();
   } catch { return json({ error: "Could not reach auth service." }, 502); }
-  if (!genRes.ok) {
-    const providerCode = String(genData?.error_code || genData?.code || "").toLowerCase();
-    const providerMessage = String(genData?.msg || genData?.message || "");
-    if (genRes.status === 422 && (providerCode === "email_exists" || /already been registered|already registered/i.test(providerMessage))) {
-      return json({
-        error: "An account may already exist for this email. Sign in or reset your password to continue.",
-        code: "ACCOUNT_EXISTS",
-        actions: ["sign_in", "reset_password"],
-      }, 409);
-    }
-    return json({ error: "Could not create account." }, genRes.status >= 400 && genRes.status < 500 ? genRes.status : 502);
-  }
+  if (!genRes.ok) return json({ error: "Could not create account." }, genRes.status >= 400 && genRes.status < 500 ? genRes.status : 502);
 
   const actionLink = genData.action_link || genData.properties?.action_link;
   if (!actionLink) return json({ warning: "Account created, but confirmation email could not be prepared. Contact support to resend." });
@@ -200,7 +173,7 @@ export default async function handler(req) {
           id: userId, display_name: assessment.name || name, headline: assessment.role || role,
           listing_status: "pending", profile_complete: false, visibility: "registered_only", active_tracks: ["candidate"],
           eligible_for_listing: false, availability_status: "unavailable", listed_at: null, valu_index: assessment.total_score,
-          cluster_scores: assessment.cluster_scores, skill_scores: assessment.skill_scores, designation: canonicalDesignationName(assessment.total_score) || '',
+          cluster_scores: assessment.cluster_scores, skill_scores: assessment.skill_scores, designation: assessment.designation,
           assessment_completed_at: assessment.completed_at, assessment_expires_at: assessment.expires_at,
         }),
       });
@@ -239,7 +212,7 @@ export default async function handler(req) {
           user_id: userId,
           event_key: journeyEventKey,
           assessment_id: assessment.id,
-          metadata: { score: assessment.total_score, designation: canonicalDesignationName(assessment.total_score), listing_status: "pending", visibility: "registered_only" },
+          metadata: { score: assessment.total_score, designation: assessment.designation, listing_status: "pending", visibility: "registered_only" },
         }),
       });
       if (!eventRes.ok) console.error("create-account: journey event failed", eventRes.status);
@@ -250,10 +223,10 @@ export default async function handler(req) {
         body: JSON.stringify({
           user_id: userId,
           type: "assessment_complete",
-          title: "Your VALU Index is complete",
-          body: "Your VALU Index is saved. Confirm your email and complete your professional profile; your record remains private until eligibility checks are complete.",
-          action_label: "Open your dashboard",
-          action_url: "/dashboard",
+          title: "Your VALU assessment is complete",
+          body: "Your VALU assessment is saved. Confirm your email and complete your professional profile; your record remains private until eligibility checks are complete.",
+          action_label: "Complete your profile",
+          action_url: "/profile/edit",
         }),
       });
       if (!notificationRes.ok) console.error("create-account: notification failed", notificationRes.status);
@@ -267,8 +240,8 @@ export default async function handler(req) {
           body: JSON.stringify({
             from: "Valoria Institute <hello@valoriainstitute.com>",
             to: normalizedEmail,
-            subject: "Your VALU Index Is Saved — Here's What Happens Next",
-            html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, canonicalDesignationName(assessment.total_score) || ''),
+            subject: "Your VALU Assessment Is Saved — Here's What Happens Next",
+            html: journeyEmailHtml(assessment.name || name || "there", assessment.total_score, assessment.designation),
           }),
         });
         if (!journeyEmailRes.ok) console.error("create-account: journey email failed", journeyEmailRes.status);
