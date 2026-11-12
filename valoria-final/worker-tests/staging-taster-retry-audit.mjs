@@ -225,6 +225,7 @@ try {
   assert.equal(committed, true);
   assert.ok(redirectUrl?.startsWith(SITE_ORIGIN + '/professional-signup/'), `handoff must return to the originating redesign site; received ${redirectUrl || 'no intercepted URL'}`);
   assert.ok(redirectUrl.includes('taster_id=' + TASTER_ID), 'handoff must carry the verified taster reference');
+  assert.ok(redirectUrl.includes('account_first=1'), 'account-first Taster must never return to post-Taster account creation');
   assert.ok(storageEvents.some(event => event.action === 'set' && event.key === 'pending_taster_id' && event.value === TASTER_ID), 'pending taster ID must be written only after confirmed completion');
   assert.ok(storageEvents.some(event => event.action === 'remove' && event.key === 'valu_taster_resume_token'), 'resume token must be cleared after confirmed completion');
   assert.ok(storageEvents.some(event => event.action === 'remove' && event.key === 'valu_taster_signup_key'), 'signup key must be cleared after confirmed completion');
