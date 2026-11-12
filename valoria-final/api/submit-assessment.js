@@ -328,6 +328,8 @@ async function verifyHandoffRequest(body, res) {
 const ALLOWED_ORIGINS = new Set([
   'https://valoriainstitute.com',
   'https://www.valoriainstitute.com',
+  'https://staging.valoriainstitute.com',
+  'https://assessment-staging.valoriainstitute.com',
   'https://assessment.valoriainstitute.com',
   'https://valoria-assessment.riverwayse.workers.dev',
 ]);
