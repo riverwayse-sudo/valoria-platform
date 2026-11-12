@@ -1,0 +1,56 @@
+name: Generate a Supabase migration file
+
+on:
+  push:
+    paths:
+      - .migration-generate-request
+
+permissions:
+  contents: write
+
+concurrency:
+  group: supabase-migration-generation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.event.deleted == false
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the requesting branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Generate migration with Supabase CLI
+        working-directory: valoria-final
+        run: |
+          set -euo pipefail
+          if [ ! -f ../.migration-generate-request ]; then
+            echo "No migration request remains; nothing to generate."
+            exit 0
+          fi
+          name="$(tr -d '\r\n' < ../.migration-generate-request)"
+          [[ "$name" =~ ^[a-z0-9_]+$ ]] || { echo "::error::Migration name must contain lowercase letters, numbers and underscores only."; exit 1; }
+          npx --yes supabase@latest migration new "$name"
+
+      - name: Commit the generated migration
+        run: |
+          set -euo pipefail
+          if [ ! -f .migration-generate-request ]; then
+            echo "No migration request remains; nothing to commit."
+            exit 0
+          fi
+          name="$(tr -d '\r\n' < .migration-generate-request)"
+          rm .migration-generate-request
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add valoria-final/supabase/migrations .migration-generate-request
+          git commit -m "chore(db): generate migration $name"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
