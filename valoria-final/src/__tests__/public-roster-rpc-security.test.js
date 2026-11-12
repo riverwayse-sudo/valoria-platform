@@ -32,6 +32,16 @@ describe("Public marketplace roster RPC security contract", () => {
     expect(migration).toContain("has_function_privilege('anon'");
   });
 
+  test("roster writer removes administrator-revoked profiles from the internal projection", () => {
+    const writerMigration = fs.readFileSync(
+      path.join(__dirname, "../../supabase/migrations/20261112133000_exclude_admin_revoked_profiles_from_roster_writer.sql"),
+      "utf8"
+    );
+    expect(writerMigration).toContain("controls.admin_revoked");
+    expect(writerMigration).toContain("is_revoked");
+    expect(writerMigration).toContain("Marketplace writer does not enforce administrator revocation");
+  });
+
   test("roster writer never projects registered-only profiles and requires explicit consent", () => {
     expect(migration).toContain("public_consent_ok");
     expect(migration).toContain("private.has_public_profile_consent(p_professional_id)");
