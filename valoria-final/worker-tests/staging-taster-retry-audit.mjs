@@ -142,7 +142,7 @@ try {
   await page.getByPlaceholder('e.g. Product Manager').fill('Staging QA');
   await page.locator('select').first().selectOption({ index: 1 });
   await page.locator('input[type="checkbox"]').first().check();
-  await page.getByRole('button', { name: /CONTINUE TO MY VALU TASTER/i }).click();
+  await page.getByRole('button', { name: /CONTINUE TO MY VALU INDEX TASTER/i }).click();
 
   await page.getByRole('button', { name: /BEGIN MY VALU TASTER/i }).waitFor({ state: 'visible', timeout: 20000 });
   await page.getByRole('button', { name: /BEGIN MY VALU TASTER/i }).click();
