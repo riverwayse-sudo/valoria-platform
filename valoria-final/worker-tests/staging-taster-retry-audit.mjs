@@ -17,6 +17,7 @@ const forbiddenRequests = [];
 const routeErrors = [];
 let committed = false;
 let submissionKey = null;
+let completedAnswers = null;
 let submitCalls = 0;
 let completeCalls = 0;
 let redirectUrl = null;
@@ -67,9 +68,11 @@ await page.route('**/api/taster-progress*', async route => {
     }
     if (body.action === 'save') {
       if (body.submission_key) submissionKey = body.submission_key;
+      if (body.current_question === 9 && !committed) completedAnswers = JSON.stringify(body.answers || {});
       if (committed) {
         assert.equal(body.submission_key, submissionKey, 'retry must preserve the original submission key');
         assert.equal(body.current_question, 9, 'completed retry must preserve the completed answer count');
+        assert.equal(JSON.stringify(body.answers || {}), completedAnswers, 'retry must preserve the exact original answers');
         await json(route, 200, {
           saved: true,
           completed: true,
