@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
-import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
+import { TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
 import { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION } from '../src/valuTasterLegacy.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -16,27 +16,6 @@ function headers() {
 }
 function hashToken(token) {
   return createHash('sha256').update(token).digest('hex');
-}
-function validEmail(value) {
-  return typeof value === 'string' && value.trim().length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-function validToken(value) {
-  return typeof value === 'string' && /^[A-Za-z0-9_-]{40,64}$/.test(value);
-}
-function validSignupKey(value) {
-  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-async function consumeRegistrationRateLimit(req) {
-  const forwarded = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
-  const ip = String(Array.isArray(forwarded) ? forwarded[0] : forwarded).split(',')[0].trim();
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_rate_limit`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ p_rate_key: `valu-taster-registration:${ip}`, p_limit: 12, p_window_seconds: 3600 }),
-  });
-  if (!response.ok) throw new Error(`registration-rate-limit:${response.status}`);
-  const result = await response.json();
-  return Array.isArray(result) ? result[0] : result;
 }
 function questionBankForVersion(version) {
   if (version === VALU_VERSION) return TASTER_QUESTIONS;
