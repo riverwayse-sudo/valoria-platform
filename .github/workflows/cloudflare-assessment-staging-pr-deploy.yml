@@ -60,8 +60,8 @@ jobs:
           CI: true
           VITE_VALU_PREVIEW: "1"
           VITE_VALU_STAGING: "1"
-          VITE_VALU_API_ORIGIN: "https://valoria-staging-assessment.riverwayse.workers.dev"
-          VITE_VALU_SITE_ORIGIN: "https://valoria-staging-site.riverwayse.workers.dev"
+          VITE_VALU_API_ORIGIN: "https://assessment-staging.valoriainstitute.com"
+          VITE_VALU_SITE_ORIGIN: "https://staging.valoriainstitute.com"
 
       - name: Validate Cloudflare deployment credentials
         run: |
@@ -83,12 +83,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base="https://valoria-staging-assessment.riverwayse.workers.dev"
+          base="https://assessment-staging.valoriainstitute.com"
           curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base/remaining" -o /tmp/valu-assessment-entry.html
           grep -q 'VALU' /tmp/valu-assessment-entry.html
           for origin in \
-            https://valoria-staging-site.riverwayse.workers.dev \
-            https://valoria-redesign-staging-site.riverwayse.workers.dev; do
+            https://staging.valoriainstitute.com; do
             status="$(curl -sS -D /tmp/valu-cors-headers -o /tmp/valu-cors-response -w '%{http_code}' -X OPTIONS "$base/api/taster-progress" \
               -H "Origin: $origin" \
               -H 'Access-Control-Request-Method: POST' \
@@ -122,5 +121,5 @@ jobs:
       - name: Simulate a lost taster-completion response and safe browser retry
         run: node ./worker-tests/staging-taster-retry-audit.mjs
         env:
-          STAGING_ASSESSMENT_URL: https://valoria-staging-assessment.riverwayse.workers.dev
-          STAGING_SITE_URL: https://valoria-redesign-staging-site.riverwayse.workers.dev
+          STAGING_ASSESSMENT_URL: https://assessment-staging.valoriainstitute.com
+          STAGING_SITE_URL: https://staging.valoriainstitute.com
