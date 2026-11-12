@@ -115,6 +115,9 @@ export default function VALUIndexV4GateNext(){
      try{sessionStorage.setItem('valu_taster_start_token',startToken)}catch{}
      if(payload.identity?.email)setEmail(payload.identity.email);
      if(payload.identity?.display_name)setName(payload.identity.display_name);
+     if(payload.identity?.role)setRole(payload.identity.role);
+     if(payload.identity?.experience)setExperience(payload.identity.experience);
+     if(payload.identity?.privacy_acknowledged===true)setPrivacyAcknowledged(true);
      window.history.replaceState({},document.title,window.location.pathname+window.location.search);
     }catch(error){
      if(!cancelled){setError(error?.message||'Your account handoff could not be verified. Return to Valoria and try again.');setPhase('account-required')}
