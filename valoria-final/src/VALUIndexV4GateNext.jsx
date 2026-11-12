@@ -249,9 +249,9 @@ export default function VALUIndexV4GateNext(){
    const data=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
+   await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
    setTasterId(data.taster_id);
    try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
-   await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
    try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
