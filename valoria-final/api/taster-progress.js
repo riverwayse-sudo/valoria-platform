@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { verifyTasterStartTokenEdge } from '../lib/taster-start-token-edge.js';
 import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
@@ -87,6 +88,29 @@ export default async function handler(req, res) {
     const organisation = typeof body.organisation === 'string' ? body.organisation.trim() : '';
     const interest = typeof body.interest === 'string' ? body.interest.trim() : '';
     if (!validToken(body.resume_token)) return json(res, 401, { error: 'A secure registration session could not be verified. Please retry.' });
+    // New sessions require a server-issued token proving that the participant
+    // completed signup and email confirmation before entering the taster.
+    // Existing progress rows remain eligible for the legacy recovery path.
+    let existingProgress = null;
+    try {
+      existingProgress = await getProgress(hashToken(body.resume_token));
+    } catch (error) {
+      console.error('taster-progress: registration continuity lookup failed', error?.message || error);
+      return json(res, 503, { error: 'We could not verify your saved session. Please retry.' });
+    }
+    if (!existingProgress) {
+      const startSession = await verifyTasterStartTokenEdge(body.taster_start_token, reason => {
+        console.warn('taster-progress: new taster start rejected', { reason });
+      });
+      if (!startSession) return json(res, 401, { error: 'Create and confirm your Valoria account before starting the taster.' });
+      const norm = value => String(value || '').trim().toLowerCase().replace(/\\s+/g, ' ');
+      if (norm(startSession.email) !== norm(email)) {
+        return json(res, 403, { error: 'Use the same confirmed email address as your Valoria account.' });
+      }
+      if (startSession.display_name && norm(startSession.display_name) !== norm(name)) {
+        return json(res, 403, { error: 'Use the same name as your Valoria account so your taster can be connected securely.' });
+      }
+    }
     if (!validSignupKey(body.signup_key)) return json(res, 400, { error: 'Your registration reference is invalid. Please refresh and try again.' });
     if (!name || name.length > 200 || !role || role.length > 160 || !validEmail(email)
       || !EXPERIENCE_BANDS.some(item => item.id === experience)
