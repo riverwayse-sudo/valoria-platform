@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - experience/staging-redesign-20261106
+      - deploy/staging-platform-navigation-20261111
     types: [opened, synchronize, reopened]
     paths:
       - "valoria-final/api/**"
