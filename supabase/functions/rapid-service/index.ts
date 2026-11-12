@@ -208,13 +208,13 @@ function buildEmailText(params: { firstName: string; score: number | null; desig
   return [
     `Hi ${firstName},`,
     "",
-    score !== null ? `Your VALU Index results are in.\\n\\nScore: ${score} points  |  Merit designation: ${designation || "Not awarded"}` : "Welcome to Valoria Institute. Complete your VALU assessment to receive your official points and merit designation.",
+    score !== null ? `Your VALU Index results are in.\n\nScore: ${score} points  |  Merit designation: ${designation || "Not awarded"}` : "Welcome to Valoria Institute. Complete your VALU assessment to receive your official points and merit designation.",
     "",
     "View your profile: https://valoriainstitute.com/profile",
     "",
     "Worth, Built.",
     "Valoria Institute — Lagos, Nigeria",
-  ].join("\\n");
+  ].join("\n");
 }
 
 serve(asyncserve(async (req: Request) => {
@@ -232,7 +232,7 @@ serve(asyncserve(async (req: Request) => {
   try { body = await req.json(); } catch { return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }); }
 
   const email = typeof body.email === "string" ? body.email.trim() : "";
-  if (!email || email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return new Response(JSON.stringify({ error: "A valid email address is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
   }
 
