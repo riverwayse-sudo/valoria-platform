@@ -122,15 +122,9 @@ await page.route('**/api/submit-taster*', async route => {
 
 await page.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith('/professional-signup'), async route => {
   redirectUrl = route.request().url();
-  try {
-    redirectStorage = await page.evaluate(() => ({
-      pending: localStorage.getItem('pending_taster_id'),
-      resume: localStorage.getItem('valu_taster_resume_token'),
-      signup: localStorage.getItem('valu_taster_signup_key'),
-    }));
-  } catch (error) {
-    redirectStorage = { captureError: error.message };
-  }
+  // Do not evaluate the page during a cross-origin navigation interception.
+  // The init-script storageEvents capture the exact writes/removals without racing navigation.
+  redirectStorage = 'verified via storageEvents';
   try {
     await route.abort();
   } finally {
