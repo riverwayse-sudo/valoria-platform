@@ -379,7 +379,7 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your taster is <em>saved.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your Valoria account is confirmed and your Taster is saved. Connect the Taster to your account, then continue from your dashboard.</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
@@ -401,21 +401,20 @@ export default function VALUIndexV4GateNext(){
   <section aria-label="Assessment progress" style={S.scoreSection}>
    <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
     <div style={S.resultRow}><div style={S.dimensionCode}>YOUR TASTER</div><h2 style={S.scoreName}>Saved</h2><strong style={S.scoreValue}>✓</strong></div>
-    <div style={S.resultRow}><div style={S.dimensionCode}>NEXT STEP</div><h2 style={S.scoreName}>Account setup</h2><strong style={S.scoreValue}>→</strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>NEXT STEP</div><h2 style={S.scoreName}>Dashboard</h2><strong style={S.scoreValue}>→</strong></div>
    </div>
   </section>
   <section className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Secure your Valoria account.</h2></div><div style={S.formTime}>ACCOUNT SETUP</div></div>
-   <p style={S.formIntro}>Your registration details and taster are saved. Continue to create your Valoria account, confirm your email and access your dashboard.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Connect your Taster.</h2></div><div style={S.formTime}>ACCOUNT LINKING</div></div>
+   <p style={S.formIntro}>Your confirmed account is ready. Save your Taster and connect it to your dashboard.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED NAME</div><h2 style={S.scoreName}>{name}</h2></div>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED EMAIL</div><h2 style={{...S.scoreName,overflowWrap:'anywhere'}}>{email}</h2></div>
    </div>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO ACCOUNT CREATION →'}</button>
+   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'SAVE TASTER & CONTINUE TO DASHBOARD →'}</button>
    <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
   </section>
-  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
 
  return <Shell mode="taster">
