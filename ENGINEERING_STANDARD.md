@@ -57,3 +57,6 @@ Score each repository independently: architecture 10; static quality 10; data in
 
 ## Quality register
 Maintain a repository-level register with each gate marked PASS, FAIL or NOT VERIFIED, linked evidence, owner and remediation. Reassess after material architecture, security, data or deployment changes.
+
+## Component change control
+All changes must follow [the Valoria Component Change-Control Protocol](docs/engineering/COMPONENT_CHANGE_CONTROL.md). Verified components are protected from incidental modification. Cross-component changes require an explicit dependency-impact map, boundary tests for every affected component, and a recorded rollback/recovery plan. A component is not VERIFIED — PROTECTED on the basis of a successful build, merge or deployment alone.
