@@ -5,6 +5,8 @@ const ASSESSMENT_ORIGIN = process.env.STAGING_ASSESSMENT_URL || 'https://assessm
 const SITE_ORIGIN = process.env.STAGING_SITE_URL || 'https://staging.valoriainstitute.com';
 const TASTER_ID = '55555555-5555-4555-8555-555555555555';
 const LEAD_CAPTURE_ID = '66666666-6666-4666-8666-666666666666';
+const RESUME_TOKEN = 'R'.repeat(43);
+const SIGNUP_KEY = '77777777-7777-4777-8777-777777777777';
 
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -60,12 +62,31 @@ async function json(route, status, body) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
+await page.route(url => url.origin === SITE_ORIGIN && url.pathname === '/api/valu-taster/bootstrap', async route => {
+  // The retry audit isolates the assessment persistence contract. The site
+  // bootstrap is mocked as an already-confirmed account and is tested
+  // independently by the site API/auth contracts.
+  await json(route, 200, {
+    registered: true,
+    resume_token: RESUME_TOKEN,
+    signup_key: SIGNUP_KEY,
+    lead_capture_id: LEAD_CAPTURE_ID,
+    progress_id: '88888888-8888-4888-8888-888888888888',
+  });
+});
+
 await page.route('**/api/taster-progress*', async route => {
   try {
     const body = route.request().postDataJSON() || {};
     actions.push(body.action);
-    if (body.action === 'register') {
-      await json(route, 200, { lead_capture_id: LEAD_CAPTURE_ID });
+    if (body.action === 'load') {
+      assert.equal(body.resume_token, RESUME_TOKEN, 'load must use the account bootstrap resume token');
+      await json(route, 200, { progress: {
+        name: 'Valoria Automated Retry Test', role: 'Staging QA', experience: '0-3',
+        email: 'retry-audit@example.invalid', lead_capture_id: LEAD_CAPTURE_ID,
+        current_question: 0, answers: {}, submission_key: null,
+        status: 'in_progress', taster_version: '4.2', total_questions: 9,
+      }});
       return;
     }
     if (body.action === 'save') {
@@ -111,7 +132,7 @@ await page.route('**/api/submit-taster*', async route => {
   try {
     submitCalls += 1;
     const body = route.request().postDataJSON() || {};
-    assert.ok(body.resume_token, 'submission must use the registered resume token');
+    assert.equal(body.resume_token, RESUME_TOKEN, 'submission must use the confirmed-account resume token');
     assert.equal(body.submission_key, submissionKey, 'submission must use the stable submission key');
     await json(route, 200, { taster_id: TASTER_ID });
   } catch (error) {
@@ -137,13 +158,6 @@ try {
   entry.searchParams.set('site_origin', SITE_ORIGIN);
   await page.goto(entry.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-  await page.getByPlaceholder('Your full professional name').fill('Valoria Automated Retry Test');
-  await page.getByPlaceholder('you@example.com').fill('retry-audit@example.invalid');
-  await page.getByPlaceholder('e.g. Product Manager').fill('Staging QA');
-  await page.locator('select').first().selectOption({ index: 1 });
-  await page.locator('input[type="checkbox"]').first().check();
-  await page.getByRole('button', { name: /CONTINUE TO MY VALU INDEX TASTER/i }).click();
-
   await page.getByRole('button', { name: /BEGIN MY VALU INDEX TASTER/i }).waitFor({ state: 'visible', timeout: 20000 });
   await page.getByRole('button', { name: /BEGIN MY VALU INDEX TASTER/i }).click();
 
@@ -155,7 +169,7 @@ try {
     }
   }
 
-  const continueButton = page.getByRole('button', { name: /CONTINUE TO ACCOUNT CREATION/i });
+  const continueButton = page.getByRole('button', { name: /CONTINUE TO MY DASHBOARD/i });
   await continueButton.waitFor({ state: 'visible', timeout: 20000 });
 
   // First attempt: taster submission commits, but the completion response is lost.
