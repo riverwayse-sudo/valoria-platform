@@ -31,7 +31,7 @@ export async function verifyTasterStartTokenEdge(token, onFailure) {
     if (payload?.typ !== 'taster_start_session') return reject('token_type_invalid');
     if (payload?.aud !== AUDIENCE) return reject('token_audience_invalid');
     if (typeof payload?.sub !== 'string' || !payload.sub) return reject('token_subject_invalid');
-    if (typeof payload?.email !== 'string' || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(payload.email)) return reject('token_email_invalid');
+    if (typeof payload?.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return reject('token_email_invalid');
     if (!Number.isInteger(payload?.iat) || !Number.isInteger(payload?.exp)) return reject('token_timestamps_invalid');
     if (payload.iat > now + 60 || payload.exp <= now || payload.exp - payload.iat > 4 * 60 * 60) return reject('token_expired_or_ttl_invalid');
     if (typeof payload?.jti !== 'string' || payload.jti.length < 16) return reject('token_id_invalid');
