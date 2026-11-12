@@ -88,6 +88,22 @@ export default async function handler(req, res) {
     const organisation = typeof body.organisation === 'string' ? body.organisation.trim() : '';
     const interest = typeof body.interest === 'string' ? body.interest.trim() : '';
     if (!validToken(body.resume_token)) return json(res, 401, { error: 'A secure registration session could not be verified. Please retry.' });
+    if (!validSignupKey(body.signup_key)) return json(res, 400, { error: 'Your registration reference is invalid. Please refresh and try again.' });
+    if (!name || name.length > 200 || !role || role.length > 160 || !validEmail(email)
+      || !EXPERIENCE_BANDS.some(item => item.id === experience)
+      || organisation.length > 180 || interest.length > 120 || body.privacy_acknowledged !== true) {
+      return json(res, 400, { error: 'Complete the required registration details and acknowledge the Privacy Notice before continuing.' });
+    }
+    try {
+      const limit = await consumeRegistrationRateLimit(req);
+      if (!limit?.allowed) {
+        if (limit?.retry_after_seconds) res.setHeader('Retry-After', String(limit.retry_after_seconds));
+        return json(res, 429, { error: 'Too many registration attempts. Please try again later.' });
+      }
+    } catch (err) {
+      console.error('taster-progress: registration rate limiter failed', err?.message || err);
+      return json(res, 503, { error: 'Registration is temporarily unavailable. Please try again shortly.' });
+    }
     // New sessions require a server-issued token proving that the participant
     // completed signup and email confirmation before entering the taster.
     // Existing progress rows remain eligible for the legacy recovery path.
@@ -110,22 +126,6 @@ export default async function handler(req, res) {
       if (startSession.display_name && norm(startSession.display_name) !== norm(name)) {
         return json(res, 403, { error: 'Use the same name as your Valoria account so your taster can be connected securely.' });
       }
-    }
-    if (!validSignupKey(body.signup_key)) return json(res, 400, { error: 'Your registration reference is invalid. Please refresh and try again.' });
-    if (!name || name.length > 200 || !role || role.length > 160 || !validEmail(email)
-      || !EXPERIENCE_BANDS.some(item => item.id === experience)
-      || organisation.length > 180 || interest.length > 120 || body.privacy_acknowledged !== true) {
-      return json(res, 400, { error: 'Complete the required registration details and acknowledge the Privacy Notice before continuing.' });
-    }
-    try {
-      const limit = await consumeRegistrationRateLimit(req);
-      if (!limit?.allowed) {
-        if (limit?.retry_after_seconds) res.setHeader('Retry-After', String(limit.retry_after_seconds));
-        return json(res, 429, { error: 'Too many registration attempts. Please try again later.' });
-      }
-    } catch (err) {
-      console.error('taster-progress: registration rate limiter failed', err?.message || err);
-      return json(res, 503, { error: 'Registration is temporarily unavailable. Please try again shortly.' });
     }
     try {
       const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/begin_valu_taster_signup`, {
