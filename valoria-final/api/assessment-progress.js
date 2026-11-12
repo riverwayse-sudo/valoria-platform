@@ -56,11 +56,11 @@ async function resolveTasterIdentity(tasterId) {
   if (!tasterId) return { error: "A completed snapshot reference is required." };
   const params = new URLSearchParams({ id: `eq.${tasterId}`, select: "id,user_id,name,role,completed_at", limit: "1" });
   const tasterRes = await supabase(`taster_sessions?${params}`);
-  if (!tasterRes.ok) return { error: "Could not verify the VALU snapshot." };
+  if (!tasterRes.ok) return { error: "Could not verify the VALU Index Taster." };
   const taster = (await tasterRes.json())?.[0];
-  if (!taster) return { error: "VALU snapshot not found." };
-  if (!taster.completed_at) return { error: "Complete the VALU snapshot before saving full-assessment progress." };
-  if (!taster.user_id) return { error: "Link the VALU snapshot to a confirmed Valoria account before saving full-assessment progress." };
+  if (!taster) return { error: "VALU Index Taster record not found." };
+  if (!taster.completed_at) return { error: "Complete the VALU Index Taster before saving full VALU Index progress." };
+  if (!taster.user_id) return { error: "Link the VALU Index Taster to a confirmed Valoria account before saving full VALU Index progress." };
   const userRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${taster.user_id}`, { headers: headers(), cache: "no-store" });
   if (!userRes.ok) return { error: "Could not verify the Valoria account." };
   const user = await userRes.json();
@@ -101,7 +101,7 @@ async function getProgressByTasterId(tasterId) {
     limit: "1",
   });
   const res = await supabase(`valu_assessment_progress?${params}`);
-  if (!res.ok) throw new Error("Could not retrieve the saved VALU assessment.");
+  if (!res.ok) throw new Error("Could not retrieve the saved VALU Index.");
   return (await res.json())?.[0] || null;
 }
 
@@ -111,15 +111,15 @@ async function sendReminder(row, reminderNumber) {
   const dashboardUrl = getDashboardUrl();
   if (!dashboardUrl) return false;
   const subject = reminderNumber === 1
-    ? "Your VALU assessment is waiting for you"
-    : "Continue your VALU journey";
+    ? "Your VALU Index is waiting for you"
+    : "Continue your VALU Index";
 
   const html = `<!doctype html><html><body style="margin:0;background:#1A1A2E;color:#F7F4EE;font-family:Arial,sans-serif">
   <div style="max-width:620px;margin:0 auto;padding:48px 28px">
     <div style="font-size:11px;letter-spacing:.18em;color:#C9A84C;font-weight:700">VALORIA INSTITUTE · VALU</div>
     <h1 style="font-weight:400;font-size:34px;line-height:1.15;margin:26px 0 16px">You can continue where you stopped.</h1>
     <p style="color:rgba(247,244,238,.7);font-size:15px;line-height:1.8">
-      ${row.name || "Your"} VALU assessment is still in progress. Your answers have been saved, so you do not need to start again.
+      ${row.name || "Your"} VALU Index is still in progress. Your answers have been saved, so you do not need to start again.
     </p>
     <div style="margin:28px 0;padding:20px;border:1px solid rgba(201,168,76,.22);background:rgba(201,168,76,.06);border-radius:8px">
       <div style="font-size:11px;letter-spacing:.14em;color:#C9A84C;font-weight:700">YOUR PROGRESS</div>
@@ -145,11 +145,11 @@ async function sendReminder(row, reminderNumber) {
 
 async function createNotification(row) {
   if (!row.user_id) return;
-  const body = "Your VALU assessment is still in progress. Sign in to your Valoria dashboard to see your progress and continue securely.";
+  const body = "Your VALU Index is still in progress. Sign in to your Valoria dashboard to see your progress and continue securely.";
   const payload = {
     user_id: row.user_id,
     type: "assessment_abandoned",
-    title: "Your VALU assessment is waiting",
+    title: "Your VALU Index is waiting",
     body,
     action_label: "Open dashboard",
     action_url: '/dashboard',
@@ -252,7 +252,7 @@ async function baseHandler(req) {
   if (action === "restore") {
     const validTasterId = typeof tasterId === "string"
       && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId);
-    if (!validTasterId) return json({ error: "A valid VALU snapshot is required to restore progress." }, 400);
+    if (!validTasterId) return json({ error: "A valid VALU Index Taster is required to restore progress." }, 400);
     const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason => {
       console.warn("[assessment-progress] handoff rejected", {
         action,
@@ -268,7 +268,7 @@ async function baseHandler(req) {
     try {
       // Restore only the separate full-assessment progress record.
       // The 9-question taster remains in taster_progress/taster_sessions and is
-      // never read, merged or scored as part of the 58-question full assessment.
+      // never read, merged or scored as part of the 58-question full VALU Index.
       const progress = await getProgressByTasterId(tasterId);
       if (!progress) return json({ ok: true, progress: null });
       if (Number(progress.total_questions) !== QUESTIONS.length) {
@@ -280,7 +280,7 @@ async function baseHandler(req) {
       if (progress.identity_hash !== `valu_progress_${tasterId}`
         || norm(progress.name) !== norm(resolvedIdentity.taster.name)
         || norm(progress.role) !== norm(resolvedIdentity.taster.role)) {
-        return json({ error: "Saved progress does not match this VALU snapshot." }, 403);
+        return json({ error: "Saved progress does not match this VALU Index Taster." }, 403);
       }
       // Safely attach a legacy unlinked session only after the snapshot owner,
       // snapshot ID, normalized identity, and identity hash have all matched.
@@ -294,7 +294,7 @@ async function baseHandler(req) {
         progress.user_id = resolvedIdentity.user_id;
       }
       // Taster answers are stored separately. This response contains only the
-      // participant's saved answers to the independent full assessment.
+      // participant's saved answers to the independent full VALU Index.
       return json({ ok: true, progress });
     } catch (err) {
       return json({ error: err.message || "Could not restore saved VALU progress." }, 502);
@@ -322,7 +322,7 @@ async function baseHandler(req) {
     return json({ error: "Invalid formal assessment timings." }, 400);
   }
   if (typeof tasterId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tasterId)) {
-    return json({ error: "A valid completed VALU snapshot is required." }, 400);
+    return json({ error: "A completed VALU Index Taster is required." }, 400);
   }
   if (identityHash !== `valu_progress_${tasterId}`) return json({ error: "Assessment identity does not match the verified snapshot." }, 403);
   const handoff = await verifyValuHandoffTokenEdge(handoffToken, tasterId, reason => {

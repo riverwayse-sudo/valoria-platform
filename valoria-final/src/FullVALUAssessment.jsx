@@ -511,18 +511,18 @@ export default function FullVALUAssessment() {
     }
   }
 
-  if (resumeLoading) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>Your progress is being retrieved securely.</p></Shell>;
+  if (resumeLoading) return <Shell><div style={S.eyebrow}>VALU INDEX JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>Your progress is being retrieved securely.</p></Shell>;
 
-  if (resumeError) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
+  if (resumeError) return <Shell><div style={S.eyebrow}>VALU INDEX JOURNEY</div><h1 style={S.h1}>We could not restore this session.</h1><p style={S.p}>{resumeError}</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
   // The initial identity is intentionally empty until the dashboard handoff
   // is exchanged. Render verification first; otherwise the empty-identity
   // guard masks the real handoff response and falsely reports "unavailable".
-  if (handoffStatus === 'checking') return <Shell><div style={S.eyebrow}>SECURE VALU JOURNEY</div><h1 style={S.h1}>Verifying your account…</h1><p style={S.p}>We are confirming that this assessment belongs to your Valoria account before you continue.</p></Shell>;
+  if (handoffStatus === 'checking') return <Shell><div style={S.eyebrow}>SECURE VALU INDEX JOURNEY</div><h1 style={S.h1}>Verifying your account…</h1><p style={S.p}>We are confirming that this assessment belongs to your Valoria account before you continue.</p></Shell>;
 
   if (handoffStatus !== 'ready') {
     return <Shell>
-      <div style={S.eyebrow}>SECURE VALU JOURNEY</div>
+      <div style={S.eyebrow}>SECURE VALU INDEX JOURNEY</div>
       <h1 style={S.h1}>Return to your Valoria dashboard.</h1>
       <p style={S.p}>Assessment continuation is available only from your authenticated dashboard. Your saved taster and answers remain attached to your account. Return to your dashboard to continue securely; if your session has expired, Valoria will ask you to sign in there.</p>
       {handoffError && <div style={S.error}>{handoffError}</div>}
@@ -530,9 +530,9 @@ export default function FullVALUAssessment() {
     </Shell>;
   }
 
-  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU assessment unavailable.</h1><p style={S.p}>The secure dashboard handoff was verified, but the saved assessment identity is incomplete. Return to your dashboard and contact Valoria support if this continues.</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
+  if (!canUse) return <Shell><h1 style={S.h1}>Full VALU Index unavailable.</h1><p style={S.p}>The secure dashboard handoff was verified, but the saved assessment identity is incomplete. Return to your dashboard and contact Valoria support if this continues.</p><a href={SITE_BASE ? SITE_BASE + '/dashboard' : undefined} style={S.button}>RETURN TO MY DASHBOARD →</a></Shell>;
 
-  if (!identity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
+  if (!identity.resume && !remoteRestoreComplete) return <Shell><div style={S.eyebrow}>VALU INDEX JOURNEY</div><h1 style={S.h1}>Restoring your saved assessment…</h1><p style={S.p}>We are securely checking for previous answers so you can continue where you stopped.</p></Shell>;
 
   if (result) {
     const score = result.valuIndex ?? result.total_score ?? result.score;
@@ -559,7 +559,7 @@ export default function FullVALUAssessment() {
         <div style={S.nextStepCard}>
           <div style={S.nextStepEyebrow}>YOUR NEXT STEP</div>
           <h2 style={S.nextStepTitle}>Complete your professional profile</h2>
-          <p style={S.nextStepText}>Your Full VALU assessment is complete. Your professional profile still needs the required information and evidence before it can be considered for public listing.</p>
+          <p style={S.nextStepText}>Your Full VALU Index is complete. Your professional profile still needs the required information and evidence before it can be considered for public listing.</p>
           <a href={SITE_BASE ? SITE_BASE + '/profile/onboarding' : undefined} style={S.primaryAction}>COMPLETE MY PROFILE <span>→</span></a>
         </div>
 
@@ -579,7 +579,7 @@ export default function FullVALUAssessment() {
 
   if (!hasValidExperience) {
     return <Shell>
-      <div style={S.eyebrow}>VALU ASSESSMENT · ONE DETAIL</div>
+      <div style={S.eyebrow}>VALU INDEX · ONE DETAIL</div>
       <h1 style={S.h1}>Confirm your experience band.</h1>
       <p style={S.p}>We need a current experience band to complete your assessment record. Choose the range that best reflects your total professional experience. This does not change your saved taster or its answers.</p>
       <div style={S.options}>
@@ -606,7 +606,7 @@ export default function FullVALUAssessment() {
         {current>0?<button type="button" className="valu-assessment-back" disabled={saving} onClick={()=>{setCurrent(value=>Math.max(0,value-1));setStartedAt(Date.now());}}>← REVIEW PREVIOUS RESPONSE</button>:<span />}
         <span>Your responses are saved automatically.</span>
       </div>
-      {current === ASSESSMENT_ORDER.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1]))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':'SUBMIT VALU ASSESSMENT →'}</button>}
+      {current === ASSESSMENT_ORDER.length - 1 && <button type="button" onClick={submitAssessment} disabled={saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])} style={{...S.button,opacity:(saving || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1]))?.55:1,cursor:saving?'wait':'pointer'}}>{saving?'SUBMITTING YOUR VALU INDEX…':'SUBMIT VALU INDEX →'}</button>}
       {error && <div style={S.error}>{error}<button onClick={()=>setError('')} style={S.dismiss}>Dismiss</button></div>}
       {saving && <div style={S.saving}>Scoring and attaching your official VALU Index…</div>}
     </div>

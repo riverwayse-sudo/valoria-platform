@@ -37,7 +37,7 @@ function getSiteUrl() {
 }
 const LOGO_URL = `${getSiteUrl()}/logo.png`;
 
-export default function AssessmentNavigation({ progress = null, label = 'VALU ASSESSMENT' }) {
+export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {
   const siteUrl = getSiteUrl();
   return (
     <header style={styles.header} aria-label="Assessment navigation">

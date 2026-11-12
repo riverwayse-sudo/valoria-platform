@@ -195,7 +195,7 @@ export default function VALUIndexV4GateNext(){
     organisation:organisation.trim(),interest,
     marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
    });
-   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU journey. Please retry.');
+   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU Index journey. Please retry.');
    const answeredCount=Object.keys(answers).length;
    const complete=current===TASTER_QUESTIONS.length-1&&answeredCount===TASTER_QUESTIONS.length&&!!submissionKey;
    setPhase(complete?'break':answeredCount?'session1':'intro');
@@ -251,7 +251,7 @@ export default function VALUIndexV4GateNext(){
    <p className="valu-results-intro" style={S.resultsIntro}>Your details connect your responses to you, so you can pause and return without losing your place. You will create your Valoria account after completing the taster.</p>
   </section>
   <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
+   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU Index Taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
    <p style={S.formIntro}>Complete the required details and acknowledge the Privacy Notice. Your answers stay connected to your registration. Optional details can be added below.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
@@ -276,7 +276,7 @@ export default function VALUIndexV4GateNext(){
     <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
    </label>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="submit" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU TASTER →'}</button>
+   <button type="submit" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU INDEX TASTER →'}</button>
    <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved taster.</div>
   </form>
  </Shell>;
@@ -285,7 +285,7 @@ export default function VALUIndexV4GateNext(){
 
  if(phase==='intro')return <Shell>
   <section className="valu-assessment-intro" aria-labelledby="valu-taster-intro-title">
-   <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU TASTER</div>
+   <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU INDEX TASTER</div>
    <div className="valu-intro-rule"><span/></div>
    <p className="valu-intro-overline">A CLEARER VIEW OF YOUR PROFESSIONAL CAPABILITY</p>
    <h1 id="valu-taster-intro-title" className="valu-intro-title">Your professional worth deserves to be <em>understood.</em></h1>
@@ -295,7 +295,7 @@ export default function VALUIndexV4GateNext(){
     <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>You can leave and return without losing saved responses.</small></span></div>
     <div><span className="valu-intro-check">✓</span><span><strong>A useful next step</strong><small>Your taster helps you understand where to continue.</small></span></div>
    </div>
-   <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU TASTER <span>→</span></button>
+   <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU INDEX TASTER <span>→</span></button>
    <p className="valu-intro-assurance">Your responses are handled securely and are not shown as a public profile.</p>
   </section>
  </Shell>;
@@ -303,14 +303,14 @@ export default function VALUIndexV4GateNext(){
  if(phase==='break')return <Shell>
   <VALUAssessmentJourney stage="account" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU INDEX v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your taster is <em>saved.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU taster</h3>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU Index Taster</h3>
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
@@ -346,7 +346,7 @@ export default function VALUIndexV4GateNext(){
 
  return <Shell mode="taster">
   <VALUAssessmentJourney stage="taster" currentQuestion={placeInAssessment} />
-  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div className="valu-taster-save-state"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</div></div>
+  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU INDEX TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div className="valu-taster-save-state"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</div></div>
   <div className="valu-taster-progress" role="progressbar" aria-label="Taster progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={sessionProgress} style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
