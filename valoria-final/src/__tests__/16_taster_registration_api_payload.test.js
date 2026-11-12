@@ -1,16 +1,30 @@
 "use strict";
 
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { EXPERIENCE_BANDS } from "../valuTaster.js";
 
 const RESUME_TOKEN = "A".repeat(43);
 const SIGNUP_KEY = "11111111-1111-4111-8111-111111111111";
 const LEAD_CAPTURE_ID = "22222222-2222-4222-8222-222222222222";
 const PROGRESS_ID = "33333333-3333-4333-8333-333333333333";
+const TEST_SECRET = "test-staging-service-role-key";
+
+function tasterStartToken() {
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    v: 1, typ: "taster_start_session", aud: "valu-taster-start",
+    sub: "66666666-6666-4666-8666-666666666666",
+    email: "participant@example.invalid", display_name: "Staging Test Participant",
+    iat: now, exp: now + 900, jti: "staging-test-jti-1234567890"
+  };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = createHmac("sha256", TEST_SECRET).update(encoded).digest("base64url");
+  return `${encoded}.${signature}`;
+}
 
 function loadHandler() {
   process.env.SUPABASE_URL = "https://staging-example.supabase.co";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-staging-service-role-key";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = TEST_SECRET;
   const rateLimitPath = require.resolve("../../api/_rateLimit.js");
   const modulePath = require.resolve("../../api/taster-progress.js");
   delete require.cache[rateLimitPath];
@@ -32,7 +46,7 @@ function request(action = "register") {
       name: "Staging Test Participant", email: "participant@example.invalid",
       role: "Operations Director", experience: EXPERIENCE_BANDS[0].id,
       organisation: "Example Organisation", interest: "Professional visibility",
-      marketing_consent: false, privacy_acknowledged: true
+      marketing_consent: false, privacy_acknowledged: true, taster_start_token: tasterStartToken()
     }
   };
 }
@@ -50,6 +64,7 @@ function installFetch() {
   global.fetch = async (url, options = {}) => {
     calls.push({ url, options });
     if (url.includes("rpc/consume_rate_limit")) return response(200, [{ allowed: true }]);
+    if (url.includes("rest/v1/taster_progress?")) return response(200, []);
     if (url.includes("rpc/begin_valu_taster_signup")) {
       return response(200, [{ lead_capture_id: LEAD_CAPTURE_ID, progress_id: PROGRESS_ID, created: true }]);
     }
