@@ -54,6 +54,8 @@ describe("signup-first taster start security contract", () => {
   test("new registrations require a signed, email-matched taster-start session", () => {
     expect(progressApi).toContain("verifyTasterStartTokenEdge(body.taster_start_token");
     expect(progressApi).toContain("norm(startSession.email) !== norm(email)");
+    expect(progressApi).toContain("norm(startSession.role) !== norm(role) || startSession.experience !== experience");
+    expect(progressApi).toContain("startSession.privacy_acknowledged !== true");
     expect(progressApi).toContain("if (!existingProgress)");
     expect(progressApi.indexOf("consumeRegistrationRateLimit(req)")).toBeLessThan(progressApi.indexOf("getProgress(hashToken(body.resume_token))"));
     expect(progressApi).toContain("Create and confirm your Valoria account before starting the taster.");
@@ -80,11 +82,17 @@ describe("signup-first taster start security contract", () => {
     expect(submitApi).toContain("aud: 'valu-taster-start'");
     expect(verifier).toContain("payload?.typ !== 'taster_start_session'");
     expect(verifier).toContain("payload?.aud !== AUDIENCE");
+    expect(verifier).toContain("payload?.role");
+    expect(verifier).toContain("payload?.experience");
+    expect(verifier).toContain("payload?.privacy_acknowledged !== true");
     expect(verifier).toContain("payload.exp - payload.iat > 4 * 60 * 60");
   });
 
   test("direct new assessment entry requires account handoff; saved progress remains restorable", () => {
     expect(gate).toContain("exchange-taster-start-handoff");
+    expect(gate).toContain("if(payload.identity?.role)setRole(payload.identity.role)");
+    expect(gate).toContain("if(payload.identity?.experience)setExperience(payload.identity.experience)");
+    expect(gate).toContain("if(payload.identity?.privacy_acknowledged===true)setPrivacyAcknowledged(true)");
     expect(gate).toContain("phase==='account-required'");
     expect(gate).toContain("valu_taster_resume_token");
     expect(gate).toContain("action:'load'");
