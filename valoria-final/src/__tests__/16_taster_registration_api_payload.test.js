@@ -140,6 +140,41 @@ describe("registration-first taster API payload", () => {
     expect(calls.some(call => call.options.method === "PATCH")).toBe(false);
   });
 
+  test("rejects a new taster registration without a confirmed-account token", async () => {
+    const calls = installFetch();
+    const req = request();
+    delete req.body.taster_start_token;
+    const res = makeRes();
+    await loadHandler()(req, res);
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error).toContain("Create and confirm your Valoria account");
+    expect(calls.some(call => call.url.includes("rpc/begin_valu_taster_signup"))).toBe(false);
+  });
+
+  test("allows a pre-existing legacy progress row to complete its recovery registration", async () => {
+    const calls = [];
+    global.fetch = async (url, options = {}) => {
+      calls.push({ url, options });
+      if (url.includes("rpc/consume_rate_limit")) return response(200, [{ allowed: true }]);
+      if (url.includes("rest/v1/taster_progress?")) return response(200, [{
+        id: PROGRESS_ID, name: "Staging Test Participant", role: "Operations Director",
+        experience: EXPERIENCE_BANDS[0].id, email: "participant@example.invalid",
+        current_question: 2, answers: { 0: 1, 1: 0 }, status: "in_progress",
+        lead_capture_id: null, taster_version: "4.2", total_questions: 9
+      }]);
+      if (url.includes("rpc/begin_valu_taster_signup")) return response(200, [{
+        lead_capture_id: LEAD_CAPTURE_ID, progress_id: PROGRESS_ID, created: true
+      }]);
+      throw new Error("unexpected fetch: " + url);
+    };
+    const req = request();
+    delete req.body.taster_start_token;
+    const res = makeRes();
+    await loadHandler()(req, res);
+    expect(res.statusCode).toBe(200);
+    expect(calls.some(call => call.url.includes("rpc/begin_valu_taster_signup"))).toBe(true);
+  });
+
   test("rejects the old anonymous init action", async () => {
     const calls = installFetch();
     const res = makeRes();
