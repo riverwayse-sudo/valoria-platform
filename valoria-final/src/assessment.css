@@ -374,3 +374,20 @@ button.valu-option:disabled { cursor: default; }
     gap: 10px;
   }
 }
+
+
+/* Staging preview marker — visible, accessible, and in normal document flow. */
+.staging-site-banner {
+  position: relative;
+  z-index: 10001;
+  width: 100%;
+  padding: 10px 16px;
+  background: #C9A84C;
+  color: #1A1A2E;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
