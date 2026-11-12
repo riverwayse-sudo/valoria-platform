@@ -60,7 +60,7 @@ describe("VALU assessment left-alignment contract", () => {
     expect(navigation).toContain("label = 'VALU INDEX'");
     expect(full).not.toContain("VALU ASSESSMENT");
     expect(full).toContain("SUBMIT VALU INDEX");
-    expect(taster).toContain("VALU INDEX TASTER");
+    expect(taster).toContain("VALU TASTER");
     expect(taster).not.toContain("VALU TASTER");
   });
 
