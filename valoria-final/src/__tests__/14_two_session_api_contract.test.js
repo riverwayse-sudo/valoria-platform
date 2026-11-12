@@ -55,6 +55,7 @@ describe("signup-first taster start security contract", () => {
     expect(progressApi).toContain("verifyTasterStartTokenEdge(body.taster_start_token");
     expect(progressApi).toContain("norm(startSession.email) !== norm(email)");
     expect(progressApi).toContain("if (!existingProgress)");
+    expect(progressApi.indexOf("consumeRegistrationRateLimit(req)")).toBeLessThan(progressApi.indexOf("getProgress(hashToken(body.resume_token))"));
     expect(progressApi).toContain("Create and confirm your Valoria account before starting the taster.");
   });
 
