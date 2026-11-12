@@ -75,6 +75,7 @@ export default function VALUIndexV4GateNext(){
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
  const [tasterId,setTasterId]=useState('');
+ const [tasterStartToken,setTasterStartToken]=useState('');
  const startedRef=useRef(false);
  const timer=useRef(null);
 
@@ -101,6 +102,26 @@ export default function VALUIndexV4GateNext(){
   startedRef.current=true;
   let cancelled=false;
   async function begin(){
+   let startToken='';
+   try{startToken=sessionStorage.getItem('valu_taster_start_token')||''}catch{}
+   const fragment=new URLSearchParams(window.location.hash.replace(/^#/, ''));
+   const handoffCode=fragment.get('taster_start_code')||'';
+   if(handoffCode){
+    try{
+     const response=await fetch(API_BASE+'/api/submit-assessment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'exchange-taster-start-handoff',handoff_code:handoffCode})});
+     const payload=await response.json().catch(()=>({}));
+     if(!response.ok||!payload.session_token)throw new Error(payload.error||'Your confirmed account could not be connected to the taster.');
+     startToken=payload.session_token;
+     try{sessionStorage.setItem('valu_taster_start_token',startToken)}catch{}
+     if(payload.identity?.email)setEmail(payload.identity.email);
+     if(payload.identity?.display_name)setName(payload.identity.display_name);
+     window.history.replaceState({},document.title,window.location.pathname+window.location.search);
+    }catch(error){
+     if(!cancelled){setError(error?.message||'Your account handoff could not be verified. Return to Valoria and try again.');setPhase('account-required')}
+     return;
+    }
+   }
+   if(startToken)setTasterStartToken(startToken);
    let pending='';
    try{pending=localStorage.getItem('pending_taster_id')||''}catch{}
    if(pending){
@@ -163,7 +184,7 @@ export default function VALUIndexV4GateNext(){
      return;
     }
    }
-   if(!cancelled)setPhase('registration');
+   if(!cancelled)setPhase(startToken?'registration':'account-required');
   }
   begin();
   return ()=>{cancelled=true};
@@ -219,6 +240,7 @@ export default function VALUIndexV4GateNext(){
    try{localStorage.setItem(RESUME_TOKEN_KEY,token);localStorage.setItem(SIGNUP_KEY_KEY,signupKey)}catch{}
    const data=await postProgress({
     action:'register',resume_token:token,signup_key:signupKey,
+    ...(tasterStartToken?{taster_start_token:tasterStartToken}:{}),
     name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),
     organisation:organisation.trim(),interest,
     marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
@@ -282,12 +304,22 @@ export default function VALUIndexV4GateNext(){
   </section>
  </Shell>;
 
+ if(phase==='account-required')return <Shell>
+  <section className="valu-results-header" style={S.resultsHeader}>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> ACCOUNT REQUIRED</div>
+   <h1 className="valu-results-title" style={S.h1}>Your account comes <em>first.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>Create your Valoria account and confirm your email before starting the VALU Index Taster. Your taster responses remain separate from your full VALU Index.</p>
+   {error&&<p role="alert" style={S.error}>{error}</p>}
+   <button type="button" onClick={()=>window.location.assign((SITE_BASE||'')+'/professional-signup/?journey=valu_taster')} style={S.primary}>CREATE OR SIGN IN TO YOUR ACCOUNT</button>
+  </section>
+ </Shell>;
+
  if(phase==='registration')return <Shell>
   <VALUAssessmentJourney stage="registration" />
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> YOUR DETAILS FIRST</div>
    <h1 className="valu-results-title" style={S.h1}>Start with your <em>details.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your details connect your responses to you, so you can pause and return without losing your place. You will create your Valoria account after completing the taster.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your details connect your responses to you, so you can pause and return without losing your place. Your Valoria account is confirmed. Complete these details before beginning the taster.</p>
   </section>
   <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
    <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
