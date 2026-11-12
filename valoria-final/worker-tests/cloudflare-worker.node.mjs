@@ -62,9 +62,8 @@ test("assessment API preflight allows the production site and exact preview orig
   const env = makeEnv();
   for (const origin of [
     "https://www.valoriainstitute.com",
-    "https://site-preview.example",
-    "https://site-preview-two.example",
-    "https://assessment-preview.example",
+    "https://staging.valoriainstitute.com",
+    "https://assessment-staging.valoriainstitute.com",
   ]) {
     const response = await worker.fetch(new Request("https://assessment.example/api/taster-progress", {
       method: "OPTIONS",
@@ -178,7 +177,6 @@ test("staging Wrangler environment targets the existing staging Worker and stagi
 test("account confirmation redirects honor only exact allowed site request origins", async () => {
   const { getSiteOrigin } = await import("../api/_siteOrigin.js");
   process.env.VALORIA_SITE_URL = "https://staging.valoriainstitute.com";
-  assert.equal(getSiteOrigin({ headers: { origin: "https://staging.valoriainstitute.com" } }), "https://staging.valoriainstitute.com");
   assert.equal(getSiteOrigin({ headers: { origin: "https://staging.valoriainstitute.com" } }), "https://staging.valoriainstitute.com");
   assert.equal(getSiteOrigin({ headers: { origin: "https://attacker.example" } }), "https://staging.valoriainstitute.com");
 });
