@@ -17,6 +17,9 @@ function headers() {
 function hashToken(token) {
   return createHash('sha256').update(token).digest('hex');
 }
+function validToken(value) {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]{40,64}$/.test(value);
+}
 function questionBankForVersion(version) {
   if (version === VALU_VERSION) return TASTER_QUESTIONS;
   if (version === LEGACY_TASTER_VERSION) return LEGACY_TASTER_QUESTIONS;
