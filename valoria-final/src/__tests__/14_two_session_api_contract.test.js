@@ -55,6 +55,8 @@ describe("signup-first taster start security contract", () => {
     expect(progressApi).toContain("verifyTasterStartTokenEdge(body.taster_start_token");
     expect(progressApi).toContain("norm(startSession.email) !== norm(email)");
     expect(progressApi).toContain("norm(startSession.role) !== norm(role) || startSession.experience !== experience");
+    expect(progressApi).toContain("confirmedAccountId = startSession.sub");
+    expect(progressApi).toContain("p_signup_key: confirmedAccountId || body.signup_key");
     expect(progressApi).toContain("startSession.privacy_acknowledged !== true");
     expect(progressApi).toContain("if (!existingProgress)");
     expect(progressApi.indexOf("consumeRegistrationRateLimit(req)")).toBeLessThan(progressApi.indexOf("getProgress(hashToken(body.resume_token))"));
