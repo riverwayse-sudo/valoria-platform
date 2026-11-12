@@ -9,6 +9,11 @@ const migration = fs.readFileSync(
 );
 
 describe("Public marketplace roster RPC security contract", () => {
+  test("migration defines its consent predicate and restricts direct client execution", () => {
+    expect(migration).toContain("CREATE OR REPLACE FUNCTION private.has_public_profile_consent");
+    expect(migration).toContain("REVOKE ALL ON FUNCTION private.has_public_profile_consent(uuid) FROM PUBLIC, anon, authenticated");
+  });
+
   test("public RPC never returns personal names or initials", () => {
     expect(migration).toContain("NULL::text AS full_name");
     expect(migration).toContain("NULL::text AS display_initials");

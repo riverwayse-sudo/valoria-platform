@@ -3,6 +3,30 @@
 -- or initials. The public wrapper is the only callable entry point; its private helper
 -- is no longer directly executable by anon/authenticated roles.
 
+-- Keep the consent predicate self-contained: production may not yet have the
+-- helper that was present in the staging schema.
+CREATE OR REPLACE FUNCTION private.has_public_profile_consent(p_professional_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'pg_catalog'
+AS $function$
+  SELECT COALESCE((
+    SELECT acknowledgement.acknowledgement_version = 'public-profile-visibility-v3-2026-11-07'
+    FROM public.professional_profile_acknowledgements acknowledgement
+    WHERE acknowledgement.professional_id = p_professional_id
+      AND acknowledgement.acknowledgement_type = 'profile_submission'
+    ORDER BY acknowledgement.acknowledged_at DESC NULLS LAST,
+             acknowledgement.created_at DESC,
+             acknowledgement.id DESC
+    LIMIT 1
+  ), FALSE);
+$function$;
+
+REVOKE ALL ON FUNCTION private.has_public_profile_consent(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION private.has_public_profile_consent(uuid) TO service_role;
+
 CREATE OR REPLACE FUNCTION private.is_basic_public_profile_ready(p_professional_id uuid)
 RETURNS boolean
 LANGUAGE sql
