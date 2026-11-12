@@ -325,8 +325,8 @@ export default function VALUIndexV4GateNext(){
    <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
    <p style={S.formIntro}>Complete the required details and acknowledge the Privacy Notice. Your answers stay connected to your registration. Optional details can be added below.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
-    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
-    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>
+    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} readOnly={Boolean(tasterStartToken)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
+    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} readOnly={Boolean(tasterStartToken)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>
    </div>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" maxLength={160}/></Field>
