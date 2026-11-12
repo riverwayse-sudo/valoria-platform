@@ -39,7 +39,6 @@ const SITE_BASE = (() => {
   // same site environment rather than a hard-coded production/staging domain.
   if (allowedOrigins.has(window.location.origin) && !host.includes('assessment')) return window.location.origin;
   if (host === 'assessment-staging.valoriainstitute.com') return 'https://staging.valoriainstitute.com';
-  if (host === 'assessment-staging.valoriainstitute.com') return 'https://staging.valoriainstitute.com';
   if (host === 'assessment.valoriainstitute.com') return 'https://valoriainstitute.com';
   const configuredOrigin = String(import.meta.env.VITE_VALU_SITE_ORIGIN || '').trim().replace(/\/$/, '');
   if (configuredOrigin) {
@@ -48,7 +47,6 @@ const SITE_BASE = (() => {
       if (parsed.protocol === 'https:' && allowedOrigins.has(parsed.origin)) return parsed.origin;
     } catch {}
   }
-  if (host === 'assessment-staging.valoriainstitute.com') return 'https://staging.valoriainstitute.com';
   return '';
 })();
 
