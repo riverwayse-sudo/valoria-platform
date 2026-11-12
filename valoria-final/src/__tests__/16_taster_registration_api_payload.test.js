@@ -96,7 +96,7 @@ describe("registration-first taster API payload", () => {
           experience: EXPERIENCE_BANDS[0].id, email: "participant@example.invalid",
           current_question: 9, answers: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 },
           submission_key: "44444444-4444-4444-8444-444444444444",
-          status: "completed", expires_at: "2099-01-01T00:00:00.000Z",
+          status: "completed", taster_version: "4.2", total_questions: 9, expires_at: "2099-01-01T00:00:00.000Z",
           lead_capture_id: LEAD_CAPTURE_ID, taster_id: "55555555-5555-4555-8555-555555555555",
           taster_version: "4.1", total_questions: 9
         }]);
