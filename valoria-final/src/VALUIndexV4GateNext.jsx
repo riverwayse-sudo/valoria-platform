@@ -245,17 +245,24 @@ export default function VALUIndexV4GateNext(){
    setSubmissionKey(key);
    const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:questionBank.length,submission_key:key});
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
-   const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
-   const data=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
-   if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
-   setTasterId(data.taster_id);
-   await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
+   if(saved.completed&&!saved.taster_id)throw new Error('Your completed taster is missing its continuation reference. Please contact Valoria support.');
+   // A completed save response is the idempotent retry path: reuse its existing
+   // taster ID instead of submitting the same answers a second time.
+   let tasterId=saved.completed?saved.taster_id:null;
+   if(!tasterId){
+    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
+    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
+    tasterId=data.taster_id;
+   }
+   setTasterId(tasterId);
+   await postProgress({action:'complete',resume_token:progressToken,taster_id:tasterId,submission_key:key});
    // Persist the handoff only after the server confirms completion. If the
    // response is lost, keep the resume token so the idempotent retry can finish.
-   try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
+   try{localStorage.setItem('pending_taster_id',tasterId)}catch{}
    try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
-   const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
+   const params=new URLSearchParams({taster_id:tasterId,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
   }catch(err){
    setError(err?.message||'Your taster could not be saved yet. Your registered details and responses remain intact — please retry.');
