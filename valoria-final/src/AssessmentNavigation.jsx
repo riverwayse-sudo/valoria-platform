@@ -5,22 +5,16 @@ const ALLOWED_SITE_ORIGINS = new Set([
   'https://valoriainstitute.com',
   'https://www.valoriainstitute.com',
   'https://staging.valoriainstitute.com',
-  'https://valoria-staging-site.riverwayse.workers.dev',
-  'https://valoria-redesign-staging-site.riverwayse.workers.dev',
 ]);
 function getSiteUrl() {
   if (typeof window === 'undefined') return 'https://valoriainstitute.com';
   const host = window.location.hostname.toLowerCase();
   const environmentDefault =
-    host === 'valoria-staging-assessment.riverwayse.workers.dev' ||
-    host === 'valoria-staging-site.riverwayse.workers.dev' ||
-    host === 'assessment-staging.valoriainstitute.com'
-      ? 'https://valoria-staging-site.riverwayse.workers.dev'
-      : host === 'staging.valoriainstitute.com'
-        ? 'https://staging.valoriainstitute.com'
-        : host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com'
-          ? 'https://valoriainstitute.com'
-          : window.location.origin;
+    host === 'assessment-staging.valoriainstitute.com' || host === 'staging.valoriainstitute.com'
+      ? 'https://staging.valoriainstitute.com'
+      : host === 'assessment.valoriainstitute.com' || host === 'valoriainstitute.com' || host === 'www.valoriainstitute.com'
+        ? 'https://valoriainstitute.com'
+        : window.location.origin;
   try {
     const requested = new URLSearchParams(window.location.search).get('site_origin');
     const parsed = new URL(requested || '');
