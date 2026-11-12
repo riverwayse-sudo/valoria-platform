@@ -28,6 +28,7 @@ const SITE_BASE = (() => {
     'https://www.valoriainstitute.com',
     'https://staging.valoriainstitute.com',
     'https://valoria-staging-site.riverwayse.workers.dev',
+  'https://valoria-redesign-staging-site.riverwayse.workers.dev',
   ]);
   // A direct assessment-host visit may be paired to one exact, approved site
   // origin. This is used by staging acceptance and never accepts arbitrary hosts.
