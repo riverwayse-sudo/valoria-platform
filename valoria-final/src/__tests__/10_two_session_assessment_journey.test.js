@@ -66,7 +66,7 @@ describe("separate taster and formal assessment contracts", () => {
 });
 
 describe("nine-question taster and account bridge", () => {
-  test("lead registration precedes the separate taster and no question counts are exposed", () => {
+  test("confirmed account bootstrap precedes the separate taster and no question counts are exposed", () => {
     const source = gateSource();
     expect(source).toContain("questionBank.length");
     expect(source).toContain("const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS)");
@@ -77,16 +77,15 @@ describe("nine-question taster and account bridge", () => {
     expect(source).toContain("how you think, make strategic decisions, understand commercial value and work with AI");
     expect(source).not.toContain("how you work, relate and create value");
     expect(source).toContain("YOUR PROGRESS IS SAVED");
-    expect(source).toContain("privacy_acknowledged:privacyAcknowledged");
-    expect(source).toContain("marketing_consent:marketingConsent");
+
     expect(source).not.toMatch(/of 9|1 of 9|Question \\{[^}]+\\} of/);
     expect(source).not.toContain("OPENING_SESSION_LENGTH");
     expect(source).not.toContain("TOTAL_QUESTIONS");
   });
 
-  test("taster completion leads to account creation and does not promise automatic Marketplace listing", () => {
+  test("taster completion returns the confirmed participant to the dashboard and does not promise automatic Marketplace listing", () => {
     const source = gateSource();
-    expect(source).toContain("Your responses are safely saved. Create your account to continue your Valoria journey.");
+    expect(source).toContain("Your responses are safely saved. Continue to your dashboard to begin the separate full VALU Index when you are ready.");
     expect(source).toContain("Completing the assessment does not grant marketplace listing.");
     expect(source).toContain("Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.");
     expect(source).not.toContain("will not prefill or count toward it");
@@ -98,14 +97,16 @@ describe("nine-question taster and account bridge", () => {
   test("transient resume failures preserve the participant's saved progress token", () => {
     const source = gateSource();
     expect(source).toContain("failure.status=response.status");
-    expect(source).toContain("err?.status===401||err?.status===404");
+    expect(source).toContain("bootstrapResponse.status===401||bootstrapResponse.status===403||bootstrapResponse.status===409");
     expect(source).toContain("setPhase('resume-error')");
-    expect(source).toContain("Transient network/server failures must never erase the only local");
+    expect(source).toContain("Your saved responses have not been deleted.");
   });
 
-  test("registration, answer saves and completion remain linked to the same lead", () => {
+  test("confirmed bootstrap, answer saves and completion remain linked to the same lead", () => {
     const source = gateSource();
-    expect(source).toContain("action:'register'");
+    expect(source).toContain("/api/valu-taster/bootstrap");
+    expect(source).not.toContain("action:'register'");
+    expect(source).toContain("action:'load'");
     expect(source).toContain("action:'save'");
     expect(source).toContain("action:'complete'");
     expect(source).toContain("let tasterId=saved.completed&&saved.taster_id?saved.taster_id:null;");
@@ -163,12 +164,11 @@ describe("independent 58-question formal assessment", () => {
     expect(api).not.toContain("assessment_version");
   });
 
-  test("the shared journey indicator distinguishes registration, taster, account and full assessment", () => {
+  test("the shared journey indicator distinguishes account registration, taster and full assessment", () => {
     const source = readSource("VALUAssessmentJourney.jsx");
-    expect(source).toContain("title: 'Register'");
-    expect(source).toContain("title: 'Taster'");
     expect(source).toContain("title: 'Account'");
-    expect(source).toContain("title: 'Assessment'");
+    expect(source).toContain("title: 'Taster'");
+    expect(source).toContain("title: 'Full VALU Index'");
     expect(source).toContain("YOUR VALU INDEX JOURNEY");
     expect(source).not.toContain("9 questions");
     expect(source).not.toContain("58 questions");
