@@ -144,8 +144,8 @@ try {
   await page.locator('input[type="checkbox"]').first().check();
   await page.getByRole('button', { name: /CONTINUE TO MY VALU INDEX TASTER/i }).click();
 
-  await page.getByRole('button', { name: /BEGIN MY VALU TASTER/i }).waitFor({ state: 'visible', timeout: 20000 });
-  await page.getByRole('button', { name: /BEGIN MY VALU TASTER/i }).click();
+  await page.getByRole('button', { name: /BEGIN MY VALU INDEX TASTER/i }).waitFor({ state: 'visible', timeout: 20000 });
+  await page.getByRole('button', { name: /BEGIN MY VALU INDEX TASTER/i }).click();
 
   for (let i = 0; i < 9; i += 1) {
     await page.locator('.valu-option').first().waitFor({ state: 'visible', timeout: 15000 });
