@@ -75,18 +75,9 @@ export default async function handler(req, res) {
 
   const body = req.body || {};
   const action = body.action;
-  if (!['register', 'load', 'save', 'complete'].includes(action)) return json(res, 400, { error: 'Unsupported progress action.' });
+  if (!['load', 'save', 'complete'].includes(action)) return json(res, 400, { error: 'Unsupported progress action. Create and confirm your Valoria account before beginning the Taster.' });
 
-  // Registration is the only entry point for a new taster. It creates the
-  // contact record and resumable progress in one database transaction.
-  if (action === 'register') {
-    const name = typeof body.name === 'string' ? body.name.trim() : '';
-    const role = typeof body.role === 'string' ? body.role.trim() : '';
-    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-    const experience = body.experience;
-    const organisation = typeof body.organisation === 'string' ? body.organisation.trim() : '';
-    const interest = typeof body.interest === 'string' ? body.interest.trim() : '';
-    if (!validToken(body.resume_token)) return json(res, 401, { error: 'A secure registration session could not be verified. Please retry.' });
+  if (!validToken(body.resume_token)) return json(res, 401, { error: 'A secure registration session could not be verified. Please retry.' });
     if (!validSignupKey(body.signup_key)) return json(res, 400, { error: 'Your registration reference is invalid. Please refresh and try again.' });
     if (!name || name.length > 200 || !role || role.length > 160 || !validEmail(email)
       || !EXPERIENCE_BANDS.some(item => item.id === experience)
