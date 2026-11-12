@@ -70,6 +70,7 @@ export default function VALUIndexV4GateNext(){
  const [marketingConsent,setMarketingConsent]=useState(false),[privacyAcknowledged,setPrivacyAcknowledged]=useState(false);
  const [registrationKey,setRegistrationKey]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
+ const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
@@ -77,8 +78,8 @@ export default function VALUIndexV4GateNext(){
  const startedRef=useRef(false);
  const timer=useRef(null);
 
- const q=TASTER_QUESTIONS[current];
- const sessionProgress=Math.round(((current+1)/TASTER_QUESTIONS.length)*100);
+ const q=questionBank[current];
+ const sessionProgress=Math.round(((current+1)/questionBank.length)*100);
  const placeInAssessment=current+1;
 
  useEffect(()=>()=>{timer.current&&clearTimeout(timer.current)},[]);
@@ -86,7 +87,11 @@ export default function VALUIndexV4GateNext(){
  async function postProgress(body){
   const response=await fetch(API_BASE+'/api/taster-progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const payload=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(payload.error||'Your progress could not be saved.');
+  if(!response.ok){
+   const failure=new Error(payload.error||'Your progress could not be saved.');
+   failure.status=response.status;
+   throw failure;
+  }
   return payload;
  }
 
@@ -109,6 +114,20 @@ export default function VALUIndexV4GateNext(){
      const loaded=await postProgress({action:'load',resume_token:stored});
      if(cancelled)return;
      const p=loaded.progress||{};
+     const version=String(p.taster_version||'4.1');
+     let restoredBank=null;
+     if(version===VALU_VERSION){
+      restoredBank=TASTER_QUESTIONS;
+     }else if(version==='4.1'){
+      const legacy=await import('./valuTasterLegacy.js');
+      restoredBank=legacy.LEGACY_TASTER_QUESTIONS;
+     }else{
+      setProgressToken(stored);
+      setError('Your saved session needs assistance before it can continue. Your responses remain saved. Please contact Valoria support.');
+      setPhase('unsupported');
+      return;
+     }
+     setQuestionBank(restoredBank);
      setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
      setProgressToken(stored);
      setPrivacyAcknowledged(Boolean(p.lead_capture_id));
@@ -116,21 +135,32 @@ export default function VALUIndexV4GateNext(){
      setAnswers(savedAnswers);
      setSubmissionKey(p.submission_key||'');
      const answeredCount=Object.keys(savedAnswers).length;
-     const complete=Number(p.current_question)===TASTER_QUESTIONS.length&&answeredCount===TASTER_QUESTIONS.length&&!!p.submission_key;
+     const complete=Number(p.current_question)===restoredBank.length&&answeredCount===restoredBank.length&&!!p.submission_key;
      if(p.lead_capture_id){
-      if(complete){setCurrent(TASTER_QUESTIONS.length-1);setPhase('break');return}
-      setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
+      if(complete){setCurrent(restoredBank.length-1);setPhase('break');return}
+      setCurrent(Math.min(Number(p.current_question)||0,restoredBank.length-1));
       setPhase('session1');
       return;
      }
      // Legacy in-progress sessions are preserved. Their owner registers once
      // before continuing, which attaches the existing progress to a lead ID.
      try{setRegistrationKey(localStorage.getItem(SIGNUP_KEY_KEY)||'')}catch{}
-     setCurrent(Math.min(Number(p.current_question)||0,TASTER_QUESTIONS.length-1));
+     setCurrent(Math.min(Number(p.current_question)||0,restoredBank.length-1));
      setPhase('registration');
      return;
-    }catch{
-     try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
+    }catch(err){
+     if(cancelled)return;
+     if(err?.status===401||err?.status===404){
+      try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
+      setPhase('registration');
+      return;
+     }
+     // Transient network/server failures must never erase the only local
+     // reference to a participant's saved progress.
+     setProgressToken(stored);
+     setError('Your saved responses remain stored. We could not reach your session just now. Check your connection and try again.');
+     setPhase('resume-error');
+     return;
     }
    }
    if(!cancelled)setPhase('registration');
@@ -145,12 +175,12 @@ export default function VALUIndexV4GateNext(){
   setSaving(true);
   setError('');
   try{
-   const isLast=current===TASTER_QUESTIONS.length-1;
+   const isLast=current===questionBank.length-1;
    const response=await postProgress({
     action:'save',
     resume_token:progressToken,
     answers:next,
-    current_question:isLast?TASTER_QUESTIONS.length:current+1,
+    current_question:isLast?questionBank.length:current+1,
     ...(isLast&&submissionKey?{submission_key:submissionKey}:{}),
    });
    if(response.submission_key&&!submissionKey)setSubmissionKey(response.submission_key);
@@ -193,9 +223,9 @@ export default function VALUIndexV4GateNext(){
     organisation:organisation.trim(),interest,
     marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
    });
-   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU Index journey. Please retry.');
+   if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU journey. Please retry.');
    const answeredCount=Object.keys(answers).length;
-   const complete=current===TASTER_QUESTIONS.length-1&&answeredCount===TASTER_QUESTIONS.length&&!!submissionKey;
+   const complete=current===questionBank.length-1&&answeredCount===questionBank.length&&!!submissionKey;
    setPhase(complete?'break':answeredCount?'session1':'intro');
   }catch(err){
    setError(err?.message||'We could not save your registration. Please retry.');
@@ -213,25 +243,15 @@ export default function VALUIndexV4GateNext(){
    const key=submissionKey||(typeof window.crypto!=='undefined'&&window.crypto.randomUUID?window.crypto.randomUUID():'');
    if(!key)throw new Error('Your browser could not create a secure submission reference. Refresh the page and try again.');
    setSubmissionKey(key);
-   const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:TASTER_QUESTIONS.length,submission_key:key});
+   const saved=await postProgress({action:'save',resume_token:progressToken,answers,current_question:questionBank.length,submission_key:key});
    if(saved.submission_key&&saved.submission_key!==key)throw new Error('This session already has a different submission reference. Refresh the page to continue.');
-   let data;
-   if(saved.completed===true&&saved.taster_id){
-    // A previous completion may have committed even if its HTTP response was lost.
-    // Reuse the verified taster reference instead of submitting a duplicate.
-    data={taster_id:saved.taster_id};
-   }else{
-    const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
-    data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
-   }
+   const response=await fetch(API_BASE+'/api/submit-taster',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({resume_token:progressToken,submission_key:key})});
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok)throw new Error(data.error||'Your taster could not be saved. Please retry.');
    if(!data.taster_id)throw new Error('Your saved session is missing its continuation reference. Please retry.');
    setTasterId(data.taster_id);
-   const completion=await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
-   if(completion?.completed!==true)throw new Error('Your taster is saved, but we could not confirm the completion step. Please retry.');
-   // Only mark the taster as pending account linkage after completion is confirmed.
-   // If confirmation fails, the resume token remains available for a safe retry.
    try{localStorage.setItem('pending_taster_id',data.taster_id)}catch{}
+   await postProgress({action:'complete',resume_token:progressToken,taster_id:data.taster_id,submission_key:key});
    try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
    const params=new URLSearchParams({taster_id:data.taster_id,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
@@ -241,6 +261,23 @@ export default function VALUIndexV4GateNext(){
   }
  }
 
+ if(phase==='resume-error')return <Shell>
+  <section className="valu-results-header" style={S.resultsHeader}>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> SAVED PROGRESS</div>
+   <h1 className="valu-results-title" style={S.h1}>Your progress is <em>safe.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>{error}</p>
+   <button type="button" onClick={()=>window.location.reload()} style={S.primary}>TRY AGAIN</button>
+  </section>
+ </Shell>;
+
+ if(phase==='unsupported')return <Shell>
+  <section className="valu-results-header" style={S.resultsHeader}>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> SAVED SESSION</div>
+   <h1 className="valu-results-title" style={S.h1}>Your session is <em>safe.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>{error}</p>
+  </section>
+ </Shell>;
+
  if(phase==='registration')return <Shell>
   <VALUAssessmentJourney stage="registration" />
   <section className="valu-results-header" style={S.resultsHeader}>
@@ -249,7 +286,7 @@ export default function VALUIndexV4GateNext(){
    <p className="valu-results-intro" style={S.resultsIntro}>Your details connect your responses to you, so you can pause and return without losing your place. You will create your Valoria account after completing the taster.</p>
   </section>
   <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU Index Taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
+   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
    <p style={S.formIntro}>Complete the required details and acknowledge the Privacy Notice. Your answers stay connected to your registration. Optional details can be added below.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
@@ -274,7 +311,7 @@ export default function VALUIndexV4GateNext(){
     <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
    </label>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="submit" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU INDEX TASTER →'}</button>
+   <button type="submit" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU TASTER →'}</button>
    <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved taster.</div>
   </form>
  </Shell>;
@@ -283,17 +320,17 @@ export default function VALUIndexV4GateNext(){
 
  if(phase==='intro')return <Shell>
   <section className="valu-assessment-intro" aria-labelledby="valu-taster-intro-title">
-   <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU INDEX TASTER</div>
+   <div className="valu-intro-kicker">VALORIA INSTITUTE <span>·</span> VALU TASTER</div>
    <div className="valu-intro-rule"><span/></div>
    <p className="valu-intro-overline">A CLEARER VIEW OF YOUR PROFESSIONAL CAPABILITY</p>
    <h1 id="valu-taster-intro-title" className="valu-intro-title">Your professional worth deserves to be <em>understood.</em></h1>
-   <p className="valu-intro-copy">Begin with a short reflection on how you work, relate and create value. Your responses help establish a starting point for your Valoria journey.</p>
+   <p className="valu-intro-copy">Begin with a short reflection on how you think, make strategic decisions, understand commercial value and work with AI. Your responses provide a starting point for your Valoria journey.</p>
    <div className="valu-intro-benefits">
     <div><span className="valu-intro-check">✓</span><span><strong>Simple, considered choices</strong><small>Choose the response that best reflects your experience.</small></span></div>
     <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>You can leave and return without losing saved responses.</small></span></div>
     <div><span className="valu-intro-check">✓</span><span><strong>A useful next step</strong><small>Your taster helps you understand where to continue.</small></span></div>
    </div>
-   <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU INDEX TASTER <span>→</span></button>
+   <button type="button" className="valu-intro-cta" onClick={()=>setPhase('session1')}>BEGIN MY VALU TASTER <span>→</span></button>
    <p className="valu-intro-assurance">Your responses are handled securely and are not shown as a public profile.</p>
   </section>
  </Shell>;
@@ -301,14 +338,14 @@ export default function VALUIndexV4GateNext(){
  if(phase==='break')return <Shell>
   <VALUAssessmentJourney stage="account" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU INDEX v{VALU_VERSION}</div>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your taster is <em>saved.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>01 · COMPLETED</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU Index Taster</h3>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your VALU taster</h3>
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
@@ -344,7 +381,7 @@ export default function VALUIndexV4GateNext(){
 
  return <Shell mode="taster">
   <VALUAssessmentJourney stage="taster" currentQuestion={placeInAssessment} />
-  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU INDEX TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div className="valu-taster-save-state"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</div></div>
+  <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div className="valu-taster-save-state"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</div></div>
   <div className="valu-taster-progress" role="progressbar" aria-label="Taster progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={sessionProgress} style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
   <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
