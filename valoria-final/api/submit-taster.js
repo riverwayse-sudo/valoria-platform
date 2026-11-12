@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { TASTER_QUESTIONS, computeTasterResult, EXPERIENCE_BANDS, VALU_VERSION } from '../src/valuTaster.js';
+import { TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from '../src/valuTaster.js';
+import { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION, computeLegacyTasterResult } from '../src/valuTasterLegacy.js';
 import { applyCors, handlePreflight } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -12,11 +13,11 @@ function json(res, status, data) {
   return res.json(data);
 }
 
-function validAnswers(answers) {
+function validAnswers(answers, questionBank) {
   if (!answers || typeof answers !== 'object' || Array.isArray(answers)) return false;
   const keys = Object.keys(answers);
-  if (keys.length !== TASTER_QUESTIONS.length || keys.some(k => !/^\d+$/.test(k))) return false;
-  return TASTER_QUESTIONS.every((q, idx) => Number.isInteger(answers[idx]) && answers[idx] >= 0 && answers[idx] < q.options.length);
+  if (keys.length !== questionBank.length || keys.some(k => !/^\d+$/.test(k))) return false;
+  return questionBank.every((q, idx) => Number.isInteger(answers[idx]) && answers[idx] >= 0 && answers[idx] < q.options.length);
 }
 
 async function consumeRateLimit(ip) {
@@ -66,7 +67,7 @@ export default async function handler(req, res) {
     resume_token_hash: `eq.${tokenHash}`,
     status: 'eq.in_progress',
     expires_at: `gt.${new Date().toISOString()}`,
-    select: 'name,role,experience,email,current_question,answers,submission_key,lead_capture_id',
+    select: 'name,role,experience,email,current_question,answers,submission_key,lead_capture_id,taster_version,total_questions',
     limit: '1',
   });
   const progressRes = await fetch(`${SUPABASE_URL}/rest/v1/taster_progress?${progressParams}`, {
@@ -80,19 +81,35 @@ export default async function handler(req, res) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'The saved contact email is invalid. Contact Valoria support.' });
   if (typeof progress.lead_capture_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(progress.lead_capture_id)) return json(res, 409, { error: 'Complete your registration before submitting your taster.' });
-  if (progress.current_question !== TASTER_QUESTIONS.length || !validAnswers(answers)) return json(res, 400, { error: 'Finish and save all taster answers before submitting.' });
+  const tasterVersion = String(progress.taster_version || LEGACY_TASTER_VERSION);
+  const questionBank = tasterVersion === VALU_VERSION
+    ? TASTER_QUESTIONS
+    : tasterVersion === LEGACY_TASTER_VERSION
+      ? LEGACY_TASTER_QUESTIONS
+      : null;
+  if (!questionBank) return json(res, 409, { error: 'This saved taster session uses a retired format and cannot be submitted automatically.' });
+  if (progress.current_question !== questionBank.length || !validAnswers(answers, questionBank)) {
+    return json(res, 400, { error: 'Finish and save all taster answers before submitting.' });
+  }
 
 
 
 
 
-  const results = computeTasterResult(answers);
-  const clusterScores = results.points;
-  const clusterIds = ['P', 'R', 'I', 'M', 'E'];
-  if (!clusterScores || typeof clusterScores !== 'object' || clusterIds.some(id => !Number.isFinite(clusterScores[id]))) {
-    // Fail loudly instead of posting a body whose cluster scores serialize away,
-    // which the RPC rejects as a signature mismatch and misreports as a save failure.
-    console.error('submit-taster: cluster scores unavailable for submission', submission_key);
+  const results = tasterVersion === VALU_VERSION ? computeTasterResult(answers) : computeLegacyTasterResult(answers);
+  // Only Intelligence is assessed by the separate taster. Null means the
+  // other four PRIME clusters were not measured; zero would falsely imply a score.
+  const clusterScores = tasterVersion === VALU_VERSION
+    ? { P: null, R: null, I: results.intelligenceScore, M: null, E: null }
+    : results.points;
+  const skillKeys = ['Critical Thinking', 'Strategic Thinking', 'Business Acumen', 'AI Fluency ★'];
+  const scoresValid = tasterVersion === VALU_VERSION
+    ? Number.isFinite(clusterScores.I)
+      && results.normalisedSkills
+      && skillKeys.every(skill => Number.isFinite(results.normalisedSkills[skill]))
+    : ['P', 'R', 'I', 'M', 'E'].every(id => Number.isFinite(clusterScores[id]));
+  if (!scoresValid) {
+    console.error('submit-taster: scores unavailable for saved taster version', tasterVersion, submission_key);
     return json(res, 500, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
   }
   try {
@@ -107,9 +124,9 @@ export default async function handler(req, res) {
         p_email: normalizedEmail,
         p_answers: answers,
         p_cluster_scores: clusterScores,
-        p_strongest_cluster: results.strongest.id,
-        p_weakest_cluster: results.weakest.id,
-        p_taster_version: String(VALU_VERSION),
+        p_strongest_cluster: tasterVersion === VALU_VERSION ? 'I' : results.strongest.id,
+        p_weakest_cluster: tasterVersion === VALU_VERSION ? 'I' : results.weakest.id,
+        p_taster_version: tasterVersion,
         p_lead_capture_id: progress.lead_capture_id,
       }),
     });
