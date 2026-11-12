@@ -191,7 +191,7 @@ try {
     }
   }
 
-  const continueButton = page.getByRole('button', { name: /CONTINUE TO ACCOUNT CREATION/i });
+  const continueButton = page.getByRole('button', { name: /SAVE TASTER & CONTINUE TO DASHBOARD/i });
   await continueButton.waitFor({ state: 'visible', timeout: 20000 });
 
   // First attempt: taster submission commits, but the completion response is lost.
@@ -205,6 +205,7 @@ try {
   assert.equal(firstFailureStorage.pending, null, 'pending taster ID must not be written before completion is confirmed');
   assert.ok(firstFailureStorage.resume, 'resume token must remain available after the lost response');
   assert.ok(firstFailureStorage.signup, 'signup key must remain available after the lost response');
+  assert.equal(handoffExchangeCalls, 1, 'the confirmed-account handoff must be exchanged exactly once');
   assert.equal(submitCalls, 1, 'the initial taster must be submitted exactly once');
   assert.equal(completeCalls, 1, 'the first completion attempt must have occurred once');
 
@@ -235,6 +236,7 @@ try {
     passed: true,
     environment: 'Cloudflare staging only',
     scenario: 'completion committed but response lost; same taster reused on retry',
+    handoffExchangeCalls,
     submitCalls,
     completeCalls,
     redirectUrl,
