@@ -114,6 +114,7 @@ export default async function handler(req, res) {
       console.error('taster-progress: registration continuity lookup failed', error?.message || error);
       return json(res, 503, { error: 'We could not verify your saved session. Please retry.' });
     }
+    let confirmedAccountId = null;
     if (!existingProgress) {
       const startSession = await verifyTasterStartTokenEdge(body.taster_start_token, reason => {
         console.warn('taster-progress: new taster start rejected', { reason });
@@ -138,7 +139,7 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: headers(),
         body: JSON.stringify({
-          p_signup_key: body.signup_key,
+          p_signup_key: confirmedAccountId || body.signup_key,
           p_resume_token_hash: hashToken(body.resume_token),
           p_name: name,
           p_email: email,
