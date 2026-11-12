@@ -27,7 +27,8 @@ function getSiteUrl() {
     const saved = new URL(window.sessionStorage.getItem('valu-site-origin') || '');
     if (saved.protocol === 'https:' && ALLOWED_SITE_ORIGINS.has(saved.origin)) return saved.origin;
   } catch {}
-  return ALLOWED_SITE_ORIGINS.has(environmentDefault) || environmentDefault.startsWith('https://') ? environmentDefault : 'https://valoriainstitute.com';
+  const localDevelopment = import.meta.env.DEV && ['localhost', '127.0.0.1'].includes(host);
+  return localDevelopment || ALLOWED_SITE_ORIGINS.has(environmentDefault) ? environmentDefault : 'https://valoriainstitute.com';
 }
 const LOGO_URL = `${getSiteUrl()}/logo.png`;
 
