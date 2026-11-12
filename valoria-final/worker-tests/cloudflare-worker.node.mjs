@@ -189,5 +189,7 @@ test("assessment app is never indexed and production analytics is disabled in st
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   assert.match(html, /name="robots" content="noindex,nofollow"/);
   assert.doesNotMatch(html, /<script async src="https:\/\/www\.googletagmanager\.com/);
-  assert.match(html, /VITE_VALU_STAGING !== '1'/);
+  const main = readFileSync(new URL("../src/main.jsx", import.meta.url), "utf8");
+  assert.match(main, /import\\.meta\\.env\\.PROD/);
+  assert.match(main, /!isPreview/);
 });
