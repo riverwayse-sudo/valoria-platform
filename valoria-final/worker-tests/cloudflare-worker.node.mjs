@@ -190,6 +190,6 @@ test("assessment app is never indexed and production analytics is disabled in st
   assert.match(html, /name="robots" content="noindex,nofollow"/);
   assert.doesNotMatch(html, /<script async src="https:\/\/www\.googletagmanager\.com/);
   const main = readFileSync(new URL("../src/main.jsx", import.meta.url), "utf8");
-  assert.match(main, /import\\.meta\\.env\\.PROD/);
-  assert.match(main, /if \\(!import\\.meta\\.env\\.PROD \\|\\| isPreview\\) return/);
+  assert.match(main, /import\.meta\.env\.PROD/);
+  assert.match(main, /if \(!import\.meta\.env\.PROD \|\| isPreview\) return/);
 });
