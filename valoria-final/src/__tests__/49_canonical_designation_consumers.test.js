@@ -26,6 +26,29 @@ describe("canonical VALU designation consumers", () => {
     }
   );
 
+  test("the app and rapid-service consume one shared, versioned VALU contract", () => {
+    const readRoot = relative => fs.readFileSync(path.join(process.cwd(), "..", relative), "utf8");
+    const appContract = readRoot("valoria-final/src/valuV4Contract.js");
+    const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
+    const edgeFunction = readRoot("supabase/functions/rapid-service/index.ts");
+    expect(appContract).toContain("../../supabase/functions/_shared/valuV4Contract.js");
+    expect(sharedContract).toContain("MARKETPLACE_SCORE_THRESHOLD = 35");
+    expect(edgeFunction).toContain('from "../_shared/valuV4Contract.js"');
+    expect(edgeFunction).toContain("getDesignation(score)");
+  });
+
+  test("rapid-service rejects caller-supplied designations and validates score boundaries", () => {
+    const edgeFunction = fs.readFileSync(path.join(process.cwd(), "..", "supabase/functions/rapid-service/index.ts"), "utf8");
+    expect(edgeFunction).not.toContain("tier?: string");
+    expect(edgeFunction).not.toContain("body.tier");
+    expect(edgeFunction).toContain("Number.isInteger(score)");
+    expect(edgeFunction).toContain("score < 0 || score > 100");
+    expect(edgeFunction).not.toContain("Platinum");
+    expect(edgeFunction).not.toContain("Gold");
+    expect(edgeFunction).not.toContain("Force to Align With");
+    expect(edgeFunction).not.toContain("/100");
+  });
+
   test("participant-facing API consumers derive labels from canonical points", () => {
     for (const file of [
       "api/submit-assessment.js",
