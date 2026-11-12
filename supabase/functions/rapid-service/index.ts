@@ -1,6 +1,7 @@
-// supabase/functions/send-welcome-email/index.ts
+// Supabase Edge Function: rapid-service
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { getDesignation } from "../_shared/valuV4Contract.js";
 
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? (() => { try { return JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}")?.default ?? "" } catch { return "" } })();
 
@@ -10,47 +11,61 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-function deriveTier(score: number | null): string {
-  if (score === null || score === undefined) return "Assessment Follow-up";
-  if (score >= 80) return "Force to Align With";
-  if (score >= 65) return "Emerging Force";
-  if (score >= 50) return "Developing Professional";
-  if (score >= 35) return "Building Foundations";
-  return "Assessment Follow-up";
+function canonicalDesignation(score: number | null): string | null {
+  return score === null ? null : getDesignation(score)?.name ?? null;
 }
 
-function getNextSteps(score: number | null): string {
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function normalizeDimensions(input: unknown): Record<string, number> | null {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const source = input as Record<string, unknown>;
+  const allowed = ["presence", "relationships", "intelligence", "mastery", "enterprise"];
+  const result: Record<string, number> = {};
+  for (const key of allowed) {
+    const value = source[key];
+    if (typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 100) {
+      result[key] = value;
+    }
+  }
+  return Object.keys(result).length ? result : null;
+}
+
+function getNextStepsfunction getNextSteps(score: number | null): string {
   if (score === null) {
     return `
-      <li>Complete the VALU Index to receive your official points score.</li>
-      <li>Return to your dashboard to continue your professional profile.</li>
-      <li>Marketplace visibility follows the full VALU Index, profile and capability eligibility checks.</li>
+      <li>Complete your full VALU assessment to receive your official VALU Index points and merit designation.</li>
+      <li>Your results will be recorded in your professional dashboard.</li>
+      <li>Marketplace visibility depends on profile and capability eligibility checks, not assessment score alone.</li>
     `;
   }
-  if (score >= 80) {
+  if (score >= 90) {
     return `
-      <li>Your merit designation is <strong>Force to Align With</strong>. Complete your professional profile and capability details.</li>
-      <li>Marketplace visibility is subject to the Institute's profile, assessment and capability eligibility checks.</li>
-      <li>Use your PRIME dimension results to identify where to sustain and extend your professional strength.</li>
+      <li>Your merit designation is <strong>Elite</strong>. Keep your professional evidence and profile current.</li>
+      <li>Marketplace visibility remains subject to profile, assessment and capability eligibility checks.</li>
+      <li>Use your PRIME results to identify where to sustain and extend your professional contribution.</li>
     `;
   }
-  if (score >= 65) {
+  if (score >= 75) {
     return `
-      <li>Your merit designation is <strong>Emerging Force</strong>. Strengthen the evidence behind your professional capabilities.</li>
+      <li>Your merit designation is <strong>Distinguished</strong>. Strengthen the evidence behind your professional capabilities.</li>
       <li>Complete your professional profile and selected capability details for eligibility review.</li>
-      <li>Use your PRIME results to identify the next development priority.</li>
+      <li>Use your PRIME results to identify your next development priority.</li>
     `;
   }
-  if (score >= 50) {
+  if (score >= 55) {
     return `
-      <li>Your merit designation is <strong>Developing Professional</strong>. Identify the dimensions where focused development will matter most.</li>
+      <li>Your merit designation is <strong>Proficient</strong>. Identify the dimensions where focused development will matter most.</li>
       <li>Complete your professional profile and capability details before marketplace eligibility can be assessed.</li>
       <li>Explore PRIME-aligned development opportunities that address your priority areas.</li>
     `;
   }
   if (score >= 35) {
     return `
-      <li>Your merit designation is <strong>Building Foundations</strong>. Review your PRIME dimension results and select a development priority.</li>
+      <li>Your merit designation is <strong>Standard</strong>. Review your PRIME dimension results and select a development priority.</li>
       <li>Complete your professional profile and capability details. A score of 35 points is only one marketplace eligibility condition.</li>
       <li>Marketplace listing is confirmed only after all required checks are satisfied.</li>
     `;
@@ -62,7 +77,7 @@ function getNextSteps(score: number | null): string {
   `;
 }
 
-function dimensionRow(label: string, score: number | null): string {
+function dimensionRowfunction dimensionRow(label: string, score: number | null): string {
   if (score === null || score === undefined) return "";
   const pct = Math.min(100, Math.max(0, score));
   const color = pct >= 75 ? "#C9A84C" : pct >= 55 ? "#9B8A5A" : "#5a5a6e";
@@ -87,10 +102,10 @@ function buildEmailHtml(params: {
   firstName: string;
   email: string;
   score: number | null;
-  tier: string;
+  designation: string | null;
   dimensions: Record<string, number> | null;
 }): string {
-  const { firstName, score, tier, dimensions } = params;
+  const { firstName, score, designation, dimensions } = params;
   const scoreDisplay = score !== null ? `${score}` : "—";
   const nextSteps = getNextSteps(score);
 
@@ -140,7 +155,7 @@ function buildEmailHtml(params: {
         <tr><td style="padding:0 48px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr><td style="padding:32px 0 0;">
-              <p style="margin:0; font-size:15px; color:rgba(247,244,238,0.75); line-height:1.7;">Hi ${firstName},</p>
+              <p style="margin:0; font-size:15px; color:rgba(247,244,238,0.75); line-height:1.7;">Hi ${escapeHtml(firstName)},</p>
               <p style="margin:16px 0 0; font-size:15px; color:rgba(247,244,238,0.75); line-height:1.7;">${score !== null ? `Thank you for completing the <strong style="color:#F7F4EE;">VALU Index</strong>. Your results have been recorded and your verified profile is now active on the Valoria marketplace.` : `Thank you for joining <strong style="color:#F7F4EE;">Valoria Institute</strong>. You're one step away from your verified professional standard.`}</p>
             </td></tr>
             ${score !== null ? `
@@ -154,7 +169,7 @@ function buildEmailHtml(params: {
                   </td>
                   <td style="padding:28px 32px; text-align:center; width:50%;">
                     <p style="margin:0 0 4px; font-size:10px; font-weight:700; color:#C9A84C; letter-spacing:2px; text-transform:uppercase;">Merit designation</p>
-                    <p style="margin:0; font-size:28px; font-weight:800; color:#C9A84C; line-height:1;">${tier}</p>
+                    <p style="margin:0; font-size:28px; font-weight:800; color:#C9A84C; line-height:1;">${escapeHtml(designation || "No merit designation")}</p>
                     <p style="margin:4px 0 0; font-size:11px; color:rgba(247,244,238,0.35);">Valoria Standard</p>
                   </td>
                 </tr>
@@ -188,21 +203,21 @@ function buildEmailHtml(params: {
   `.trim();
 }
 
-function buildEmailText(params: { firstName: string; score: number | null; tier: string }): string {
-  const { firstName, score, tier } = params;
+function buildEmailText(params: { firstName: string; score: number | null; designation: string | null }): string {
+  const { firstName, score, designation } = params;
   return [
     `Hi ${firstName},`,
     "",
-    score !== null ? `Your VALU Index results are in.\n\nScore: ${score} points  |  Merit designation: ${tier}` : "Welcome to Valoria Institute. Complete your VALU Index to receive your verified score.",
+    score !== null ? `Your VALU Index results are in.\\n\\nScore: ${score} points  |  Merit designation: ${designation || "Not awarded"}` : "Welcome to Valoria Institute. Complete your VALU assessment to receive your official points and merit designation.",
     "",
     "View your profile: https://valoriainstitute.com/profile",
     "",
     "Worth, Built.",
     "Valoria Institute — Lagos, Nigeria",
-  ].join("\n");
+  ].join("\\n");
 }
 
-serve(async (req: Request) => {
+serve(asyncserve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
@@ -213,23 +228,34 @@ serve(async (req: Request) => {
   if (!SERVICE_ROLE_KEY || authorization !== `Bearer ${SERVICE_ROLE_KEY}`) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Cache-Control": "no-store" } });
   }
-  let body: { email?: string; first_name?: string; score?: number | null; tier?: string | null; dimensions?: Record<string, number> | null };
+  let body: { email?: string; first_name?: string; score?: number | null; dimensions?: Record<string, number> | null };
   try { body = await req.json(); } catch { return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }); }
-  const { email, first_name, score = null, dimensions = null } = body;
-  
-  if (!email) { return new Response(JSON.stringify({ error: "email is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }); }
-  const firstName = first_name || "Professional";
-  const resolvedTier = deriveTier(score ?? null);
-  const htmlContent = buildEmailHtml({ firstName, email, score: score ?? null, tier: resolvedTier, dimensions: dimensions ?? null });
-  const textContent = buildEmailText({ firstName, score: score ?? null, tier: resolvedTier });
-  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  if (!email || email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    return new Response(JSON.stringify({ error: "A valid email address is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+  }
+
+  const score = body.score === undefined || body.score === null ? null : body.score;
+  if (score !== null && (typeof score !== "number" || !Number.isInteger(score) || score < 0 || score > 100)) {
+    return new Response(JSON.stringify({ error: "score must be an integer from 0 to 100" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+  }
+
+  const firstName = typeof body.first_name === "string" && body.first_name.trim()
+    ? body.first_name.trim().slice(0, 80)
+    : "Professional";
+  const designation = canonicalDesignation(score);
+  const dimensions = normalizeDimensions(body.dimensions);
+  const htmlContent = buildEmailHtml({ firstName, email, score, designation, dimensions });
+  const textContent = buildEmailText({ firstName, score, designation });
+  const RESEND_API_KEY  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
   const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "hello@valoriainstitute.com";
   const REPLY_TO = Deno.env.get("REPLY_TO_EMAIL") || "support@valoriainstitute.com";
   if (!RESEND_API_KEY) {
     console.error("RESEND_API_KEY not set");
     return new Response(JSON.stringify({ error: "Email service not configured" }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
   }
-  const subject = score !== null ? `Your VALU Index results — ${resolvedTier} (${score} points)` : "Welcome to Valoria Institute — complete your VALU Index";
+  const subject = score !== null ? `Your VALU Index results — ${designation || "Assessment Follow-up"} (${score} points)` : "Welcome to Valoria Institute — complete your VALU assessment";
   const resendResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
