@@ -173,7 +173,7 @@ export default function VALUIndexV4GateNext(){
      if(cancelled)return;
      if(err?.status===401||err?.status===404){
       try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
-      setPhase('registration');
+      setPhase(startToken?'registration':'account-required');
       return;
      }
      // Transient network/server failures must never erase the only local
