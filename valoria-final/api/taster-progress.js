@@ -126,6 +126,12 @@ export default async function handler(req, res) {
       if (startSession.display_name && norm(startSession.display_name) !== norm(name)) {
         return json(res, 403, { error: 'Use the same name as your Valoria account so your taster can be connected securely.' });
       }
+      if (norm(startSession.role) !== norm(role) || startSession.experience !== experience) {
+        return json(res, 403, { error: 'Use the professional role and experience saved to your confirmed Valoria account.' });
+      }
+      if (startSession.privacy_acknowledged !== true || body.privacy_acknowledged !== true) {
+        return json(res, 403, { error: 'Confirm the Privacy Notice before starting the taster.' });
+      }
     }
     try {
       const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/begin_valu_taster_signup`, {
