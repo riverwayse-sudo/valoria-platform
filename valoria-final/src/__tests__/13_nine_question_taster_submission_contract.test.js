@@ -20,7 +20,7 @@ describe("versioned taster submission contract", () => {
     expect(canonicalFix).toContain("jsonb_object_keys(p_answers)) <> 15");
     expect(canonicalFix).toContain("'all 15 snapshot answers are required'");
     expect(canonicalFix).toContain("lead_capture_id");
-    expect(canonicalFix).toContain("SECURITY INVOKER");
+    expect(canonicalFix.toLowerCase()).toContain("security invoker");
   });
 
   test("the new-session defaults are 4.0 and 15 without rewriting saved progress", () => {
