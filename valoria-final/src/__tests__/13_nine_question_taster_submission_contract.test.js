@@ -49,9 +49,9 @@ describe("versioned taster submission contract", () => {
     const regexMigration = fs.readdirSync(MIGRATIONS).find(name => name.includes("fix_taster_submission_email_regex"));
     expect(regexMigration).toBeTruthy();
     const regexSql = readMigration(regexMigration);
-    const emailRegexLine = regexSql.split("\\n").find(line => line.includes("v_email !~"));
+    const emailRegexLine = regexSql.split("\n").find(line => line.includes("v_email !~"));
     expect(emailRegexLine).toBeTruthy();
-    expect((emailRegexLine.match(/\\\\/g) || [])).toHaveLength(1);
+    expect((emailRegexLine.match(/\\/g) || [])).toHaveLength(1);
   });
 
   test("historical snapshot completion remains independently protected", () => {
