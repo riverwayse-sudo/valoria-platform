@@ -28,8 +28,8 @@ const gateSource = () => readSource("VALUIndexV4GateNext.jsx");
 const fullSource = () => readSource("FullVALUAssessment.jsx");
 
 describe("separate taster and formal assessment contracts", () => {
-  test("the taster contains nine questions and the formal instrument contains 58", () => {
-    expect(TASTER_QUESTIONS).toHaveLength(9);
+  test("the taster contains the canonical 15 questions and the formal instrument contains 58", () => {
+    expect(TASTER_QUESTIONS).toHaveLength(15);
     expect(QUESTIONS).toHaveLength(58);
     expect(TOTAL_QUESTIONS).toBe(58);
   });
@@ -44,7 +44,7 @@ describe("separate taster and formal assessment contracts", () => {
   });
 
   test("taster answers can never seed or contribute to formal assessment answers", () => {
-    const tasterAnswers = { 0: 2, 1: 1, 2: 0, 3: 3, 4: 2, 5: 1, 6: 0, 7: 3, 8: 2 };
+    const tasterAnswers = Object.fromEntries(TASTER_QUESTIONS.map((_, index) => [index, index % 4]));
     expect(seedAnswersFromOpening(tasterAnswers)).toEqual({});
     expect(answeredCount(seedAnswersFromOpening(tasterAnswers))).toBe(0);
   });
@@ -65,7 +65,7 @@ describe("separate taster and formal assessment contracts", () => {
   });
 });
 
-describe("confirmed-account nine-question Taster and dashboard bridge", () => {
+describe("confirmed-account v4.0 Taster and dashboard bridge", () => {
   test("confirmed account handoff precedes the separate taster and no question counts are exposed", () => {
     const source = gateSource();
     expect(source).toContain("questionBank.length");
@@ -78,7 +78,7 @@ describe("confirmed-account nine-question Taster and dashboard bridge", () => {
     expect(source).toContain("payload.identity?.experience");
     expect(source).toContain("readOnly={Boolean(tasterStartToken)}");
     expect(source).toContain("VALUAssessmentJourney stage=\"taster\"");
-    expect(source).toContain("how you think, make strategic decisions, understand commercial value and work with AI");
+    expect(source).toContain("five dimensions of professional capability: Presence, Relationships, Intelligence, Mastery and Enterprise");
     expect(source).not.toContain("how you work, relate and create value");
     expect(source).toContain("YOUR PROGRESS IS SAVED");
     expect(source).toContain("privacy_acknowledged:privacyAcknowledged");

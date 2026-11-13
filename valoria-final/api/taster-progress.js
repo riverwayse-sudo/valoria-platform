@@ -4,6 +4,7 @@ import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
 import { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION } from '../src/valuTasterLegacy.js';
+import { TASTER_QUESTIONS as V42_TASTER_QUESTIONS, TASTER_VERSION_V42 } from '../src/valuTasterV42.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -42,6 +43,7 @@ async function consumeRegistrationRateLimit(req) {
 function questionBankForVersion(version) {
   if (version === VALU_VERSION) return TASTER_QUESTIONS;
   if (version === LEGACY_TASTER_VERSION) return LEGACY_TASTER_QUESTIONS;
+  if (version === TASTER_VERSION_V42) return V42_TASTER_QUESTIONS;
   return null;
 }
 

@@ -71,6 +71,7 @@ export default function VALUIndexV4GateNext(){
  const [registrationKey,setRegistrationKey]=useState('');
  const [current,setCurrent]=useState(0),[answers,setAnswers]=useState({}),[selected,setSelected]=useState(null);
  const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS);
+ const [sessionVersion,setSessionVersion]=useState(VALU_VERSION);
  const [saving,setSaving]=useState(false),[error,setError]=useState('');
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
@@ -145,6 +146,9 @@ export default function VALUIndexV4GateNext(){
      }else if(version==='4.1'){
       const legacy=await import('./valuTasterLegacy.js');
       restoredBank=legacy.LEGACY_TASTER_QUESTIONS;
+     }else if(version==='4.2'){
+      const legacy=await import('./valuTasterV42.js');
+      restoredBank=legacy.TASTER_QUESTIONS;
      }else{
       setProgressToken(stored);
       setError('Your saved session needs assistance before it can continue. Your responses remain saved. Please contact Valoria support.');
@@ -152,6 +156,7 @@ export default function VALUIndexV4GateNext(){
       return;
      }
      setQuestionBank(restoredBank);
+     setSessionVersion(version);
      setName(p.name||'');setRole(p.role||'');setExperience(p.experience||'');setEmail(p.email||'');
      setProgressToken(stored);
      setPrivacyAcknowledged(Boolean(p.lead_capture_id));
@@ -363,7 +368,7 @@ export default function VALUIndexV4GateNext(){
    <div className="valu-intro-rule"><span/></div>
    <p className="valu-intro-overline">A CLEARER VIEW OF YOUR PROFESSIONAL CAPABILITY</p>
    <h1 id="valu-taster-intro-title" className="valu-intro-title">Your professional worth deserves to be <em>understood.</em></h1>
-   <p className="valu-intro-copy">Begin with a short reflection on how you think, make strategic decisions, understand commercial value and work with AI. Your responses provide a starting point for your Valoria journey.</p>
+   <p className="valu-intro-copy">Begin with a focused reflection across the five dimensions of professional capability: Presence, Relationships, Intelligence, Mastery and Enterprise. Your responses provide a starting point for your Valoria journey.</p>
    <div className="valu-intro-benefits">
     <div><span className="valu-intro-check">✓</span><span><strong>Simple, considered choices</strong><small>Choose the response that best reflects your experience.</small></span></div>
     <div><span className="valu-intro-check">✓</span><span><strong>Your progress is saved</strong><small>You can leave and return without losing saved responses.</small></span></div>
@@ -377,7 +382,7 @@ export default function VALUIndexV4GateNext(){
  if(phase==='break')return <Shell>
   <VALUAssessmentJourney stage="account" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{sessionVersion}</div>
    <h1 className="valu-results-title" style={S.h1}>Your taster is <em>saved.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>Your Valoria account is confirmed and your Taster is saved. Connect the Taster to your account, then continue from your dashboard.</p>
   </section>

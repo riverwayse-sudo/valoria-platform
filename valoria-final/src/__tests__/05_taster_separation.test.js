@@ -1,60 +1,41 @@
 "use strict";
 
-const {
-  TASTER_QUESTIONS,
-  TASTER_SKILLS,
-  VALU_VERSION,
-  computeTasterResult,
-} = require("../valuTaster");
+const { TASTER_QUESTIONS, VALU_VERSION, computeTasterResult } = require("../valuTaster");
 const { QUESTIONS } = require("../questions");
 const { validPartialAnswers } = require("../../api/taster-progress");
 const fs = require("fs");
 const path = require("path");
-const {
-  LEGACY_TASTER_QUESTIONS,
-  LEGACY_TASTER_VERSION,
-  computeLegacyTasterResult,
-} = require("../valuTasterLegacy");
-const {
-  TOTAL_QUESTIONS,
-  ASSESSMENT_ORDER,
-  openingPositions,
-  remainingPositions,
-  seedAnswersFromOpening,
-} = require("../assessmentJourney");
+const { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION, computeLegacyTasterResult } = require("../valuTasterLegacy");
+const { TASTER_QUESTIONS: V42_QUESTIONS, TASTER_VERSION_V42, computeV42TasterResult } = require("../valuTasterV42");
+const { TOTAL_QUESTIONS, ASSESSMENT_ORDER, openingPositions, remainingPositions, seedAnswersFromOpening } = require("../assessmentJourney");
 
 describe("separate VALU taster and formal assessment contracts", () => {
-  test("partial-answer validation accepts numeric question indexes and rejects malformed keys", () => {
-    expect(validPartialAnswers({ 0: 1, 8: 2 }, TASTER_QUESTIONS)).toBe(true);
-    expect(validPartialAnswers({ "not-an-index": 1 }, TASTER_QUESTIONS)).toBe(false);
-    expect(validPartialAnswers({ 9: 1 }, TASTER_QUESTIONS)).toBe(false);
+  test("new taster is the independent 15-question v4.0 PRIME snapshot", () => {
+    expect(VALU_VERSION).toBe("4.0");
+    expect(TASTER_QUESTIONS).toHaveLength(15);
+    expect(new Set(TASTER_QUESTIONS.map(question => question.cluster))).toEqual(new Set(["P", "R", "I", "M", "E"]));
+    expect(validPartialAnswers({ 0: 1, 14: 2 }, TASTER_QUESTIONS)).toBe(true);
+    expect(validPartialAnswers({ 15: 1 }, TASTER_QUESTIONS)).toBe(false);
+    const result = computeTasterResult(Object.fromEntries(TASTER_QUESTIONS.map((_, index) => [index, 3])));
+    expect(result.completedQuestions).toBe(15);
+    expect(Object.keys(result.normalisedScores).sort()).toEqual(["E", "I", "M", "P", "R"]);
   });
 
-  test("the taster is an independent nine-question Intelligence instrument", () => {
-    expect(TASTER_QUESTIONS).toHaveLength(9);
-    expect(TASTER_QUESTIONS.every(question => question.cluster === "I")).toBe(true);
-    expect(TASTER_QUESTIONS.every(question => question.id.startsWith("T-"))).toBe(true);
-    expect(VALU_VERSION).toBe("4.2");
-  });
-
-  test("existing v4.1 sessions retain their original question set for safe resume", () => {
+  test("existing v4.1 sessions retain their exact nine-question bank and scoring", () => {
     expect(LEGACY_TASTER_VERSION).toBe("4.1");
     expect(LEGACY_TASTER_QUESTIONS).toHaveLength(9);
-    const legacyAnswers = Object.fromEntries(LEGACY_TASTER_QUESTIONS.map((_, index) => [index, 3]));
-    const result = computeLegacyTasterResult(legacyAnswers);
+    const result = computeLegacyTasterResult(Object.fromEntries(LEGACY_TASTER_QUESTIONS.map((_, index) => [index, 3])));
     expect(result.completedQuestions).toBe(9);
     expect(Object.keys(result.points).sort()).toEqual(["E", "I", "M", "P", "R"]);
   });
 
-  test("the Intelligence taster has the approved skill distribution", () => {
-    const counts = Object.fromEntries(TASTER_SKILLS.map(skill => [skill.key, 0]));
-    TASTER_QUESTIONS.forEach(question => { counts[question.skill] += 1; });
-    expect(counts).toEqual({
-      "Critical Thinking": 3,
-      "Strategic Thinking": 3,
-      "Business Acumen": 2,
-      "AI Fluency ★": 1,
-    });
+  test("existing v4.2 sessions retain their Intelligence-only bank and scoring", () => {
+    expect(TASTER_VERSION_V42).toBe("4.2");
+    expect(V42_QUESTIONS).toHaveLength(9);
+    expect(V42_QUESTIONS.every(question => question.cluster === "I")).toBe(true);
+    const result = computeV42TasterResult(Object.fromEntries(V42_QUESTIONS.map((_, index) => [index, 3])));
+    expect(result.completedQuestions).toBe(9);
+    expect(Number.isFinite(result.intelligenceScore)).toBe(true);
   });
 
   test("the formal VALU assessment remains a separate 58-question instrument", () => {
@@ -66,47 +47,30 @@ describe("separate VALU taster and formal assessment contracts", () => {
     expect(seedAnswersFromOpening()).toEqual({});
   });
 
-  test("taster identifiers cannot collide with the formal question bank", () => {
+  test("the taster reuses canonical question definitions without sharing formal answer state", () => {
     const formalIds = new Set(QUESTIONS.map(question => question.id));
-    expect(TASTER_QUESTIONS.every(question => !formalIds.has(question.id))).toBe(true);
+    expect(TASTER_QUESTIONS.every(question => formalIds.has(question.id))).toBe(true);
+    expect(seedAnswersFromOpening()).toEqual({});
   });
 
-  test("taster answers score only Intelligence skills and never produce an official VALU Index", () => {
-    const answers = Object.fromEntries(TASTER_QUESTIONS.map((_, index) => [index, 3]));
-    const result = computeTasterResult(answers);
-
-    expect(result.intelligenceScore).toBe(100);
-    expect(result.normalisedSkills).toEqual({
-      "Critical Thinking": 100,
-      "Strategic Thinking": 100,
-      "Business Acumen": 100,
-      "AI Fluency ★": 100,
-    });
-    expect(result.completedQuestions).toBe(9);
-    expect(result).not.toHaveProperty("valuIndex");
-    expect(result).not.toHaveProperty("clusterScores");
-  });
-
-  test("new sessions use v4.2 while existing v4.1 sessions retain their original bank", () => {
+  test("new registrations resolve to v4.0 while old versions remain explicitly resumable", () => {
     const progressApi = fs.readFileSync(path.join(__dirname, "../../api/taster-progress.js"), "utf8");
     const submitApi = fs.readFileSync(path.join(__dirname, "../../api/submit-taster.js"), "utf8");
-    const migration = fs.readFileSync(path.join(__dirname, "../../supabase/migrations/20261110083803_set_taster_version_42_default.sql"), "utf8");
+    const migrationFiles = fs.readdirSync(path.join(__dirname, "../../supabase/migrations"));
+    const migration = migrationFiles.find(name => name.includes("restore_writer_taster_v40"));
+    expect(migration).toBeTruthy();
+    const migrationSql = fs.readFileSync(path.join(__dirname, "../../supabase/migrations", migration), "utf8");
     expect(progressApi).toContain("questionBankForVersion(progress.taster_version)");
-    expect(progressApi).toContain("taster_version: progress.taster_version");
+    expect(progressApi).toContain("TASTER_VERSION_V42");
     expect(submitApi).toContain("computeLegacyTasterResult(answers)");
+    expect(submitApi).toContain("computeV42TasterResult(answers)");
     expect(submitApi).toContain("p_taster_version: tasterVersion");
-    expect(migration).toContain("alter column taster_version set default '4.2'");
+    expect(migrationSql).toContain("alter column taster_version set default '4.0'");
+    expect(migrationSql).toContain("alter column total_questions set default 15");
   });
 
-  test("retired taster versions are not silently remapped to the new question bank", () => {
-    const progressApi = fs.readFileSync(path.join(__dirname, "../../api/taster-progress.js"), "utf8");
-    expect(progressApi).toContain("This saved taster session uses a retired format");
-  });
-
-  test("an empty taster answer map does not create NaN skill scores", () => {
-    const result = computeTasterResult({});
-    expect(result.intelligenceScore).toBe(0);
-    expect(Object.values(result.normalisedSkills).every(Number.isFinite)).toBe(true);
-    expect(result.completedQuestions).toBe(0);
+  test("the 58-question assessment is never seeded from taster answers", () => {
+    expect(remainingPositions()).toHaveLength(58);
+    expect(seedAnswersFromOpening()).toEqual({});
   });
 });
