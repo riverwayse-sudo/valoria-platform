@@ -391,3 +391,87 @@ button.valu-option:disabled { cursor: default; }
   line-height: 1.5;
   text-transform: uppercase;
 }
+
+
+/* STAGING EDITORIAL PRESENTATION — never applied to the production assessment. */
+.valu-staging-editorial {
+  min-height: 100dvh;
+  background: #1A1A2E;
+  color: #F7F4EE;
+  font-family: 'Raleway', sans-serif;
+}
+.valu-staging-editorial,
+.valu-staging-editorial * {
+  font-family: 'Raleway', sans-serif !important;
+}
+.valu-staging-editorial :where(h1,h2,h3,h4,h5,h6) {
+  font-weight: 800 !important;
+  letter-spacing: -.04em !important;
+}
+.valu-staging-editorial .assessment-nav-inner {
+  border-bottom: 1px solid rgba(212,201,168,.32) !important;
+}
+.valu-staging-editorial .valu-assessment-page {
+  background: #1A1A2E !important;
+}
+.valu-staging-editorial .valu-assessment-intro .valu-intro-title,
+.valu-staging-editorial .valu-entry-intro h1 {
+  max-width: 760px;
+  font-size: clamp(38px, 5.8vw, 72px) !important;
+  line-height: 1.02 !important;
+  font-weight: 800 !important;
+  letter-spacing: -.055em !important;
+}
+.valu-staging-editorial .valu-assessment-page .valu-taster-question,
+.valu-staging-editorial .valu-assessment-page.valu-assessment-full .valu-assessment-content > h1 {
+  font-size: clamp(26px, 3.2vw, 38px) !important;
+  line-height: 1.12 !important;
+  font-weight: 700 !important;
+  letter-spacing: -.035em !important;
+}
+.valu-staging-editorial .valu-option {
+  min-height: 58px !important;
+  border-radius: 1px !important;
+  border-left: 2px solid rgba(201,168,76,.42) !important;
+  background: #222238 !important;
+  font-weight: 600 !important;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease !important;
+}
+.valu-staging-editorial .valu-option:hover,
+.valu-staging-editorial .valu-option:focus-visible {
+  background: #2E2E4A !important;
+  border-left-color: #C9A84C !important;
+}
+.valu-staging-editorial :where(button,input,textarea,select,.valu-entry-form-card,.valu-assessment-back) {
+  border-radius: 1px !important;
+}
+.valu-staging-editorial .valu-assessment-back {
+  min-height: 46px;
+  padding-inline: 18px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+.valu-staging-editorial .valu-full-progress,
+.valu-staging-editorial .valu-full-progress > div,
+.valu-staging-editorial .valu-taster-progress,
+.valu-staging-editorial .valu-taster-progress > div {
+  border-radius: 0 !important;
+}
+.valu-staging-editorial .valu-entry-form-card {
+  border: 1px solid rgba(212,201,168,.32) !important;
+  background: #202036 !important;
+  box-shadow: none !important;
+}
+.valu-staging-editorial :where(input,textarea,select) {
+  border-radius: 1px !important;
+  border-color: rgba(212,201,168,.38) !important;
+}
+.valu-staging-editorial .staging-site-banner {
+  font-family: 'Raleway', sans-serif !important;
+  letter-spacing: .16em;
+}
+@media (max-width: 640px) {
+  .valu-staging-editorial .valu-option {
+    min-height: 54px !important;
+  }
+}
