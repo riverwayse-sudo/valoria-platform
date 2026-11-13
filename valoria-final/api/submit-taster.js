@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from '../src/valuTaster.js';
 import { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION, computeLegacyTasterResult } from '../src/valuTasterLegacy.js';
+import { TASTER_QUESTIONS as V42_TASTER_QUESTIONS, TASTER_VERSION_V42, computeV42TasterResult } from '../src/valuTasterV42.js';
 import { applyCors, handlePreflight } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -86,7 +87,9 @@ export default async function handler(req, res) {
     ? TASTER_QUESTIONS
     : tasterVersion === LEGACY_TASTER_VERSION
       ? LEGACY_TASTER_QUESTIONS
-      : null;
+      : tasterVersion === TASTER_VERSION_V42
+        ? V42_TASTER_QUESTIONS
+        : null;
   if (!questionBank) return json(res, 409, { error: 'This saved taster session uses a retired format and cannot be submitted automatically.' });
   if (progress.current_question !== questionBank.length || !validAnswers(answers, questionBank)) {
     return json(res, 400, { error: 'Finish and save all taster answers before submitting.' });
@@ -96,18 +99,26 @@ export default async function handler(req, res) {
 
 
 
-  const results = tasterVersion === VALU_VERSION ? computeTasterResult(answers) : computeLegacyTasterResult(answers);
-  // Only Intelligence is assessed by the separate taster. Null means the
-  // other four PRIME clusters were not measured; zero would falsely imply a score.
+  const results = tasterVersion === VALU_VERSION
+    ? computeTasterResult(answers)
+    : tasterVersion === LEGACY_TASTER_VERSION
+      ? computeLegacyTasterResult(answers)
+      : computeV42TasterResult(answers);
+  // v4.0 is the canonical five-PRIME directional snapshot. v4.1 retains its
+  // historical raw-point contract; v4.2 remains Intelligence-only for old sessions.
   const clusterScores = tasterVersion === VALU_VERSION
-    ? { P: null, R: null, I: results.intelligenceScore, M: null, E: null }
-    : results.points;
+    ? results.normalisedScores
+    : tasterVersion === LEGACY_TASTER_VERSION
+      ? results.points
+      : { P: null, R: null, I: results.intelligenceScore, M: null, E: null };
   const skillKeys = ['Critical Thinking', 'Strategic Thinking', 'Business Acumen', 'AI Fluency ★'];
   const scoresValid = tasterVersion === VALU_VERSION
-    ? Number.isFinite(clusterScores.I)
-      && results.normalisedSkills
-      && skillKeys.every(skill => Number.isFinite(results.normalisedSkills[skill]))
-    : ['P', 'R', 'I', 'M', 'E'].every(id => Number.isFinite(clusterScores[id]));
+    ? ['P', 'R', 'I', 'M', 'E'].every(id => Number.isFinite(clusterScores[id]))
+    : tasterVersion === LEGACY_TASTER_VERSION
+      ? ['P', 'R', 'I', 'M', 'E'].every(id => Number.isFinite(clusterScores[id]))
+      : Number.isFinite(clusterScores.I)
+        && results.normalisedSkills
+        && skillKeys.every(skill => Number.isFinite(results.normalisedSkills[skill]));
   if (!scoresValid) {
     console.error('submit-taster: scores unavailable for saved taster version', tasterVersion, submission_key);
     return json(res, 500, { error: 'The assessment service is temporarily unavailable. Please try again shortly.' });
@@ -124,8 +135,8 @@ export default async function handler(req, res) {
         p_email: normalizedEmail,
         p_answers: answers,
         p_cluster_scores: clusterScores,
-        p_strongest_cluster: tasterVersion === VALU_VERSION ? 'I' : results.strongest.id,
-        p_weakest_cluster: tasterVersion === VALU_VERSION ? 'I' : results.weakest.id,
+        p_strongest_cluster: tasterVersion === TASTER_VERSION_V42 ? 'I' : results.strongest.id,
+        p_weakest_cluster: tasterVersion === TASTER_VERSION_V42 ? 'I' : results.weakest.id,
         p_taster_version: tasterVersion,
         p_lead_capture_id: progress.lead_capture_id,
       }),
