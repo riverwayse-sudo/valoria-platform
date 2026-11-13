@@ -313,7 +313,7 @@ export default function VALUIndexV4GateNext(){
    <h1 className="valu-results-title" style={S.h1}>Your account comes <em>first.</em></h1>
    <p className="valu-results-intro" style={S.resultsIntro}>Create your Valoria account and confirm your email before starting the VALU Index Taster. Your taster responses remain separate from your full VALU Index.</p>
    {error&&<p role="alert" style={S.error}>{error}</p>}
-   <button type="button" onClick={()=>window.location.assign((SITE_BASE||'')+'/professional-signup/?journey=valu_taster')} style={S.primary}>CREATE OR SIGN IN TO YOUR ACCOUNT</button>
+   <button type="button" onClick={()=>window.location.assign((SITE_BASE||'')+'/valu/register/?journey=valu_taster')} style={S.primary}>CREATE OR SIGN IN TO YOUR ACCOUNT</button>
   </section>
  </Shell>;
 
