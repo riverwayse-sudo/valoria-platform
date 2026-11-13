@@ -75,6 +75,7 @@ function installFetch({ progress = {}, submit = {} } = {}) {
         email: "Temitayo@Example.com",
         current_question: TASTER_QUESTIONS.length,
         answers: validAnswers(),
+        taster_version: "4.0",
         submission_key: SUBMISSION_KEY,
         lead_capture_id: LEAD_CAPTURE_ID,
         ...progress,
