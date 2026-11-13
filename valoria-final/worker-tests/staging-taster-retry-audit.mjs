@@ -163,6 +163,26 @@ await page.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith('/
 });
 
 try {
+  // Verify that a direct, tokenless assessment visit sends a new participant
+  // to the account-first signup page, not the legacy post-Taster connector.
+  const gatePage = await context.newPage();
+  let fallbackUrl = null;
+  await gatePage.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith('/valu/register'), async route => {
+    fallbackUrl = route.request().url();
+    await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Signup fallback intercepted by staging audit.</body></html>' });
+  });
+  const gateEntry = new URL('/', ASSESSMENT_ORIGIN);
+  gateEntry.searchParams.set('site_origin', SITE_ORIGIN);
+  await gatePage.goto(gateEntry.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await gatePage.getByRole('button', { name: /CREATE OR SIGN IN TO YOUR ACCOUNT/i }).click();
+  await gatePage.waitForTimeout(100);
+  assert.ok(fallbackUrl, 'tokenless assessment entry must navigate to the account-first signup page');
+  assert.equal(new URL(fallbackUrl).origin, SITE_ORIGIN, 'signup fallback must use the matching site environment');
+  assert.equal(new URL(fallbackUrl).pathname, '/valu/register/', 'signup fallback must use the account-first registration route');
+  assert.equal(new URL(fallbackUrl).searchParams.get('journey'), 'valu_taster');
+  assert.ok(!fallbackUrl.includes('/professional-signup/'), 'account-required fallback must not use the legacy post-Taster route');
+  await gatePage.close();
+
   const entry = new URL('/', ASSESSMENT_ORIGIN);
   entry.searchParams.set('site_origin', SITE_ORIGIN);
   entry.hash = new URLSearchParams({ taster_start_code: TASTER_START_CODE }).toString();
