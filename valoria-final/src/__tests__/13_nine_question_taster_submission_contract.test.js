@@ -39,7 +39,7 @@ describe("versioned taster submission contract", () => {
       "submission retry could not be reconciled",
       "submission key was reused with different snapshot or registration data",
       "snapshot identity candidate is linked to a different registration",
-      "SECURITY INVOKER",
+      "security invoker",
       "REVOKE ALL ON FUNCTION public.submit_taster_with_identity_candidate",
       "GRANT EXECUTE ON FUNCTION public.submit_taster_with_identity_candidate",
     ]) expect(canonicalFix).toContain(rule);
