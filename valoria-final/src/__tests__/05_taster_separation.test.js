@@ -47,9 +47,10 @@ describe("separate VALU taster and formal assessment contracts", () => {
     expect(seedAnswersFromOpening()).toEqual({});
   });
 
-  test("the 15-question taster identifiers do not collide with the formal bank", () => {
+  test("the taster reuses canonical question definitions without sharing formal answer state", () => {
     const formalIds = new Set(QUESTIONS.map(question => question.id));
-    expect(TASTER_QUESTIONS.every(question => !formalIds.has(question.id))).toBe(true);
+    expect(TASTER_QUESTIONS.every(question => formalIds.has(question.id))).toBe(true);
+    expect(seedAnswersFromOpening()).toEqual({});
   });
 
   test("new registrations resolve to v4.0 while old versions remain explicitly resumable", () => {
@@ -69,8 +70,6 @@ describe("separate VALU taster and formal assessment contracts", () => {
   });
 
   test("the 58-question assessment is never seeded from taster answers", () => {
-    const formalIds = new Set(QUESTIONS.map(question => question.id));
-    expect(TASTER_QUESTIONS.every(question => !formalIds.has(question.id))).toBe(true);
     expect(remainingPositions()).toHaveLength(58);
     expect(seedAnswersFromOpening()).toEqual({});
   });
