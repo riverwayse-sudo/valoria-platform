@@ -40,8 +40,8 @@ describe("versioned taster submission contract", () => {
       "submission key was reused with different snapshot or registration data",
       "snapshot identity candidate is linked to a different registration",
       "security invoker",
-      "REVOKE ALL ON FUNCTION public.submit_taster_with_identity_candidate",
-      "GRANT EXECUTE ON FUNCTION public.submit_taster_with_identity_candidate",
+      "revoke all on function public.submit_taster_with_identity_candidate",
+      "grant execute on function public.submit_taster_with_identity_candidate",
     ]) expect(canonicalFix).toContain(rule);
   });
 
