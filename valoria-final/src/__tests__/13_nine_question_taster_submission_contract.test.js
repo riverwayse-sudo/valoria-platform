@@ -49,14 +49,9 @@ describe("versioned taster submission contract", () => {
     const regexMigration = fs.readdirSync(MIGRATIONS).find(name => name.includes("fix_taster_submission_email_regex"));
     expect(regexMigration).toBeTruthy();
     const regexSql = readMigration(regexMigration);
-    expect(regexSql).toContain("v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\\\\.[^[:space:]@]+
-    const completion = readMigration("20261030090000_explicit_taster_completion.sql");
-    expect(completion).toContain("alter column completed_at set default now()");
-    expect(completion).toContain("WHERE t.completed_at IS NULL");
-    expect(completion).not.toMatch(/DELETE\s+FROM/i);
-  });
-});
-");
+    const emailRegexLine = regexSql.split("\\n").find(line => line.includes("v_email !~"));
+    expect(emailRegexLine).toBeTruthy();
+    expect((emailRegexLine.match(/\\\\/g) || [])).toHaveLength(1);
   });
 
   test("historical snapshot completion remains independently protected", () => {
