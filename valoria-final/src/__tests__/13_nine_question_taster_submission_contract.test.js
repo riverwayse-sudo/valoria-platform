@@ -45,6 +45,20 @@ describe("versioned taster submission contract", () => {
     ]) expect(canonicalFix).toContain(rule);
   });
 
+  test("the atomic submission email validator accepts valid addresses and rejects malformed ones", () => {
+    const regexMigration = fs.readdirSync(MIGRATIONS).find(name => name.includes("fix_taster_submission_email_regex"));
+    expect(regexMigration).toBeTruthy();
+    const regexSql = readMigration(regexMigration);
+    expect(regexSql).toContain("v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\\\\.[^[:space:]@]+
+    const completion = readMigration("20261030090000_explicit_taster_completion.sql");
+    expect(completion).toContain("alter column completed_at set default now()");
+    expect(completion).toContain("WHERE t.completed_at IS NULL");
+    expect(completion).not.toMatch(/DELETE\s+FROM/i);
+  });
+});
+");
+  });
+
   test("historical snapshot completion remains independently protected", () => {
     const completion = readMigration("20261030090000_explicit_taster_completion.sql");
     expect(completion).toContain("alter column completed_at set default now()");
