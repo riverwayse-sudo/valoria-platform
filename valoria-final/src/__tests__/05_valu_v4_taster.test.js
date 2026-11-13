@@ -27,7 +27,7 @@ describe('VALU v4 canonical taster', () => {
 
   test('normalises each cluster independently and uses canonical PRIME order for ties', () => {
     const answers = Object.fromEntries(TASTER_QUESTIONS.map((q, i) => {
-      const choice = i === 0
+      const choice = q.cluster === 'P'
         ? q.options.reduce((best, option, index, options) => option.score > options[best].score ? index : best, 0)
         : q.options.reduce((best, option, index, options) => option.score < options[best].score ? index : best, 0);
       return [i, choice];
