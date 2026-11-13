@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { verifyTasterStartTokenEdge } from '../lib/taster-start-token-edge.js';
 import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
@@ -103,12 +104,43 @@ export default async function handler(req, res) {
       console.error('taster-progress: registration rate limiter failed', err?.message || err);
       return json(res, 503, { error: 'Registration is temporarily unavailable. Please try again shortly.' });
     }
+    // New sessions require a server-issued token proving that the participant
+    // completed signup and email confirmation before entering the taster.
+    // Existing progress rows remain eligible for the legacy recovery path.
+    let existingProgress = null;
+    try {
+      existingProgress = await getProgress(hashToken(body.resume_token));
+    } catch (error) {
+      console.error('taster-progress: registration continuity lookup failed', error?.message || error);
+      return json(res, 503, { error: 'We could not verify your saved session. Please retry.' });
+    }
+    let confirmedAccountId = null;
+    if (!existingProgress) {
+      const startSession = await verifyTasterStartTokenEdge(body.taster_start_token, reason => {
+        console.warn('taster-progress: new taster start rejected', { reason });
+      });
+      if (!startSession) return json(res, 401, { error: 'Create and confirm your Valoria account before starting the taster.' });
+      confirmedAccountId = startSession.sub;
+      const norm = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      if (norm(startSession.email) !== norm(email)) {
+        return json(res, 403, { error: 'Use the same confirmed email address as your Valoria account.' });
+      }
+      if (startSession.display_name && norm(startSession.display_name) !== norm(name)) {
+        return json(res, 403, { error: 'Use the same name as your Valoria account so your taster can be connected securely.' });
+      }
+      if (norm(startSession.role) !== norm(role) || startSession.experience !== experience) {
+        return json(res, 403, { error: 'Use the professional role and experience saved to your confirmed Valoria account.' });
+      }
+      if (startSession.privacy_acknowledged !== true || body.privacy_acknowledged !== true) {
+        return json(res, 403, { error: 'Confirm the Privacy Notice before starting the taster.' });
+      }
+    }
     try {
       const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/begin_valu_taster_signup`, {
         method: 'POST',
         headers: headers(),
         body: JSON.stringify({
-          p_signup_key: body.signup_key,
+          p_signup_key: confirmedAccountId || body.signup_key,
           p_resume_token_hash: hashToken(body.resume_token),
           p_name: name,
           p_email: email,

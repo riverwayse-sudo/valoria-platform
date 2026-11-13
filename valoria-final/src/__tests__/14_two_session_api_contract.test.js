@@ -45,6 +45,65 @@ describe("taster-progress requires registration before a new taster", () => {
   });
 });
 
+describe("signup-first taster start security contract", () => {
+  const progressApi = readApi("taster-progress.js");
+  const submitApi = readApi("submit-assessment.js");
+  const verifier = fs.readFileSync(path.join(__dirname, "../../lib/taster-start-token-edge.js"), "utf8");
+  const gate = fs.readFileSync(path.join(__dirname, "../VALUIndexV4GateNext.jsx"), "utf8");
+
+  test("new registrations require a signed, email-matched taster-start session", () => {
+    expect(progressApi).toContain("verifyTasterStartTokenEdge(body.taster_start_token");
+    expect(progressApi).toContain("norm(startSession.email) !== norm(email)");
+    expect(progressApi).toContain("norm(startSession.role) !== norm(role) || startSession.experience !== experience");
+    expect(progressApi).toContain("confirmedAccountId = startSession.sub");
+    expect(progressApi).toContain("p_signup_key: confirmedAccountId || body.signup_key");
+    expect(progressApi).toContain("startSession.privacy_acknowledged !== true");
+    expect(progressApi).toContain("if (!existingProgress)");
+    expect(progressApi.indexOf("consumeRegistrationRateLimit(req)")).toBeLessThan(progressApi.indexOf("getProgress(hashToken(body.resume_token))"));
+    expect(progressApi).toContain("Create and confirm your Valoria account before starting the taster.");
+  });
+
+  test("legacy in-progress registrations remain recoverable without changing their saved answers", () => {
+    expect(progressApi).toContain("existingProgress = await getProgress(hashToken(body.resume_token))");
+    expect(progressApi).toContain("existingProgress");
+    expect(progressApi).toContain("rpc/begin_valu_taster_signup");
+    expect(progressApi).toContain("hashToken(body.resume_token)");
+  });
+
+  test("taster-start exchange is isolated from the dashboard full-assessment handoff", () => {
+    expect(submitApi).toContain("entry_point: 'eq.taster_start'");
+    expect(submitApi).toContain("const accountMetadata = user.app_metadata || {}");
+    expect(submitApi).toContain("accountMetadata.privacy_acknowledged !== true");
+    expect(submitApi).not.toContain("user.user_metadata?.privacy_acknowledged");
+    expect(submitApi).toContain("target_stage: 'eq.taster'");
+    expect(submitApi).toContain("action === 'exchange-taster-start-handoff'");
+    expect(submitApi).toContain("action === 'exchange-dashboard-handoff'");
+    expect(submitApi).toContain("entry_point: 'eq.dashboard_assessment'");
+    expect(submitApi).toContain("target_stage: 'eq.assess'");
+  });
+
+  test("taster-start tokens have a distinct audience and type", () => {
+    expect(submitApi).toContain("typ: 'taster_start_session'");
+    expect(submitApi).toContain("aud: 'valu-taster-start'");
+    expect(verifier).toContain("payload?.typ !== 'taster_start_session'");
+    expect(verifier).toContain("payload?.aud !== AUDIENCE");
+    expect(verifier).toContain("payload?.role");
+    expect(verifier).toContain("payload?.experience");
+    expect(verifier).toContain("payload?.privacy_acknowledged !== true");
+    expect(verifier).toContain("payload.exp - payload.iat > 4 * 60 * 60");
+  });
+
+  test("direct new assessment entry requires account handoff; saved progress remains restorable", () => {
+    expect(gate).toContain("exchange-taster-start-handoff");
+    expect(gate).toContain("if(payload.identity?.role)setRole(payload.identity.role)");
+    expect(gate).toContain("if(payload.identity?.experience)setExperience(payload.identity.experience)");
+    expect(gate).toContain("if(payload.identity?.privacy_acknowledged===true)setPrivacyAcknowledged(true)");
+    expect(gate).toContain("phase==='account-required'");
+    expect(gate).toContain("valu_taster_resume_token");
+    expect(gate).toContain("action:'load'");
+  });
+});
+
 describe("full-assessment progress is independent of taster progress", () => {
   const progressApi = readApi("assessment-progress.js");
   const submitApi = readApi("submit-assessment.js");

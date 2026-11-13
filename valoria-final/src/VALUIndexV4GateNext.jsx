@@ -60,9 +60,9 @@ const RESUME_TOKEN_KEY = 'valu_taster_resume_token';
 const SIGNUP_KEY_KEY = 'valu_taster_signup_key';
 
 // Entry flow for the VALU journey.
-// Participants begin with the VALU taster before account setup.
-// Taster responses are stored and scored independently; they never populate
-// the formal VALU assessment response record.
+// Participants confirm their Valoria account before entering the separate Taster.
+// Taster responses are stored independently; they never populate the formal
+// 58-question VALU Index response record.
 export default function VALUIndexV4GateNext(){
  const [phase,setPhase]=useState('loading');
  const [name,setName]=useState(''),[role,setRole]=useState(''),[experience,setExperience]=useState(''),[email,setEmail]=useState('');
@@ -75,6 +75,7 @@ export default function VALUIndexV4GateNext(){
  const [progressToken,setProgressToken]=useState('');
  const [submissionKey,setSubmissionKey]=useState('');
  const [tasterId,setTasterId]=useState('');
+ const [tasterStartToken,setTasterStartToken]=useState('');
  const startedRef=useRef(false);
  const timer=useRef(null);
 
@@ -101,6 +102,29 @@ export default function VALUIndexV4GateNext(){
   startedRef.current=true;
   let cancelled=false;
   async function begin(){
+   let startToken='';
+   try{startToken=sessionStorage.getItem('valu_taster_start_token')||''}catch{}
+   const fragment=new URLSearchParams(window.location.hash.replace(/^#/, ''));
+   const handoffCode=fragment.get('taster_start_code')||'';
+   if(handoffCode){
+    try{
+     const response=await fetch(API_BASE+'/api/submit-assessment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'exchange-taster-start-handoff',handoff_code:handoffCode})});
+     const payload=await response.json().catch(()=>({}));
+     if(!response.ok||!payload.session_token)throw new Error(payload.error||'Your confirmed account could not be connected to the taster.');
+     startToken=payload.session_token;
+     try{sessionStorage.setItem('valu_taster_start_token',startToken)}catch{}
+     if(payload.identity?.email)setEmail(payload.identity.email);
+     if(payload.identity?.display_name)setName(payload.identity.display_name);
+     if(payload.identity?.role)setRole(payload.identity.role);
+     if(payload.identity?.experience)setExperience(payload.identity.experience);
+     if(payload.identity?.privacy_acknowledged===true)setPrivacyAcknowledged(true);
+     window.history.replaceState({},document.title,window.location.pathname+window.location.search);
+    }catch(error){
+     if(!cancelled){setError(error?.message||'Your account handoff could not be verified. Return to Valoria and try again.');setPhase('account-required')}
+     return;
+    }
+   }
+   if(startToken)setTasterStartToken(startToken);
    let pending='';
    try{pending=localStorage.getItem('pending_taster_id')||''}catch{}
    if(pending){
@@ -152,7 +176,7 @@ export default function VALUIndexV4GateNext(){
      if(cancelled)return;
      if(err?.status===401||err?.status===404){
       try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
-      setPhase('registration');
+      setPhase(startToken?'registration':'account-required');
       return;
      }
      // Transient network/server failures must never erase the only local
@@ -163,7 +187,7 @@ export default function VALUIndexV4GateNext(){
      return;
     }
    }
-   if(!cancelled)setPhase('registration');
+   if(!cancelled)setPhase(startToken?'registration':'account-required');
   }
   begin();
   return ()=>{cancelled=true};
@@ -219,6 +243,7 @@ export default function VALUIndexV4GateNext(){
    try{localStorage.setItem(RESUME_TOKEN_KEY,token);localStorage.setItem(SIGNUP_KEY_KEY,signupKey)}catch{}
    const data=await postProgress({
     action:'register',resume_token:token,signup_key:signupKey,
+    ...(tasterStartToken?{taster_start_token:tasterStartToken}:{}),
     name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),
     organisation:organisation.trim(),interest,
     marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
@@ -257,7 +282,7 @@ export default function VALUIndexV4GateNext(){
    setTasterId(tasterId);
    try{localStorage.setItem('pending_taster_id',tasterId)}catch{}
    try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
-   const params=new URLSearchParams({taster_id:tasterId,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase()});
+   const params=new URLSearchParams({taster_id:tasterId,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),account_first:tasterStartToken?'1':'0'});
    window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
   }catch(err){
    setError(err?.message||'Your taster could not be saved yet. Your registered details and responses remain intact — please retry.');
@@ -282,23 +307,33 @@ export default function VALUIndexV4GateNext(){
   </section>
  </Shell>;
 
+ if(phase==='account-required')return <Shell>
+  <section className="valu-results-header" style={S.resultsHeader}>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> ACCOUNT REQUIRED</div>
+   <h1 className="valu-results-title" style={S.h1}>Your account comes <em>first.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>Create your Valoria account and confirm your email before starting the VALU Index Taster. Your taster responses remain separate from your full VALU Index.</p>
+   {error&&<p role="alert" style={S.error}>{error}</p>}
+   <button type="button" onClick={()=>window.location.assign((SITE_BASE||'')+'/valu/register/?journey=valu_taster')} style={S.primary}>CREATE OR SIGN IN TO YOUR ACCOUNT</button>
+  </section>
+ </Shell>;
+
  if(phase==='registration')return <Shell>
   <VALUAssessmentJourney stage="registration" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> YOUR DETAILS FIRST</div>
-   <h1 className="valu-results-title" style={S.h1}>Start with your <em>details.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your details connect your responses to you, so you can pause and return without losing your place. You will create your Valoria account after completing the taster.</p>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> ACCOUNT CONFIRMED</div>
+   <h1 className="valu-results-title" style={S.h1}>Your account is ready. <em>Begin your Taster.</em></h1>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your confirmed Valoria details are connected to this Taster. Review them and continue; your responses will remain connected to your account.</p>
   </section>
   <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTRATION</div><h2 style={S.formTitle}>Begin your VALU taster.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
-   <p style={S.formIntro}>Complete the required details and acknowledge the Privacy Notice. Your answers stay connected to your registration. Optional details can be added below.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>CONFIRMED ACCOUNT</div><h2 style={S.formTitle}>Your Taster is ready.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
+   <p style={S.formIntro}>These required details are verified against your confirmed account. Optional professional details can be added below.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
-    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
-    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>
+    <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} readOnly={Boolean(tasterStartToken)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
+    <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} readOnly={Boolean(tasterStartToken)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>
    </div>
    <div className="valu-entry-form-grid" style={S.grid}>
-    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} placeholder="e.g. Product Manager" autoComplete="organization-title" maxLength={160}/></Field>
-    <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
+    <Field label="CURRENT ROLE"><input required style={S.input} value={role} onChange={e=>setRole(e.target.value)} readOnly={Boolean(tasterStartToken)} placeholder="e.g. Product Manager" autoComplete="organization-title" maxLength={160}/></Field>
+    <Field label="PROFESSIONAL EXPERIENCE"><select required style={S.input} value={experience} disabled={Boolean(tasterStartToken)} onChange={e=>setExperience(e.target.value)}><option value="">Select your experience</option>{EXPERIENCE_BANDS.map(x=><option key={x.id} value={x.id}>{x.label} · {x.desc}</option>)}</select></Field>
    </div>
    <p style={S.note}>If you already have a Valoria account, use the email address associated with it so your taster can be connected to that account.</p>
    <details className="valu-optional-details">
@@ -307,7 +342,7 @@ export default function VALUIndexV4GateNext(){
     <Field label="WHAT ARE YOU MOST INTERESTED IN? (OPTIONAL)"><select style={S.input} value={interest} onChange={e=>setInterest(e.target.value)}><option value="">Select an interest</option><option value="Professional visibility">Professional visibility</option><option value="Career and leadership opportunities">Career and leadership opportunities</option><option value="Speaking and facilitation">Speaking and facilitation</option><option value="Learning and development">Learning and development</option><option value="Other">Other</option></select></Field>
    </details>
    <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
-    <input type="checkbox" required checked={privacyAcknowledged} onChange={e=>setPrivacyAcknowledged(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
+    <input type="checkbox" required checked={privacyAcknowledged} disabled={Boolean(tasterStartToken)} onChange={e=>setPrivacyAcknowledged(e.target.checked)} style={{marginTop:2,accentColor:GOLD}}/>
     <span>I acknowledge that Valoria will process these details to administer my assessment and manage my journey. Read the <a href={(SITE_BASE||'https://valoriainstitute.com')+'/privacypolicy'} style={{color:GOLD,textDecoration:'underline'}}>Privacy Notice</a>.</span>
    </label>
    <label style={{display:'flex',alignItems:'flex-start',gap:10,color:DIM,fontSize:11,lineHeight:1.6}}>
@@ -344,7 +379,7 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> TASTER SAVED <span style={S.statusDivider}>/</span> VALU v{VALU_VERSION}</div>
    <h1 className="valu-results-title" style={S.h1}>Your taster is <em>saved.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your responses are safely saved. Create your account to continue your Valoria journey.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your Valoria account is confirmed and your Taster is saved. Connect the Taster to your account, then continue from your dashboard.</p>
   </section>
   <section aria-label="What happens next" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:10,margin:'8px 0 22px'}}>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
@@ -353,34 +388,33 @@ export default function VALUIndexV4GateNext(){
     <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your responses are saved and ready for your next step.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.28)',borderRadius:9,background:'rgba(201,168,76,.07)'}}>
-    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · YOU ARE HERE</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Create your account</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Add your details now. You’ll set your password and confirm your email in the next step.</p>
+    <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:GOLD}}>02 · COMPLETED</div>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your Valoria account</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your account and email are already confirmed.</p>
    </div>
    <div style={{padding:'16px 17px',border:'1px solid rgba(201,168,76,.16)',borderRadius:9,background:'rgba(46,46,74,.35)'}}>
     <div style={{fontSize:9,fontWeight:900,letterSpacing:'.13em',color:'rgba(250,250,247,.55)'}}>03 · UP NEXT</div>
-    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Continue with Valoria</h3>
-    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Confirm your email, then return to your dashboard to continue.</p>
+    <h3 style={{fontSize:14,color:PARCH,margin:'8px 0 5px'}}>Your dashboard</h3>
+    <p style={{fontSize:11,lineHeight:1.6,color:DIM,margin:0}}>Your full VALU Index is ready to begin from your dashboard.</p>
    </div>
   </section>
   <section aria-label="Assessment progress" style={S.scoreSection}>
    <div className="valu-result-grid" style={{...S.resultGrid,gridTemplateColumns:'1fr 1fr'}}>
     <div style={S.resultRow}><div style={S.dimensionCode}>YOUR TASTER</div><h2 style={S.scoreName}>Saved</h2><strong style={S.scoreValue}>✓</strong></div>
-    <div style={S.resultRow}><div style={S.dimensionCode}>NEXT STEP</div><h2 style={S.scoreName}>Account setup</h2><strong style={S.scoreValue}>→</strong></div>
+    <div style={S.resultRow}><div style={S.dimensionCode}>NEXT STEP</div><h2 style={S.scoreName}>Dashboard</h2><strong style={S.scoreValue}>→</strong></div>
    </div>
   </section>
   <section className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Secure your Valoria account.</h2></div><div style={S.formTime}>ACCOUNT SETUP</div></div>
-   <p style={S.formIntro}>Your registration details and taster are saved. Continue to create your Valoria account, confirm your email and access your dashboard.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Connect your Taster.</h2></div><div style={S.formTime}>ACCOUNT LINKING</div></div>
+   <p style={S.formIntro}>Your confirmed account is ready. Save your Taster and connect it to your dashboard.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED NAME</div><h2 style={S.scoreName}>{name}</h2></div>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED EMAIL</div><h2 style={{...S.scoreName,overflowWrap:'anywhere'}}>{email}</h2></div>
    </div>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'CONTINUE TO ACCOUNT CREATION →'}</button>
+   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'SAVE TASTER & CONTINUE TO DASHBOARD →'}</button>
    <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
   </section>
-  <p style={S.note}>Completing the assessment does not grant marketplace listing. Listing eligibility depends on the full assessment, professional profile, capabilities, and applicable eligibility checks.</p>
  </Shell>;
 
  return <Shell mode="taster">

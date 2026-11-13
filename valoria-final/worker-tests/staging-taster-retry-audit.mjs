@@ -5,6 +5,9 @@ const ASSESSMENT_ORIGIN = process.env.STAGING_ASSESSMENT_URL || 'https://assessm
 const SITE_ORIGIN = process.env.STAGING_SITE_URL || 'https://staging.valoriainstitute.com';
 const TASTER_ID = '55555555-5555-4555-8555-555555555555';
 const LEAD_CAPTURE_ID = '66666666-6666-4666-8666-666666666666';
+const TASTER_START_CODE = 'staging-confirmed-account-handoff-code';
+const TASTER_START_TOKEN = 'staging-confirmed-account-session-token';
+let handoffExchangeCalls = 0;
 
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -65,6 +68,10 @@ await page.route('**/api/taster-progress*', async route => {
     const body = route.request().postDataJSON() || {};
     actions.push(body.action);
     if (body.action === 'register') {
+      assert.equal(body.taster_start_token, TASTER_START_TOKEN, 'new Taster registration must carry the confirmed-account token');
+      assert.equal(body.email, 'retry-audit@example.invalid');
+      assert.equal(body.role, 'Staging QA');
+      assert.equal(body.experience, '0-3');
       await json(route, 200, { lead_capture_id: LEAD_CAPTURE_ID });
       return;
     }
@@ -107,6 +114,29 @@ await page.route('**/api/taster-progress*', async route => {
   }
 });
 
+await page.route('**/api/submit-assessment*', async route => {
+  try {
+    const body = route.request().postDataJSON() || {};
+    assert.equal(body.action, 'exchange-taster-start-handoff');
+    assert.equal(body.handoff_code, TASTER_START_CODE);
+    handoffExchangeCalls += 1;
+    await json(route, 200, {
+      ok: true,
+      session_token: TASTER_START_TOKEN,
+      identity: {
+        email: 'retry-audit@example.invalid',
+        display_name: 'Valoria Automated Retry Test',
+        role: 'Staging QA',
+        experience: '0-3',
+        privacy_acknowledged: true,
+      },
+    });
+  } catch (error) {
+    routeErrors.push(error.message);
+    await json(route, 500, { error: 'Taster-start handoff mock failed.' });
+  }
+});
+
 await page.route('**/api/submit-taster*', async route => {
   try {
     submitCalls += 1;
@@ -133,15 +163,41 @@ await page.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith('/
 });
 
 try {
+  // Verify that a direct, tokenless assessment visit sends a new participant
+  // to the account-first signup page, not the legacy post-Taster connector.
+  const gatePage = await context.newPage();
+  let fallbackUrl = null;
+  await gatePage.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith('/valu/register'), async route => {
+    fallbackUrl = route.request().url();
+    await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Signup fallback intercepted by staging audit.</body></html>' });
+  });
+  const gateEntry = new URL('/', ASSESSMENT_ORIGIN);
+  gateEntry.searchParams.set('site_origin', SITE_ORIGIN);
+  await gatePage.goto(gateEntry.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await gatePage.getByRole('button', { name: /CREATE OR SIGN IN TO YOUR ACCOUNT/i }).click();
+  await gatePage.waitForTimeout(100);
+  assert.ok(fallbackUrl, 'tokenless assessment entry must navigate to the account-first signup page');
+  assert.equal(new URL(fallbackUrl).origin, SITE_ORIGIN, 'signup fallback must use the matching site environment');
+  assert.equal(new URL(fallbackUrl).pathname, '/valu/register/', 'signup fallback must use the account-first registration route');
+  assert.equal(new URL(fallbackUrl).searchParams.get('journey'), 'valu_taster');
+  assert.ok(!fallbackUrl.includes('/professional-signup/'), 'account-required fallback must not use the legacy post-Taster route');
+  await gatePage.close();
+
   const entry = new URL('/', ASSESSMENT_ORIGIN);
   entry.searchParams.set('site_origin', SITE_ORIGIN);
+  entry.hash = new URLSearchParams({ taster_start_code: TASTER_START_CODE }).toString();
   await page.goto(entry.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-  await page.getByPlaceholder('Your full professional name').fill('Valoria Automated Retry Test');
-  await page.getByPlaceholder('you@example.com').fill('retry-audit@example.invalid');
-  await page.getByPlaceholder('e.g. Product Manager').fill('Staging QA');
-  await page.locator('select').first().selectOption({ index: 1 });
-  await page.locator('input[type="checkbox"]').first().check();
+  await page.locator('input[autocomplete="name"]').waitFor({ state: 'visible', timeout: 20000 });
+  assert.equal(await page.locator('input[autocomplete="name"]').inputValue(), 'Valoria Automated Retry Test');
+  assert.equal(await page.locator('input[autocomplete="email"]').inputValue(), 'retry-audit@example.invalid');
+  assert.equal(await page.locator('input[autocomplete="organization-title"]').inputValue(), 'Staging QA');
+  assert.equal(await page.locator('select').first().inputValue(), '0-3');
+  assert.equal(await page.locator('input[type="checkbox"]').first().isChecked(), true);
+  assert.equal(await page.locator('input[autocomplete="name"]').isEditable(), false);
+  assert.equal(await page.locator('input[autocomplete="organization-title"]').isEditable(), false);
+  assert.equal(await page.locator('select').first().isDisabled(), true);
+  assert.equal(await page.locator('input[type="checkbox"]').first().isDisabled(), true);
   await page.getByRole('button', { name: /CONTINUE TO MY VALU INDEX TASTER/i }).click();
 
   await page.getByRole('button', { name: /BEGIN MY VALU INDEX TASTER/i }).waitFor({ state: 'visible', timeout: 20000 });
@@ -155,7 +211,7 @@ try {
     }
   }
 
-  const continueButton = page.getByRole('button', { name: /CONTINUE TO ACCOUNT CREATION/i });
+  const continueButton = page.getByRole('button', { name: /SAVE TASTER & CONTINUE TO DASHBOARD/i });
   await continueButton.waitFor({ state: 'visible', timeout: 20000 });
 
   // First attempt: taster submission commits, but the completion response is lost.
@@ -169,6 +225,7 @@ try {
   assert.equal(firstFailureStorage.pending, null, 'pending taster ID must not be written before completion is confirmed');
   assert.ok(firstFailureStorage.resume, 'resume token must remain available after the lost response');
   assert.ok(firstFailureStorage.signup, 'signup key must remain available after the lost response');
+  assert.equal(handoffExchangeCalls, 1, 'the confirmed-account handoff must be exchanged exactly once');
   assert.equal(submitCalls, 1, 'the initial taster must be submitted exactly once');
   assert.equal(completeCalls, 1, 'the first completion attempt must have occurred once');
 
@@ -188,6 +245,7 @@ try {
   assert.equal(committed, true);
   assert.ok(redirectUrl?.startsWith(SITE_ORIGIN + '/professional-signup/'), `handoff must return to the originating redesign site; received ${redirectUrl || 'no intercepted URL'}`);
   assert.ok(redirectUrl.includes('taster_id=' + TASTER_ID), 'handoff must carry the verified taster reference');
+  assert.ok(redirectUrl.includes('account_first=1'), 'account-first Taster must never return to post-Taster account creation');
   assert.ok(storageEvents.some(event => event.action === 'set' && event.key === 'pending_taster_id' && event.value === TASTER_ID), 'pending taster ID must be written only after confirmed completion');
   assert.ok(storageEvents.some(event => event.action === 'remove' && event.key === 'valu_taster_resume_token'), 'resume token must be cleared after confirmed completion');
   assert.ok(storageEvents.some(event => event.action === 'remove' && event.key === 'valu_taster_signup_key'), 'signup key must be cleared after confirmed completion');
@@ -199,6 +257,7 @@ try {
     passed: true,
     environment: 'Cloudflare staging only',
     scenario: 'completion committed but response lost; same taster reused on retry',
+    handoffExchangeCalls,
     submitCalls,
     completeCalls,
     redirectUrl,

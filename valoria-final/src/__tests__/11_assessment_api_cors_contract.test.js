@@ -30,6 +30,14 @@ describe("assessment API CORS and origin contract", () => {
     expect(source).toContain("export default withEdgeCors(baseHandler)");
   });
 
+  test("submit-assessment accepts only the explicit production and staging site/assessment origins", () => {
+    const source = read("submit-assessment.js");
+    expect(source).toContain("'https://staging.valoriainstitute.com'");
+    expect(source).toContain("'https://assessment-staging.valoriainstitute.com'");
+    expect(source).toContain("'https://valoria-assessment.riverwayse.workers.dev'");
+    expect(source).not.toContain("'*'");
+  });
+
   test("the CORS allow-list is explicit and never wildcarded", () => {
     const source = read("_cors.js");
     expect(source).toContain("'https://valoriainstitute.com'");

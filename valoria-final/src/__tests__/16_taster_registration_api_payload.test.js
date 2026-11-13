@@ -1,16 +1,32 @@
 "use strict";
 
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { EXPERIENCE_BANDS } from "../valuTaster.js";
 
 const RESUME_TOKEN = "A".repeat(43);
 const SIGNUP_KEY = "11111111-1111-4111-8111-111111111111";
+const ACCOUNT_ID = "66666666-6666-4666-8666-666666666666";
 const LEAD_CAPTURE_ID = "22222222-2222-4222-8222-222222222222";
 const PROGRESS_ID = "33333333-3333-4333-8333-333333333333";
+const TEST_SECRET = "test-staging-service-role-key";
+
+function tasterStartToken() {
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    v: 1, typ: "taster_start_session", aud: "valu-taster-start",
+    sub: ACCOUNT_ID,
+    email: "participant@example.invalid", display_name: "Staging Test Participant",
+    role: "Operations Director", experience: EXPERIENCE_BANDS[0].id, privacy_acknowledged: true,
+    iat: now, exp: now + 900, jti: "staging-test-jti-1234567890"
+  };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = createHmac("sha256", TEST_SECRET).update(encoded).digest("base64url");
+  return `${encoded}.${signature}`;
+}
 
 function loadHandler() {
   process.env.SUPABASE_URL = "https://staging-example.supabase.co";
-  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-staging-service-role-key";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = TEST_SECRET;
   const rateLimitPath = require.resolve("../../api/_rateLimit.js");
   const modulePath = require.resolve("../../api/taster-progress.js");
   delete require.cache[rateLimitPath];
@@ -32,7 +48,7 @@ function request(action = "register") {
       name: "Staging Test Participant", email: "participant@example.invalid",
       role: "Operations Director", experience: EXPERIENCE_BANDS[0].id,
       organisation: "Example Organisation", interest: "Professional visibility",
-      marketing_consent: false, privacy_acknowledged: true
+      marketing_consent: false, privacy_acknowledged: true, taster_start_token: tasterStartToken()
     }
   };
 }
@@ -50,6 +66,7 @@ function installFetch() {
   global.fetch = async (url, options = {}) => {
     calls.push({ url, options });
     if (url.includes("rpc/consume_rate_limit")) return response(200, [{ allowed: true }]);
+    if (url.includes("rest/v1/taster_progress?")) return response(200, []);
     if (url.includes("rpc/begin_valu_taster_signup")) {
       return response(200, [{ lead_capture_id: LEAD_CAPTURE_ID, progress_id: PROGRESS_ID, created: true }]);
     }
@@ -76,7 +93,7 @@ describe("registration-first taster API payload", () => {
     const rpc = calls.find(call => call.url.includes("rpc/begin_valu_taster_signup"));
     expect(rpc).toBeDefined();
     const body = JSON.parse(rpc.options.body);
-    expect(body.p_signup_key).toBe(SIGNUP_KEY);
+    expect(body.p_signup_key).toBe(ACCOUNT_ID);
     expect(body.p_resume_token_hash).toBe(createHash("sha256").update(RESUME_TOKEN).digest("hex"));
     expect(body.p_email).toBe("participant@example.invalid");
     expect(body.p_experience).toBe(EXPERIENCE_BANDS[0].id);
@@ -123,6 +140,54 @@ describe("registration-first taster API payload", () => {
     expect(completeRes.statusCode).toBe(200);
     expect(completeRes.body).toMatchObject({ completed: true, already_completed: true });
     expect(calls.some(call => call.options.method === "PATCH")).toBe(false);
+  });
+
+  test("rejects role or experience that differs from the confirmed account token", async () => {
+    for (const override of [{ role: "Finance Director" }, { experience: EXPERIENCE_BANDS[1].id }]) {
+      const calls = installFetch();
+      const req = request();
+      Object.assign(req.body, override);
+      const res = makeRes();
+      await loadHandler()(req, res);
+      expect(res.statusCode).toBe(403);
+      expect(res.body.error).toContain("professional role and experience");
+      expect(calls.some(call => call.url.includes("rpc/begin_valu_taster_signup"))).toBe(false);
+    }
+  });
+
+  test("rejects a new taster registration without a confirmed-account token", async () => {
+    const calls = installFetch();
+    const req = request();
+    delete req.body.taster_start_token;
+    const res = makeRes();
+    await loadHandler()(req, res);
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error).toContain("Create and confirm your Valoria account");
+    expect(calls.some(call => call.url.includes("rpc/begin_valu_taster_signup"))).toBe(false);
+  });
+
+  test("allows a pre-existing legacy progress row to complete its recovery registration", async () => {
+    const calls = [];
+    global.fetch = async (url, options = {}) => {
+      calls.push({ url, options });
+      if (url.includes("rpc/consume_rate_limit")) return response(200, [{ allowed: true }]);
+      if (url.includes("rest/v1/taster_progress?")) return response(200, [{
+        id: PROGRESS_ID, name: "Staging Test Participant", role: "Operations Director",
+        experience: EXPERIENCE_BANDS[0].id, email: "participant@example.invalid",
+        current_question: 2, answers: { 0: 1, 1: 0 }, status: "in_progress",
+        lead_capture_id: null, taster_version: "4.2", total_questions: 9
+      }]);
+      if (url.includes("rpc/begin_valu_taster_signup")) return response(200, [{
+        lead_capture_id: LEAD_CAPTURE_ID, progress_id: PROGRESS_ID, created: true
+      }]);
+      throw new Error("unexpected fetch: " + url);
+    };
+    const req = request();
+    delete req.body.taster_start_token;
+    const res = makeRes();
+    await loadHandler()(req, res);
+    expect(res.statusCode).toBe(200);
+    expect(calls.some(call => call.url.includes("rpc/begin_valu_taster_signup"))).toBe(true);
   });
 
   test("rejects the old anonymous init action", async () => {
