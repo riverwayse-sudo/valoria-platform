@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const source = fs.readFileSync(path.join(process.cwd(), "valoria-final/src/VALUIndexV4GateNext.jsx"), "utf8");
+const source = fs.readFileSync(path.join(process.cwd(), "src/VALUIndexV4GateNext.jsx"), "utf8");
 
 describe("account-required taster entry", () => {
   test("sends users to the account-first signup route, not the legacy post-taster recovery route", () => {
