@@ -44,7 +44,7 @@ function simulateDBResult({ valuIndex = 72, clusterScores = null, skillScores = 
     (a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0)
   );
 
-  // This replicates what fetchAssessmentByFingerprint returns in PRIMEAssessment.jsx
+  // This models the persisted result shape returned by fetchAssessmentByFingerprint.
   return {
     name: "Test User",
     role: "Test Role",
