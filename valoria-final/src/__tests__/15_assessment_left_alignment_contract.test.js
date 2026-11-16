@@ -16,12 +16,9 @@ describe("VALU assessment left-alignment contract", () => {
     const sendEmail = readRoot("api/send-email.js");
     const generatedReport = readRoot("api/generate-and-send-report.js");
     const waitlist = readRoot("public/Waitlist.html");
-    const reportPrompt = read("PRIMEAssessment.jsx");
     expect([report, sendEmail, generatedReport, waitlist].join("\\n")).not.toMatch(/VALU\s+Index\s+assessment/i);
     expect(sendEmail).toContain("Your VALU Index is complete.");
     expect(waitlist).toContain("begin the VALU Index.");
-    expect(reportPrompt).not.toContain("VALU Index assessment");
-    expect(reportPrompt).toContain("just completed the VALU Index");
   });
 
   test("the full assessment shell receives the same page class as the taster", () => {
@@ -37,9 +34,7 @@ describe("VALU assessment left-alignment contract", () => {
 
   test("assessment typography is loaded once from the shared stylesheet", () => {
     const css = read("assessment.css");
-    const legacyPrime = read("PRIMEAssessment.jsx");
     expect((css.match(/fonts\.googleapis\.com/g) || []).length).toBe(1);
-    expect(legacyPrime).not.toContain("fonts.googleapis.com");
   });
 
   test("both assessment stages expose a keyboard skip link to the main region", () => {
