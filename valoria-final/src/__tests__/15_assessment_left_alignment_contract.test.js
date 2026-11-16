@@ -17,7 +17,7 @@ describe("VALU assessment left-alignment contract", () => {
     const generatedReport = readRoot("api/generate-and-send-report.js");
     const waitlist = readRoot("public/Waitlist.html");
     const reportPrompt = read("PRIMEAssessment.jsx");
-    expect([report, sendEmail, generatedReport, waitlist].join("\\n")).not.toMatch(/VALU\s+Index\s+assessment/i);
+    expect([report, sendEmail, generatedReport, waitlist].join("\\n")).not.toMatch(/VALU\\s+Index\\s+assessment/i);
     expect(sendEmail).toContain("Your VALU Index is complete.");
     expect(waitlist).toContain("begin the VALU Index.");
     expect(reportPrompt).not.toContain("VALU Index assessment");
@@ -32,13 +32,13 @@ describe("VALU assessment left-alignment contract", () => {
 
   test("all full and taster assessment copy is left aligned, including inline-styled controls", () => {
     const css = read("assessment.css");
-    expect(css).toMatch(/\.valu-assessment-page,\s*\.valu-assessment-page\s*\*\s*\{\s*text-align:\s*left\s*!important;/);
+    expect(css).toMatch(/\\.valu-assessment-page,\\s*\\.valu-assessment-page\\s*\\*\\s*\\{\\s*text-align:\\s*left\\s*!important;/);
   });
 
   test("assessment typography is loaded once from the shared stylesheet", () => {
     const css = read("assessment.css");
     const legacyPrime = read("PRIMEAssessment.jsx");
-    expect((css.match(/fonts\.googleapis\.com/g) || []).length).toBe(1);
+    expect((css.match(/fonts\\.googleapis\\.com/g) || []).length).toBe(1);
     expect(legacyPrime).not.toContain("fonts.googleapis.com");
   });
 
@@ -86,13 +86,13 @@ describe("VALU assessment left-alignment contract", () => {
     expect(full).not.toContain("current + 1} / TOTAL_QUESTIONS");
   });
 
-  test("the legacy taster no longer queries public profiles with an anonymous key", () => {
-    const legacyGate = read("VALUIndexV4Gate.jsx");
+  test("the legacy taster import path delegates to the active account-first taster", () => {
+    const compatibilityEntry = read("prime-assessment-v4.jsx");
     const activeApp = read("VALUIndexV4App.jsx");
     expect(activeApp).toContain("VALUIndexV4GateNext");
-    expect(legacyGate).not.toContain("SUPABASE_ANON_KEY");
-    expect(legacyGate).not.toContain("professional_profiles?\u0024{params}");
-    expect(legacyGate).not.toContain("AssessmentProof");
+    expect(compatibilityEntry).toContain('from "./VALUIndexV4GateNext.jsx"');
+    expect(compatibilityEntry).toContain("<VALUIndexV4GateNext />");
+    expect(compatibilityEntry).not.toContain("VALUIndexV4Gate.jsx");
   });
 
   test("assessment navigation title begins at the left edge of its own grid cell", () => {
