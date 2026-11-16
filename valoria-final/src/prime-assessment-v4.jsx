@@ -1,9 +1,9 @@
 // PRIMEAssessment v4 compatibility entry.
-// The public UX now uses the canonical 9-question VALU taster only.
-// The authoritative question bank remains server-side/canonical and is not exposed here.
+// Preserve the historical import path while routing to the active account-first
+// taster. The formal 58-question assessment remains a separate application stage.
 import React from "react";
-import VALUIndexV4Gate from "./VALUIndexV4Gate.jsx";
+import VALUIndexV4GateNext from "./VALUIndexV4GateNext.jsx";
 
 export default function PRIMEAssessmentV4() {
-  return <VALUIndexV4Gate />;
+  return <VALUIndexV4GateNext />;
 }
