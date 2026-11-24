@@ -23,12 +23,12 @@ function validUuid(value) {
   return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 function validEmail(value) {
-  return typeof value === 'string' && value.length <= 254 && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value);
+  return typeof value === 'string' && value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 function validAnswers(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   return Object.entries(value).every(([key, answer]) => {
-    if (!/^\\d+$/.test(key)) return false;
+    if (!/^\d+$/.test(key)) return false;
     const index = Number(key);
     return index >= 0 && index < TASTER_QUESTIONS.length
       && Number.isInteger(answer) && answer >= 0 && answer < TASTER_QUESTIONS[index].options.length;
