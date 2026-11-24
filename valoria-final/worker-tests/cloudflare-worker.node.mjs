@@ -48,7 +48,7 @@ test("known API paths execute their handler instead of falling through to static
       env,
     );
     assert.equal(response.status, 405, pathname);
-    assert.match(response.headers.get("content-type") || "", /application\\/json/, pathname);
+    assert.ok((response.headers.get("content-type") || "").includes("application/json"), pathname);
   }
   assert.deepEqual(env.seen, []);
 });
