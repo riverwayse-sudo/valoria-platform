@@ -175,7 +175,7 @@ export default async function handler(req, res) {
       });
       if (!progressPatch.ok) throw new Error(`canonical progress save failed:${progressPatch.status}`);
 
-      const submitted = await rpc('submit_taster_with_identity_candidate', {
+      const submitted = await rpc('submit_taster_first_with_identity_candidate', {
         p_submission_key: session.submission_key,
         p_name: session.name,
         p_role: session.role,
