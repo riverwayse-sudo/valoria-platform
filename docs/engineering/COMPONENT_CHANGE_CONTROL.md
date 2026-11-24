@@ -102,3 +102,10 @@ A component becomes **VERIFIED — PROTECTED** only after its owner-approved acc
 ## 9. Relationship to REQS
 
 This protocol supplements and does not weaken `ENGINEERING_STANDARD.md`. Follow the stricter security, privacy, data-integrity and release requirement where rules overlap. The repository quality register is the source of truth for current status and evidence.
+
+## Display-preservation gate
+Any change affecting rendered output, route data, shared styles, assets, navigation or component behavior must follow `docs/engineering/PLATFORM_INVARIANTS.md`. Record intended display changes, protected surfaces inspected, matching desktop/mobile before-and-after checks, route/console/overflow/interaction results and an explanation for every expected difference. HTTP 200 or a successful build alone is not visual verification.
+
+If website display is out of scope, the diff must contain no runtime source, style, asset, route, configuration or migration changes. Accidental runtime-file changes block the PR until removed or separately authorized. Unexplained display differences block release.
+
+All production-bound changes must also follow `docs/engineering/PRODUCTION_RELEASE_POLICY.md`; this does not independently authorize deployment.
