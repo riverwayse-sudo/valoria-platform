@@ -8,10 +8,10 @@ const readApi = name => fs.readFileSync(path.join(__dirname, "../../api", name),
 
 describe("parallel Taster-first journey isolation", () => {
   const api = readApi("taster-first-progress.js");
-  const worker = read("../../worker.js");
+  const worker = read("../worker.js");
   const app = read("VALUIndexV4App.jsx");
   const component = read("VALUIndexTasterFirst.jsx");
-  const migration = read("../../supabase/migrations/20261124193000_preaccount_taster_first_sessions.sql");
+  const migration = read("../supabase/migrations/20261124193000_preaccount_taster_first_sessions.sql");
 
   test("Taster-first is opt-in and the current account-first experience remains the default", () => {
     expect(app).toContain('params.get("journey") === "taster-first"');
