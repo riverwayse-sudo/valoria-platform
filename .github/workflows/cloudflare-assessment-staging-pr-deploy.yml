@@ -124,6 +124,12 @@ jobs:
             fi
           done
 
+      - name: Exercise Taster-first start, save, resume, completion and retry
+        run: node ./worker-tests/staging-taster-first-e2e.mjs
+        env:
+          STAGING_ASSESSMENT_URL: https://assessment-staging.valoriainstitute.com
+          STAGING_SITE_URL: https://staging.valoriainstitute.com
+
       - name: Install pinned Playwright for staging browser retry audit
         run: npm install --no-save playwright@1.65.0
 
