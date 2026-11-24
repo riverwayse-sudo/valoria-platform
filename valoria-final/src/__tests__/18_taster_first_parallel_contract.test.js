@@ -54,11 +54,16 @@ describe("parallel Taster-first journey isolation", () => {
 
   test("completion reuses canonical idempotent registration and snapshot RPCs", () => {
     expect(api).toContain("rpc('begin_valu_taster_signup'");
-    expect(api).toContain("rpc('submit_taster_with_identity_candidate'");
+    expect(api).toContain("rpc('submit_taster_first_with_identity_candidate'");
     expect(api).toContain("p_signup_key: session.signup_key");
     expect(api).toContain("p_submission_key: session.submission_key");
     expect(api).toContain("status: 'completed', taster_id: submitted.taster_id");
     expect(api).toContain("already_completed: true");
+    expect(migration).toContain("submit_taster_first_with_identity_candidate");
+    expect(migration).toContain("all nine valid Taster answers are required");
+    expect(migration).toContain("revoke all on function public.submit_taster_first_with_identity_candidate");
+    expect(api).not.toContain("rpc('submit_taster_with_identity_candidate'");
+
   });
 
   test("the formal 58-question assessment remains separate and unchanged", () => {
