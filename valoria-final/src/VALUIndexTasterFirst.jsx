@@ -89,7 +89,7 @@ export default function VALUIndexTasterFirst({onComplete}){
    <div style={eyebrow}>A USEFUL NEXT STEP</div>
    <p style={{fontSize:13,lineHeight:1.7,color:"rgba(247,244,238,.6)",margin:"8px 0 0"}}>Create or connect your Valoria account to preserve this Taster in your professional journey. Your separate full VALU Index will be available from your dashboard.</p>
   </div>
-  <button onClick={()=>{if(onComplete)onComplete({tasterId,name,role,experience,email:email.trim().toLowerCase()});}} disabled={saving||failed||!tasterId} style={{...button,opacity:saving||failed||!tasterId?.55:1}}>{saving?"SAVING YOUR READ…":failed?"SAVE FAILED — RETRY REQUIRED":"CREATE MY VALORIA ACCOUNT →"}</button>
+  <button onClick={()=>{if(onComplete)onComplete({tasterId,name,role,experience,email:email.trim().toLowerCase()});}} disabled={saving||failed||!tasterId} style={{...button,opacity:(saving||failed||!tasterId)?0.55:1}}>{saving?"SAVING YOUR READ…":failed?"SAVE FAILED — RETRY REQUIRED":"CREATE MY VALORIA ACCOUNT →"}</button>
   <p style={{fontSize:11,lineHeight:1.6,color:"rgba(247,244,238,.27)",textAlign:"center",marginTop:16}}>Your saved responses remain separate from your full VALU Index.</p>
  </div></div>;
 }
