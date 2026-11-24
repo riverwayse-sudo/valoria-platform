@@ -16,6 +16,15 @@
 - [ ] Logs, monitoring and recovery behaviour reviewed
 - [ ] No participant data or consent changed without explicit approval
 
+## Website display preservation (required when UI, data projections, routes or shared dependencies are affected)
+- **Intended display changes:**
+- **Protected display surfaces inspected:**
+- **Desktop baseline/after verification:**
+- **Mobile baseline/after verification:**
+- **Routes, console, overflow and interactions:**
+- [ ] No unexplained display regression remains
+- [ ] If display is out of scope, no runtime/UI/configuration/migration files were changed
+
 ## Verification evidence
 - [ ] Static analysis / lint / type checks (where configured)
 - [ ] Unit tests
