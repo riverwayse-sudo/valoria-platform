@@ -12,6 +12,7 @@ describe("parallel Taster-first journey isolation", () => {
   const app = read("VALUIndexV4App.jsx");
   const component = read("VALUIndexTasterFirst.jsx");
   const migration = read("../supabase/migrations/20261124193000_preaccount_taster_first_sessions.sql");
+  const submissionMigration = read("../supabase/migrations/20261124213000_submit_taster_first_with_identity_candidate.sql");
 
   test("Taster-first is opt-in and the current account-first experience remains the default", () => {
     expect(app).toContain('params.get("journey") === "taster-first"');
@@ -59,9 +60,9 @@ describe("parallel Taster-first journey isolation", () => {
     expect(api).toContain("p_submission_key: session.submission_key");
     expect(api).toContain("status: 'completed', taster_id: submitted.taster_id");
     expect(api).toContain("already_completed: true");
-    expect(migration).toContain("submit_taster_first_with_identity_candidate");
-    expect(migration).toContain("all nine valid Taster answers are required");
-    expect(migration).toContain("revoke all on function public.submit_taster_first_with_identity_candidate");
+    expect(submissionMigration).toContain("submit_taster_first_with_identity_candidate");
+    expect(submissionMigration).toContain("all nine valid Taster answers are required");
+    expect(submissionMigration).toContain("revoke all on function public.submit_taster_first_with_identity_candidate");
     expect(api).not.toContain("rpc('submit_taster_with_identity_candidate'");
 
   });
