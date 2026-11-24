@@ -99,12 +99,12 @@ export default async function handler(req, res) {
       });
       if (!response.ok) {
         const detail = await response.text().catch(() => '');
-        console.error('taster-first:start failed', response.status, detail.slice(0, 300));
+        console.error('taster-first:start failed', { status: response.status });
         return json(res, 502, { error: 'We could not securely start your Taster. Please retry.' });
       }
       return json(res, 201, { resume_token: token, submission_key: submissionKey, current_question: 0, answers: {} });
     } catch (error) {
-      console.error('taster-first:start error', error?.message || error);
+      console.error('taster-first:start error', { name: error?.name || 'Error' });
       return json(res, 502, { error: 'We could not start your Taster. Please retry.' });
     }
   }
@@ -206,7 +206,7 @@ export default async function handler(req, res) {
 
     return json(res, 400, { error: 'Unsupported Taster-first action.' });
   } catch (error) {
-    console.error('taster-first operation failed', error?.message || error);
+    console.error('taster-first operation failed', { action, name: error?.name || 'Error' });
     return json(res, 502, { error: 'We could not complete that step. Your saved answers remain available; please retry.' });
   }
 }
