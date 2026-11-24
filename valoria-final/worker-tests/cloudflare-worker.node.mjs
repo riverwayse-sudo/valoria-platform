@@ -67,12 +67,14 @@ test("assessment API preflight allows the production site and exact preview orig
     "https://staging.valoriainstitute.com",
     "https://assessment-staging.valoriainstitute.com",
   ]) {
-    const response = await worker.fetch(new Request("https://assessment.example/api/taster-progress", {
-      method: "OPTIONS",
-      headers: { Origin: origin },
-    }), env);
-    assert.equal(response.status, 204, origin);
-    assert.equal(response.headers.get("access-control-allow-origin"), origin);
+    for (const pathname of ["/api/taster-progress", "/api/taster-first-progress"]) {
+      const response = await worker.fetch(new Request("https://assessment.example" + pathname, {
+        method: "OPTIONS",
+        headers: { Origin: origin },
+      }), env);
+      assert.equal(response.status, 204, pathname + " " + origin);
+      assert.equal(response.headers.get("access-control-allow-origin"), origin);
+    }
   }
 });
 
