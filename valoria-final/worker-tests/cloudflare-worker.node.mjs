@@ -42,12 +42,14 @@ test("Vite asset URLs retain their filename after the assessment prefix is remov
 
 test("known API paths execute their handler instead of falling through to static assets", async () => {
   const env = makeEnv();
-  const response = await worker.fetch(
-    new Request("https://assessment.example/api/taster-progress", { method: "GET" }),
-    env,
-  );
-  assert.equal(response.status, 405);
-  assert.match(response.headers.get("content-type") || "", /application\/json/);
+  for (const pathname of ["/api/taster-progress", "/api/taster-first-progress"]) {
+    const response = await worker.fetch(
+      new Request("https://assessment.example" + pathname, { method: "GET" }),
+      env,
+    );
+    assert.equal(response.status, 405, pathname);
+    assert.match(response.headers.get("content-type") || "", /application\\/json/, pathname);
+  }
   assert.deepEqual(env.seen, []);
 });
 
