@@ -1,25 +1,37 @@
 name: Supabase Health Check
 
-# Prevents Supabase free-tier projects from auto-pausing after 7 days of inactivity.
-# Runs every 5 minutes to keep the project active.
-
+# Read-only service checks. A failed endpoint must fail this workflow rather
+# than being converted into a successful "health check attempted" message.
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Every 5 minutes
-  workflow_dispatch:         # Allow manual trigger
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   health-check:
+    name: Verify site and assessment data paths
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
-      - name: Health check valoria-platform
+      - name: Check Valoria site database health
+        shell: bash
         run: |
-          # Ping the production site to keep Supabase active
-          # Replace with your actual production URL
-          curl -f -s -o /dev/null "https://valoriainstitute.com" || \
-          curl -f -s -o /dev/null "https://valoriainstitute.com/valu/assessment" || \
-          echo "Health check attempted"
-        
-      - name: Log timestamp
+          set -euo pipefail
+          status="$(curl --silent --show-error --fail --retry 2 --retry-all-errors --retry-delay 3 --max-time 20 -o /dev/null -w '%{http_code}' 'https://valoriainstitute.com/api/health')"
+          echo "Valoria site health endpoint: HTTP ${status}"
+
+      - name: Check assessment platform operational status
+        shell: bash
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          echo "Last health check: $(date -u)"
+          set -euo pipefail
+          test -n "${CRON_SECRET}" || { echo "CRON_SECRET is not configured"; exit 1; }
+          status="$(curl --silent --show-error --fail --retry 2 --retry-all-errors --retry-delay 3 --max-time 20 -H "Authorization: Bearer ${CRON_SECRET}" -o /dev/null -w '%{http_code}' 'https://assessment.valoriainstitute.com/api/system-status')"
+          echo "Assessment platform operational endpoint: HTTP ${status}"
+
+      - name: Record check time
+        run: echo "Read-only health checks passed at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
