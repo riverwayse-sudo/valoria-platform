@@ -98,8 +98,8 @@ async function serveAssessmentAsset(request, env) {
     assetPath = "/index.html";
   } else if (assetPath.startsWith("/valu/assessment/")) {
     assetPath = assetPath.slice("/valu/assessment".length);
-    if (!assetPath || assetPath === "/" || !/\\.[a-z0-9]+$/i.test(assetPath)) assetPath = "/index.html";
-  } else if (assetPath.startsWith("/assets/") && !/\\.[a-z0-9]+$/i.test(assetPath)) assetPath = "/index.html";
+    if (!assetPath || assetPath === "/" || !/\.[a-z0-9]+$/i.test(assetPath)) assetPath = "/index.html";
+  } else if (assetPath.startsWith("/assets/") && !/\.[a-z0-9]+$/i.test(assetPath)) assetPath = "/index.html";
   url.pathname = assetPath;
   return env.ASSETS.fetch(new Request(url, request));
 }
