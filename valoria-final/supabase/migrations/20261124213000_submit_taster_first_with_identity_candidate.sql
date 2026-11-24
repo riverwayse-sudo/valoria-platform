@@ -25,17 +25,17 @@ as $function$
 declare
   v_id uuid;
   v_created boolean := false;
-  v_email text := pg_catalog.lower(pg_catalog.btrim(pg_catalog.coalesce(p_email, '')));
+  v_email text := pg_catalog.lower(pg_catalog.btrim(coalesce(p_email, '')));
   v_existing public.taster_sessions%rowtype;
   v_candidate_lead_id uuid;
 begin
   if p_submission_key is null or p_lead_capture_id is null then
     raise exception 'submission and lead references are required' using errcode = '22023';
   end if;
-  if pg_catalog.btrim(pg_catalog.coalesce(p_name, '')) = '' or pg_catalog.length(pg_catalog.btrim(p_name)) > 200 then
+  if pg_catalog.btrim(coalesce(p_name, '')) = '' or pg_catalog.length(pg_catalog.btrim(p_name)) > 200 then
     raise exception 'valid name is required' using errcode = '22023';
   end if;
-  if pg_catalog.btrim(pg_catalog.coalesce(p_role, '')) = '' or pg_catalog.length(pg_catalog.btrim(p_role)) > 160 then
+  if pg_catalog.btrim(coalesce(p_role, '')) = '' or pg_catalog.length(pg_catalog.btrim(p_role)) > 160 then
     raise exception 'valid role is required' using errcode = '22023';
   end if;
   if pg_catalog.length(v_email) > 254 or v_email !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$' then
@@ -66,7 +66,7 @@ begin
   perform 1
   from public.lead_captures
   where id = p_lead_capture_id
-    and pg_catalog.lower(pg_catalog.coalesce(email, '')) = v_email
+    and pg_catalog.lower(coalesce(email, '')) = v_email
     and full_name = pg_catalog.btrim(p_name)
     and role = pg_catalog.btrim(p_role)
     and raw_payload ->> 'experience' = p_experience
