@@ -33,7 +33,8 @@ describe("parallel Taster-first journey isolation", () => {
     expect(migration).toContain("grant all on table public.valu_preaccount_taster_progress to service_role");
     expect(api).toContain("createHash('sha256')");
     expect(api).toContain("randomBytes(32).toString('base64url')");
-    expect(api).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(component).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(api).toContain("process.env.SUPABASE_SERVICE_ROLE_KEY");
   });
 
   test("start requires privacy acknowledgement and applies IP and email rate limits", () => {
