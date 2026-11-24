@@ -120,9 +120,9 @@ begin
   )
   on conflict on constraint taster_identity_candidates_pkey do nothing;
 
-  select lead_capture_id into v_candidate_lead_id
-  from public.taster_identity_candidates
-  where taster_id = v_id;
+  select candidate.lead_capture_id into v_candidate_lead_id
+  from public.taster_identity_candidates as candidate
+  where candidate.taster_id = v_id;
 
   if v_candidate_lead_id is distinct from p_lead_capture_id then
     raise exception 'Taster identity candidate is linked to a different registration' using errcode = '23505';
