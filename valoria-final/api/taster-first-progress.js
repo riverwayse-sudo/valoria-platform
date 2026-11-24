@@ -80,6 +80,7 @@ export default async function handler(req, res) {
       || organisation.length > 180 || interest.length > 120 || body.privacy_acknowledged !== true) {
       return json(res, 400, { error: 'Complete your details and acknowledge the Privacy Notice before starting.' });
     }
+    if (!await enforceRateLimit(req, res, { namespace: 'taster-first-email', limit: 3, windowSeconds: 3600, subject: email })) return;
     const token = randomBytes(32).toString('base64url');
     const tokenHash = hashToken(token);
     const signupKey = randomUUID();
