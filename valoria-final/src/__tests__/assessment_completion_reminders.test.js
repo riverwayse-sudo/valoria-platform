@@ -26,7 +26,8 @@ describe("Assessment completion reminder delivery failure contract", () => {
   });
 
   test("partial delivery failures return a non-success HTTP response with aggregate counts", () => {
-    expect(source).toContain("if(failed>0) return Response.json({ok:false,...summary},{status:502})");
+    expect(source).toContain('console.error("assessment-completion-reminders-delivery-failed",summary)');
+    expect(source).toContain("return Response.json({ok:false,...summary},{status:502})");
     expect(source).toContain("const summary={candidates:candidates.filter(c=>!c.done).length,due:dueRes.data?.length??0,sent,failed,skipped}");
   });
 });
