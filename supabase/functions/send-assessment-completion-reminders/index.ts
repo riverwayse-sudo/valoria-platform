@@ -96,8 +96,10 @@ async function sendEmail(candidate) {
       tags:["valoria","assessment-completion",missingAssessment?"assessment":"profile"]
     })
   })
-  const text = await response.text()
-  if (!response.ok) throw new Error("BREVO_EMAIL_"+response.status+": "+text.slice(0,300))
+  if (!response.ok) {
+    try { await response.body?.cancel() } catch {}
+    throw new Error("BREVO_EMAIL_"+response.status)
+  }
 }
 
 Deno.serve(async(req)=>{
@@ -159,16 +161,25 @@ Deno.serve(async(req)=>{
         sent++
       } catch(err) {
         failed++
+        const rawError=String(err?.message??err)
+        const errorCode=rawError.match(/^BREVO_EMAIL_\\d{3}/)?.[0]
+          ?? (rawError === "BREVO_NOT_CONFIGURED" ? rawError : "EMAIL_DELIVERY_FAILED")
+        const permanentAuthFailure=/^BREVO_EMAIL_(401|403)$/.test(errorCode)
         const retryMinutes=Math.min(1440,Math.max(30,2**Math.min(attemptCount,8)*5))
+        const nextSendAt=permanentAuthFailure
+          ? "9999-12-31T00:00:00.000Z"
+          : new Date(Date.now()+retryMinutes*60000).toISOString()
         await db.from("assessment_completion_reminders").update({
-          last_error:String(err?.message??err).slice(0,500),
-          next_send_at:new Date(Date.now()+retryMinutes*60000).toISOString(),
+          last_error:errorCode,
+          next_send_at:nextSendAt,
           updated_at:new Date().toISOString()
         }).eq("user_id",row.user_id)
       }
     }
 
-    return Response.json({ok:true,candidates:candidates.filter(c=>!c.done).length,due:dueRes.data?.length??0,sent,failed,skipped})
+    const summary={candidates:candidates.filter(c=>!c.done).length,due:dueRes.data?.length??0,sent,failed,skipped}
+    if(failed>0) return Response.json({ok:false,...summary},{status:502})
+    return Response.json({ok:true,...summary})
   } catch(err) {
     console.error("assessment-completion-reminders",err)
     return Response.json({ok:false,error:String(err?.message??err).slice(0,500)},{status:500})
