@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from '../src/valuTaster.js';
 import { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION, computeLegacyTasterResult } from '../src/valuTasterLegacy.js';
+import { LEGACY_15_TASTER_QUESTIONS, LEGACY_15_TASTER_VERSION, computeLegacy15TasterResult } from '../src/valuTasterLegacy15.js';
 import { applyCors, handlePreflight } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
