@@ -16,6 +16,7 @@ on:
       - "valoria-final/wrangler.jsonc"
       - "valoria-final/package.json"
       - "valoria-final/package-lock.json"
+      - ".github/workflows/cloudflare-assessment-staging-pr-deploy.yml"
 
 permissions:
   contents: read
