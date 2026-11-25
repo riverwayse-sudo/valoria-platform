@@ -109,4 +109,13 @@ describe("separate VALU taster and formal assessment contracts", () => {
     expect(Object.values(result.normalisedSkills).every(Number.isFinite)).toBe(true);
     expect(result.completedQuestions).toBe(0);
   });
+  test("pre-account Taster registrations are pinned to v4.2 while the formal instrument stays independent", () => {
+    const preaccountMigration = fs.readFileSync(path.join(__dirname, "../../supabase/migrations/20261124193000_preaccount_taster_first_sessions.sql"), "utf8");
+    const submitMigration = fs.readFileSync(path.join(__dirname, "../../supabase/migrations/20261124213000_submit_taster_first_with_identity_candidate.sql"), "utf8");
+    expect(preaccountMigration).toContain("taster_version text not null default '4.2'");
+    expect(submitMigration).toContain("p_taster_version is distinct from '4.2'");
+    expect(TASTER_QUESTIONS).toHaveLength(9);
+    expect(QUESTIONS).toHaveLength(58);
+  });
+
 });
