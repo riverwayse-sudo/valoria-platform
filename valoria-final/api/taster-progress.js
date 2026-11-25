@@ -43,6 +43,7 @@ async function consumeRegistrationRateLimit(req) {
 function questionBankForVersion(version) {
   if (version === VALU_VERSION) return TASTER_QUESTIONS;
   if (version === LEGACY_TASTER_VERSION) return LEGACY_TASTER_QUESTIONS;
+  if (version === LEGACY_15_TASTER_VERSION || version === '4.0') return LEGACY_15_TASTER_QUESTIONS;
   return null;
 }
 
