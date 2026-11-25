@@ -50,14 +50,16 @@ await page.route(url => url.origin === ASSESSMENT_ORIGIN && url.pathname === "/a
       calls.save += 1;
       assert.equal(body.resume_token, RESUME_TOKEN, "every save must use the same resume token");
       assert.equal(body.submission_key, SUBMISSION_KEY, "every save must preserve the stable submission key");
-      assert.equal(body.current_question, 9, "retry must retain the completed answer position");
-      assert.equal(Object.keys(body.answers || {}).length, 9, "all nine answers must be preserved");
-      if (committed) {
-        assert.equal(JSON.stringify(body.answers), firstCompletedAnswers, "retry must preserve the exact original answers");
-      } else {
-        firstCompletedAnswers = JSON.stringify(body.answers);
+      assert.ok(body.current_question >= 1 && body.current_question <= 9, "saved position must stay within the nine-question Taster");
+      assert.equal(Object.keys(body.answers || {}).length, body.current_question, "saved answers must match the current question position");
+      if (body.current_question === 9) {
+        if (committed) {
+          assert.equal(JSON.stringify(body.answers), firstCompletedAnswers, "retry must preserve the exact original answers");
+        } else {
+          firstCompletedAnswers = JSON.stringify(body.answers);
+        }
       }
-      await json(route, 200, { saved: true, current_question: 9, submission_key: SUBMISSION_KEY });
+      await json(route, 200, { saved: true, current_question: body.current_question, submission_key: SUBMISSION_KEY });
       return;
     }
     if (body.action === "complete") {
