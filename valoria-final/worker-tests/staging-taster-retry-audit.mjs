@@ -1,269 +1,192 @@
-import assert from 'node:assert/strict';
-import { chromium } from 'playwright';
+import assert from "node:assert/strict";
+import { chromium } from "playwright";
 
-const ASSESSMENT_ORIGIN = process.env.STAGING_ASSESSMENT_URL || 'https://assessment-staging.valoriainstitute.com';
-const SITE_ORIGIN = process.env.STAGING_SITE_URL || 'https://staging.valoriainstitute.com';
-const TASTER_ID = '55555555-5555-4555-8555-555555555555';
-const LEAD_CAPTURE_ID = '66666666-6666-4666-8666-666666666666';
-const TASTER_START_CODE = 'staging-confirmed-account-handoff-code';
-const TASTER_START_TOKEN = 'staging-confirmed-account-session-token';
-let handoffExchangeCalls = 0;
+const ASSESSMENT_ORIGIN = (process.env.STAGING_ASSESSMENT_URL || "https://assessment-staging.valoriainstitute.com").replace(/\/$/, "");
+const SITE_ORIGIN = process.env.STAGING_SITE_URL || "https://staging.valoriainstitute.com";
+const TASTER_ID = "66666666-6666-4666-8666-666666666666";
+const RESUME_TOKEN = "staging-taster-first-resume-token-12345678901234567890";
+const SUBMISSION_KEY = "77777777-7777-4777-8777-777777777777";
 
-const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
-const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-const page = await context.newPage();
-
-const actions = [];
-const storageEvents = [];
+const calls = { start: 0, save: 0, complete: 0 };
+const routeErrors = [];
 const pageErrors = [];
 const forbiddenRequests = [];
-const routeErrors = [];
 let committed = false;
-let submissionKey = null;
-let completedAnswers = null;
-let submitCalls = 0;
-let completeCalls = 0;
+let firstCompletedAnswers = null;
 let redirectUrl = null;
-let redirectStorage = null;
-let resolveRedirectHandled;
-const redirectHandled = new Promise(resolve => { resolveRedirectHandled = resolve; });
 
-await context.exposeBinding('auditStorage', (_source, event) => storageEvents.push(event));
-await page.addInitScript(() => {
-  localStorage.clear();
-  sessionStorage.clear();
-  const watched = new Set(['pending_taster_id', 'valu_taster_resume_token', 'valu_taster_signup_key']);
-  const originalSet = Storage.prototype.setItem;
-  const originalRemove = Storage.prototype.removeItem;
-  Storage.prototype.setItem = function (key, value) {
-    if (this === window.localStorage && watched.has(key)) {
-      void window.auditStorage?.({ action: 'set', key, value: String(value) });
-    }
-    return originalSet.call(this, key, value);
-  };
-  Storage.prototype.removeItem = function (key) {
-    if (this === window.localStorage && watched.has(key)) {
-      void window.auditStorage?.({ action: 'remove', key });
-    }
-    return originalRemove.call(this, key);
-  };
-});
+const browser = await chromium.launch({ headless: true });
+const context = await browser.newContext({ viewport: { width: 1365, height: 900 } });
+const page = await context.newPage();
 
-page.on('pageerror', error => pageErrors.push(error.message));
-page.on('request', request => {
+page.on("pageerror", error => pageErrors.push(error.message));
+page.on("request", request => {
   try {
     const url = new URL(request.url());
-    if (['valoriainstitute.com', 'www.valoriainstitute.com', 'assessment.valoriainstitute.com'].includes(url.hostname)) {
+    if (["valoriainstitute.com", "www.valoriainstitute.com", "assessment.valoriainstitute.com"].includes(url.hostname)) {
       forbiddenRequests.push(request.url());
     }
   } catch {}
 });
 
 async function json(route, status, body) {
-  await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+  await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 }
 
-await page.route('**/api/taster-progress*', async route => {
+await page.route(url => url.origin === ASSESSMENT_ORIGIN && url.pathname === "/api/taster-first-progress", async route => {
   try {
     const body = route.request().postDataJSON() || {};
-    actions.push(body.action);
-    if (body.action === 'register') {
-      assert.equal(body.taster_start_token, TASTER_START_TOKEN, 'new Taster registration must carry the confirmed-account token');
-      assert.equal(body.email, 'retry-audit@example.invalid');
-      assert.equal(body.role, 'Staging QA');
-      assert.equal(body.experience, '0-3');
-      await json(route, 200, { lead_capture_id: LEAD_CAPTURE_ID });
+    if (body.action === "start") {
+      calls.start += 1;
+      assert.equal(body.name, "Valoria Automated Retry Test");
+      assert.equal(body.role, "Staging QA");
+      assert.equal(body.email, "retry-audit@example.invalid");
+      assert.equal(body.experience, "0-3");
+      assert.equal(body.privacy_acknowledged, true);
+      await json(route, 200, { resume_token: RESUME_TOKEN, submission_key: SUBMISSION_KEY });
       return;
     }
-    if (body.action === 'save') {
-      if (body.submission_key) submissionKey = body.submission_key;
-      if (body.current_question === 9 && !committed) completedAnswers = JSON.stringify(body.answers || {});
+    if (body.action === "save") {
+      calls.save += 1;
+      assert.equal(body.resume_token, RESUME_TOKEN, "every save must use the same resume token");
+      assert.equal(body.submission_key, SUBMISSION_KEY, "every save must preserve the stable submission key");
+      assert.equal(body.current_question, 9, "retry must retain the completed answer position");
+      assert.equal(Object.keys(body.answers || {}).length, 9, "all nine answers must be preserved");
       if (committed) {
-        assert.equal(body.submission_key, submissionKey, 'retry must preserve the original submission key');
-        assert.equal(body.current_question, 9, 'completed retry must preserve the completed answer count');
-        assert.equal(JSON.stringify(body.answers || {}), completedAnswers, 'retry must preserve the exact original answers');
-        await json(route, 200, {
-          saved: true,
-          completed: true,
-          taster_id: TASTER_ID,
-          submission_key: submissionKey,
-        });
-        return;
+        assert.equal(JSON.stringify(body.answers), firstCompletedAnswers, "retry must preserve the exact original answers");
+      } else {
+        firstCompletedAnswers = JSON.stringify(body.answers);
       }
-      await json(route, 200, { saved: true, submission_key: body.submission_key || null });
+      await json(route, 200, { saved: true, current_question: 9, submission_key: SUBMISSION_KEY });
       return;
     }
-    if (body.action === 'complete') {
-      completeCalls += 1;
-      assert.equal(body.taster_id, TASTER_ID);
-      assert.ok(body.submission_key, 'completion must carry the stable submission key');
-      assert.equal(body.submission_key, submissionKey);
-      if (completeCalls === 1) {
-        // The server has committed the completion, but the browser loses the response.
+    if (body.action === "complete") {
+      calls.complete += 1;
+      assert.equal(body.resume_token, RESUME_TOKEN);
+      if (calls.complete === 1) {
+        // The server commits the result but the browser loses the response.
         committed = true;
-        await json(route, 502, { error: 'Simulated response loss after completion commit.' });
+        await json(route, 502, { error: "Simulated response loss after completion commit." });
         return;
       }
-      await json(route, 200, { completed: true, already_completed: true });
+      await json(route, 200, {
+        completed: true,
+        already_completed: true,
+        taster_id: TASTER_ID,
+        results: { intelligenceScore: 72, points: { I: 72 }, normalisedSkills: {} },
+      });
       return;
     }
-    await json(route, 400, { error: 'Unexpected progress action in retry audit.' });
+    if (body.action === "load") {
+      await json(route, 200, { progress: { status: "completed", taster_id: TASTER_ID, current_question: 9, answers: {} } });
+      return;
+    }
+    await json(route, 400, { error: "Unexpected Taster-first progress action." });
   } catch (error) {
     routeErrors.push(error.message);
-    await json(route, 500, { error: 'Retry audit mock failed.' });
+    await json(route, 500, { error: "Taster-first retry audit mock failed." });
   }
 });
 
-await page.route('**/api/submit-assessment*', async route => {
-  try {
-    const body = route.request().postDataJSON() || {};
-    assert.equal(body.action, 'exchange-taster-start-handoff');
-    assert.equal(body.handoff_code, TASTER_START_CODE);
-    handoffExchangeCalls += 1;
-    await json(route, 200, {
-      ok: true,
-      session_token: TASTER_START_TOKEN,
-      identity: {
-        email: 'retry-audit@example.invalid',
-        display_name: 'Valoria Automated Retry Test',
-        role: 'Staging QA',
-        experience: '0-3',
-        privacy_acknowledged: true,
-      },
-    });
-  } catch (error) {
-    routeErrors.push(error.message);
-    await json(route, 500, { error: 'Taster-start handoff mock failed.' });
-  }
-});
-
-await page.route('**/api/submit-taster*', async route => {
-  try {
-    submitCalls += 1;
-    const body = route.request().postDataJSON() || {};
-    assert.ok(body.resume_token, 'submission must use the registered resume token');
-    assert.equal(body.submission_key, submissionKey, 'submission must use the stable submission key');
-    await json(route, 200, { taster_id: TASTER_ID });
-  } catch (error) {
-    routeErrors.push(error.message);
-    await json(route, 500, { error: 'Retry audit submission mock failed.' });
-  }
-});
-
-await page.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith('/professional-signup'), async route => {
+await page.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith("/professional-signup/"), async route => {
   redirectUrl = route.request().url();
-  // Do not evaluate the page during a cross-origin navigation interception.
-  // The init-script storageEvents capture the exact writes/removals without racing navigation.
-  redirectStorage = 'verified via storageEvents';
-  try {
-    await route.abort();
-  } finally {
-    resolveRedirectHandled();
-  }
+  await route.abort();
 });
 
 try {
-  // Verify that a direct, tokenless assessment visit sends a new participant
-  // to the account-first signup page, not the legacy post-Taster connector.
-  const gatePage = await context.newPage();
-  let fallbackUrl = null;
-  await gatePage.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith('/valu/register'), async route => {
-    fallbackUrl = route.request().url();
-    await route.fulfill({ status: 200, contentType: 'text/html', body: '<html><body>Signup fallback intercepted by staging audit.</body></html>' });
-  });
-  const gateEntry = new URL('/', ASSESSMENT_ORIGIN);
-  gateEntry.searchParams.set('site_origin', SITE_ORIGIN);
-  await gatePage.goto(gateEntry.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await gatePage.getByRole('button', { name: /CREATE OR SIGN IN TO YOUR ACCOUNT/i }).click();
-  await gatePage.waitForTimeout(100);
-  assert.ok(fallbackUrl, 'tokenless assessment entry must navigate to the account-first signup page');
-  assert.equal(new URL(fallbackUrl).origin, SITE_ORIGIN, 'signup fallback must use the matching site environment');
-  assert.equal(new URL(fallbackUrl).pathname, '/valu/register/', 'signup fallback must use the account-first registration route');
-  assert.equal(new URL(fallbackUrl).searchParams.get('journey'), 'valu_taster');
-  assert.ok(!fallbackUrl.includes('/professional-signup/'), 'account-required fallback must not use the legacy post-Taster route');
-  await gatePage.close();
+  const entry = new URL("/", ASSESSMENT_ORIGIN);
+  entry.searchParams.set("site_origin", SITE_ORIGIN);
+  await page.goto(entry.toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
 
-  const entry = new URL('/', ASSESSMENT_ORIGIN);
-  entry.searchParams.set('site_origin', SITE_ORIGIN);
-  entry.hash = new URLSearchParams({ taster_start_code: TASTER_START_CODE }).toString();
-  await page.goto(entry.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
+  // The canonical public entry is the Taster itself, not account-first registration.
+  await page.getByPlaceholder("Full name").fill("Valoria Automated Retry Test");
+  await page.getByPlaceholder("e.g. Senior Marketing Manager").fill("Staging QA");
+  await page.getByPlaceholder("you@example.com").fill("retry-audit@example.invalid");
+  await page.getByRole("button", { name: /Select your experience/i }).click();
+  await page.getByRole("button", { name: /0 – 3 years/i }).click();
+  await page.locator('input[type="checkbox"]').first().check();
+  await page.getByRole("button", { name: /START THE VALU INDEX TASTER/i }).click();
 
-  await page.locator('input[autocomplete="name"]').waitFor({ state: 'visible', timeout: 20000 });
-  assert.equal(await page.locator('input[autocomplete="name"]').inputValue(), 'Valoria Automated Retry Test');
-  assert.equal(await page.locator('input[autocomplete="email"]').inputValue(), 'retry-audit@example.invalid');
-  assert.equal(await page.locator('input[autocomplete="organization-title"]').inputValue(), 'Staging QA');
-  assert.equal(await page.locator('select').first().inputValue(), '0-3');
-  assert.equal(await page.locator('input[type="checkbox"]').first().isChecked(), true);
-  assert.equal(await page.locator('input[autocomplete="name"]').isEditable(), false);
-  assert.equal(await page.locator('input[autocomplete="organization-title"]').isEditable(), false);
-  assert.equal(await page.locator('select').first().isDisabled(), true);
-  assert.equal(await page.locator('input[type="checkbox"]').first().isDisabled(), true);
-  await page.getByRole('button', { name: /CONTINUE TO MY VALU INDEX TASTER/i }).click();
+  assert.equal(calls.start, 1, "Taster-first must start exactly one saved session");
+  assert.equal(await page.evaluate(() => localStorage.getItem("pending_taster_id")), null,
+    "the account-linking Taster ID must not exist before completion");
 
-  await page.getByRole('button', { name: /BEGIN MY VALU INDEX TASTER/i }).waitFor({ state: 'visible', timeout: 20000 });
-  await page.getByRole('button', { name: /BEGIN MY VALU INDEX TASTER/i }).click();
-
-  for (let i = 0; i < 9; i += 1) {
-    await page.locator('.valu-option').first().waitFor({ state: 'visible', timeout: 15000 });
-    await page.locator('.valu-option').first().click();
-    if (i < 8) {
-      await page.waitForTimeout(250);
-    }
+  // Answer the first eight questions normally.
+  for (let index = 0; index < 8; index += 1) {
+    await page.locator(".valu-option").first().waitFor({ state: "visible", timeout: 20000 });
+    await page.locator(".valu-option").first().click();
+    await page.waitForTimeout(350);
   }
 
-  const continueButton = page.getByRole('button', { name: /SAVE TASTER & CONTINUE TO DASHBOARD/i });
-  await continueButton.waitFor({ state: 'visible', timeout: 20000 });
+  // First completion commits server-side but the response is lost.
+  await page.locator(".valu-option").first().waitFor({ state: "visible", timeout: 20000 });
+  await page.locator(".valu-option").first().click();
+  await page.getByRole("alert").filter({ hasText: "Simulated response loss after completion commit." }).waitFor({ state: "visible", timeout: 20000 });
 
-  // First attempt: taster submission commits, but the completion response is lost.
-  await continueButton.click();
-  await page.getByRole('alert').filter({ hasText: 'Simulated response loss after completion commit.' }).waitFor({ state: 'visible', timeout: 20000 });
-  const firstFailureStorage = await page.evaluate(() => ({
-    pending: localStorage.getItem('pending_taster_id'),
-    resume: localStorage.getItem('valu_taster_resume_token'),
-    signup: localStorage.getItem('valu_taster_signup_key'),
+  const failedAttemptStorage = await page.evaluate(() => ({
+    pendingTasterId: localStorage.getItem("pending_taster_id"),
+    resumeToken: localStorage.getItem("valu_taster_first_resume_token"),
   }));
-  assert.equal(firstFailureStorage.pending, null, 'pending taster ID must not be written before completion is confirmed');
-  assert.ok(firstFailureStorage.resume, 'resume token must remain available after the lost response');
-  assert.ok(firstFailureStorage.signup, 'signup key must remain available after the lost response');
-  assert.equal(handoffExchangeCalls, 1, 'the confirmed-account handoff must be exchanged exactly once');
-  assert.equal(submitCalls, 1, 'the initial taster must be submitted exactly once');
-  assert.equal(completeCalls, 1, 'the first completion attempt must have occurred once');
+  assert.equal(failedAttemptStorage.pendingTasterId, null,
+    "the Taster must not be linked to an account before confirmed completion");
+  assert.equal(failedAttemptStorage.resumeToken, RESUME_TOKEN,
+    "the resume token must remain available after a lost response");
+  assert.equal(calls.complete, 1);
 
-  // Retry: the API reports the already-committed taster and the browser must not resubmit it.
+  // Retry the final answer. The server returns the same committed Taster.
+  await page.locator(".valu-option").first().waitFor({ state: "visible", timeout: 20000 });
+  await page.locator(".valu-option").first().click();
+  await page.getByRole("heading", { name: /Your first signal is ready/i }).waitFor({ state: "visible", timeout: 20000 });
+
+  assert.equal(calls.start, 1, "retry must not create a second Taster session");
+  assert.equal(calls.complete, 2, "completion must be safely retried");
+  assert.equal(committed, true);
+  const completedStorage = await page.evaluate(() => ({
+    pendingTasterId: localStorage.getItem("pending_taster_id"),
+    name: localStorage.getItem("pending_taster_name"),
+    role: localStorage.getItem("pending_taster_role"),
+    experience: localStorage.getItem("pending_taster_experience"),
+    email: localStorage.getItem("pending_taster_email"),
+  }));
+  assert.equal(completedStorage.pendingTasterId, TASTER_ID,
+    "the canonical Taster ID must be stored only after confirmed completion");
+  assert.equal(completedStorage.name, "Valoria Automated Retry Test");
+  assert.equal(completedStorage.role, "Staging QA");
+  assert.equal(completedStorage.experience, "0-3");
+  assert.equal(completedStorage.email, "retry-audit@example.invalid");
+
   const redirectRequest = page.waitForRequest(request => {
     try {
       const url = new URL(request.url());
-      return url.origin === SITE_ORIGIN && url.pathname.startsWith('/professional-signup');
+      return url.origin === SITE_ORIGIN && url.pathname.startsWith("/professional-signup/");
     } catch { return false; }
   }, { timeout: 20000 });
-  await continueButton.click();
+  await page.getByRole("button", { name: /CREATE MY VALORIA ACCOUNT/i }).click();
   await redirectRequest;
-  await redirectHandled;
 
-  assert.equal(submitCalls, 1, 'retry must reuse the completed taster instead of submitting a duplicate');
-  assert.equal(completeCalls, 2, 'the completion transition must be safely retried');
-  assert.equal(committed, true);
-  assert.ok(redirectUrl?.startsWith(SITE_ORIGIN + '/professional-signup/'), `handoff must return to the originating redesign site; received ${redirectUrl || 'no intercepted URL'}`);
-  assert.ok(redirectUrl.includes('taster_id=' + TASTER_ID), 'handoff must carry the verified taster reference');
-  assert.ok(redirectUrl.includes('account_first=1'), 'account-first Taster must never return to post-Taster account creation');
-  assert.ok(storageEvents.some(event => event.action === 'set' && event.key === 'pending_taster_id' && event.value === TASTER_ID), 'pending taster ID must be written only after confirmed completion');
-  assert.ok(storageEvents.some(event => event.action === 'remove' && event.key === 'valu_taster_resume_token'), 'resume token must be cleared after confirmed completion');
-  assert.ok(storageEvents.some(event => event.action === 'remove' && event.key === 'valu_taster_signup_key'), 'signup key must be cleared after confirmed completion');
-  assert.equal(routeErrors.length, 0, routeErrors.join('; '));
-  assert.equal(pageErrors.length, 0, pageErrors.join('; '));
-  assert.equal(forbiddenRequests.length, 0, forbiddenRequests.join('; '));
+  const destination = new URL(redirectUrl);
+  assert.equal(destination.origin, SITE_ORIGIN, "account creation must return to the matching site environment");
+  assert.equal(destination.pathname, "/professional-signup/");
+  assert.equal(destination.searchParams.get("taster_id"), TASTER_ID);
+  assert.equal(destination.searchParams.get("name"), "Valoria Automated Retry Test");
+  assert.equal(destination.searchParams.get("role"), "Staging QA");
+  assert.equal(destination.searchParams.get("experience"), "0-3");
+  assert.equal(destination.searchParams.get("email"), "retry-audit@example.invalid");
+  assert.equal(destination.searchParams.has("account_first"), false,
+    "post-Taster account creation must not be routed into the account-first legacy path");
+  assert.equal(routeErrors.length, 0, routeErrors.join("; "));
+  assert.equal(pageErrors.length, 0, pageErrors.join("; "));
+  assert.equal(forbiddenRequests.length, 0, forbiddenRequests.join("; "));
 
   console.log(JSON.stringify({
     passed: true,
-    environment: 'Cloudflare staging only',
-    scenario: 'completion committed but response lost; same taster reused on retry',
-    handoffExchangeCalls,
-    submitCalls,
-    completeCalls,
+    environment: "Cloudflare staging only",
+    scenario: "Taster-first completion commits but response is lost; retry reuses the same Taster",
+    calls,
+    failedAttemptStorage,
+    completedStorage,
     redirectUrl,
-    firstFailureStorage,
-    redirectStorage,
-    storageEvents,
+    routeErrors,
     pageErrors,
     forbiddenRequests,
   }, null, 2));
