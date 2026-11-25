@@ -178,7 +178,10 @@ Deno.serve(async(req)=>{
     }
 
     const summary={candidates:candidates.filter(c=>!c.done).length,due:dueRes.data?.length??0,sent,failed,skipped}
-    if(failed>0) return Response.json({ok:false,...summary},{status:502})
+    if(failed>0) {
+      console.error("assessment-completion-reminders-delivery-failed",summary)
+      return Response.json({ok:false,...summary},{status:502})
+    }
     return Response.json({ok:true,...summary})
   } catch(err) {
     console.error("assessment-completion-reminders",err)
