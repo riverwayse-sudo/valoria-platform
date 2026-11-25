@@ -4,6 +4,7 @@ import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
 import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
 import { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION } from '../src/valuTasterLegacy.js';
+import { LEGACY_15_TASTER_QUESTIONS, LEGACY_15_TASTER_VERSION } from '../src/valuTasterLegacy15.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
