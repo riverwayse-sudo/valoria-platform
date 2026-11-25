@@ -97,7 +97,7 @@ const homeResponse = await fetch(origin);
 assert.equal(homeResponse.status, 200, "staging site homepage must return HTTP 200");
 const homeHtml = await homeResponse.text();
 assert.ok(homeHtml.includes("START THE VALU INDEX TASTER"), "homepage must expose the Taster-first CTA");
-assert.ok(homeHtml.includes('href="/valu/assessment/"'), "public CTA must point to the Taster-first assessment entry");
+assert.ok(homeHtml.includes('href="/valu/register/?journey=valu_taster"'), "public CTA must require account-first Taster registration");
 
 const robotsResponse = await fetch(new URL("/robots.txt", origin));
 assert.equal(robotsResponse.status, 200, "staging robots.txt must return HTTP 200");
