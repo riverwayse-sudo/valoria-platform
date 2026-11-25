@@ -63,6 +63,27 @@ const postCompleteSave = await fetch(`${base}/api/taster-first-progress`, {
 });
 assert.equal(postCompleteSave.status, 409, "completed Taster must be immutable");
 
+// Verify the paired site staging deployment exposes the same Taster-first journey.
+const sitePaths = ["/", "/valu", "/valu/start", "/valu/assessment", "/professional-signup", "/marketplace"];
+for (const path of sitePaths) {
+  const response = await fetch(new URL(path, origin));
+  assert.equal(response.status, 200, `site route ${path} returned HTTP ${response.status}`);
+}
+const homeResponse = await fetch(origin);
+assert.equal(homeResponse.status, 200, "staging site homepage must return HTTP 200");
+const homeHtml = await homeResponse.text();
+assert.ok(homeHtml.includes("START THE VALU INDEX TASTER"), "homepage must expose the Taster-first CTA");
+assert.ok(homeHtml.includes('href="/valu/assessment/"'), "public CTA must point to the Taster-first assessment entry");
+
+const robotsResponse = await fetch(new URL("/robots.txt", origin));
+assert.equal(robotsResponse.status, 200, "staging robots.txt must return HTTP 200");
+assert.match(await robotsResponse.text(), /^Disallow: \/$/m, "staging must block search indexing");
+const sitemapResponse = await fetch(new URL("/sitemap.xml", origin));
+assert.equal(sitemapResponse.status, 200, "staging sitemap must return HTTP 200");
+const sitemap = await sitemapResponse.text();
+assert.ok(sitemap.includes("https://staging.valoriainstitute.com/"), "staging sitemap must use the staging canonical origin");
+assert.doesNotMatch(sitemap, /<loc>https:\/\/(?:www\.)?valoriainstitute\.com\//, "staging sitemap must not publish production URLs");
+
 console.log(JSON.stringify({
   result: "PASS",
   email,
