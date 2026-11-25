@@ -169,7 +169,7 @@ try {
   }, { timeout: 20000 });
   await page.getByRole("button", { name: /CREATE MY VALORIA ACCOUNT/i }).click();
   await redirectRequest;
-  await page.waitForURL(url => url.origin === SITE_ORIGIN && url.pathname.startsWith("/professional-signup/"), { timeout: 30000 });
+  await page.waitForURL(url => url.origin === SITE_ORIGIN && url.pathname.replace(/\/$/, "") === "/professional-signup", { timeout: 30000 });
   await page.locator('input[type="email"]').waitFor({ state: "visible", timeout: 20000 });
   await page.waitForFunction(expected => {
     const emailInput = document.querySelector('input[type="email"]');
