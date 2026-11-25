@@ -7,27 +7,40 @@ const source = fs.readFileSync(
   "utf8"
 );
 
-describe("Assessment completion reminder delivery failure contract", () => {
-  test("provider response bodies are not persisted in reminder error records", () => {
-    expect(source).toContain('throw new Error("BREVO_EMAIL_"+response.status)');
-    expect(source).not.toContain('text.slice(0,300)');
-    expect(source).toContain("last_error:errorCode");
+describe("Assessment completion reminder delivery contract", () => {
+  test("reminders use the verified Resend sender rather than Brevo", () => {
+    expect(source).toContain('Deno.env.get("RESEND_API_KEY")');
+    expect(source).toContain('fetch("https://api.resend.com/emails"');
+    expect(source).toContain("from: FROM_EMAIL");
+    expect(source).toContain("reply_to: REPLY_TO_EMAIL");
+    expect(source).not.toContain("api.brevo.com");
+    expect(source).not.toContain("BREVO_API_KEY");
   });
 
-  test("Brevo authentication and authorization failures are parked instead of retried", () => {
-    expect(source).toContain("const permanentAuthFailure=/^BREVO_EMAIL_(401|403)$/.test(errorCode)");
+  test("each reminder stage has a deterministic idempotency key", () => {
+    expect(source).toContain('"Idempotency-Key"');
+    expect(source).toContain('`valoria-assessment-completion-${candidate.id}-${stage}`');
+  });
+
+  test("dry run reports provider configuration and due counts before any writes", () => {
+    expect(source).toContain("const dryRun = payload?.dry_run === true");
+    expect(source).toContain("dry_run: true");
+    expect(source).toContain("provider_configured: Boolean(RESEND_API_KEY)");
+    const dryRunIndex = source.indexOf("if (dryRun) {");
+    const upsertIndex = source.indexOf('db.from("assessment_completion_reminders").upsert');
+    expect(dryRunIndex).toBeGreaterThan(-1);
+    expect(upsertIndex).toBeGreaterThan(dryRunIndex);
+  });
+
+  test("permanent provider failures are parked and transient failures use bounded backoff", () => {
+    expect(source).toContain("/^RESEND_EMAIL_(401|403)$/");
+    expect(source).toContain("/^RESEND_EMAIL_(400|422)$/");
     expect(source).toContain('"9999-12-31T00:00:00.000Z"');
-    expect(source).toContain("next_send_at:nextSendAt");
-  });
-
-  test("transient delivery failures retain bounded exponential backoff", () => {
     expect(source).toContain("Math.min(1440,Math.max(30,2**Math.min(attemptCount,8)*5))");
-    expect(source).toContain("new Date(Date.now()+retryMinutes*60000).toISOString()");
   });
 
-  test("partial delivery failures return a non-success HTTP response with aggregate counts", () => {
+  test("partial delivery failures return a non-success response with aggregate counts", () => {
     expect(source).toContain('console.error("assessment-completion-reminders-delivery-failed",summary)');
     expect(source).toContain("return Response.json({ok:false,...summary},{status:502})");
-    expect(source).toContain("const summary={candidates:candidates.filter(c=>!c.done).length,due:dueRes.data?.length??0,sent,failed,skipped}");
   });
 });

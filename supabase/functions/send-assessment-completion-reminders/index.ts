@@ -3,9 +3,9 @@ import { createClient } from "npm:@supabase/supabase-js@2"
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? ""
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
   (() => { try { return JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}")?.default ?? "" } catch { return "" } })()
-const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY") ?? ""
-const FROM_EMAIL = Deno.env.get("BREVO_FROM_EMAIL") ?? "info@valoriainstitute.com"
-const FROM_NAME = Deno.env.get("BREVO_FROM_NAME") ?? "Valoria Institute"
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? ""
+const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") ?? "Valoria Institute <info@valoriainstitute.com>"
+const REPLY_TO_EMAIL = Deno.env.get("RESEND_REPLY_TO_EMAIL") ?? "info@valoriainstitute.com"
 const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth:{autoRefreshToken:false,persistSession:false} })
 
 const ASSESSMENT_URL = "https://assessment.valoriainstitute.com/"
@@ -33,8 +33,8 @@ function escapeHtml(v="") {
 }
 function nextDelayDays(stage) { return [2,3,5][stage] ?? null }
 
-async function sendEmail(candidate) {
-  if (!BREVO_API_KEY) throw new Error("BREVO_NOT_CONFIGURED")
+async function sendEmail(candidate, stage) {
+  if (!RESEND_API_KEY) throw new Error("RESEND_NOT_CONFIGURED")
   const firstName = escapeHtml((candidate.full_name || candidate.display_name || "there").trim().split(/\s+/)[0] || "there")
   const missingAssessment = Boolean(candidate.missing_assessment)
   const missingProfile = Boolean(candidate.missing_profile)
@@ -84,22 +84,45 @@ async function sendEmail(candidate) {
     '<div style="margin-top:30px;padding-top:20px;border-top:1px solid rgba(255,255,255,.07);font-size:10px;color:rgba(247,244,238,.28);letter-spacing:.05em">WORTH. BUILT. · VALORIA INSTITUTE</div>'+
     "</div></div>"
 
-  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-    method:"POST",
-    headers:{"api-key":BREVO_API_KEY,"Content-Type":"application/json"},
-    body:JSON.stringify({
-      sender:{name:FROM_NAME,email:FROM_EMAIL},
-      to:[{email:candidate.email,name:candidate.full_name||candidate.display_name||firstName}],
-      replyTo:{name:FROM_NAME,email:FROM_EMAIL},
+  const plainName = (candidate.full_name || candidate.display_name || "there").trim().split(/\s+/)[0] || "there"
+  const textContent = [
+    `Hi ${plainName},`,
+    body,
+    "What remains:",
+    missingAssessment ? "- Complete your VALU Index" : null,
+    missingProfile ? "- Finish your professional profile" : null,
+    `Continue: ${primaryUrl}`,
+    (missingAssessment && missingProfile) ? `Finish your profile after the assessment: ${PROFILE_URL}` : null,
+    "Valoria Institute · Worth. Built."
+  ].filter(Boolean).join("\n\n")
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": `valoria-assessment-completion-${candidate.id}-${stage}`
+    },
+    body: JSON.stringify({
+      from: FROM_EMAIL,
+      to: [candidate.email],
+      reply_to: REPLY_TO_EMAIL,
       subject,
-      htmlContent:html,
-      tags:["valoria","assessment-completion",missingAssessment?"assessment":"profile"]
+      html,
+      text: textContent,
+      tags: [
+        { name: "system", value: "valoria" },
+        { name: "type", value: "assessment-completion" },
+        { name: "stage", value: String(stage) },
+        { name: "journey", value: missingAssessment ? "assessment" : "profile" }
+      ]
     })
   })
   if (!response.ok) {
     try { await response.body?.cancel() } catch {}
-    throw new Error("BREVO_EMAIL_"+response.status)
+    throw new Error("RESEND_EMAIL_" + response.status)
   }
+  const sent = await response.json().catch(() => ({}))
+  return sent.id ?? null
 }
 
 Deno.serve(async(req)=>{
@@ -107,6 +130,7 @@ Deno.serve(async(req)=>{
     if(!(await isPrivileged(req))) return Response.json({error:"Unauthorized"},{status:401})
     const payload = await req.json().catch(()=>({}))
     const limit = Math.min(Math.max(Number(payload?.limit??20),1),50)
+    const dryRun = payload?.dry_run === true
 
     const [uRes,pRes,aRes] = await Promise.all([
       db.from("users").select("id,email,full_name,user_type,created_at").eq("user_type","professional").not("email","is",null),
@@ -125,6 +149,23 @@ Deno.serve(async(req)=>{
       const missingProfile=!p || p.profile_complete!==true
       return {...u,display_name:p?.display_name??null,missing_assessment:missingAssessment,missing_profile:missingProfile,done:!missingAssessment&&!missingProfile}
     })
+
+    if (dryRun) {
+      const previewRes = await db.from("assessment_completion_reminders")
+        .select("user_id,reminder_stage,next_send_at")
+        .is("completed_at",null).is("campaign_completed_at",null)
+        .lte("next_send_at",new Date().toISOString()).order("next_send_at",{ascending:true}).limit(limit)
+      if (previewRes.error) throw previewRes.error
+      return Response.json({
+        ok: true,
+        dry_run: true,
+        provider: "resend",
+        provider_configured: Boolean(RESEND_API_KEY),
+        eligible_candidates: candidates.filter(c=>!c.done).length,
+        due_existing: previewRes.data?.length ?? 0
+      })
+    }
+    if (!RESEND_API_KEY) return Response.json({ok:false,error:"RESEND_NOT_CONFIGURED"},{status:503})
 
     for (const c of candidates) {
       if (c.done) {
@@ -149,7 +190,7 @@ Deno.serve(async(req)=>{
       const stage=Number(row.reminder_stage??0)
       await db.from("assessment_completion_reminders").update({attempt_count:attemptCount,last_error:null,updated_at:new Date().toISOString()}).eq("user_id",row.user_id)
       try {
-        await sendEmail(c)
+        await sendEmail(c, stage)
         const nextDays=nextDelayDays(stage)
         const nextStage=stage+1
         const exhausted=nextDays===null
@@ -162,11 +203,12 @@ Deno.serve(async(req)=>{
       } catch(err) {
         failed++
         const rawError=String(err?.message??err)
-        const errorCode=rawError.match(/^BREVO_EMAIL_\d{3}/)?.[0]
-          ?? (rawError === "BREVO_NOT_CONFIGURED" ? rawError : "EMAIL_DELIVERY_FAILED")
-        const permanentAuthFailure=/^BREVO_EMAIL_(401|403)$/.test(errorCode)
+        const errorCode=rawError.match(/^RESEND_EMAIL_\d{3}/)?.[0]
+          ?? (rawError === "RESEND_NOT_CONFIGURED" ? rawError : "EMAIL_DELIVERY_FAILED")
+        const permanentAuthFailure=/^RESEND_EMAIL_(401|403)$/.test(errorCode)
+        const permanentRequestFailure=/^RESEND_EMAIL_(400|422)$/.test(errorCode)
         const retryMinutes=Math.min(1440,Math.max(30,2**Math.min(attemptCount,8)*5))
-        const nextSendAt=permanentAuthFailure
+        const nextSendAt=(permanentAuthFailure || permanentRequestFailure)
           ? "9999-12-31T00:00:00.000Z"
           : new Date(Date.now()+retryMinutes*60000).toISOString()
         await db.from("assessment_completion_reminders").update({
