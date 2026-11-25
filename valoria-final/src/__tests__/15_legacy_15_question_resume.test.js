@@ -41,10 +41,14 @@ describe("legacy 15-question Taster recovery", () => {
     const progress = fs.readFileSync(path.join(root, "api/taster-progress.js"), "utf8");
     const submit = fs.readFileSync(path.join(root, "api/submit-taster.js"), "utf8");
     const gate = fs.readFileSync(path.join(__dirname, "../VALUIndexV4GateNext.jsx"), "utf8");
+    const migration = fs.readFileSync(path.join(root, "supabase/migrations/20261125205300_align_taster_versions_and_preserve_legacy_15.sql"), "utf8");
     expect(progress).toContain("version === LEGACY_15_TASTER_VERSION");
     expect(submit).toContain("tasterVersion === LEGACY_15_TASTER_VERSION");
     expect(submit).toContain("computeLegacy15TasterResult");
     expect(gate).toContain("version==='legacy-15'||version==='4.0'");
     expect(gate).toContain("legacy.LEGACY_15_TASTER_QUESTIONS");
+    expect(migration).toContain("alter column taster_version set default '4.2'");
+    expect(migration).toContain("alter column total_questions set default 9");
+    expect(migration).toContain("p_taster_version IN (''legacy-15'', ''4.0'')");
   });
 });
