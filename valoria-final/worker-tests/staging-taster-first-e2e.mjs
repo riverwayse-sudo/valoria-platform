@@ -6,6 +6,16 @@ const origin = process.env.STAGING_SITE_URL || "https://staging.valoriainstitute
 const email = `qa+taster-first-${process.env.GITHUB_RUN_ID || randomUUID()}@example.com`;
 const headers = { "Content-Type": "application/json", Origin: origin };
 
+async function postRaw(action, payload = {}) {
+  const response = await fetch(`${base}/api/taster-first-progress`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ action, ...payload }),
+  });
+  const data = await response.json().catch(() => ({}));
+  return { response, data };
+}
+
 async function post(action, payload = {}) {
   const response = await fetch(`${base}/api/taster-first-progress`, {
     method: "POST",
@@ -16,6 +26,20 @@ async function post(action, payload = {}) {
   assert.ok(response.ok, `${action} returned HTTP ${response.status}: ${JSON.stringify(data)}`);
   return data;
 }
+
+// Reject incomplete consent before creating a pre-account session.
+const noConsent = await postRaw("start", {
+  name: "Staging Taster First QA",
+  role: "QA Analyst",
+  email,
+  experience: "4-8",
+  privacy_acknowledged: false,
+});
+assert.equal(noConsent.response.status, 400, "start must reject missing privacy acknowledgement");
+
+// A resume token is a bearer credential and must be validated before session lookup.
+const invalidResume = await postRaw("load", { resume_token: "invalid-token" });
+assert.equal(invalidResume.response.status, 401, "load must reject malformed resume tokens");
 
 const started = await post("start", {
   name: "Staging Taster First QA",
