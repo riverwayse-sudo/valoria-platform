@@ -164,6 +164,17 @@ test("unsent report sweep endpoint is registered and requires cron authenticatio
   assert.deepEqual(env.seen, []);
 });
 
+test("reconciliation health endpoint is registered and requires cron authentication", async () => {
+  const env = makeEnv();
+  const response = await worker.fetch(
+    new Request("https://assessment.example/api/reconciliation-health", { method: "GET" }),
+    env,
+  );
+  assert.equal(response.status, 401);
+  assert.match(await response.text(), /Unauthorized/);
+  assert.deepEqual(env.seen, []);
+});
+
 test("staging Wrangler environment targets the existing staging Worker and staging database only", () => {
   const config = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
   assert.equal(config.env.staging.name, "valoria-staging-assessment");
