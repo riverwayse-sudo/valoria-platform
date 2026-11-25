@@ -9,6 +9,7 @@ import linkAssessmentToTaster from "./api/link-assessment-to-taster.js";
 import generateAndSendReport from "./api/generate-and-send-report.js";
 import { GET as processReadinessQueue } from "./api/process-readiness-queue.js";
 import sweepUnsentReports from "./api/sweep-unsent-reports.js";
+import reconciliationHealth from "./api/reconciliation-health.js";
 
 const API_HANDLERS = new Map([
   ["/api/taster-progress", { handler: tasterProgress, nodeStyle: true }],
@@ -20,6 +21,7 @@ const API_HANDLERS = new Map([
   ["/api/generate-and-send-report", { handler: generateAndSendReport, nodeStyle: false }],
   ["/api/process-readiness-queue", { handler: processReadinessQueue, nodeStyle: false }],
   ["/api/sweep-unsent-reports", { handler: sweepUnsentReports, nodeStyle: false }],
+  ["/api/reconciliation-health", { handler: reconciliationHealth, nodeStyle: true }],
 ]);
 
 function json(data, status = 200) {
