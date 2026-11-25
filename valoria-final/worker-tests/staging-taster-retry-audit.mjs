@@ -102,8 +102,11 @@ try {
   await page.getByPlaceholder("Full name").fill("Valoria Automated Retry Test");
   await page.getByPlaceholder("e.g. Senior Marketing Manager").fill("Staging QA");
   await page.getByPlaceholder("you@example.com").fill("retry-audit@example.invalid");
-  await page.getByRole("button", { name: /Select your experience/i }).click();
-  await page.getByRole("button", { name: /0 – 3 years/i }).click();
+  await page.waitForTimeout(500);
+  const experienceTrigger = page.locator("button").filter({ hasText: /Select your experience/i }).first();
+  await experienceTrigger.waitFor({ state: "visible", timeout: 20000 });
+  await experienceTrigger.click();
+  await page.getByRole("listbox").getByText(/0 – 3 years/i).click();
   await page.locator('input[type="checkbox"]').first().check();
   await page.getByRole("button", { name: /START THE VALU INDEX TASTER/i }).click();
   await page.locator(".valu-option").first().waitFor({ state: "visible", timeout: 20000 });
