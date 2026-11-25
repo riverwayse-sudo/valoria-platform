@@ -23,12 +23,12 @@ begin
   v_definition := pg_catalog.replace(
     v_definition,
     ')) <> 15 then',
-    ')) <> CASE WHEN p_taster_version IN (''legacy-15'', ''4.0'') THEN 15 ELSE 9 END then'
+    ')) <> (CASE WHEN p_taster_version IN (''legacy-15'', ''4.0'') THEN 15 ELSE 9 END) then'
   );
   v_definition := pg_catalog.replace(
     v_definition,
     ')) <> 9 THEN',
-    ')) <> CASE WHEN p_taster_version IN (''legacy-15'', ''4.0'') THEN 15 ELSE 9 END THEN'
+    ')) <> (CASE WHEN p_taster_version IN (''legacy-15'', ''4.0'') THEN 15 ELSE 9 END) THEN'
   );
   v_definition := pg_catalog.replace(
     v_definition,
