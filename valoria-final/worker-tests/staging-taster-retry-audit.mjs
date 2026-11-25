@@ -106,6 +106,7 @@ try {
   await page.getByRole("button", { name: /0 – 3 years/i }).click();
   await page.locator('input[type="checkbox"]').first().check();
   await page.getByRole("button", { name: /START THE VALU INDEX TASTER/i }).click();
+  await page.locator(".valu-option").first().waitFor({ state: "visible", timeout: 20000 });
 
   assert.equal(calls.start, 1, "Taster-first must start exactly one saved session");
   assert.equal(await page.evaluate(() => localStorage.getItem("pending_taster_id")), null,
