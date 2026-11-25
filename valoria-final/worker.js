@@ -10,6 +10,7 @@ import generateAndSendReport from "./api/generate-and-send-report.js";
 import { GET as processReadinessQueue } from "./api/process-readiness-queue.js";
 import sweepUnsentReports from "./api/sweep-unsent-reports.js";
 import reconciliationHealth from "./api/reconciliation-health.js";
+import systemStatus from "./api/system-status.js";
 
 const API_HANDLERS = new Map([
   ["/api/taster-progress", { handler: tasterProgress, nodeStyle: true }],
@@ -22,6 +23,7 @@ const API_HANDLERS = new Map([
   ["/api/process-readiness-queue", { handler: processReadinessQueue, nodeStyle: false }],
   ["/api/sweep-unsent-reports", { handler: sweepUnsentReports, nodeStyle: false }],
   ["/api/reconciliation-health", { handler: reconciliationHealth, nodeStyle: true }],
+  ["/api/system-status", { handler: systemStatus, nodeStyle: true }],
 ]);
 
 function json(data, status = 200) {

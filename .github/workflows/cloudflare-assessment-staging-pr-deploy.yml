@@ -16,6 +16,7 @@ on:
       - "valoria-final/wrangler.jsonc"
       - "valoria-final/package.json"
       - "valoria-final/package-lock.json"
+      - ".github/workflows/cloudflare-assessment-staging-pr-deploy.yml"
 
 permissions:
   contents: read
@@ -124,12 +125,22 @@ jobs:
             fi
           done
 
-          health_status="$(curl -sS -o /tmp/valu-reconciliation-health-response -w '%{http_code}' "$base/api/reconciliation-health")"
-          if [[ "$health_status" != "401" ]] || ! grep -q 'Unauthorized' /tmp/valu-reconciliation-health-response; then
-            echo "Reconciliation health route must be registered and reject unauthenticated requests; got HTTP $health_status"
-            cat /tmp/valu-reconciliation-health-response || true
-            exit 1
-          fi
+          for route in reconciliation-health system-status; do
+            health_status="$(curl -sS -o "/tmp/valu-$route-response" -w '%{http_code}' "$base/api/$route")"
+            if [[ "$route" == "system-status" ]]; then
+              # Staging intentionally has no CRON_SECRET; 503 confirms the
+              # protected handler is registered but not configured for cron.
+              if [[ "$health_status" != "401" && "$health_status" != "503" ]]; then
+                echo "$route must be registered; expected 401 or staging-only 503, got HTTP $health_status"
+                cat "/tmp/valu-$route-response" || true
+                exit 1
+              fi
+            elif [[ "$health_status" != "401" ]] || ! grep -q 'Unauthorized' "/tmp/valu-$route-response"; then
+              echo "$route must be registered and reject unauthenticated requests; got HTTP $health_status"
+              cat "/tmp/valu-$route-response" || true
+              exit 1
+            fi
+          done
 
       - name: Exercise Taster-first start, save, resume, completion and retry
         run: node ./worker-tests/staging-taster-first-e2e.mjs
