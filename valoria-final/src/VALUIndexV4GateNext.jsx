@@ -145,6 +145,9 @@ export default function VALUIndexV4GateNext(){
      }else if(version==='4.1'){
       const legacy=await import('./valuTasterLegacy.js');
       restoredBank=legacy.LEGACY_TASTER_QUESTIONS;
+     }else if(version==='legacy-15'||version==='4.0'){
+      const legacy=await import('./valuTasterLegacy15.js');
+      restoredBank=legacy.LEGACY_15_TASTER_QUESTIONS;
      }else{
       setProgressToken(stored);
       setError('Your saved session needs assistance before it can continue. Your responses remain saved. Please contact Valoria support.');

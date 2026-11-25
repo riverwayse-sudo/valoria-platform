@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { TASTER_QUESTIONS, computeTasterResult, VALU_VERSION } from '../src/valuTaster.js';
 import { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION, computeLegacyTasterResult } from '../src/valuTasterLegacy.js';
+import { LEGACY_15_TASTER_QUESTIONS, LEGACY_15_TASTER_VERSION, computeLegacy15TasterResult } from '../src/valuTasterLegacy15.js';
 import { applyCors, handlePreflight } from './_cors.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -82,26 +83,31 @@ export default async function handler(req, res) {
   if (!normalizedEmail || normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return json(res, 400, { error: 'The saved contact email is invalid. Contact Valoria support.' });
   if (typeof progress.lead_capture_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(progress.lead_capture_id)) return json(res, 409, { error: 'Complete your registration before submitting your taster.' });
   const tasterVersion = String(progress.taster_version || LEGACY_TASTER_VERSION);
+  const isLegacy15 = tasterVersion === LEGACY_15_TASTER_VERSION || tasterVersion === '4.0';
   const questionBank = tasterVersion === VALU_VERSION
     ? TASTER_QUESTIONS
     : tasterVersion === LEGACY_TASTER_VERSION
       ? LEGACY_TASTER_QUESTIONS
-      : null;
+      : isLegacy15
+        ? LEGACY_15_TASTER_QUESTIONS
+        : null;
   if (!questionBank) return json(res, 409, { error: 'This saved taster session uses a retired format and cannot be submitted automatically.' });
   if (progress.current_question !== questionBank.length || !validAnswers(answers, questionBank)) {
     return json(res, 400, { error: 'Finish and save all taster answers before submitting.' });
   }
 
-
-
-
-
-  const results = tasterVersion === VALU_VERSION ? computeTasterResult(answers) : computeLegacyTasterResult(answers);
-  // Only Intelligence is assessed by the separate taster. Null means the
-  // other four PRIME clusters were not measured; zero would falsely imply a score.
+  const results = tasterVersion === VALU_VERSION
+    ? computeTasterResult(answers)
+    : isLegacy15
+      ? computeLegacy15TasterResult(answers)
+      : computeLegacyTasterResult(answers);
+  // The current Intelligence-only Taster reports only Intelligence. Historical
+  // PRIME snapshots retain their own five-cluster result contract.
   const clusterScores = tasterVersion === VALU_VERSION
     ? { P: null, R: null, I: results.intelligenceScore, M: null, E: null }
-    : results.points;
+    : isLegacy15
+      ? results.normalisedScores
+      : results.points;
   const skillKeys = ['Critical Thinking', 'Strategic Thinking', 'Business Acumen', 'AI Fluency ★'];
   const scoresValid = tasterVersion === VALU_VERSION
     ? Number.isFinite(clusterScores.I)
