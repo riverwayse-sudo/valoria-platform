@@ -92,7 +92,7 @@ await page.route(url => url.origin === ASSESSMENT_ORIGIN && url.pathname === "/a
 
 await page.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith("/professional-signup/"), async route => {
   redirectUrl = route.request().url();
-  await route.abort();
+  await route.continue();
 });
 
 try {
@@ -169,6 +169,25 @@ try {
   }, { timeout: 20000 });
   await page.getByRole("button", { name: /CREATE MY VALORIA ACCOUNT/i }).click();
   await redirectRequest;
+  await page.waitForURL(url => url.origin === SITE_ORIGIN && url.pathname.startsWith("/professional-signup/"), { timeout: 30000 });
+  await page.locator('input[type="email"]').waitFor({ state: "visible", timeout: 20000 });
+  await page.waitForFunction(expected => {
+    const emailInput = document.querySelector('input[type="email"]');
+    return Boolean(emailInput && emailInput.value === expected && emailInput.readOnly);
+  }, "retry-audit@example.invalid", { timeout: 20000 });
+
+  const signupPageState = await page.evaluate(() => ({
+    email: document.querySelector('input[type="email"]')?.value || "",
+    emailReadOnly: Boolean(document.querySelector('input[type="email"]')?.readOnly),
+    password: Boolean(document.querySelector('input[type="password"]')),
+    savedTasterCopy: /Your taster is saved/i.test(document.body.innerText),
+    tasterId: new URL(window.location.href).searchParams.get("taster_id"),
+  }));
+  assert.equal(signupPageState.tasterId, TASTER_ID, "the actual signup page must receive the completed Taster ID");
+  assert.equal(signupPageState.email, "retry-audit@example.invalid", "the actual signup page must retain the Taster email");
+  assert.equal(signupPageState.emailReadOnly, true, "the Taster email must be locked to the completed result");
+  assert.equal(signupPageState.password, true, "post-Taster signup must offer account creation");
+  assert.equal(signupPageState.savedTasterCopy, true, "the signup page must confirm the Taster is saved");
 
   const destination = new URL(redirectUrl);
   assert.equal(destination.origin, SITE_ORIGIN, "account creation must return to the matching site environment");
