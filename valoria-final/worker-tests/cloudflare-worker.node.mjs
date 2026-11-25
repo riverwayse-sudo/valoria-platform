@@ -42,12 +42,14 @@ test("Vite asset URLs retain their filename after the assessment prefix is remov
 
 test("known API paths execute their handler instead of falling through to static assets", async () => {
   const env = makeEnv();
-  const response = await worker.fetch(
-    new Request("https://assessment.example/api/taster-progress", { method: "GET" }),
-    env,
-  );
-  assert.equal(response.status, 405);
-  assert.match(response.headers.get("content-type") || "", /application\/json/);
+  for (const pathname of ["/api/taster-progress", "/api/taster-first-progress"]) {
+    const response = await worker.fetch(
+      new Request("https://assessment.example" + pathname, { method: "GET" }),
+      env,
+    );
+    assert.equal(response.status, 405, pathname);
+    assert.ok((response.headers.get("content-type") || "").includes("application/json"), pathname);
+  }
   assert.deepEqual(env.seen, []);
 });
 
@@ -65,12 +67,14 @@ test("assessment API preflight allows the production site and exact preview orig
     "https://staging.valoriainstitute.com",
     "https://assessment-staging.valoriainstitute.com",
   ]) {
-    const response = await worker.fetch(new Request("https://assessment.example/api/taster-progress", {
-      method: "OPTIONS",
-      headers: { Origin: origin },
-    }), env);
-    assert.equal(response.status, 204, origin);
-    assert.equal(response.headers.get("access-control-allow-origin"), origin);
+    for (const pathname of ["/api/taster-progress", "/api/taster-first-progress"]) {
+      const response = await worker.fetch(new Request("https://assessment.example" + pathname, {
+        method: "OPTIONS",
+        headers: { Origin: origin },
+      }), env);
+      assert.equal(response.status, 204, pathname + " " + origin);
+      assert.equal(response.headers.get("access-control-allow-origin"), origin);
+    }
   }
 });
 
@@ -153,6 +157,17 @@ test("unsent report sweep endpoint is registered and requires cron authenticatio
   const env = makeEnv();
   const response = await worker.fetch(
     new Request("https://assessment.example/api/sweep-unsent-reports", { method: "POST" }),
+    env,
+  );
+  assert.equal(response.status, 401);
+  assert.match(await response.text(), /Unauthorized/);
+  assert.deepEqual(env.seen, []);
+});
+
+test("reconciliation health endpoint is registered and requires cron authentication", async () => {
+  const env = makeEnv();
+  const response = await worker.fetch(
+    new Request("https://assessment.example/api/reconciliation-health", { method: "GET" }),
     env,
   );
   assert.equal(response.status, 401);

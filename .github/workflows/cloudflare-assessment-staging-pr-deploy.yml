@@ -112,7 +112,30 @@ jobs:
               cat /tmp/valu-api-runtime-response || true
               exit 1
             fi
+
+            taster_first_status="$(curl -sS -o /tmp/valu-taster-first-runtime-response -w '%{http_code}' -X POST "$base/api/taster-first-progress" \
+              -H "Origin: $origin" \
+              -H 'Content-Type: application/json' \
+              --data '{"action":"start"}')"
+            if [[ "$taster_first_status" != "400" ]] || ! grep -q 'Complete your details and acknowledge the Privacy Notice' /tmp/valu-taster-first-runtime-response; then
+              echo "Taster-first API runtime probe failed with HTTP $taster_first_status for $origin"
+              cat /tmp/valu-taster-first-runtime-response || true
+              exit 1
+            fi
           done
+
+          health_status="$(curl -sS -o /tmp/valu-reconciliation-health-response -w '%{http_code}' "$base/api/reconciliation-health")"
+          if [[ "$health_status" != "401" ]] || ! grep -q 'Unauthorized' /tmp/valu-reconciliation-health-response; then
+            echo "Reconciliation health route must be registered and reject unauthenticated requests; got HTTP $health_status"
+            cat /tmp/valu-reconciliation-health-response || true
+            exit 1
+          fi
+
+      - name: Exercise Taster-first start, save, resume, completion and retry
+        run: node ./worker-tests/staging-taster-first-e2e.mjs
+        env:
+          STAGING_ASSESSMENT_URL: https://assessment-staging.valoriainstitute.com
+          STAGING_SITE_URL: https://staging.valoriainstitute.com
 
       - name: Install pinned Playwright for staging browser retry audit
         run: npm install --no-save playwright@1.65.0
