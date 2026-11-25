@@ -99,7 +99,7 @@ jobs:
             fi
             curl -fsSL --retry 4 --retry-all-errors --max-time 25 "$base$asset" -o /dev/null
           done
-          for spec in "GET /api/process-readiness-queue" "POST /api/sweep-unsent-reports"; do
+          for spec in "GET /api/process-readiness-queue" "POST /api/sweep-unsent-reports" "GET /api/reconciliation-health" "GET /api/system-status"; do
             method="${spec%% *}"
             route="${spec#* }"
             status="$(curl -sS -o /tmp/valu-production-cron-response -w '%{http_code}' -X "$method" "$api_base$route")"
