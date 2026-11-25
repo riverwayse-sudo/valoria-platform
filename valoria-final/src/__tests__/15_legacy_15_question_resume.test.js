@@ -49,6 +49,6 @@ describe("legacy 15-question Taster recovery", () => {
     expect(gate).toContain("legacy.LEGACY_15_TASTER_QUESTIONS");
     expect(migration).toContain("alter column taster_version set default '4.2'");
     expect(migration).toContain("alter column total_questions set default 9");
-    expect(migration).toContain("p_taster_version IN (''legacy-15'', ''4.0'')");
+    expect(migration).toContain("p_taster_version IN (''legacy-15'', ''4.0'') THEN 15 ELSE 9 END)");
   });
 });
