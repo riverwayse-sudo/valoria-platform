@@ -14,10 +14,10 @@ describe("parallel Taster-first journey isolation", () => {
   const migration = read("../supabase/migrations/20261124193000_preaccount_taster_first_sessions.sql");
   const submissionMigration = read("../supabase/migrations/20261124213000_submit_taster_first_with_identity_candidate.sql");
 
-  test("Taster-first is opt-in and the current account-first experience remains the default", () => {
-    expect(app).toContain('params.get("journey") === "taster-first"');
-    expect(app).toContain("<VALUIndexV4GateNext />");
-    expect(app).toContain("<VALUIndexTasterFirst");
+  test("Taster-first is the canonical default and account-first remains an explicit legacy route", () => {
+    expect(app).toContain('params.get("journey") === "account-first"');
+    expect(app).toContain("if (!accountFirst) return <VALUIndexTasterFirst");
+    expect(app).toContain("return <VALUIndexV4GateNext />");
     expect(component).toContain("api/taster-first-progress");
   });
 
