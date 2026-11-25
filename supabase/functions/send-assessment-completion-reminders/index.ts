@@ -162,7 +162,7 @@ Deno.serve(async(req)=>{
       } catch(err) {
         failed++
         const rawError=String(err?.message??err)
-        const errorCode=rawError.match(/^BREVO_EMAIL_\\d{3}/)?.[0]
+        const errorCode=rawError.match(/^BREVO_EMAIL_\d{3}/)?.[0]
           ?? (rawError === "BREVO_NOT_CONFIGURED" ? rawError : "EMAIL_DELIVERY_FAILED")
         const permanentAuthFailure=/^BREVO_EMAIL_(401|403)$/.test(errorCode)
         const retryMinutes=Math.min(1440,Math.max(30,2**Math.min(attemptCount,8)*5))
