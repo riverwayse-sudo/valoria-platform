@@ -30,8 +30,9 @@ function continueFromTasterFirst({ tasterId, name, role, experience, email }) {
 export default function VALUIndexV4App() {
   const params = new URLSearchParams(window.location.search);
   const full = params.get("full") === "1";
-  const tasterFirst = params.get("journey") === "taster-first";
+  const accountFirst = params.get("journey") === "account-first";
   if (full) return <FullVALUAssessment />;
-  if (tasterFirst) return <VALUIndexTasterFirst onComplete={continueFromTasterFirst} />;
+  // The canonical public journey is Taster first; retain account-first only as an explicit legacy route.
+  if (!accountFirst) return <VALUIndexTasterFirst onComplete={continueFromTasterFirst} />;
   return <VALUIndexV4GateNext />;
 }
