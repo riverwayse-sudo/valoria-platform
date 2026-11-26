@@ -44,10 +44,10 @@ describe("public profile capability projection contract", () => {
 
   test("designation backfill does not mutate assessment scores or answers", () => {
     const sql = readMigration();
-    expect(sql).not.toMatch(/SET\\s+total_score\\s*=/i);
-    expect(sql).not.toMatch(/SET\\s+answers\\s*=/i);
-    expect(sql).not.toMatch(/DELETE\\s+FROM\\s+public\\.valu_assessments/i);
-    expect(sql).not.toMatch(/DELETE\\s+FROM\\s+public\\.professional_profiles/i);
+    expect(sql).not.toMatch(/SET\s+total_score\s*=/i);
+    expect(sql).not.toMatch(/SET\s+answers\s*=/i);
+    expect(sql).not.toMatch(/DELETE\s+FROM\s+public\.valu_assessments/i);
+    expect(sql).not.toMatch(/DELETE\s+FROM\s+public\.professional_profiles/i);
   });
 
   test("the projection backfill is consent-gated and excludes test or revoked profiles", () => {
