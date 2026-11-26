@@ -53,6 +53,14 @@ if (!invariants.includes("Public visibility requires current, explicit participa
   console.error("Governance check failed: participant-entered public-consent invariant is missing.");
   process.exit(1);
 }
+if (!governance.includes("without an administrator approval gate")) {
+  console.error("Governance check failed: automatic Taster profile creation without an admin approval gate is missing.");
+  process.exit(1);
+}
+if (!invariants.includes("without an administrator approval gate")) {
+  console.error("Governance check failed: automatic profile-creation invariant is missing.");
+  process.exit(1);
+}
 if (!release.includes("Production operations target Cloudflare only")) {
   console.error("Governance check failed: Cloudflare-only production boundary is missing.");
   process.exit(1);
