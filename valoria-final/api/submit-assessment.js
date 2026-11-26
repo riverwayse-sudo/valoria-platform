@@ -266,7 +266,7 @@ async function exchangeTasterStartHandoff(body, res) {
   // checks; do not copy this exception into those authorization paths.
   if (!user?.email || accountMetadata.valu_taster_signup !== true ||
       !role || !EXPERIENCE_BANDS.has(experience) || accountMetadata.privacy_acknowledged !== true) {
-    return json(res, 403, { ok: false, error: 'Your unconfirmed Valoria Taster registration could not be verified.' });
+    return json(res, 403, { ok: false, error: 'Your Valoria Taster registration could not be verified.' });
   }
 
   const consumeParams = new URLSearchParams({
