@@ -40,4 +40,21 @@ for (const section of ["Protected standards", "Strategic Review requirements", "
     process.exit(1);
   }
 }
+const requiredDocs = ["PLATFORM_INVARIANTS.md", "PRODUCTION_RELEASE_POLICY.md", "COMPONENT_CHANGE_CONTROL.md"];
+for (const file of requiredDocs) {
+  if (!existsSync(resolve(docsDir, file))) {
+    console.error(`Governance check failed: required control document "${file}" is missing.`);
+    process.exit(1);
+  }
+}
+const invariants = readFileSync(resolve(docsDir, "PLATFORM_INVARIANTS.md"), "utf8");
+const release = readFileSync(resolve(docsDir, "PRODUCTION_RELEASE_POLICY.md"), "utf8");
+if (!invariants.includes("Public visibility requires current, explicit participant-entered consent")) {
+  console.error("Governance check failed: participant-entered public-consent invariant is missing.");
+  process.exit(1);
+}
+if (!release.includes("Production operations target Cloudflare only")) {
+  console.error("Governance check failed: Cloudflare-only production boundary is missing.");
+  process.exit(1);
+}
 console.log("Valoria governance contract integrity: PASS (documentation guard only; application behavior is covered by the existing test suites).");
