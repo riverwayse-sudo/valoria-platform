@@ -60,3 +60,11 @@ Maintain a repository-level register with each gate marked PASS, FAIL or NOT VER
 
 ## Component change control
 All changes must follow [the Valoria Component Change-Control Protocol](docs/engineering/COMPONENT_CHANGE_CONTROL.md). Verified components are protected from incidental modification. Cross-component changes require an explicit dependency-impact map, boundary tests for every affected component, and a recorded rollback/recovery plan. A component is not VERIFIED — PROTECTED on the basis of a successful build, merge or deployment alone.
+
+## Unified Valoria governance
+
+The shared product authority, cross-repository boundaries, protected standards, decision precedence and requirements-to-release workflow are defined in [VALORIA_UNIFIED_GOVERNANCE.md](docs/engineering/VALORIA_UNIFIED_GOVERNANCE.md). The cross-repository acceptance and decision register is [VALORIA_REQUIREMENTS_REGISTER.md](docs/engineering/VALORIA_REQUIREMENTS_REGISTER.md). Both repositories must carry the same governance version. Repository-specific quality registers remain the evidence source for their own code and deployments.
+
+## Unified Valoria governance
+
+The shared product authority, cross-repository boundaries, protected standards and requirements-to-release workflow are defined in [VALORIA_UNIFIED_GOVERNANCE.md](docs/engineering/VALORIA_UNIFIED_GOVERNANCE.md). The cross-repository acceptance and decision register is [VALORIA_REQUIREMENTS_REGISTER.md](docs/engineering/VALORIA_REQUIREMENTS_REGISTER.md). The enforceable invariants and release controls are [PLATFORM_INVARIANTS.md](docs/engineering/PLATFORM_INVARIANTS.md) and [PRODUCTION_RELEASE_POLICY.md](docs/engineering/PRODUCTION_RELEASE_POLICY.md). Both repositories must carry the same governance version. Repository-specific quality registers remain the evidence source for their own code and deployments.

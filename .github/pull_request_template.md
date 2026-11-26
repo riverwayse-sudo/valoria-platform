@@ -51,3 +51,17 @@
 - [ ] Participant data, identity links, assessment answers/scores and consent remain unchanged unless explicitly authorized
 - [ ] Real participant/owner accounts and real email recipients were not used without explicit authorization
 - [ ] Component status and evidence will be updated in the quality register
+
+## Unified requirements and protected standards (required)
+- **Requirement / defect IDs:**
+- **Source clause or approved decision:**
+- **Change class:** Protected Standard / Controlled Product Requirement / Adaptable Implementation Detail
+- **Target repository and component:**
+- **Cross-repository/API/data dependencies:**
+- **Protected standards inspected:**
+- **Conflicts or decisions required:**
+- **Acceptance criteria and evidence:**
+- **Explicitly out of scope:**
+- [ ] No protected standard changed without explicit owner approval and a versioned decision record
+- [ ] Shared governance version matches the other Valoria repository
+- [ ] Requirement and repository quality registers will be updated with evidence

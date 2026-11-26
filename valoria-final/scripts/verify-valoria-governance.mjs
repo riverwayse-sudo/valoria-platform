@@ -1,0 +1,98 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const candidates = [
+  resolve(process.cwd(), "docs/engineering"),
+  resolve(process.cwd(), "../docs/engineering"),
+];
+const docsDir = candidates.find((dir) => existsSync(resolve(dir, "VALORIA_UNIFIED_GOVERNANCE.md")));
+if (!docsDir) {
+  console.error("Governance check failed: shared Valoria governance documents were not found.");
+  process.exit(1);
+}
+
+const governance = readFileSync(resolve(docsDir, "VALORIA_UNIFIED_GOVERNANCE.md"), "utf8");
+const register = readFileSync(resolve(docsDir, "VALORIA_REQUIREMENTS_REGISTER.md"), "utf8");
+const required = [
+  "VALORIA_GOVERNANCE_VERSION: 1.0.0",
+  "The 9-question Taster and the separate 58-question full assessment are distinct",
+  "54 scored questions plus 4 validity anchors",
+  "Historical 15-question sessions remain supported",
+  "VALU is presented in points",
+  "Public visibility requires the current, explicit participant-entered acknowledgement",
+  "One account has one canonical professional profile",
+  "authenticated human review",
+  "Cloudflare is the approved production deployment target",
+  "Known Critical or High defects block production release",
+];
+const missing = required.filter((item) => !governance.toLowerCase().includes(item.toLowerCase()));
+if (missing.length) {
+  console.error("Governance check failed. Missing protected clauses:", missing);
+  process.exit(1);
+}
+if (!register.includes("VALORIA_GOVERNANCE_VERSION: 1.0.0")) {
+  console.error("Governance check failed: requirements register version does not match.");
+  process.exit(1);
+}
+for (const section of ["Protected standards", "Strategic Review requirements", "Content Overhaul requirements", "Cross-repository architecture", "Decision log"]) {
+  if (!register.includes(section)) {
+    console.error(`Governance check failed: requirements register is missing "${section}".`);
+    process.exit(1);
+  }
+}
+const requiredDocs = ["PLATFORM_INVARIANTS.md", "PRODUCTION_RELEASE_POLICY.md", "COMPONENT_CHANGE_CONTROL.md"];
+for (const file of requiredDocs) {
+  if (!existsSync(resolve(docsDir, file))) {
+    console.error(`Governance check failed: required control document "${file}" is missing.`);
+    process.exit(1);
+  }
+}
+const invariants = readFileSync(resolve(docsDir, "PLATFORM_INVARIANTS.md"), "utf8");
+const release = readFileSync(resolve(docsDir, "PRODUCTION_RELEASE_POLICY.md"), "utf8");
+if (!invariants.includes("Public visibility requires current, explicit participant-entered consent")) {
+  console.error("Governance check failed: participant-entered public-consent invariant is missing.");
+  process.exit(1);
+}
+if (!governance.includes("without an administrator approval gate")) {
+  console.error("Governance check failed: automatic Taster profile creation without an admin approval gate is missing.");
+  process.exit(1);
+}
+if (!invariants.includes("without an administrator approval gate")) {
+  console.error("Governance check failed: automatic profile-creation invariant is missing.");
+  process.exit(1);
+}
+if (!release.includes("Production operations target Cloudflare only")) {
+  console.error("Governance check failed: Cloudflare-only production boundary is missing.");
+  process.exit(1);
+}
+
+const peerRef = process.env.VALORIA_GOVERNANCE_PEER_REF;
+const currentRepo = process.env.GITHUB_REPOSITORY || "";
+if (peerRef && currentRepo) {
+  const peerRepo = currentRepo.endsWith("/valoria-site")
+    ? "riverwayse-sudo/valoria-platform"
+    : "riverwayse-sudo/valoria-site";
+  const sharedFiles = [
+    "VALORIA_UNIFIED_GOVERNANCE.md",
+    "VALORIA_REQUIREMENTS_REGISTER.md",
+    "PLATFORM_INVARIANTS.md",
+    "PRODUCTION_RELEASE_POLICY.md",
+  ];
+  for (const file of sharedFiles) {
+    const url = `https://raw.githubusercontent.com/${peerRepo}/${encodeURI(peerRef)}/docs/engineering/${file}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Governance parity check failed: cannot read peer ${peerRepo}/${file} at ${peerRef} (HTTP ${response.status}).`);
+      process.exit(1);
+    }
+    const peerContent = await response.text();
+    const localContent = readFileSync(resolve(docsDir, file), "utf8");
+    if (peerContent !== localContent) {
+      console.error(`Governance parity check failed: ${file} differs between ${currentRepo} and ${peerRepo}.`);
+      process.exit(1);
+    }
+  }
+  console.log(`Cross-repository governance parity: PASS (${sharedFiles.length} shared documents match ${peerRepo}@${peerRef}).`);
+}
+
+console.log("Valoria governance contract integrity: PASS (documentation guard only; application behavior is covered by the existing test suites).");
