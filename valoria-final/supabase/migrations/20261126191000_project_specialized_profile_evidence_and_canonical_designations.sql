@@ -286,7 +286,7 @@ begin
       end,
       caps, selected_caps, p.atb_id,
       p.display_initials, p.photo_url, p.industry, p.skills, p.topics, p.programme_types, p.experience_years, p.facilitation_topics, p.format_capabilities, p.audience_sizes, p.past_events, p.past_clients,
-      p.availability, null, null, 'BASIC', p.fee_range, p.salary_expectation,
+      p.availability, null, null, null, p.fee_range, p.salary_expectation,
       p.availability_status, now(), 'basic', null
     );
   end if;
