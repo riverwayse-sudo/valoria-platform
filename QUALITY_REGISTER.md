@@ -24,6 +24,7 @@ The three existing assessment questions formerly labelled â€œManaging Ambiguityâ
 - **Site PR #474 merged** to main as `4d0302a3f67159daaf7e6921764ade5f85cea49a`. It consolidates account-first Taster entry, post-Taster confirmation handoff, recovery, consent-aware listing, specialist profile evidence, institutional copy and the canonical 17-skill display.
 - **Platform PR #283 merged** to main as `cbcad60d8f33b1830df698892d8239716acf5920`. It consolidates authenticated Taster handoff, completion retry safety, independent full-assessment continuity, specialist roster projection, canonical designation migration and 17-skill scoring aggregation.
 - **Platform PR #287 merged** to main as `84a4b56cc5ba13abb6dbb65b31b51c6c0d5f00f3`. It removes the remaining standalone Managing Ambiguity report prompt/programme key and keeps the guidance under Strategic Thinking.
+- **Site PR #478 merged** to main as `26d24eb14b75c7fbe3d55234a5fd5ee94442d1df`. It requires a recorded human reviewer before any assessment/account, Taster/account or assessment/Taster link can be applied; makes queue completion audit-backed; and keeps unreviewed automated suggestions visible for human review. Superseded site PR #119 was closed.
 - **Quality register PR #274 merged** as `f92d1cfdd822206141a15ddab92ea392b910fc11`.
 - Superseded staging-only PRs #285, #286 and site #476 were closed after their staging verification; they were not merged.
 - Superseded historical journey PRs were closed without merging: site #140, #142, #129, #127, #298, #297, #162, #313 and #114; platform #138, #23, #60 and #62. Other open PRs cover separate governance, security, admin, certificate, design, cleanup and monitoring work and remain outside this release closeout.
@@ -57,7 +58,9 @@ The three existing assessment questions formerly labelled â€œManaging Ambiguityâ
 
 ### Historical identity reconciliation status
 - Production identity evidence remains deliberately unresolved where it is ambiguous: 17 contact candidates, 23 unresolved candidates and 2 conflicting-evidence candidates. The 17 full-assessment records without `taster_id` are not automatically attached to those candidates.
-- Site PR #119 (verified-only admin reconciliation apply action) remains open, non-mergeable and has failing checks. Do not merge it as-is. It needs a fresh rebase/repair and acceptance tests before an administrator can apply reviewed identity links.
+- The production review ledger contains 104 existing rows and zero recorded human reviewers. This includes 10 algorithmic `verified_match` account suggestions, 12 algorithmic `resolved_no_link` suggestions, and no `verified_match` Taster-link reviews. These are not human approvals and must not be applied or treated as closed.
+- Site PR #478 adds human-review gating to all identity apply actions, labels unreviewed suggestions as requiring human review, keeps unreviewed no-link decisions in the active queue, and requires the exact same account owner plus audit evidence for assessment/Taster links. PR #119 was closed as superseded.
+- The admin review POST records the authenticated reviewer. New human reviews can supersede the automated suggestions with traceable evidence; only then can the guarded apply actions run.
 - Current participant-facing claim/link routes fail closed on missing or conflicting email, role, ownership or completion evidence. No identity links or participant records were changed during this closeout.
 
 ### Database advisor and wider engineering findings
