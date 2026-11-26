@@ -157,8 +157,14 @@ export const EXPERIENCE_BANDS = [
   { id: "0-3", label: "0 – 3 years", desc: "Early career" },
   { id: "4-8", label: "4 – 8 years", desc: "Mid career" },
   { id: "9-15", label: "9 – 15 years", desc: "Senior" },
-  { id: "15+", label: "15+ years", desc: "Executive / Director" },
+  { id: "16+", label: "16+ years", desc: "Executive / Director" },
 ];
+
+// Historical records and existing signed handoffs may still carry the old
+// overlapping 15+ identifier. Accept it during migration; new forms emit 16+.
+export function isValidExperienceBand(value) {
+  return EXPERIENCE_BANDS.some(band => band.id === value) || value === "15+";
+}
 
 export function computeTasterResult(answers = {}) {
   const rawScores = Object.fromEntries(TASTER_SKILLS.map(skill => [skill.key, 0]));

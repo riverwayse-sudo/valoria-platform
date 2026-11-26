@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { TASTER_QUESTIONS, computeTasterResult, VALU_VERSION, EXPERIENCE_BANDS } from '../src/valuTaster.js';
+import { TASTER_QUESTIONS, computeTasterResult, VALU_VERSION, isValidExperienceBand } from '../src/valuTaster.js';
 import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
 
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
     const organisation = typeof body.organisation === 'string' ? body.organisation.trim() : '';
     const interest = typeof body.interest === 'string' ? body.interest.trim() : '';
     if (!name || name.length > 200 || !role || role.length > 160 || !validEmail(email)
-      || !EXPERIENCE_BANDS.some(item => item.id === experience)
+      || !isValidExperienceBand(experience)
       || organisation.length > 180 || interest.length > 120 || body.privacy_acknowledged !== true) {
       return json(res, 400, { error: 'Complete your details and acknowledge the Privacy Notice before starting.' });
     }
