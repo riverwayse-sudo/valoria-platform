@@ -38,7 +38,11 @@ describe("VALU v4.2 Intelligence taster", () => {
   });
 
   test("keeps experience bands and complete option text intact", () => {
-    expect(EXPERIENCE_BANDS.map(band => band.id)).toEqual(["0-3", "4-8", "9-15", "15+"]);
+    expect(EXPERIENCE_BANDS.map(band => band.id)).toEqual(["0-3", "4-8", "9-15", "16+"]);
+    const { isValidExperienceBand } = require("../valuTaster");
+    expect(isValidExperienceBand("16+")).toBe(true);
+    expect(isValidExperienceBand("15+")).toBe(true); // legacy compatibility
+    expect(isValidExperienceBand("17+")).toBe(false);
     for (const question of TASTER_QUESTIONS) {
       expect(question.q.trim()).toMatch(/[.!?]$/);
       expect(question.options).toHaveLength(4);
