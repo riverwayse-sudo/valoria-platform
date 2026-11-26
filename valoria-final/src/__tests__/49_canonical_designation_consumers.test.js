@@ -53,6 +53,27 @@ describe("canonical VALU designation consumers", () => {
     expect(edgeFunction).not.toContain("/100");
   });
 
+  test("email and report generation share the canonical designation helper", () => {
+    for (const file of ["api/send-email.js", "api/generate-and-send-report.js"]) {
+      const source = read(file);
+      expect(source).toContain('import { canonicalDesignationName } from "./_canonicalDesignation.js"');
+      expect(source).not.toContain('return "Elite"');
+      expect(source).not.toContain('return "Distinguished"');
+      expect(source).not.toContain('return "Proficient"');
+      expect(source).not.toContain('return "Standard"');
+      expect(source).toContain("No merit designation");
+    }
+  });
+
+  test("rapid-service email code is syntactically singular and uses canonical bands", () => {
+    const edgeFunction = readRoot("supabase/functions/rapid-service/index.ts");
+    expect(edgeFunction).toContain("function getNextSteps(score: number | null)");
+    expect(edgeFunction).toContain("serve(async (req: Request) =>");
+    expect(edgeFunction).not.toContain("function getNextStepsfunction");
+    expect(edgeFunction).not.toContain("serve(asyncserve");
+    expect(edgeFunction).toContain("No merit designation");
+  });
+
   test("participant-facing API consumers derive labels from canonical points", () => {
     for (const file of [
       "api/submit-assessment.js",
