@@ -5,6 +5,8 @@ import path from "node:path";
 const read = (relative) => fs.readFileSync(path.join(process.cwd(), relative), "utf8");
 
 describe("canonical VALU designation consumers", () => {
+  const readRoot = relative => fs.readFileSync(path.join(process.cwd(), "..", relative), "utf8");
+
   test.each([
     [34, null],
     [35, "Building Foundations"],
@@ -27,7 +29,6 @@ describe("canonical VALU designation consumers", () => {
   );
 
   test("the app and rapid-service consume one shared, versioned VALU contract", () => {
-    const readRoot = relative => fs.readFileSync(path.join(process.cwd(), "..", relative), "utf8");
     const appContract = readRoot("valoria-final/src/valuV4Contract.js");
     const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
     const edgeFunction = readRoot("supabase/functions/rapid-service/index.ts");
@@ -49,7 +50,8 @@ describe("canonical VALU designation consumers", () => {
     expect(edgeFunction).toContain("Emerging Force");
     expect(edgeFunction).toContain("Developing Professional");
     expect(edgeFunction).toContain("Building Foundations");
-    for (const retired of ["Elite", "Distinguished", "Proficient"]) expect(sharedContract).not.toContain(`name: "${retired}"`);
+    const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
+    for (const retired of ["Elite", "Distinguished", "Proficient", "Standard"]) expect(sharedContract).not.toContain(`name: "${retired}"`);
     expect(edgeFunction).not.toContain("/100");
   });
 
