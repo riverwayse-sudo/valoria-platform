@@ -3,7 +3,7 @@ import VALUIndexV4GateNext from "./VALUIndexV4GateNext.jsx";
 import VALUIndexTasterFirst from "./VALUIndexTasterFirst.jsx";
 import FullVALUAssessment from "./FullVALUAssessment.jsx";
 
-function continueFromTasterFirst({ tasterId, name, role, experience, email }) {
+function continueFromLegacyTaster({ tasterId, name, role, experience, email }) {
   if (!tasterId || !name || !role || !experience || !email) return;
   const host = window.location.hostname.toLowerCase();
   const approved = new Set([
@@ -30,9 +30,16 @@ function continueFromTasterFirst({ tasterId, name, role, experience, email }) {
 export default function VALUIndexV4App() {
   const params = new URLSearchParams(window.location.search);
   const full = params.get("full") === "1";
-  const accountFirst = params.get("journey") === "account-first";
+  const legacyTasterFirst = params.get("journey") === "taster-first";
+  let hasSavedLegacyTaster = false;
+  try {
+    hasSavedLegacyTaster = Boolean(window.localStorage.getItem("valu_taster_first_resume_token"));
+  } catch {}
   if (full) return <FullVALUAssessment />;
-  // The canonical public journey is Taster first; retain account-first only as an explicit legacy route.
-  if (!accountFirst) return <VALUIndexTasterFirst onComplete={continueFromTasterFirst} />;
+  // Only an explicitly requested or already-saved legacy session can enter Taster-first.
+  if (legacyTasterFirst || hasSavedLegacyTaster) {
+    return <VALUIndexTasterFirst onComplete={continueFromLegacyTaster} />;
+  }
+  // New participants must create and confirm their account before the Taster.
   return <VALUIndexV4GateNext />;
 }

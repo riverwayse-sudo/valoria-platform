@@ -7,6 +7,15 @@ const path = require("path");
 
 const readApi = name => fs.readFileSync(path.join(__dirname, "../../api", name), "utf8");
 
+describe("confirmed Taster-start handoff compatibility", () => {
+  test("legacy 16+ account metadata is normalized to the canonical 15+ assessment band", () => {
+    const api = fs.readFileSync(path.join(__dirname, "../../api/submit-assessment.js"), "utf8");
+    expect(api).toContain("function normalizeExperienceBand(value)");
+    expect(api).toContain("return value === '16+' ? '15+' : value");
+    expect(api).toContain("const experience = normalizeExperienceBand(String(accountMetadata.experience || '').trim())");
+  });
+});
+
 describe("taster-progress requires registration before a new taster", () => {
   const api = readApi("taster-progress.js");
 
@@ -118,6 +127,21 @@ describe("full-assessment progress is independent of taster progress", () => {
     expect(progressApi).not.toContain("assessment_version");
   });
 
+  test("full-assessment autosaves are serialized and failures remain visible and retryable", () => {
+    const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
+    expect(component).toContain("queueProgressSave");
+    expect(component).toContain("const completion = await queueProgressSave({");
+    expect(component).toContain("completionStartedRef.current = true");
+    expect(component).toContain("if (completionStartedRef.current) return;");
+    expect(component).toContain("progressSaveQueueRef.current.then(() => saveProgress(payload))");
+    expect(component).toContain("requestId === progressSaveSequenceRef.current");
+    expect(component).toContain("setProgressSaveStatus('failed')");
+    expect(component).toContain("SAVE ISSUE — CHECK MESSAGE BELOW");
+    expect(component).toContain("RETRY SAVE");
+    expect(component).toContain("if (!checkpointSaved) throw new Error");
+    expect(component).toContain("return false;");
+  });
+
   test("assessment reminder emails never expose internal question counts", () => {
     expect(progressApi).not.toContain("${row.current_question} / ${row.total_questions} questions");
     expect(progressApi).not.toContain("${remaining} remaining");
@@ -169,7 +193,7 @@ describe("full assessment submission validates a complete answer map", () => {
   test("the formal assessment only advances to report handoff after completion is confirmed", () => {
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     const submit = component.slice(component.indexOf("async function submitAssessment"));
-    expect(submit).toContain("const completion = await saveProgress({");
+    expect(submit).toContain("const completion = await queueProgressSave({");
     expect(submit).toContain("completion?.ok !== true || completion?.status !== 'completed'");
     expect(submit.indexOf("completion?.ok !== true")).toBeLessThan(submit.indexOf("api/link-assessment-to-taster"));
   });

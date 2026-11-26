@@ -87,7 +87,7 @@ const postCompleteSave = await fetch(`${base}/api/taster-first-progress`, {
 });
 assert.equal(postCompleteSave.status, 409, "completed Taster must be immutable");
 
-// Verify the paired site staging deployment exposes the same Taster-first journey.
+// Verify the paired site staging deployment exposes account-first onboarding while retaining the legacy Taster API for saved sessions.
 const sitePaths = ["/", "/valu", "/valu/start", "/valu/assessment", "/professional-signup", "/marketplace"];
 for (const path of sitePaths) {
   const response = await fetch(new URL(path, origin));

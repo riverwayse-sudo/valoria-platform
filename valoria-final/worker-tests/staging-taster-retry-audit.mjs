@@ -96,11 +96,20 @@ await page.route(url => url.origin === SITE_ORIGIN && url.pathname.startsWith("/
 });
 
 try {
-  const entry = new URL("/", ASSESSMENT_ORIGIN);
-  entry.searchParams.set("site_origin", SITE_ORIGIN);
-  await page.goto(entry.toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
+  // A new visitor must reach account creation before any Taster questions.
+  const publicEntry = new URL("/", ASSESSMENT_ORIGIN);
+  publicEntry.searchParams.set("site_origin", SITE_ORIGIN);
+  await page.goto(publicEntry.toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
+  await page.getByRole("heading", { name: /Your account comes first/i }).waitFor({ state: "visible", timeout: 20000 });
+  const accountButton = page.getByRole("button", { name: /CREATE OR SIGN IN TO YOUR ACCOUNT/i });
+  await accountButton.click();
+  await page.waitForURL(url => url.origin === SITE_ORIGIN && url.pathname.replace(/\/$/, "") === "/valu/register" && url.searchParams.get("journey") === "valu_taster", { timeout: 20000 });
 
-  // The canonical public entry is the Taster itself, not account-first registration.
+  // Existing pre-account sessions remain resumable only through their explicit legacy route.
+  const legacyEntry = new URL("/", ASSESSMENT_ORIGIN);
+  legacyEntry.searchParams.set("site_origin", SITE_ORIGIN);
+  legacyEntry.searchParams.set("journey", "taster-first");
+  await page.goto(legacyEntry.toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.getByPlaceholder("Full name").fill("Valoria Automated Retry Test");
   await page.getByPlaceholder("e.g. Senior Marketing Manager").fill("Staging QA");
   await page.getByPlaceholder("you@example.com").fill("retry-audit@example.invalid");

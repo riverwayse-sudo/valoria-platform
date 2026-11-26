@@ -121,6 +121,8 @@ export default function FullVALUAssessment() {
   const [startedAt,setStartedAt] = useState(Date.now());
   const [timings,setTimings] = useState([]);
   const [saving,setSaving] = useState(false);
+  const [progressSaveStatus,setProgressSaveStatus] = useState('checking');
+  const [progressSaveError,setProgressSaveError] = useState('');
   const [result,setResult] = useState(null);
   const [error,setError] = useState('');
   const [reportStatus,setReportStatus] = useState('');
@@ -134,6 +136,16 @@ export default function FullVALUAssessment() {
   const [handoffError,setHandoffError] = useState('');
   const mountedRef = useRef(true);
   const verifiedHandoffRef = useRef('');
+  const progressSaveSequenceRef = useRef(0);
+  const progressSaveQueueRef = useRef(Promise.resolve());
+  const completionStartedRef = useRef(false);
+
+  // Serialize writes so an older autosave cannot arrive after and overwrite a newer checkpoint.
+  function queueProgressSave(payload) {
+    const pending = progressSaveQueueRef.current.then(() => saveProgress(payload));
+    progressSaveQueueRef.current = pending.catch(() => {});
+    return pending;
+  }
 
   const resumeKey = useMemo(
     () => `valoria-valu-resume:${identity.tasterId}:${identity.name}:${identity.role}:${identity.experience}`,
@@ -349,34 +361,49 @@ export default function FullVALUAssessment() {
   }, [resumeKey, canUse, sessionId, resumeToken, current, answers, timings, result, handoffStatus]);
 
   useEffect(() => {
-    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
-    const timer = window.setTimeout(() => {
-      saveProgress({
-        action:'save',
-        handoff_token:handoffToken,
-        session_id:sessionId,
-        resume_token:resumeToken || undefined,
-        taster_id:identity.tasterId,
-        identity_hash:identityHashFor(identity),
-        name:identity.name,
-        role:identity.role,
-        experience:identity.experience,
-        current_question:current,
-        total_questions:TOTAL_QUESTIONS,
-        answers,
-        timings,
-        session_seed:0,
-      }).then(data => {
-        if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
-      }).catch(() => {});
+    if (!canUse || !sessionId || result || completionStartedRef.current || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
+    const timer = window.setTimeout(async () => {
+      if (completionStartedRef.current) return;
+      const requestId = ++progressSaveSequenceRef.current;
+      setProgressSaveStatus('saving');
+      try {
+        const data = await queueProgressSave({
+          action:'save',
+          handoff_token:handoffToken,
+          session_id:sessionId,
+          resume_token:resumeToken || undefined,
+          taster_id:identity.tasterId,
+          identity_hash:identityHashFor(identity),
+          name:identity.name,
+          role:identity.role,
+          experience:identity.experience,
+          current_question:current,
+          total_questions:TOTAL_QUESTIONS,
+          answers,
+          timings,
+          session_seed:0,
+        });
+        if (data.resume_token && mountedRef.current && requestId === progressSaveSequenceRef.current) setResumeToken(data.resume_token);
+        if (mountedRef.current && requestId === progressSaveSequenceRef.current) {
+          setProgressSaveStatus('saved');
+          setProgressSaveError('');
+        }
+      } catch (err) {
+        if (mountedRef.current && requestId === progressSaveSequenceRef.current) {
+          setProgressSaveStatus('failed');
+          setProgressSaveError(err?.message || 'Your latest response could not be saved to your Valoria account. Keep this page open and retry.');
+        }
+      }
     }, 250);
     return () => window.clearTimeout(timer);
   }, [answers, timings, current, sessionId, canUse, result, identity.tasterId, identity.name, identity.role, resumeToken, handoffStatus]);
 
   async function persistCheckpoint(nextAnswers, nextTimings, nextCurrent) {
-    if (!sessionId || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete)) return;
+    if (!sessionId || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete)) return false;
+    const requestId = ++progressSaveSequenceRef.current;
+    setProgressSaveStatus('saving');
     try {
-      const data = await saveProgress({
+      const data = await queueProgressSave({
         action:'save',
         handoff_token:handoffToken,
         session_id:sessionId,
@@ -392,9 +419,17 @@ export default function FullVALUAssessment() {
         timings:nextTimings,
         session_seed:0,
       });
-      if (data.resume_token && mountedRef.current) setResumeToken(data.resume_token);
+      if (data.resume_token && mountedRef.current && requestId === progressSaveSequenceRef.current) setResumeToken(data.resume_token);
+      if (mountedRef.current && requestId === progressSaveSequenceRef.current) {
+        setProgressSaveStatus('saved');
+        setProgressSaveError('');
+      }
       return true;
     } catch (err) {
+      if (mountedRef.current && requestId === progressSaveSequenceRef.current) {
+        setProgressSaveStatus('failed');
+        setProgressSaveError(err?.message || 'Your latest response could not be saved to your Valoria account. Keep this page open and retry.');
+      }
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
         try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
         setHandoffToken('');
@@ -431,6 +466,7 @@ export default function FullVALUAssessment() {
     if (saving || result || handoffStatus !== 'ready' || !handoffToken || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])) return;
     setSaving(true);
     setError('');
+    completionStartedRef.current = true;
     try {
       const checkpointSaved = await persistCheckpoint(answers, timings, ASSESSMENT_ORDER.length);
       if (!checkpointSaved) throw new Error('Your final responses could not be confirmed as saved. Please retry; your answers remain on this page.');
@@ -451,7 +487,9 @@ export default function FullVALUAssessment() {
       const scoreData = await scoreRes.json().catch(() => ({}));
       if (!scoreRes.ok) throw new Error(scoreData.error || 'The assessment could not be scored.');
 
-      const completion = await saveProgress({
+      const completionRequestId = ++progressSaveSequenceRef.current;
+      setProgressSaveStatus('saving');
+      const completion = await queueProgressSave({
         action:'complete',
         handoff_token:handoffToken,
         session_id:sessionId,
@@ -469,6 +507,10 @@ export default function FullVALUAssessment() {
       });
       if (completion?.ok !== true || completion?.status !== 'completed') {
         throw new Error('Your VALU score is saved, but we could not confirm the assessment completion state. Please retry from this page.');
+      }
+      if (mountedRef.current && completionRequestId === progressSaveSequenceRef.current) {
+        setProgressSaveStatus('saved');
+        setProgressSaveError('');
       }
 
       const linkRes = await fetch(API_BASE + '/api/link-assessment-to-taster', {
@@ -499,6 +541,7 @@ export default function FullVALUAssessment() {
       window.gtag?.("event", "valu_index_complete", { assessment_type: "full" });
       setResult(scoreData.results);
     } catch (err) {
+      completionStartedRef.current = false;
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
         try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
         setHandoffToken('');
@@ -594,7 +637,7 @@ export default function FullVALUAssessment() {
       <VALUAssessmentJourney stage="full" />
       <div className="valu-full-heading">
         <div><div style={S.eyebrow}>YOUR VALU INDEX</div><p className="valu-full-prompt">A considered view of your professional capability.</p></div>
-        <span className="valu-full-save"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</span>
+        <span className="valu-full-save" role="status" aria-live="polite"><span aria-hidden="true">{progressSaveStatus === 'saved' ? '✓' : progressSaveStatus === 'failed' ? '!' : '…'}</span> {progressSaveStatus === 'saved' ? 'YOUR PROGRESS IS SAVED' : progressSaveStatus === 'failed' ? 'SAVE ISSUE — CHECK MESSAGE BELOW' : 'SAVING YOUR PROGRESS…'}</span>
       </div>
       <div className="valu-full-progress" role="progressbar" aria-label="Assessment progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}><div style={{...S.progressFill,width:`${progress}%`}} /></div>
       <div className="valu-full-context"><span>{question.cluster} · {CLUSTER_NAMES[question.cluster]}</span><span>SELECT THE RESPONSE THAT BEST REFLECTS YOU</span></div>
@@ -602,6 +645,7 @@ export default function FullVALUAssessment() {
       <div style={S.options}>
         {question.options.map((option,i)=>{const selected=answers[ASSESSMENT_ORDER[current]]===i;return <button className="valu-option" key={i} type="button" aria-pressed={selected} disabled={saving} onClick={()=>choose(i)} style={{...S.option,borderColor:selected?'#C9A84C':'rgba(247,244,238,.1)',background:selected?'rgba(201,168,76,.14)':'#2E2E4A'}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{option.text}</span></button>})}
       </div>
+      {progressSaveError && <div style={S.error} role="alert">{progressSaveError} Your answers remain on this device while this page stays open. <button type="button" onClick={()=>persistCheckpoint(answers,timings,current)} style={S.dismiss}>RETRY SAVE</button></div>}
       <div className="valu-full-footer">
         {current>0?<button type="button" className="valu-assessment-back" disabled={saving} onClick={()=>{setCurrent(value=>Math.max(0,value-1));setStartedAt(Date.now());}}>← REVIEW PREVIOUS RESPONSE</button>:<span />}
         <span>Your responses are saved automatically.</span>

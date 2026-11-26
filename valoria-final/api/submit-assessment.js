@@ -18,6 +18,10 @@ const MAX_TIMINGS_LENGTH = QUESTIONS.length;
 const FULL_ASSESSMENT_VERSION = "FULL_VALU_V2_SEPARATE_TASTER";
 const MAX_SHUFFLE_KEYS = QUESTIONS.length;
 const EXPERIENCE_BANDS = new Set(['0-3', '4-8', '9-15', '15+']);
+function normalizeExperienceBand(value) {
+  // Older account-registration forms stored 16+; the assessment contract uses 15+.
+  return value === '16+' ? '15+' : value;
+}
 const RATE_LIMIT = 10;
 const RATE_WINDOW_SECONDS = 60 * 60;
 
@@ -255,7 +259,7 @@ async function exchangeTasterStartHandoff(body, res) {
   const user = await userResponse.json();
   const accountMetadata = user.app_metadata || {};
   const role = String(accountMetadata.role || '').trim();
-  const experience = String(accountMetadata.experience || '').trim();
+  const experience = normalizeExperienceBand(String(accountMetadata.experience || '').trim());
   if (!user?.email_confirmed_at || !user?.email || accountMetadata.valu_taster_signup !== true ||
       !role || !EXPERIENCE_BANDS.has(experience) || accountMetadata.privacy_acknowledged !== true) {
     return json(res, 403, { ok: false, error: 'Complete and confirm your Valoria professional account before starting the taster.' });

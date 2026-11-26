@@ -82,6 +82,14 @@ describe("VALU full-assessment handoff token interoperability", () => {
     expect(await verifyValuHandoffTokenEdge(signToken(payload), other)).toBeNull();
   });
 
+  test("non-canonical base64url signature encodings are rejected", async () => {
+    const token = signToken(payload);
+    const [encoded, signature] = token.split(".");
+    const nonCanonical = `${encoded}.${signature.slice(0, -2)}xx`;
+    expect(verifyValuHandoffToken(nonCanonical, tasterId)).toBeNull();
+    expect(await verifyValuHandoffTokenEdge(nonCanonical, tasterId)).toBeNull();
+  });
+
   test("a tampered signature is rejected", async () => {
     const token = signToken(payload);
     const [encoded, signature] = token.split(".");

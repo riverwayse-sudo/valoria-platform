@@ -1,9 +1,12 @@
 const AUDIENCE = 'valu-full-assessment';
 
 function decodeBase64Url(value) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)) throw new Error('Invalid base64url encoding');
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
   const binary = globalThis.atob(padded);
+  const canonical = globalThis.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  if (canonical !== value) throw new Error('Non-canonical base64url encoding');
   return Uint8Array.from(binary, char => char.charCodeAt(0));
 }
 
