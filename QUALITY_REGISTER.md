@@ -1,4 +1,4 @@
-# 2026-11-26 current-main code closeout candidate
+## 2026-11-26 current-main code closeout candidate
 
 **Status:** CODE CONSOLIDATED IN TWO DRAFT PRs; CONSOLIDATED TESTING NOT STARTED. This section supersedes earlier 26 November snapshots where production visibility and open-PR status differ. It records read-only source, migration-history and aggregate-count verification; it does not claim the candidate code is deployed or tested.
 
