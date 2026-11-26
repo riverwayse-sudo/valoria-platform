@@ -26,6 +26,7 @@ The three existing assessment questions formerly labelled â€œManaging Ambiguityâ
 - **Platform PR #287 merged** to main as `84a4b56cc5ba13abb6dbb65b31b51c6c0d5f00f3`. It removes the remaining standalone Managing Ambiguity report prompt/programme key and keeps the guidance under Strategic Thinking.
 - **Quality register PR #274 merged** as `f92d1cfdd822206141a15ddab92ea392b910fc11`.
 - Superseded staging-only PRs #285, #286 and site #476 were closed after their staging verification; they were not merged.
+- Superseded historical journey PRs were closed without merging: site #140, #142, #129, #127, #298, #297 and #162; platform #138, #23, #60 and #62. Other open PRs cover separate governance, security, admin, certificate, design, cleanup and monitoring work and remain outside this release closeout.
 - Earlier implementation branches remain superseded; do not merge stale branches wholesale.
 
 ### Automated and isolated staging evidence
