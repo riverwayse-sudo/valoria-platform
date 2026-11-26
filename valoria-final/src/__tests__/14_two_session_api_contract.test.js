@@ -69,7 +69,7 @@ describe("signup-first taster start security contract", () => {
     expect(progressApi).toContain("startSession.privacy_acknowledged !== true");
     expect(progressApi).toContain("if (!existingProgress)");
     expect(progressApi.indexOf("consumeRegistrationRateLimit(req)")).toBeLessThan(progressApi.indexOf("getProgress(hashToken(body.resume_token))"));
-    expect(progressApi).toContain("Create and confirm your Valoria account before starting the taster.");
+    expect(progressApi).toContain("Create your Valoria account before starting the Taster. Email confirmation follows completion.");
   });
 
   test("legacy in-progress registrations remain recoverable without changing their saved answers", () => {
