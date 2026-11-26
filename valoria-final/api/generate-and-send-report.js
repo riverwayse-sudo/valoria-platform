@@ -1,5 +1,7 @@
 import { checkRateLimit } from "./_rateLimit.js";
 import { applyCors, handlePreflight } from "./_cors.js";
+import { canonicalDesignationName } from "./_canonicalDesignation.js";
+
 
 // Server-side report generation + email send for the sweep workflow.
 // Public browser triggers are rate-limited; cron workers remain authenticated.
@@ -87,8 +89,6 @@ async function markFailed(identityHash, failureCode) {
   try { await patchAssessment(identityHash, { report_status: "FAILED", report_locked_at: null, report_failure_code: failureCode }); }
   catch { console.error("[generate-and-send-report] failed to persist failure state"); }
 }
-
-import { canonicalDesignationName } from "./_canonicalDesignation.js";
 
 function canonicalDesignation(score) {
   const points = Number(score);
