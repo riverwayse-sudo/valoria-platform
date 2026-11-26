@@ -28,6 +28,15 @@ const gateSource = () => readSource("VALUIndexV4GateNext.jsx");
 const fullSource = () => readSource("FullVALUAssessment.jsx");
 
 describe("separate taster and formal assessment contracts", () => {
+  test("the default assessment entry requires a confirmed account before the Taster", () => {
+    const app = readSource("VALUIndexV4App.jsx");
+    expect(app).toContain("if (full) return <FullVALUAssessment />;");
+    expect(app).toContain("return <VALUIndexV4GateNext />;");
+    expect(app).not.toContain("VALUIndexTasterFirst");
+    expect(app).not.toContain("continueFromTasterFirst");
+  });
+
+
   test("the taster contains nine questions and the formal instrument contains 58", () => {
     expect(TASTER_QUESTIONS).toHaveLength(9);
     expect(QUESTIONS).toHaveLength(58);
