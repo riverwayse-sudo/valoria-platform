@@ -1,3 +1,5 @@
+import { canonicalDesignationName } from "./_canonicalDesignation.js";
+
 export const config = { runtime: "edge" };
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -9,8 +11,6 @@ function escapeHtml(str) {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-
-import { canonicalDesignationName } from "./_canonicalDesignation.js";
 
 function getCanonicalDesignation(score) {
   const points = Number(score);
