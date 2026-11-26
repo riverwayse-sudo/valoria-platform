@@ -1,7 +1,7 @@
 import React from 'react';
 
 const STEPS = [
-  { key: 'account', title: 'Account', detail: 'Email confirmed' },
+  { key: 'account', title: 'Account', detail: 'Account registered' },
   { key: 'taster', title: 'Taster', detail: 'A guided starting point' },
   { key: 'dashboard', title: 'Dashboard', detail: 'Your next step' },
   { key: 'full', title: 'Full VALU Index', detail: 'Your official result' },
@@ -10,7 +10,7 @@ const STEPS = [
 export default function VALUAssessmentJourney({ stage = 'taster' }) {
   const normalizedStage = stage === 'registration' ? 'taster' : stage === 'account' ? 'dashboard' : stage;
   const statusLabel = stage === 'registration'
-    ? 'ACCOUNT CONFIRMED'
+    ? 'ACCOUNT REGISTERED · TASTER NEXT'
     : stage === 'account'
       ? 'TASTER SAVED · READY FOR YOUR DASHBOARD'
       : stage === 'full'
