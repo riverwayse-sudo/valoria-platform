@@ -37,7 +37,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$function$
+$function$;
 
 
 CREATE OR REPLACE FUNCTION public.refresh_marketplace_public_roster(p_professional_id uuid)
@@ -291,7 +291,7 @@ begin
     );
   end if;
 end;
-$function$
+$function$;
 
 
 -- Canonical point bands replace the retired Elite/Distinguished/Proficient/Standard labels.
