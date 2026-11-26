@@ -260,9 +260,13 @@ async function exchangeTasterStartHandoff(body, res) {
   const accountMetadata = user.app_metadata || {};
   const role = String(accountMetadata.role || '').trim();
   const experience = normalizeExperienceBand(String(accountMetadata.experience || '').trim());
-  if (!user?.email_confirmed_at || !user?.email || accountMetadata.valu_taster_signup !== true ||
+  // This handoff is intentionally Taster-scoped: the account is created at
+  // registration but email confirmation is deferred until the Taster is complete.
+  // Dashboard and full-assessment handoffs retain their separate confirmed-email
+  // checks; do not copy this exception into those authorization paths.
+  if (!user?.email || user.email_confirmed_at || accountMetadata.valu_taster_signup !== true ||
       !role || !EXPERIENCE_BANDS.has(experience) || accountMetadata.privacy_acknowledged !== true) {
-    return json(res, 403, { ok: false, error: 'Complete and confirm your Valoria professional account before starting the taster.' });
+    return json(res, 403, { ok: false, error: 'Your unconfirmed Valoria Taster registration could not be verified.' });
   }
 
   const consumeParams = new URLSearchParams({
