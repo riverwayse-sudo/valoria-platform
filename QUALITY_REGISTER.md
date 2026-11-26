@@ -1,43 +1,57 @@
-## 2026-11-26 current-main code closeout candidate
+## 2026-11-26 consolidated closeout — current evidence
 
-**Status:** CODE CONSOLIDATED IN TWO DRAFT PRs; CONSOLIDATED TESTING NOT STARTED. This section supersedes earlier 26 November snapshots where production visibility and open-PR status differ. It records read-only source, migration-history and aggregate-count verification; it does not claim the candidate code is deployed or tested.
+**Status:** CONSOLIDATED CODE CANDIDATES PASS AUTOMATED GATES AND ISOLATED STAGING BROWSER/E2E CHECKS. LIVE AUTHENTICATION AND FULL 58-QUESTION JOURNEY ARE NOT ACCEPTED. NO PRODUCTION PROMOTION OR PRODUCTION DATABASE CHANGE HAS BEEN PERFORMED FOR THESE CANDIDATES.
 
-## Current implementation candidates
-- **Site PR #474** — current-main draft, mergeable. Consolidates the writer-approved account-at-entry → Taster → post-Taster email confirmation → authenticated dashboard handoff; legacy Taster recovery; institutional content; event replay; marketplace consent reuse; canonical site labels; and specialist-spectrum profile content. It also adds regression contracts for the new flows.
-- **Platform PR #283** — current-main draft, mergeable. Consolidates the narrowly scoped unconfirmed-account Taster-start handoff, preserves confirmed-email requirements for dashboard/full assessment, records the production-applied visibility migration in source control, and adds the specialist public-roster projection and canonical designation migration.
-- Earlier implementation branches were closed as superseded rather than merged wholesale because they were based on stale commits. Their current requirements were re-applied as targeted changes on #474 and #283.
-- Both PRs remain drafts. No production deployment or production database operation has been performed for this candidate.
-- The site production Worker workflow in PR #474 now requires either a `[deploy-production]` commit annotation or a manual `DEPLOY` selection; the platform production Worker workflow already has an equivalent explicit gate. Ordinary merges do not authorize production promotion.
+### Authoritative product and content decisions
+- Brand Guidelines VI-BG-2026-001 govern identity, typography, palette and institutional voice.
+- The October 2026 Content Audit and Valoria Developer Content Brief v1 establish the exact canonical 17 PRIME skills and replace the older invented skill names.
+- Website Review and Website Content Overhaul govern product and page requirements; the 10 November Closeout Addendum records corrections and acceptance gates.
+- Later owner instruction supersedes the older pre-account Taster sequence: account registration first, authenticated Taster second, completion confirmation third, authenticated dashboard next, then the separate full assessment.
+- The nine-question Taster is independent from the 58-question full assessment. Do not merge their answers, count the Taster as part of the full assessment, or show internal question counts/progress counts to participants.
+- VALU is points-based; official designation is separate from Taster completion, listing eligibility, public visibility and certification.
 
-## Verified production and staging consent state
-Read-only Supabase migration-history and aggregate queries on 26 November show:
-- Production has migration `20261126000638_require_participant_entered_public_profile_consent` and the later migration `20261126111526_honor_admin_attested_public_profile_visibility`.
-- The effective production consent helper therefore accepts the current profile acknowledgement sources `profile_setup`, `profile_edit`, and the existing `admin_attestation` evidence. The earlier statement that admin attestations no longer authorize visibility is superseded by the later production migration.
-- Production aggregate counts: 13 public/listed, non-revoked, non-test profiles; 13 public-roster rows; 15 `admin_attestation` acknowledgement rows (all `profile_submission` at `public-profile-visibility-v3-2026-11-07)); 0 `profile_setup`/`profile_edit` acknowledgement rows; 15 total acknowledgement rows.
-- Staging aggregate counts: 0 public/listed profiles, 0 public-roster rows, 0 admin-attestation rows and 0 participant acknowledgement rows. Staging does not yet have migration `20261126111526`.
-- No participant names, answers, scores, identity links or consent rows were read or changed during this verification. Aggregate counts only were queried.
+### Canonical PRIME taxonomy
+The public taxonomy and assessment skill output must contain exactly these 17 skills:
+- Presence: Communication; Negotiation; Personal Brand & Executive Presence.
+- Relationships: Emotional Intelligence; Conflict Resolution; People Development; Stakeholder Management.
+- Intelligence: Critical Thinking; Strategic Thinking; Business Acumen; AI Fluency.
+- Mastery: Execution & Accountability; Resilience & Self-Leadership; Adaptability.
+- Enterprise: Commercial Creativity; Influence Without Authority; Human-AI Collaboration.
 
-## Pending platform migration and canonical designation alignment
-- PR #283 includes `20261126111526_honor_admin_attested_public_profile_visibility.sql` under the exact version recorded in production, for source-control parity. Do not reapply it to production. Staging parity is a controlled prerequisite for the later test phase.
-- PR #283 also includes `20261126191000_project_specialized_profile_evidence_and_canonical_designations.sql`. It is **not applied** in either environment.
-- The new migration extends the consent-gated public roster with experience years, facilitation topics, delivery formats, audience sizes, past events and past-client/programme evidence. It updates the roster writer to project these fields for both Basic and Full listings.
-- The same migration updates the database designation trigger and roster writer to the current point bands: 80–100 Force to Align With; 65–79 Emerging Force; 50–64 Developing Professional; 35–49 Building Foundations; below 35 no designation. It backfills derived designation labels only and does not change assessment answers or scores.
-- Basic Taster listings remain a separate access state, not a merit designation: the Basic roster projection writes a null designation. The 35-point threshold remains part of Full VALU eligibility and does not gate the independent Basic listing path.
-- The migration refreshes only existing public/listed, non-revoked, non-test profiles through the existing consent gate. Apply it to staging only after the code phase is complete, then verify the projection and boundaries before any production promotion.
+The three existing assessment questions formerly labelled “Managing Ambiguity” are retained in the 58-question bank as an assessment facet of Strategic Thinking. They do not create an eighteenth PRIME skill. Their scores are aggregated under Strategic Thinking and normalized against the combined six-question maximum; total question count, cluster scoring and VALU Index weighting remain unchanged. This mapping is covered by a new regression contract in platform PR #283.
 
-## Specialist-spectrum correction
-- Site PR #474 adds a shared capability-evidence adapter. General views use the overall VALU report and PRIME strengths. Talent uses skills and professional context; Speaker uses topics, formats, audience experience and speaking engagements; Facilitator uses facilitation topics, programme types, delivery formats, audience experience and client/programme evidence.
-- Specialist views no longer reuse the general VALU summary, score/radar or PRIME-strength narrative. The profile route preserves the selected spectrum, and missing specialist evidence receives a neutral fallback.
-- Marketplace cards now use track-specific chips and search/filter evidence. Overall VALU score/tier badges, PRIME-strength badges, PRIME-cluster filters, score-band filters and score-based ordering are General-only; specialist spectra are not ranked by the general VALU score.
-- The platform migration adds the required consent-gated roster fields; the site directory selects them. These two changes must be released and tested together.
+### Consolidated implementation candidates
+- **Site PR #474** — account-first Taster entry, post-Taster confirmation handoff, recovery route, consent-aware listing, specialist profile evidence, canonical institutional copy and 17-skill display. Current candidate head: `c73365aecaabcd09a4176d4008190186cc5d6e6a`.
+- **Platform PR #283** — authenticated Taster handoff, completion retry safety, independent full-assessment continuity, specialist public-roster projection and canonical designation migration. The latest scoring-taxonomy commits are under CI verification; do not treat the earlier staging run as proof that the new skill aggregation has been deployed.
+- Earlier implementation branches remain superseded; do not merge stale branches wholesale.
+- Both production deployment workflows are explicitly gated. Merging code to main does not by itself authorize production promotion; site requires `[deploy-production]` or manual `DEPLOY`, and platform has its own explicit production gate.
 
-## Remaining verification gates
-- The consolidated test pass has **not** been started. Do not treat existing CI/E2E results for the earlier account-first flow as evidence for the new post-Taster confirmation sequence.
-- After code freeze, apply the two required migration versions to staging in order, then run site/platform unit and contract tests, lint/build, security checks, Cloudflare Worker validation, and desktop/mobile browser acceptance.
-- Use a synthetic staging identity and controlled mailbox to verify registration, Taster save/resume/completion, confirmation token exchange, authenticated dashboard landing, separate Full VALU Index authorization, score/report generation and marketplace listing. Do not use a real participant account or require anyone to retake an assessment.
-- Verify specialist Talent/Speaker/Facilitator content with synthetic profile evidence and confirm the General view alone shows the overall VALU narrative.
-- The Supabase confirmation-email template and real controlled-mailbox token exchange remain a release gate. No production promotion until the full journey passes.
-- Separate backlog items remain outside this code phase: private event certificate delivery, shared admin-auth refactoring, staging editorial redesign, broader ASVS/WCAG review, rapid-service external-caller identification and Supabase plan-limited leaked-password protection.
+### Automated and isolated staging evidence
+- Site candidate PR #474: production build, unit/contract tests, static checks, secret scan, environment parity and Cloudflare Worker build passed.
+- Site staging PR #476: isolated Cloudflare site Worker deployed; 34-page desktop/mobile browser audit reported zero failures. Staging routes, canonical URLs, confirmation form structure, robots policy and staging-only sitemap checks passed. This does not verify a real Supabase email token exchange.
+- Platform staging PR #285: isolated assessment Worker deployed; platform unit tests, build, CORS/route smoke, nine-question Taster save/resume/completion/retry and lost-response recovery checks passed. These results predate the latest Managing Ambiguity → Strategic Thinking aggregation change; re-run staging after the latest platform CI is green.
+- Browser audit artifacts are attached to the site staging workflow run #45892406694 for seven-day retention.
+
+### Supabase migration and environment boundary
+- Projects: staging `yccxgjdqworgcbircnvn`; production `sbkgpisgkuhbalsxqkdr`.
+- Staging migration history records the consent-attestation migration under version `20261126200338`. The specialized-profile/canonical-designation migration is recorded under `20261126200408` and again under `20261126202125`; this is a duplicate history application. Do not apply it again. Confirm final schema/function parity and retain the duplicate history for audit rather than attempting destructive cleanup.
+- Staging has the specialized public-roster columns. Production does not yet have those columns; the new specialist projection migration must not be applied to production until the full release gate passes.
+- Production read-only aggregate snapshot: 47 Taster sessions (5 linked to accounts); 44 resumable Taster progress records (11 completed, 11 linked); 18 completed VALU assessment records (17 have no `taster_id`); 23 professional profiles (13 public/listed and 10 registered-only, including 5 test profiles); 13 public-roster rows; 26 capability records.
+- Production identity-candidate snapshot: 5 account-linked, 17 contact-candidate, 23 unresolved and 2 conflicting-evidence candidates. The 17 full-assessment records missing `taster_id` are not assumed to be the same people as the 17 contact candidates.
+- The 15 current profile acknowledgement rows are administrator-attestation records. The production consent helper currently accepts the approved `admin_attestation` source alongside participant-entered setup/edit sources; the live roster contains 13 rows. Do not force the remaining profiles public or change consent/visibility without evidence of the person's permission.
+- No participant answers, assessment scores, profile rows, identity links or acknowledgement rows were modified during this read-only reconciliation. Do not auto-link contact candidates or conflicting records; use the review ledger and deterministic evidence only.
+
+### Release blockers and acceptance still required
+1. Configure the dedicated staging Supabase service-role secret for the site Worker. The current site candidate deliberately fails closed for live Auth registration without it.
+2. Update the Supabase Confirm signup email template to use the scanner-safe token-hash confirmation route, then verify a real confirmation email in a controlled staging mailbox.
+3. Complete a synthetic-account end-to-end journey: account registration → authenticated nine-question Taster → server-confirmed completion → email confirmation → authenticated dashboard → independent 58-question assessment → save/resume → official points-based VALU report → consent/eligibility-gated listing.
+4. Re-run platform staging Worker deployment and assessment E2E after the canonical 17-skill aggregation commits pass CI.
+5. Verify the specialized Talent, Speaker and Facilitator profile projections using synthetic profile evidence; confirm General-only VALU narrative and no leakage of private evidence.
+6. Review the duplicate staging migration history and run Supabase security/performance advisors. Current advisor output includes INFO-level service-role-only RLS tables, the Free-plan leaked-password-protection warning, and unindexed foreign-key/permissive-policy recommendations. Do not expose private tables to client roles to silence informational warnings.
+7. Do not promote either production Worker or apply the specialist-roster migration to production until the real Auth/mailbox and full assessment journey pass. No production promotion is authorised by this register.
+
+### Separate backlog outside this closeout
+Private event certificate delivery; shared admin-auth refactoring; staging editorial redesign visual sign-off; full ASVS/WCAG 2.2 AA review; rapid-service external-caller identification; and Supabase plan-limited leaked-password protection remain separate workstreams. These are not to be silently marked complete by the current code closeout.
 
 ---
 
