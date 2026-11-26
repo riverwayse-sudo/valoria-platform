@@ -85,7 +85,7 @@ function installStatefulFetch() {
         db.inserts += 1;
         db.rows.push({
           id: "row-1", user_id: USER_ID, taster_id: TASTER_ID, total_score: 71,
-          designation: "Strategist", cluster_scores: {}, skill_scores: {},
+          designation: "Emerging Force", cluster_scores: {}, skill_scores: {},
           completed_at: "2026-10-25T09:00:00.000Z", report_token: REPORT_TOKEN,
         });
         return jsonResponse(201, [{ identity_hash: "abc", report_token: REPORT_TOKEN }]);
@@ -122,7 +122,7 @@ describe("Full assessment data recovery", () => {
     expect(res2.statusCode).toBe(200);
     expect(res2.body.report_token).toBe(REPORT_TOKEN);
     expect(res2.body.alreadyCompleted).toBe(true);
-    expect(res2.body.results.desig.name).toBe("Proficient");
+    expect(res2.body.results.desig.name).toBe("Emerging Force");
     expect(res2.body.results.desig.name).not.toBe("Strategist");
     expect(db.inserts).toBe(1); // still one insert: the retry did not duplicate
     expect(db.rows).toHaveLength(1);
