@@ -426,6 +426,13 @@ describe("canonical PRIME skill aggregation", () => {
     expect(skillNames).toContain("Strategic Thinking");
   });
 
+
+  test("assessment UI does not expose Managing Ambiguity as an eighteenth skill", () => {
+    const ui = require("fs").readFileSync(require("path").join(__dirname, "../PRIMEAssessment.jsx"), "utf8")
+    expect(ui).not.toMatch(/["']Managing Ambiguity["']\\s*:/)
+    expect(ui).toContain('"Strategic Thinking": "Take the most important task')
+    expect(ui).toContain('the most uncertain situation you are operating in')
+  });
   test("Managing Ambiguity remains an assessment facet within Strategic Thinking", () => {
     const facets = ALL_QUESTIONS.filter(question => question.subdimension === "Managing Ambiguity");
     expect(facets).toHaveLength(3);
