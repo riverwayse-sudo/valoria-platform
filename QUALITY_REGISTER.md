@@ -26,7 +26,7 @@ The three existing assessment questions formerly labelled â€œManaging Ambiguityâ
 - **Platform PR #287 merged** to main as `84a4b56cc5ba13abb6dbb65b31b51c6c0d5f00f3`. It removes the remaining standalone Managing Ambiguity report prompt/programme key and keeps the guidance under Strategic Thinking.
 - **Quality register PR #274 merged** as `f92d1cfdd822206141a15ddab92ea392b910fc11`.
 - Superseded staging-only PRs #285, #286 and site #476 were closed after their staging verification; they were not merged.
-- Superseded historical journey PRs were closed without merging: site #140, #142, #129, #127, #298, #297 and #162; platform #138, #23, #60 and #62. Other open PRs cover separate governance, security, admin, certificate, design, cleanup and monitoring work and remain outside this release closeout.
+- Superseded historical journey PRs were closed without merging: site #140, #142, #129, #127, #298, #297, #162, #313 and #114; platform #138, #23, #60 and #62. Other open PRs cover separate governance, security, admin, certificate, design, cleanup and monitoring work and remain outside this release closeout.
 - Earlier implementation branches remain superseded; do not merge stale branches wholesale.
 
 ### Automated and isolated staging evidence
@@ -54,6 +54,11 @@ The three existing assessment questions formerly labelled â€œManaging Ambiguityâ
 6. Resolve historical identity candidates only where deterministic evidence proves the link. Keep 17 contact candidates, 23 unresolved candidates and 2 conflicts out of automated linking until reviewed.
 7. Keep the 10 registered-only profiles private unless current eligibility and the required public-display consent evidence are satisfied. The current 13 public/listed profiles are the verified public roster; do not force a target count of 17 by bypassing consent.
 8. Do not promote either production Worker or apply the specialist-roster migration to production until the real Auth/mailbox and full assessment journey pass. Production deployment workflows were skipped after the main merges; no production promotion is authorized by this register.
+
+### Historical identity reconciliation status
+- Production identity evidence remains deliberately unresolved where it is ambiguous: 17 contact candidates, 23 unresolved candidates and 2 conflicting-evidence candidates. The 17 full-assessment records without `taster_id` are not automatically attached to those candidates.
+- Site PR #119 (verified-only admin reconciliation apply action) remains open, non-mergeable and has failing checks. Do not merge it as-is. It needs a fresh rebase/repair and acceptance tests before an administrator can apply reviewed identity links.
+- Current participant-facing claim/link routes fail closed on missing or conflicting email, role, ownership or completion evidence. No identity links or participant records were changed during this closeout.
 
 ### Database advisor and wider engineering findings
 - Supabase advisors report INFO-level RLS-enabled tables without policies, including service-role-only/internal tables. Do not expose private tables to client roles merely to silence these findings.
