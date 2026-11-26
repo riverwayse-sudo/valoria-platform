@@ -264,7 +264,7 @@ async function exchangeTasterStartHandoff(body, res) {
   // registration but email confirmation is deferred until the Taster is complete.
   // Dashboard and full-assessment handoffs retain their separate confirmed-email
   // checks; do not copy this exception into those authorization paths.
-  if (!user?.email || user.email_confirmed_at || accountMetadata.valu_taster_signup !== true ||
+  if (!user?.email || accountMetadata.valu_taster_signup !== true ||
       !role || !EXPERIENCE_BANDS.has(experience) || accountMetadata.privacy_acknowledged !== true) {
     return json(res, 403, { ok: false, error: 'Your unconfirmed Valoria Taster registration could not be verified.' });
   }
