@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const migration = fs.readFileSync(
-  path.join(__dirname, "../../supabase/migrations/20261126000600_require_participant_entered_public_profile_consent.sql"),
+  path.join(__dirname, "../../supabase/migrations/20261126000638_require_participant_entered_public_profile_consent.sql"),
   "utf8"
 );
 
