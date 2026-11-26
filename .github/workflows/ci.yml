@@ -47,6 +47,20 @@ jobs:
           path: valoria-final/test-output.log
           if-no-files-found: warn
 
+  deno-check:
+    name: Supabase Edge Function Type Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check rapid-service
+        run: deno check --no-lock supabase/functions/rapid-service/index.ts
+
   build-check:
     name: Production Build Check
     runs-on: ubuntu-latest
