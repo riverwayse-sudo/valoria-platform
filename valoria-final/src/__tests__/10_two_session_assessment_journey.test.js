@@ -75,8 +75,8 @@ describe("separate taster and formal assessment contracts", () => {
   });
 });
 
-describe("confirmed-account nine-question Taster and dashboard bridge", () => {
-  test("confirmed account handoff precedes the separate taster and no question counts are exposed", () => {
+describe("account-at-entry nine-question Taster and delayed-confirmation bridge", () => {
+  test("unconfirmed account Taster handoff is scoped and the formal assessment remains confirmed-email-only", () => {
     const source = gateSource();
     expect(source).toContain("questionBank.length");
     expect(source).toContain("const [questionBank,setQuestionBank]=useState(TASTER_QUESTIONS)");
@@ -100,11 +100,15 @@ describe("confirmed-account nine-question Taster and dashboard bridge", () => {
 
   test("taster completion links the saved snapshot to the confirmed account and returns to the dashboard", () => {
     const source = gateSource();
-    expect(source).toContain("Your Valoria account is confirmed and your Taster is saved.");
-    expect(source).toContain("Connect the Taster to your account, then continue from your dashboard.");
-    expect(source).toContain("SAVE TASTER & CONTINUE TO DASHBOARD");
-    expect(source).toContain("account_first:tasterStartToken?'1':'0'");
-    expect(source).toContain("Participants confirm their Valoria account before entering the separate Taster.");
+    expect(source).toContain("'/valu/confirm-taster/?taster_id='+encodeURIComponent(tasterId)");
+    expect(source).toContain("Email confirmation is deliberately deferred until after the Taster has been persisted.");
+    const submit = readApi("submit-assessment.js");
+    const exchangeStart = submit.indexOf("async function exchangeTasterStartHandoff");
+    const exchangeEnd = submit.indexOf("async function verifyHandoffRequest", exchangeStart);
+    const tasterExchange = submit.slice(exchangeStart, exchangeEnd);
+    expect(tasterExchange).not.toContain("user.email_confirmed_at");
+    expect(submit).toContain("if (!user.email_confirmed_at) return json(res, 403");
+    expect(submit).toContain("if (!user.email_confirmed_at) return json(res, 403, { ok: false, error: 'Confirm your Valoria account email before continuing.' });");
     expect(source).not.toContain("Participants begin with the VALU taster before account setup.");
     expect(source).toContain("Your full VALU Index is ready to begin from your dashboard.");
     expect(source).not.toContain("will not prefill or count toward it");
@@ -127,9 +131,9 @@ describe("confirmed-account nine-question Taster and dashboard bridge", () => {
     expect(source).toContain("action:'save'");
     expect(source).toContain("action:'complete'");
     expect(source).toContain("let tasterId=saved.completed&&saved.taster_id?saved.taster_id:null;");
-    expect(source).toContain("localStorage.setItem('pending_taster_id',tasterId)");
-    expect(source.indexOf("await postProgress({action:'complete'")).toBeLessThan(source.indexOf("localStorage.setItem('pending_taster_id',tasterId)"));
-    expect(source).toContain("'/professional-signup/?'+params.toString()");
+    expect(source).toContain("await postProgress({action:'complete'");
+    expect(source).toContain("'/valu/confirm-taster/?taster_id='+encodeURIComponent(tasterId)");
+    expect(source.indexOf("await postProgress({action:'complete'")).toBeLessThan(source.indexOf("'/valu/confirm-taster/?taster_id='"));
     expect(source).not.toContain("action:'identify'");
   });
 
