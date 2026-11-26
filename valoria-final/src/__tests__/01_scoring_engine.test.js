@@ -15,6 +15,7 @@ const {
   getPathway,
   computeResults,
 } = require("../scoringEngine");
+const { ALL_QUESTIONS } = require("../questions");
 
 // ── MINIMAL QUESTION FIXTURE ──────────────────────────────────────────────
 // 3 questions per cluster (P,R,I,M,E) + 1 anchor = 16 total.
@@ -50,7 +51,7 @@ const FIXTURE_QUESTIONS = [
   makeQuestion("I1", "I", "Critical Thinking"),
   makeQuestion("I2", "I", "Strategic Thinking"),
   makeQuestion("I3", "I", "Business Acumen"),
-  makeQuestion("I4", "I", "Managing Ambiguity"),
+  makeQuestion("I4", "I", "Strategic Thinking"),
   makeQuestion("I5", "I", "AI Fluency", false),
   // M cluster: maxRaw = 12 (3 questions × max 4)
   makeQuestion("M1", "M", "Execution & Accountability"),
@@ -411,5 +412,35 @@ describe("computeResults (full pipeline)", () => {
     const backendIndex  = computeWeightedIndex(clusterScores);
     // Frontend would compute same cluster scores and weighted index
     expect(backendIndex).toBe(computeWeightedIndex(clusterScores));
+  });
+});
+
+describe("canonical PRIME skill aggregation", () => {
+  test("the 58-question bank exposes exactly the 17 canonical PRIME skills", () => {
+    const scored = ALL_QUESTIONS.filter(question => question.cluster !== "VA");
+    const skillNames = [...new Set(scored.map(question => question.skill))].sort();
+    expect(ALL_QUESTIONS).toHaveLength(58);
+    expect(scored).toHaveLength(54);
+    expect(skillNames).toHaveLength(17);
+    expect(skillNames).not.toContain("Managing Ambiguity");
+    expect(skillNames).toContain("Strategic Thinking");
+  });
+
+  test("Managing Ambiguity remains an assessment facet within Strategic Thinking", () => {
+    const facets = ALL_QUESTIONS.filter(question => question.subdimension === "Managing Ambiguity");
+    expect(facets).toHaveLength(3);
+    expect(facets.every(question => question.skill === "Strategic Thinking" && question.cluster === "I")).toBe(true);
+  });
+
+  test("Strategic Thinking normalises across its six questions without exceeding the 17-skill taxonomy", () => {
+    const answers = {};
+    ALL_QUESTIONS.forEach((question, index) => {
+      if (question.cluster === "VA") return;
+      answers[index] = question.options.findIndex(option => Number(option.score) === 4);
+    });
+    const result = computeResults(answers, Array(ALL_QUESTIONS.length).fill(60000), {}, ALL_QUESTIONS);
+    expect(Object.keys(result.skillScores)).toHaveLength(17);
+    expect(result.skillScores["Strategic Thinking"]).toBe(100);
+    expect(result.skillScores).not.toHaveProperty("Managing Ambiguity");
   });
 });

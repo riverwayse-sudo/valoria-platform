@@ -70,7 +70,9 @@ describe("parallel Taster-first journey isolation", () => {
 
   test("the formal 58-question assessment remains separate and unchanged", () => {
     expect(app).toContain("if (full) return <FullVALUAssessment />");
-    expect(component).toContain("separate from your full 58-question VALU Index");
+    expect(component).toContain("separate from your full VALU Index assessment");
+    expect(component).not.toContain("58-question");
+    expect(component).not.toContain("9-question");
     expect(component).not.toContain("Question 10");
     expect(component).not.toContain("1 of 9");
     expect(component).not.toContain("1 of 58");

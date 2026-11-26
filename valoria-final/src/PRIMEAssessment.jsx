@@ -251,7 +251,6 @@ const SKILL_CLUSTER = {
   "Critical Thinking":                    "I",
   "Strategic Thinking":                   "I",
   "Business Acumen":                      "I",
-  "Managing Ambiguity":                   "I",
   "AI Fluency":                           "I",
   "Execution & Accountability":           "M",
   "Resilience & Self-Leadership":         "M",

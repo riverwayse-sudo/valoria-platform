@@ -78,7 +78,7 @@ export default function VALUIndexTasterFirst({onComplete}){
  return <div style={shell}><div style={wrap}>
   <div style={eyebrow}>VALU INDEX TASTER · COMPLETE</div>
   <h1 style={{fontFamily:BRAND.FONT_DISPLAY,fontWeight:400,fontSize:"clamp(38px,7vw,62px)",lineHeight:1.05,margin:"16px 0"}}>Your first signal is <em style={{color:BRAND.GOLD}}>ready.</em></h1>
-  <p style={{fontSize:14,lineHeight:1.75,color:"rgba(247,244,238,.58)"}}>Your Taster is saved. This is a directional read of the Intelligence dimension, separate from your full 58-question VALU Index.</p>
+  <p style={{fontSize:14,lineHeight:1.75,color:"rgba(247,244,238,.58)"}}>Your Taster is saved. This is a directional read of the Intelligence dimension, separate from your full VALU Index assessment.</p>
   {failed&&<div role="alert" style={{padding:14,margin:"18px 0",border:"1px solid rgba(201,168,76,.4)",borderRadius:7,fontSize:13}}>We could not save your Taster. Please retry before continuing.</div>}
   <div style={{padding:22,background:"rgba(201,168,76,.07)",border:"1px solid rgba(201,168,76,.28)",borderRadius:8,margin:"24px 0"}}>
    <div style={eyebrow}>INTELLIGENCE · VALU TASTER POINTS</div>
