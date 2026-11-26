@@ -106,8 +106,9 @@ export default async function handler(req, res) {
       console.error('taster-progress: registration rate limiter failed', err?.message || err);
       return json(res, 503, { error: 'Registration is temporarily unavailable. Please try again shortly.' });
     }
-    // New sessions require a server-issued token proving that the participant
-    // completed signup and email confirmation before entering the taster.
+    // New sessions require a server-issued, Taster-scoped token proving that
+    // the participant created a Valoria account and completed required consent.
+    // Email confirmation is intentionally requested only after Taster completion.
     // Existing progress rows remain eligible for the legacy recovery path.
     let existingProgress = null;
     try {
@@ -121,7 +122,7 @@ export default async function handler(req, res) {
       const startSession = await verifyTasterStartTokenEdge(body.taster_start_token, reason => {
         console.warn('taster-progress: new taster start rejected', { reason });
       });
-      if (!startSession) return json(res, 401, { error: 'Create and confirm your Valoria account before starting the taster.' });
+      if (!startSession) return json(res, 401, { error: 'Create your Valoria account before starting the Taster. Email confirmation follows completion.' });
       confirmedAccountId = startSession.sub;
       const norm = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
       if (norm(startSession.email) !== norm(email)) {
