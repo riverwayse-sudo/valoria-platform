@@ -22,7 +22,7 @@ export const DESIGNATIONS = Object.freeze([
   Object.freeze({ min: 35, name: "Building Foundations", stars: "", color: "#2E2E4A", bg: "#F7F4EE" }),
 ]);
 
-// Development pathways are separate from merit credentials.
+// Development pathways are separate from merit designations.
 export const PATHWAYS = Object.freeze([
   Object.freeze({ min: 75, name: "Advanced Development Pathway" }),
   Object.freeze({ min: 55, name: "Cluster Development Pathway" }),
