@@ -7,6 +7,7 @@
 - **Platform PR #283** — current-main draft, mergeable. Consolidates the narrowly scoped unconfirmed-account Taster-start handoff, preserves confirmed-email requirements for dashboard/full assessment, records the production-applied visibility migration in source control, and adds the specialist public-roster projection and canonical designation migration.
 - Earlier implementation branches were closed as superseded rather than merged wholesale because they were based on stale commits. Their current requirements were re-applied as targeted changes on #474 and #283.
 - Both PRs remain drafts. No production deployment or production database operation has been performed for this candidate.
+- The site production Worker workflow in PR #474 now requires either a `[deploy-production]` commit annotation or a manual `DEPLOY` selection; the platform production Worker workflow already has an equivalent explicit gate. Ordinary merges do not authorize production promotion.
 
 ## Verified production and staging consent state
 Read-only Supabase migration-history and aggregate queries on 26 November show:
