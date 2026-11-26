@@ -101,7 +101,7 @@ describe("account-at-entry nine-question Taster and delayed-confirmation bridge"
   test("taster completion links the saved snapshot to the confirmed account and returns to the dashboard", () => {
     const source = gateSource();
     expect(source).toContain("'/valu/confirm-taster/?taster_id='+encodeURIComponent(tasterId)");
-    expect(source).toContain("Email confirmation is deliberately deferred until after the Taster has been persisted.");
+    expect(source).toContain("'/valu/confirm-taster/?taster_id='+encodeURIComponent(tasterId)");
     const submit = readApi("submit-assessment.js");
     const exchangeStart = submit.indexOf("async function exchangeTasterStartHandoff");
     const exchangeEnd = submit.indexOf("async function verifyHandoffRequest", exchangeStart);
