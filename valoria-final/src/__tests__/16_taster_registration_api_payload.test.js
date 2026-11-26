@@ -155,14 +155,14 @@ describe("registration-first taster API payload", () => {
     }
   });
 
-  test("rejects a new taster registration without a confirmed-account token", async () => {
+  test("rejects a new Taster registration without a valid server-issued start token", async () => {
     const calls = installFetch();
     const req = request();
     delete req.body.taster_start_token;
     const res = makeRes();
     await loadHandler()(req, res);
     expect(res.statusCode).toBe(401);
-    expect(res.body.error).toContain("Create and confirm your Valoria account");
+    expect(res.body.error).toContain("Create your Valoria account before starting the Taster");
     expect(calls.some(call => call.url.includes("rpc/begin_valu_taster_signup"))).toBe(false);
   });
 
