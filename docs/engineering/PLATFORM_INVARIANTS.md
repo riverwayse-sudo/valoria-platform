@@ -37,7 +37,7 @@ For changes affecting rendered pages, route data, shared styles, assets or compo
 - VALU is presented in points. One canonical server-side implementation owns scoring and designation; do not duplicate or locally reinterpret scoring.
 - PRIME remains five clusters and 17 canonical skills. Use approved canonical labels and mappings.
 - A discrepancy between source-document thresholds and the current canonical scorer is a decision conflict. Do not change thresholds or rewrite historical results by inference.
-- One account has one canonical professional profile; multiple declared capabilities do not create duplicate profiles.
+- One account has one canonical professional profile; multiple declared capabilities do not create duplicate profiles. Taster completion automatically creates/refreshes the approved profile and eligibility projection without an administrator approval gate; public visibility still requires participant-entered consent and eligibility.
 - Account/profile creation, assessment completion, eligibility, participant consent and public discoverability are separate states.
 - Public visibility requires current, explicit participant-entered consent through the approved profile setup/edit flow. Administrator attestation, inferred consent or marketing consent is not public-profile consent.
 - Automated identity matches are suggestions only. Historical links require authenticated human review and traceable evidence; never transfer ownership automatically.
