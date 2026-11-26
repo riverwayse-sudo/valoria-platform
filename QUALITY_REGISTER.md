@@ -27,6 +27,7 @@ Read-only Supabase migration-history and aggregate queries on 26 November show:
 ## Specialist-spectrum correction
 - Site PR #474 adds a shared capability-evidence adapter. General views use the overall VALU report and PRIME strengths. Talent uses skills and professional context; Speaker uses topics, formats, audience experience and speaking engagements; Facilitator uses facilitation topics, programme types, delivery formats, audience experience and client/programme evidence.
 - Specialist views no longer reuse the general VALU summary, score/radar or PRIME-strength narrative. The profile route preserves the selected spectrum, and missing specialist evidence receives a neutral fallback.
+- Marketplace cards now use track-specific chips and search/filter evidence. Overall VALU score/tier badges, PRIME-strength badges, PRIME-cluster filters, score-band filters and score-based ordering are General-only; specialist spectra are not ranked by the general VALU score.
 - The platform migration adds the required consent-gated roster fields; the site directory selects them. These two changes must be released and tested together.
 
 ## Remaining verification gates
