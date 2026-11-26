@@ -22,6 +22,7 @@ Read-only Supabase migration-history and aggregate queries on 26 November show:
 - PR #283 also includes `20261126191000_project_specialized_profile_evidence_and_canonical_designations.sql`. It is **not applied** in either environment.
 - The new migration extends the consent-gated public roster with experience years, facilitation topics, delivery formats, audience sizes, past events and past-client/programme evidence. It updates the roster writer to project these fields for both Basic and Full listings.
 - The same migration updates the database designation trigger and roster writer to the current point bands: 80–100 Force to Align With; 65–79 Emerging Force; 50–64 Developing Professional; 35–49 Building Foundations; below 35 no designation. It backfills derived designation labels only and does not change assessment answers or scores.
+- Basic Taster listings remain a separate access state, not a merit designation: the Basic roster projection writes a null designation. The 35-point threshold remains part of Full VALU eligibility and does not gate the independent Basic listing path.
 - The migration refreshes only existing public/listed, non-revoked, non-test profiles through the existing consent gate. Apply it to staging only after the code phase is complete, then verify the projection and boundaries before any production promotion.
 
 ## Specialist-spectrum correction
