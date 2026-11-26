@@ -22,13 +22,13 @@ begin
   v_old := $old$
   IF NEW.total_score IS NULL THEN
     NEW.designation := NULL;
-  ELSIF NEW.total_score >= 90 THEN
+  ELSIF NEW.total_score BETWEEN 90 AND 100 THEN
     NEW.designation := 'Elite';
-  ELSIF NEW.total_score >= 75 THEN
+  ELSIF NEW.total_score BETWEEN 75 AND 89 THEN
     NEW.designation := 'Distinguished';
-  ELSIF NEW.total_score >= 55 THEN
+  ELSIF NEW.total_score BETWEEN 55 AND 74 THEN
     NEW.designation := 'Proficient';
-  ELSIF NEW.total_score >= 35 THEN
+  ELSIF NEW.total_score BETWEEN 35 AND 54 THEN
     NEW.designation := 'Standard';
   ELSE
     NEW.designation := NULL;
@@ -60,21 +60,23 @@ $new$;
 
   -- The public roster writer derives its label from the canonical points too.
   v_old := $old$
+    canonical_designation := case
       when canonical_valu_index between 90 and 100 then 'Elite'
       when canonical_valu_index between 75 and 89 then 'Distinguished'
       when canonical_valu_index between 55 and 74 then 'Proficient'
       when canonical_valu_index between 35 and 54 then 'Standard'
       else null
-    end
+    end;
 $old$;
 
   v_new := $new$
+    canonical_designation := case
       when canonical_valu_index between 80 and 100 then 'Force to Align With'
       when canonical_valu_index between 65 and 79 then 'Emerging Force'
       when canonical_valu_index between 50 and 64 then 'Developing Professional'
       when canonical_valu_index between 35 and 49 then 'Building Foundations'
       else null
-    end
+    end;
 $new$;
 
   v_definition := pg_catalog.pg_get_functiondef('public.refresh_marketplace_public_roster(uuid)'::regprocedure);
