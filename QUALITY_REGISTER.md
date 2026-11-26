@@ -13,7 +13,7 @@
 Read-only Supabase migration-history and aggregate queries on 26 November show:
 - Production has migration `20261126000638_require_participant_entered_public_profile_consent` and the later migration `20261126111526_honor_admin_attested_public_profile_visibility`.
 - The effective production consent helper therefore accepts the current profile acknowledgement sources `profile_setup`, `profile_edit`, and the existing `admin_attestation` evidence. The earlier statement that admin attestations no longer authorize visibility is superseded by the later production migration.
-- Production aggregate counts: 13 public/listed, non-revoked, non-test profiles; 13 public-roster rows; 15 `admin_attestation` acknowledgement rows; 0 `profile_setup`/`profile_edit` acknowledgement rows; 15 total acknowledgement rows.
+- Production aggregate counts: 13 public/listed, non-revoked, non-test profiles; 13 public-roster rows; 15 `admin_attestation` acknowledgement rows (all `profile_submission` at `public-profile-visibility-v3-2026-11-07)); 0 `profile_setup`/`profile_edit` acknowledgement rows; 15 total acknowledgement rows.
 - Staging aggregate counts: 0 public/listed profiles, 0 public-roster rows, 0 admin-attestation rows and 0 participant acknowledgement rows. Staging does not yet have migration `20261126111526`.
 - No participant names, answers, scores, identity links or consent rows were read or changed during this verification. Aggregate counts only were queried.
 
