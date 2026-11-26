@@ -23,6 +23,7 @@ The three existing assessment questions formerly labelled “Managing Ambiguity�
 ### Main-branch consolidation
 - **Site PR #474 merged** to main as `4d0302a3f67159daaf7e6921764ade5f85cea49a`. It consolidates account-first Taster entry, post-Taster confirmation handoff, recovery, consent-aware listing, specialist profile evidence, institutional copy and the canonical 17-skill display.
 - **Platform PR #283 merged** to main as `cbcad60d8f33b1830df698892d8239716acf5920`. It consolidates authenticated Taster handoff, completion retry safety, independent full-assessment continuity, specialist roster projection, canonical designation migration and 17-skill scoring aggregation.
+- **Platform PR #287 merged** to main as `84a4b56cc5ba13abb6dbb65b31b51c6c0d5f00f3`. It removes the remaining standalone Managing Ambiguity report prompt/programme key and keeps the guidance under Strategic Thinking.
 - **Quality register PR #274 merged** as `f92d1cfdd822206141a15ddab92ea392b910fc11`.
 - Superseded staging-only PRs #285, #286 and site #476 were closed after their staging verification; they were not merged.
 - Earlier implementation branches remain superseded; do not merge stale branches wholesale.
@@ -31,8 +32,8 @@ The three existing assessment questions formerly labelled “Managing Ambiguity�
 - Platform main-branch CI, unit tests, Supabase Edge Function type checks, production build, dependency audit, secret scan, environment parity and Cloudflare Worker validation all passed after merge.
 - Platform staging PR #286 deployed the updated assessment Worker after the 17-skill aggregation change. Worker routing, unit tests, build, CORS/route smoke, nine-question Taster save/resume/completion/retry and lost-response browser retry all passed.
 - Site main-branch CI, site quality gates, Cloudflare Worker build and security validation passed after merge. The production deployment workflow was skipped by its explicit gate.
-- Site staging PR #476 deployed the consolidated site Worker; 34-page desktop/mobile browser audit reported zero failures. The post-merge main-branch staging rerun #45894966125 has deployed the Worker, passed route/privacy smoke and is completing its desktop/mobile browser audit.
-- Cloudflare metadata confirms staging site and assessment Workers reference Supabase staging project `yccxgjdqworgcbircnvn`, with preview and staging API flags enabled. Both have a `SUPABASE_SERVICE_ROLE_KEY` secret binding. Secret values were not retrieved or exposed; presence and project routing are verified, but the actual registration/token journey still requires a controlled mailbox test.
+- Site staging PR #476 and the post-merge main-branch staging run #45894966125 both deployed the consolidated site Worker. The post-merge 34-page desktop/mobile browser audit completed with zero failures; route/privacy smoke, account-first URL preservation, confirmation-form rendering, robots policy and staging-only sitemap checks passed.
+- Cloudflare metadata confirms staging site and assessment Workers reference Supabase staging project `yccxgjdqworgcbircnvn`, with preview and staging API flags enabled. A `SUPABASE_SERVICE_ROLE_KEY` binding is visible in Worker metadata, but the post-merge site workflow explicitly reported that the dedicated GitHub environment secret `SUPABASE_STAGING_SERVICE_ROLE_KEY` is not configured and kept live Auth registration/confirmation fail-closed. Do not treat the pre-existing binding as proof of a valid staging key. Secret values were not retrieved or exposed.
 
 ### Supabase migration and environment boundary
 - Projects: staging `yccxgjdqworgcbircnvn`; production `sbkgpisgkuhbalsxqkdr`.
@@ -44,13 +45,14 @@ The three existing assessment questions formerly labelled “Managing Ambiguity�
 - No participant answers, assessment scores, profile rows, identity links or acknowledgement rows were modified during this read-only reconciliation. Do not auto-link contact candidates or conflicting records; use the review ledger and deterministic evidence only.
 
 ### Remaining release acceptance — not production blockers to code merge, but blockers to promotion
-1. Update the Supabase staging **Authentication → Email Templates → Confirm signup** template to use the scanner-safe token-hash URL documented in `docs/supabase-auth-email-template.md`; the template change itself is not performed by repository deployment.
-2. Use a synthetic staging account and controlled mailbox to verify registration, Taster completion, confirmation email, token POST, authenticated session creation and dashboard landing.
+1. Configure the dedicated `SUPABASE_STAGING_SERVICE_ROLE_KEY` GitHub environment secret so the staging Worker receives a verified key for the staging Supabase project; the current pipeline intentionally fails live Auth closed without it.
+2. Update the Supabase staging **Authentication → Email Templates → Confirm signup** template to use the scanner-safe token-hash URL documented in `docs/supabase-auth-email-template.md`; the template change itself is not performed by repository deployment.
+3. Use a synthetic staging account and controlled mailbox to verify registration, Taster completion, confirmation email, token POST, authenticated session creation and dashboard landing.
 3. Complete the independent 58-question full assessment with the same synthetic account; verify save/resume, official points-based VALU report and correct designation.
-4. Verify specialist Talent, Speaker and Facilitator projections with synthetic profile evidence; confirm General-only VALU narrative and no leakage of private evidence.
-5. Resolve historical identity candidates only where deterministic evidence proves the link. Keep 17 contact candidates, 23 unresolved candidates and 2 conflicts out of automated linking until reviewed.
-6. Keep the 10 registered-only profiles private unless current eligibility and the required public-display consent evidence are satisfied. The current 13 public/listed profiles are the verified public roster; do not force a target count of 17 by bypassing consent.
-7. Do not promote either production Worker or apply the specialist-roster migration to production until the real Auth/mailbox and full assessment journey pass. Production deployment workflows were skipped after the main merges; no production promotion is authorized by this register.
+5. Verify specialist Talent, Speaker and Facilitator projections with synthetic profile evidence; confirm General-only VALU narrative and no leakage of private evidence.
+6. Resolve historical identity candidates only where deterministic evidence proves the link. Keep 17 contact candidates, 23 unresolved candidates and 2 conflicts out of automated linking until reviewed.
+7. Keep the 10 registered-only profiles private unless current eligibility and the required public-display consent evidence are satisfied. The current 13 public/listed profiles are the verified public roster; do not force a target count of 17 by bypassing consent.
+8. Do not promote either production Worker or apply the specialist-roster migration to production until the real Auth/mailbox and full assessment journey pass. Production deployment workflows were skipped after the main merges; no production promotion is authorized by this register.
 
 ### Database advisor and wider engineering findings
 - Supabase advisors report INFO-level RLS-enabled tables without policies, including service-role-only/internal tables. Do not expose private tables to client roles merely to silence these findings.
