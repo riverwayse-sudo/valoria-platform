@@ -16,10 +16,10 @@ describe("Canonical VALU designation read paths", () => {
 
   test("live designation writers use approved bands without rewriting participant rows", () => {
     const migration = read("supabase/migrations/20261126010000_align_valu_designation_bands.sql");
-    expect(migration).toContain("NEW.total_score BETWEEN 80 AND 100");
-    expect(migration).toContain("NEW.total_score BETWEEN 65 AND 79");
-    expect(migration).toContain("NEW.total_score BETWEEN 50 AND 64");
-    expect(migration).toContain("NEW.total_score BETWEEN 35 AND 49");
+    expect(migration).toContain("NEW.total_score >= 80");
+    expect(migration).toContain("NEW.total_score >= 65");
+    expect(migration).toContain("NEW.total_score >= 50");
+    expect(migration).toContain("NEW.total_score >= 35");
     expect(migration).toContain("Force to Align With");
     expect(migration).toContain("Emerging Force");
     expect(migration).toContain("Developing Professional");
