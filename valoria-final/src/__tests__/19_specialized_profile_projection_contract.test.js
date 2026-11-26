@@ -17,6 +17,8 @@ describe("public profile capability projection contract", () => {
     expect(sql).toContain("ADD COLUMN IF NOT EXISTS audience_sizes text[]");
     expect(sql).toContain("ADD COLUMN IF NOT EXISTS past_events jsonb");
     expect(sql).toContain("ADD COLUMN IF NOT EXISTS past_clients jsonb");
+    expect(sql).not.toContain("'BASIC'");
+    expect(sql).toContain('p.availability, null, null, null, p.fee_range');
   });
 
   test("both Full and Basic public projections carry specialist evidence", () => {
