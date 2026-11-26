@@ -76,6 +76,23 @@ describe("canonical VALU designation consumers", () => {
     expect(edgeFunction).toContain("No merit designation");
   });
 
+  test("legacy public assets use the current assessment and designation language", () => {
+    const landing = read("public/Index.html");
+    const about = read("public/About_Valoria.html");
+    const waitlist = read("public/Waitlist.html");
+    expect(landing).toContain("58-question formal assessment");
+    expect(landing).toContain("9-question Taster");
+    expect(landing).not.toContain("55 questions across five clusters");
+    expect(landing).not.toContain("professional credential of its kind");
+    expect(landing).not.toContain("At the Starting Point");
+    expect(about).toContain("not itself a certification or professional credential");
+    expect(about).not.toContain("A certification body");
+    expect(waitlist).toContain("confirm your email first");
+    expect(waitlist).toContain("58-question full VALU Index");
+    expect(waitlist).toContain("/valu/register/?journey=valu_taster");
+    expect(waitlist).not.toContain("Registration routes you directly to the assessment");
+  });
+
   test("participant-facing API consumers derive labels from canonical points", () => {
     for (const file of [
       "api/submit-assessment.js",
