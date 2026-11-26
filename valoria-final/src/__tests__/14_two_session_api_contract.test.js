@@ -193,7 +193,7 @@ describe("full assessment submission validates a complete answer map", () => {
   test("the formal assessment only advances to report handoff after completion is confirmed", () => {
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     const submit = component.slice(component.indexOf("async function submitAssessment"));
-    expect(submit).toContain("const completion = await saveProgress({");
+    expect(submit).toContain("const completion = await queueProgressSave({");
     expect(submit).toContain("completion?.ok !== true || completion?.status !== 'completed'");
     expect(submit.indexOf("completion?.ok !== true")).toBeLessThan(submit.indexOf("api/link-assessment-to-taster"));
   });
