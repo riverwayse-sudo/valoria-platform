@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { verifyTasterStartTokenEdge } from '../lib/taster-start-token-edge.js';
 import { enforceRateLimit } from './_rateLimit.js';
 import { applyCors, handlePreflight } from './_cors.js';
-import { EXPERIENCE_BANDS, TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
+import { isValidExperienceBand, TASTER_QUESTIONS, VALU_VERSION } from '../src/valuTaster.js';
 import { LEGACY_TASTER_QUESTIONS, LEGACY_TASTER_VERSION } from '../src/valuTasterLegacy.js';
 import { LEGACY_15_TASTER_QUESTIONS, LEGACY_15_TASTER_VERSION } from '../src/valuTasterLegacy15.js';
 
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
     if (!validToken(body.resume_token)) return json(res, 401, { error: 'A secure registration session could not be verified. Please retry.' });
     if (!validSignupKey(body.signup_key)) return json(res, 400, { error: 'Your registration reference is invalid. Please refresh and try again.' });
     if (!name || name.length > 200 || !role || role.length > 160 || !validEmail(email)
-      || !EXPERIENCE_BANDS.some(item => item.id === experience)
+      || !isValidExperienceBand(experience)
       || organisation.length > 180 || interest.length > 120 || body.privacy_acknowledged !== true) {
       return json(res, 400, { error: 'Complete the required registration details and acknowledge the Privacy Notice before continuing.' });
     }
