@@ -146,3 +146,7 @@ Update status only with traceable evidence. Known Critical or High defects block
 - **Database:** staging and production both have the v4.2 nine-question default and version-specific 9-versus-15 answer-count guards. No participant assessment or profile rows were rewritten.
 - **Email confirmation:** the scanner-safe token-hash route is merged and deployed to the production site (site PR #462). Staging GET smoke and desktop/mobile browser acceptance passed. The Supabase Confirm signup template has not been changed; a real controlled-mailbox POST/token verification and authenticated dashboard handoff test remain outstanding.
 - **Release boundary:** the 58-question full assessment must not be conflated with the nine-question Taster. Full authenticated completion and checkpoint-resume acceptance remain open until a controlled test identity is used.
+
+## Shared requirements authority
+
+Use [VALORIA_REQUIREMENTS_REGISTER.md](docs/engineering/VALORIA_REQUIREMENTS_REGISTER.md) for cross-repository requirement IDs, source authority, decisions and acceptance criteria. This quality register remains the platform-specific evidence record; do not infer PASS from the shared requirement text. Link each status to the relevant platform commit, CI run, staging/production evidence and remediation.
