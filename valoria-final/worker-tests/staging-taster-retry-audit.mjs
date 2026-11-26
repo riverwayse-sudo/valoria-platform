@@ -103,7 +103,7 @@ try {
   await page.getByRole("heading", { name: /Your account comes first/i }).waitFor({ state: "visible", timeout: 20000 });
   const accountButton = page.getByRole("button", { name: /CREATE OR SIGN IN TO YOUR ACCOUNT/i });
   await accountButton.click();
-  await page.waitForURL(url => url.origin === SITE_ORIGIN && url.pathname.replace(/\\/$/, "") === "/valu/register" && url.searchParams.get("journey") === "valu_taster", { timeout: 20000 });
+  await page.waitForURL(url => url.origin === SITE_ORIGIN && url.pathname.replace(/\/$/, "") === "/valu/register" && url.searchParams.get("journey") === "valu_taster", { timeout: 20000 });
 
   // Existing pre-account sessions remain resumable only through their explicit legacy route.
   const legacyEntry = new URL("/", ASSESSMENT_ORIGIN);
