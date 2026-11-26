@@ -110,7 +110,7 @@ export default function VALUIndexV4GateNext(){
     try{
      const response=await fetch(API_BASE+'/api/submit-assessment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'exchange-taster-start-handoff',handoff_code:handoffCode})});
      const payload=await response.json().catch(()=>({}));
-     if(!response.ok||!payload.session_token)throw new Error(payload.error||'Your confirmed account could not be connected to the taster.');
+     if(!response.ok||!payload.session_token)throw new Error(payload.error||'Your Valoria account could not be connected to the Taster.');
      startToken=payload.session_token;
      try{sessionStorage.setItem('valu_taster_start_token',startToken)}catch{}
      if(payload.identity?.email)setEmail(payload.identity.email);
@@ -330,8 +330,8 @@ export default function VALUIndexV4GateNext(){
    <p className="valu-results-intro" style={S.resultsIntro}>Your Valoria account is registered. Your Taster responses are saved separately from the full VALU Index.</p>
   </section>
   <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
-   <div style={S.formTop}><div><div style={S.eyebrow}>CONFIRMED ACCOUNT</div><h2 style={S.formTitle}>Your Taster is ready.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
-   <p style={S.formIntro}>These required details are verified against your confirmed account. Optional professional details can be added below.</p>
+   <div style={S.formTop}><div><div style={S.eyebrow}>REGISTERED ACCOUNT</div><h2 style={S.formTitle}>Your Taster is ready.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
+   <p style={S.formIntro}>These required details are verified against your registered account. Optional professional details can be added below.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <Field label="FULL NAME"><input required style={S.input} value={name} onChange={e=>setName(e.target.value)} readOnly={Boolean(tasterStartToken)} placeholder="Your full professional name" autoComplete="name" maxLength={200}/></Field>
     <Field label="EMAIL ADDRESS"><input required style={S.input} type="email" value={email} onChange={e=>setEmail(e.target.value)} readOnly={Boolean(tasterStartToken)} placeholder="you@example.com" autoComplete="email" maxLength={254}/></Field>
@@ -411,7 +411,7 @@ export default function VALUIndexV4GateNext(){
   </section>
   <section className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
    <div style={S.formTop}><div><div style={S.eyebrow}>YOUR NEXT STEP</div><h2 style={S.formTitle}>Connect your Taster.</h2></div><div style={S.formTime}>ACCOUNT LINKING</div></div>
-   <p style={S.formIntro}>Your confirmed account is ready. Save your Taster and connect it to your dashboard.</p>
+   <p style={S.formIntro}>Your Valoria account is ready. Save your Taster and connect it after email confirmation.</p>
    <div className="valu-entry-form-grid" style={S.grid}>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED NAME</div><h2 style={S.scoreName}>{name}</h2></div>
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED EMAIL</div><h2 style={{...S.scoreName,overflowWrap:'anywhere'}}>{email}</h2></div>
