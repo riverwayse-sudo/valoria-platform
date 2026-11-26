@@ -132,8 +132,7 @@ export default function VALUIndexV4GateNext(){
     return;
    }
    let stored='';
-   // Recover older Taster-first sessions without resetting or discarding saved answers.
-   try{stored=localStorage.getItem(RESUME_TOKEN_KEY)||localStorage.getItem('valu_taster_first_resume_token')||''}catch{}
+   try{stored=localStorage.getItem(RESUME_TOKEN_KEY)||''}catch{}
    if(stored){
     try{
      const loaded=await postProgress({action:'load',resume_token:stored});
@@ -253,7 +252,6 @@ export default function VALUIndexV4GateNext(){
     marketing_consent:marketingConsent,privacy_acknowledged:privacyAcknowledged,
    });
    if(!data.lead_capture_id)throw new Error('Your registration could not be connected to your VALU journey. Please retry.');
-   try{localStorage.removeItem('valu_taster_first_resume_token')}catch{}
    const answeredCount=Object.keys(answers).length;
    const complete=current===questionBank.length-1&&answeredCount===questionBank.length&&!!submissionKey;
    setPhase(complete?'break':answeredCount?'session1':'intro');
