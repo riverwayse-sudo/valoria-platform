@@ -5,7 +5,7 @@ function decodeBase64Url(value) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
   const binary = globalThis.atob(padded);
-  const canonical = globalThis.btoa(binary).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+  const canonical = globalThis.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   if (canonical !== value) throw new Error('Non-canonical base64url encoding');
   return Uint8Array.from(binary, char => char.charCodeAt(0));
 }
