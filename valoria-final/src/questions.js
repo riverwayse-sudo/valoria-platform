@@ -245,7 +245,7 @@ const ALL_QUESTIONS = [
       {text:"I can think of something. I made a call that saved costs or generated value, though I did not formally model it.",score:2},
       {text:"I have a clear example where I thought through the commercial implications deliberately before deciding.",score:3},
     ]},
-  { id:"I4a", cluster:"I", skill:"Managing Ambiguity", type:"behavioural",
+  { id:"I4a", cluster:"I", skill:"Strategic Thinking", subdimension:"Managing Ambiguity", type:"behavioural",
     q:"You are asked to lead something where the goal is clear but the method is entirely undefined. How do you respond?",
     options:[
       {text:"Frame the ambiguity explicitly, make a directional move, communicate the uncertainty to stakeholders, and build in review points.",score:4},
@@ -253,7 +253,7 @@ const ALL_QUESTIONS = [
       {text:"Make a start and check in regularly to make sure I am not too far off course.",score:2},
       {text:"Define what I know, identify the smallest reversible step to generate new information, and move from there.",score:3},
     ]},
-  { id:"I4b", cluster:"I", skill:"Managing Ambiguity", type:"situational",
+  { id:"I4b", cluster:"I", skill:"Strategic Thinking", subdimension:"Managing Ambiguity", type:"situational",
     q:"Your organisation is going through significant change and nobody can tell you clearly how your role will be affected. Work still needs to get done. How do you operate?",
     options:[
       {text:"Treat the uncertainty as the operating context — define short-term priorities, communicate them upward, and stay curious rather than anxious about how things are unfolding.",score:4},
@@ -261,7 +261,7 @@ const ALL_QUESTIONS = [
       {text:"Focus on what I can control and try not to let the uncertainty affect my output.",score:2},
       {text:"Name the uncertainty to my manager, agree on what to prioritise in the short term, and operate with full commitment within that frame.",score:3},
     ]},
-  { id:"I4c", cluster:"I", skill:"Managing Ambiguity", type:"reflective",
+  { id:"I4c", cluster:"I", skill:"Strategic Thinking", subdimension:"Managing Ambiguity", type:"reflective",
     q:"Tell me about a time you had to make a consequential decision with significantly less information than you wanted. What did you do?",
     options:[
       {text:"I have a specific example — what I knew, what I treated as an assumption, how I reduced reversibility risk, what happened, and what it taught me about the right threshold for action under uncertainty.",score:4},
