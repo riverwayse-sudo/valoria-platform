@@ -130,6 +130,9 @@ describe("full-assessment progress is independent of taster progress", () => {
   test("full-assessment autosaves are serialized and failures remain visible and retryable", () => {
     const component = fs.readFileSync(path.join(__dirname, "../FullVALUAssessment.jsx"), "utf8");
     expect(component).toContain("queueProgressSave");
+    expect(component).toContain("const completion = await queueProgressSave({");
+    expect(component).toContain("completionStartedRef.current = true");
+    expect(component).toContain("if (completionStartedRef.current) return;");
     expect(component).toContain("progressSaveQueueRef.current.then(() => saveProgress(payload))");
     expect(component).toContain("requestId === progressSaveSequenceRef.current");
     expect(component).toContain("setProgressSaveStatus('failed')");
