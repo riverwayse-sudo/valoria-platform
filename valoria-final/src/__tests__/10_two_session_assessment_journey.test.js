@@ -28,12 +28,13 @@ const gateSource = () => readSource("VALUIndexV4GateNext.jsx");
 const fullSource = () => readSource("FullVALUAssessment.jsx");
 
 describe("separate taster and formal assessment contracts", () => {
-  test("the default assessment entry requires a confirmed account before the Taster", () => {
+  test("new assessment entries require a confirmed account before the Taster", () => {
     const app = readSource("VALUIndexV4App.jsx");
     expect(app).toContain("if (full) return <FullVALUAssessment />;");
     expect(app).toContain("return <VALUIndexV4GateNext />;");
-    expect(app).not.toContain("VALUIndexTasterFirst");
-    expect(app).not.toContain("continueFromTasterFirst");
+    expect(app).toContain('params.get("journey") === "taster-first"');
+    expect(app).toContain('window.localStorage.getItem("valu_taster_first_resume_token")');
+    expect(app).toContain("return <VALUIndexTasterFirst onComplete={continueFromLegacyTaster} />;");
   });
 
 
