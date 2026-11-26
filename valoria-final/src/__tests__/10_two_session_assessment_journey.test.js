@@ -28,7 +28,7 @@ const gateSource = () => readSource("VALUIndexV4GateNext.jsx");
 const fullSource = () => readSource("FullVALUAssessment.jsx");
 
 describe("separate taster and formal assessment contracts", () => {
-  test("new assessment entries require a confirmed account before the Taster", () => {
+  test("legacy Taster-first sessions remain recoverable without changing the account-at-entry default", () => {
     const app = readSource("VALUIndexV4App.jsx");
     expect(app).toContain("if (full) return <FullVALUAssessment />;");
     expect(app).toContain("return <VALUIndexV4GateNext />;");
@@ -188,6 +188,9 @@ describe("independent 58-question formal assessment", () => {
   test("the shared journey indicator distinguishes account, Taster, dashboard and full VALU Index", () => {
     const source = readSource("VALUAssessmentJourney.jsx");
     expect(source).toContain("title: 'Account'");
+    expect(source).toContain("detail: 'Account registered'");
+    expect(source).toContain("ACCOUNT REGISTERED · TASTER NEXT");
+    expect(source).not.toContain("Email confirmed");
     expect(source).toContain("title: 'Taster'");
     expect(source).toContain("title: 'Dashboard'");
     expect(source).toContain("title: 'Full VALU Index'");
