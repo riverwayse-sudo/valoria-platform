@@ -283,10 +283,12 @@ export default function VALUIndexV4GateNext(){
    }
    await postProgress({action:'complete',resume_token:progressToken,taster_id:tasterId,submission_key:key});
    setTasterId(tasterId);
-   try{localStorage.setItem('pending_taster_id',tasterId)}catch{}
+   try{localStorage.removeItem('pending_taster_id')}catch{}
    try{localStorage.removeItem(RESUME_TOKEN_KEY);localStorage.removeItem(SIGNUP_KEY_KEY)}catch{}
-   const params=new URLSearchParams({taster_id:tasterId,name:name.trim(),role:role.trim(),experience,email:email.trim().toLowerCase(),account_first:tasterStartToken?'1':'0'});
-   window.location.assign((SITE_BASE?SITE_BASE:'')+'/professional-signup/?'+params.toString());
+   // Email confirmation is deliberately deferred until after the Taster has
+   // been persisted. The site verifies ownership from the saved registration
+   // and requests the signup confirmation email server-side.
+   window.location.assign((SITE_BASE?SITE_BASE:'')+'/valu/confirm-taster/?taster_id='+encodeURIComponent(tasterId));
   }catch(err){
    setError(err?.message||'Your taster could not be saved yet. Your registered details and responses remain intact — please retry.');
    setSaving(false);
@@ -314,7 +316,7 @@ export default function VALUIndexV4GateNext(){
   <section className="valu-results-header" style={S.resultsHeader}>
    <div style={S.resultsEyebrow}><span style={S.statusDot}/> ACCOUNT REQUIRED</div>
    <h1 className="valu-results-title" style={S.h1}>Your account comes <em>first.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Create your Valoria account and confirm your email before starting the VALU Index Taster. Your taster responses remain separate from your full VALU Index.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Create your Valoria account to begin the Taster. Email confirmation follows Taster completion; the full VALU Index remains a separate next step.</p>
    {error&&<p role="alert" style={S.error}>{error}</p>}
    <button type="button" onClick={()=>window.location.assign((SITE_BASE||'')+'/valu/register/?journey=valu_taster')} style={S.primary}>CREATE OR SIGN IN TO YOUR ACCOUNT</button>
   </section>
@@ -323,9 +325,9 @@ export default function VALUIndexV4GateNext(){
  if(phase==='registration')return <Shell>
   <VALUAssessmentJourney stage="registration" />
   <section className="valu-results-header" style={S.resultsHeader}>
-   <div style={S.resultsEyebrow}><span style={S.statusDot}/> ACCOUNT CONFIRMED</div>
+   <div style={S.resultsEyebrow}><span style={S.statusDot}/> ACCOUNT REGISTERED</div>
    <h1 className="valu-results-title" style={S.h1}>Your account is ready. <em>Begin your Taster.</em></h1>
-   <p className="valu-results-intro" style={S.resultsIntro}>Your confirmed Valoria details are connected to this Taster. Review them and continue; your responses will remain connected to your account.</p>
+   <p className="valu-results-intro" style={S.resultsIntro}>Your Valoria account is registered. Your Taster responses are saved separately from the full VALU Index.</p>
   </section>
   <form onSubmit={registerForTaster} className="valu-entry-form-card" style={{...S.formCard,marginTop:18}}>
    <div style={S.formTop}><div><div style={S.eyebrow}>CONFIRMED ACCOUNT</div><h2 style={S.formTitle}>Your Taster is ready.</h2></div><div style={S.formTime}>BEFORE YOU BEGIN</div></div>
