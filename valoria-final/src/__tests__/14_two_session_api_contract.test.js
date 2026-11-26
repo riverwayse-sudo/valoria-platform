@@ -7,6 +7,15 @@ const path = require("path");
 
 const readApi = name => fs.readFileSync(path.join(__dirname, "../../api", name), "utf8");
 
+describe("confirmed Taster-start handoff compatibility", () => {
+  test("legacy 16+ account metadata is normalized to the canonical 15+ assessment band", () => {
+    const api = fs.readFileSync(path.join(__dirname, "../../api/submit-assessment.js"), "utf8");
+    expect(api).toContain("function normalizeExperienceBand(value)");
+    expect(api).toContain("return value === '16+' ? '15+' : value");
+    expect(api).toContain("const experience = normalizeExperienceBand(String(accountMetadata.experience || '').trim())");
+  });
+});
+
 describe("taster-progress requires registration before a new taster", () => {
   const api = readApi("taster-progress.js");
 
