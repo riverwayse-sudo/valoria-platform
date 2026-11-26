@@ -67,6 +67,7 @@ function computeResults(answers, timings = [], shuffleMap = {}, questions) {
   const clusterRaw = { P: 0, R: 0, I: 0, M: 0, E: 0 };
   const clusterAllScores = { P: [], R: [], I: [], M: [], E: [] };
   const skillRaw = {};
+  const skillMaxRaw = {};
 
   indexedQuestions.forEach(q => {
     if (q.cluster === "VA") return;
@@ -78,12 +79,15 @@ function computeResults(answers, timings = [], shuffleMap = {}, questions) {
     clusterAllScores[q.cluster].push(score);
     if (q.skill && q.skill !== "Validity") {
       skillRaw[q.skill] = (skillRaw[q.skill] || 0) + score;
+      const questionMax = Math.max(0, ...(q.options || []).map(option => Number(option?.score) || 0));
+      skillMaxRaw[q.skill] = (skillMaxRaw[q.skill] || 0) + questionMax;
     }
   });
 
   const skillScores = {};
   Object.entries(skillRaw).forEach(([skill, raw]) => {
-    skillScores[skill] = Math.round((Math.min(SKILL_MAX_RAW, raw) / SKILL_MAX_RAW) * 100);
+    const maxRaw = skillMaxRaw[skill] || SKILL_MAX_RAW;
+    skillScores[skill] = Math.round((Math.min(maxRaw, raw) / maxRaw) * 100);
   });
 
   const clusterScores = computeClusterScoresOnly(clusterRaw);
