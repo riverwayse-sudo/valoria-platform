@@ -126,13 +126,13 @@ export default async function handler(req, res) {
       confirmedAccountId = startSession.sub;
       const norm = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
       if (norm(startSession.email) !== norm(email)) {
-        return json(res, 403, { error: 'Use the same confirmed email address as your Valoria account.' });
+        return json(res, 403, { error: 'Use the same email address as your Valoria account.' });
       }
       if (startSession.display_name && norm(startSession.display_name) !== norm(name)) {
         return json(res, 403, { error: 'Use the same name as your Valoria account so your taster can be connected securely.' });
       }
       if (norm(startSession.role) !== norm(role) || startSession.experience !== experience) {
-        return json(res, 403, { error: 'Use the professional role and experience saved to your confirmed Valoria account.' });
+        return json(res, 403, { error: 'Use the professional role and experience saved to your Valoria account.' });
       }
       if (startSession.privacy_acknowledged !== true || body.privacy_acknowledged !== true) {
         return json(res, 403, { error: 'Confirm the Privacy Notice before starting the taster.' });
