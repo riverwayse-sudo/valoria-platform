@@ -138,6 +138,7 @@ export default function FullVALUAssessment() {
   const verifiedHandoffRef = useRef('');
   const progressSaveSequenceRef = useRef(0);
   const progressSaveQueueRef = useRef(Promise.resolve());
+  const completionStartedRef = useRef(false);
 
   // Serialize writes so an older autosave cannot arrive after and overwrite a newer checkpoint.
   function queueProgressSave(payload) {
@@ -360,8 +361,9 @@ export default function FullVALUAssessment() {
   }, [resumeKey, canUse, sessionId, resumeToken, current, answers, timings, result, handoffStatus]);
 
   useEffect(() => {
-    if (!canUse || !sessionId || result || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
+    if (!canUse || !sessionId || result || completionStartedRef.current || handoffStatus !== 'ready' || (!identity.resume && !remoteRestoreComplete) || Object.keys(answers).length === 0) return;
     const timer = window.setTimeout(async () => {
+      if (completionStartedRef.current) return;
       const requestId = ++progressSaveSequenceRef.current;
       setProgressSaveStatus('saving');
       try {
@@ -464,6 +466,7 @@ export default function FullVALUAssessment() {
     if (saving || result || handoffStatus !== 'ready' || !handoffToken || !Object.prototype.hasOwnProperty.call(answers, ASSESSMENT_ORDER[ASSESSMENT_ORDER.length - 1])) return;
     setSaving(true);
     setError('');
+    completionStartedRef.current = true;
     try {
       const checkpointSaved = await persistCheckpoint(answers, timings, ASSESSMENT_ORDER.length);
       if (!checkpointSaved) throw new Error('Your final responses could not be confirmed as saved. Please retry; your answers remain on this page.');
@@ -484,7 +487,9 @@ export default function FullVALUAssessment() {
       const scoreData = await scoreRes.json().catch(() => ({}));
       if (!scoreRes.ok) throw new Error(scoreData.error || 'The assessment could not be scored.');
 
-      const completion = await saveProgress({
+      const completionRequestId = ++progressSaveSequenceRef.current;
+      setProgressSaveStatus('saving');
+      const completion = await queueProgressSave({
         action:'complete',
         handoff_token:handoffToken,
         session_id:sessionId,
@@ -502,6 +507,10 @@ export default function FullVALUAssessment() {
       });
       if (completion?.ok !== true || completion?.status !== 'completed') {
         throw new Error('Your VALU score is saved, but we could not confirm the assessment completion state. Please retry from this page.');
+      }
+      if (mountedRef.current && completionRequestId === progressSaveSequenceRef.current) {
+        setProgressSaveStatus('saved');
+        setProgressSaveError('');
       }
 
       const linkRes = await fetch(API_BASE + '/api/link-assessment-to-taster', {
@@ -532,6 +541,7 @@ export default function FullVALUAssessment() {
       window.gtag?.("event", "valu_index_complete", { assessment_type: "full" });
       setResult(scoreData.results);
     } catch (err) {
+      completionStartedRef.current = false;
       if (String(err?.message || '').toLowerCase().includes('handoff')) {
         try { window.sessionStorage.removeItem('valu-handoff-session'); } catch {}
         setHandoffToken('');
