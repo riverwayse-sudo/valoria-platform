@@ -88,13 +88,12 @@ async function markFailed(identityHash, failureCode) {
   catch { console.error("[generate-and-send-report] failed to persist failure state"); }
 }
 
+import { canonicalDesignationName } from "./_canonicalDesignation.js";
+
 function canonicalDesignation(score) {
   const points = Number(score);
-  if (!Number.isFinite(points) || points < 35 || points > 100) return "Assessment Follow-up";
-  if (points >= 90) return "Elite";
-  if (points >= 75) return "Distinguished";
-  if (points >= 55) return "Proficient";
-  return "Standard";
+  if (!Number.isFinite(points) || points < 0 || points > 100) return "Assessment Follow-up";
+  return canonicalDesignationName(points) || "No merit designation";
 }
 
 function reportMatchesCanonicalAssessment(reportText, assessment) {
