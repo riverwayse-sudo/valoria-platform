@@ -142,7 +142,7 @@ jobs:
             fi
           done
 
-      - name: Exercise Taster-first start, save, resume, completion and retry
+      - name: Exercise legacy Taster save, resume, completion and retry compatibility
         run: node ./worker-tests/staging-taster-first-e2e.mjs
         env:
           STAGING_ASSESSMENT_URL: https://assessment-staging.valoriainstitute.com
