@@ -5,16 +5,18 @@ import path from "node:path";
 const read = (relative) => fs.readFileSync(path.join(process.cwd(), relative), "utf8");
 
 describe("canonical VALU designation consumers", () => {
+  const readRoot = relative => fs.readFileSync(path.join(process.cwd(), "..", relative), "utf8");
+
   test.each([
     [34, null],
-    [35, "Standard"],
-    [54, "Standard"],
-    [55, "Proficient"],
-    [74, "Proficient"],
-    [75, "Distinguished"],
-    [89, "Distinguished"],
-    [90, "Elite"],
-    [100, "Elite"],
+    [35, "Building Foundations"],
+    [49, "Building Foundations"],
+    [50, "Developing Professional"],
+    [64, "Developing Professional"],
+    [65, "Emerging Force"],
+    [79, "Emerging Force"],
+    [80, "Force to Align With"],
+    [100, "Force to Align With"],
   ])("score %i resolves to %s", (score, expected) => {
     expect(canonicalDesignationName(score)).toBe(expected);
   });
@@ -27,7 +29,6 @@ describe("canonical VALU designation consumers", () => {
   );
 
   test("the app and rapid-service consume one shared, versioned VALU contract", () => {
-    const readRoot = relative => fs.readFileSync(path.join(process.cwd(), "..", relative), "utf8");
     const appContract = readRoot("valoria-final/src/valuV4Contract.js");
     const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
     const edgeFunction = readRoot("supabase/functions/rapid-service/index.ts");
@@ -45,8 +46,51 @@ describe("canonical VALU designation consumers", () => {
     expect(edgeFunction).toContain("score < 0 || score > 100");
     expect(edgeFunction).not.toContain("Platinum");
     expect(edgeFunction).not.toContain("Gold");
-    expect(edgeFunction).not.toContain("Force to Align With");
+    expect(edgeFunction).toContain("Force to Align With");
+    expect(edgeFunction).toContain("Emerging Force");
+    expect(edgeFunction).toContain("Developing Professional");
+    expect(edgeFunction).toContain("Building Foundations");
+    const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
+    for (const retired of ["Elite", "Distinguished", "Proficient", "Standard"]) expect(sharedContract).not.toContain(`name: "${retired}"`);
     expect(edgeFunction).not.toContain("/100");
+  });
+
+  test("email and report generation share the canonical designation helper", () => {
+    for (const file of ["api/send-email.js", "api/generate-and-send-report.js"]) {
+      const source = read(file);
+      expect(source).toContain('import { canonicalDesignationName } from "./_canonicalDesignation.js"');
+      expect(source).not.toContain('return "Elite"');
+      expect(source).not.toContain('return "Distinguished"');
+      expect(source).not.toContain('return "Proficient"');
+      expect(source).not.toContain('return "Standard"');
+      expect(source).toContain("No merit designation");
+    }
+  });
+
+  test("rapid-service email code is syntactically singular and uses canonical bands", () => {
+    const edgeFunction = readRoot("supabase/functions/rapid-service/index.ts");
+    expect(edgeFunction).toContain("function getNextSteps(score: number | null)");
+    expect(edgeFunction).toContain("serve(async (req: Request) =>");
+    expect(edgeFunction).not.toContain("function getNextStepsfunction");
+    expect(edgeFunction).not.toContain("serve(asyncserve");
+    expect(edgeFunction).toContain("No merit designation");
+  });
+
+  test("legacy public assets use the current assessment and designation language", () => {
+    const landing = read("public/Index.html");
+    const about = read("public/About_Valoria.html");
+    const waitlist = read("public/Waitlist.html");
+    expect(landing).toContain("58-question formal assessment");
+    expect(landing).toContain("9-question Taster");
+    expect(landing).not.toContain("55 questions across five clusters");
+    expect(landing).not.toContain("professional credential of its kind");
+    expect(landing).not.toContain("At the Starting Point");
+    expect(about).toContain("not itself a certification or professional credential");
+    expect(about).not.toContain("A certification body");
+    expect(waitlist).toContain("confirm your email first");
+    expect(waitlist).toContain("58-question full VALU Index");
+    expect(waitlist).toContain("/valu/register/?journey=valu_taster");
+    expect(waitlist).not.toContain("Registration routes you directly to the assessment");
   });
 
   test("participant-facing API consumers derive labels from canonical points", () => {

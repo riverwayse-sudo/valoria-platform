@@ -70,4 +70,11 @@ If any hard requirement is missing, the professional remains `NOT_LISTED`; no as
 
 ## Evidence quality vs existence
 
-The initial gate checks whether required evidence exists. Quality scoring, verification levels, experience tiers, and Elite/Established/Emerging classifications should be separate Board-approved rules and must not be invented by the implementation layer.
+The approved VALU Index merit designations are points-based:
+- 80–100: Force to Align With
+- 65–79: Emerging Force
+- 50–64: Developing Professional
+- 35–49: Building Foundations
+- Below 35: no merit designation
+
+A score of 35 points is one assessment-eligibility condition, not a marketplace listing decision. Public listing also requires profile completeness, evidence approval, capability eligibility, explicit public-display consent, and governance checks. Verification levels and experience tiers remain separate governed rules and must not be inferred from the VALU Index designation.

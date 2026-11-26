@@ -1,5 +1,7 @@
 import { checkRateLimit } from "./_rateLimit.js";
 import { applyCors, handlePreflight } from "./_cors.js";
+import { canonicalDesignationName } from "./_canonicalDesignation.js";
+
 
 // Server-side report generation + email send for the sweep workflow.
 // Public browser triggers are rate-limited; cron workers remain authenticated.
@@ -90,11 +92,8 @@ async function markFailed(identityHash, failureCode) {
 
 function canonicalDesignation(score) {
   const points = Number(score);
-  if (!Number.isFinite(points) || points < 35 || points > 100) return "Assessment Follow-up";
-  if (points >= 90) return "Elite";
-  if (points >= 75) return "Distinguished";
-  if (points >= 55) return "Proficient";
-  return "Standard";
+  if (!Number.isFinite(points) || points < 0 || points > 100) return "Assessment Follow-up";
+  return canonicalDesignationName(points) || "No merit designation";
 }
 
 function reportMatchesCanonicalAssessment(reportText, assessment) {

@@ -34,7 +34,7 @@ function normalizeDimensions(input: unknown): Record<string, number> | null {
   return Object.keys(result).length ? result : null;
 }
 
-function getNextStepsfunction getNextSteps(score: number | null): string {
+function getNextSteps(score: number | null): string {
   if (score === null) {
     return `
       <li>Complete your full VALU assessment to receive your official VALU Index points and merit designation.</li>
@@ -42,42 +42,42 @@ function getNextStepsfunction getNextSteps(score: number | null): string {
       <li>Marketplace visibility depends on profile and capability eligibility checks, not assessment score alone.</li>
     `;
   }
-  if (score >= 90) {
+  if (score >= 80) {
     return `
-      <li>Your merit designation is <strong>Elite</strong>. Keep your professional evidence and profile current.</li>
+      <li>Your merit designation is <strong>Force to Align With</strong>. Keep your professional evidence and profile current.</li>
       <li>Marketplace visibility remains subject to profile, assessment and capability eligibility checks.</li>
       <li>Use your PRIME results to identify where to sustain and extend your professional contribution.</li>
     `;
   }
-  if (score >= 75) {
+  if (score >= 65) {
     return `
-      <li>Your merit designation is <strong>Distinguished</strong>. Strengthen the evidence behind your professional capabilities.</li>
+      <li>Your merit designation is <strong>Emerging Force</strong>. Strengthen the evidence behind your professional capabilities.</li>
       <li>Complete your professional profile and selected capability details for eligibility review.</li>
       <li>Use your PRIME results to identify your next development priority.</li>
     `;
   }
-  if (score >= 55) {
+  if (score >= 50) {
     return `
-      <li>Your merit designation is <strong>Proficient</strong>. Identify the dimensions where focused development will matter most.</li>
+      <li>Your merit designation is <strong>Developing Professional</strong>. Identify the dimensions where focused development will matter most.</li>
       <li>Complete your professional profile and capability details before marketplace eligibility can be assessed.</li>
       <li>Explore PRIME-aligned development opportunities that address your priority areas.</li>
     `;
   }
   if (score >= 35) {
     return `
-      <li>Your merit designation is <strong>Standard</strong>. Review your PRIME dimension results and select a development priority.</li>
+      <li>Your merit designation is <strong>Building Foundations</strong>. Review your PRIME dimension results and select a development priority.</li>
       <li>Complete your professional profile and capability details. A score of 35 points is only one marketplace eligibility condition.</li>
       <li>Marketplace listing is confirmed only after all required checks are satisfied.</li>
     `;
   }
   return `
-    <li>Your assessment is recorded. Your current score does not meet the 35-point marketplace score threshold.</li>
+    <li>Your assessment is recorded with no merit designation. A score below 35 points does not meet the marketplace score eligibility threshold.</li>
     <li>Review your PRIME dimension results and choose a focused development priority.</li>
     <li>Continue developing your professional evidence before your next assessment.</li>
   `;
 }
 
-function dimensionRowfunction dimensionRow(label: string, score: number | null): string {
+function dimensionRow(label: string, score: number | null): string {
   if (score === null || score === undefined) return "";
   const pct = Math.min(100, Math.max(0, score));
   const color = pct >= 75 ? "#C9A84C" : pct >= 55 ? "#9B8A5A" : "#5a5a6e";
@@ -217,7 +217,7 @@ function buildEmailText(params: { firstName: string; score: number | null; desig
   ].join("\n");
 }
 
-serve(asyncserve(async (req: Request) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
@@ -244,11 +244,11 @@ serve(asyncserve(async (req: Request) => {
   const firstName = typeof body.first_name === "string" && body.first_name.trim()
     ? body.first_name.trim().slice(0, 80)
     : "Professional";
-  const designation = canonicalDesignation(score);
+  const designation = score === null ? null : canonicalDesignation(score) || "No merit designation";
   const dimensions = normalizeDimensions(body.dimensions);
   const htmlContent = buildEmailHtml({ firstName, email, score, designation, dimensions });
   const textContent = buildEmailText({ firstName, score, designation });
-  const RESEND_API_KEY  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
   const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "hello@valoriainstitute.com";
   const REPLY_TO = Deno.env.get("REPLY_TO_EMAIL") || "support@valoriainstitute.com";
   if (!RESEND_API_KEY) {
