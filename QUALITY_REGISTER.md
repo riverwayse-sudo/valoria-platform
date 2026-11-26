@@ -1,3 +1,43 @@
+# 2026-11-26 current-main code closeout candidate
+
+**Status:** CODE CONSOLIDATED IN TWO DRAFT PRs; CONSOLIDATED TESTING NOT STARTED. This section supersedes earlier 26 November snapshots where production visibility and open-PR status differ. It records read-only source, migration-history and aggregate-count verification; it does not claim the candidate code is deployed or tested.
+
+## Current implementation candidates
+- **Site PR #474** — current-main draft, mergeable. Consolidates the writer-approved account-at-entry → Taster → post-Taster email confirmation → authenticated dashboard handoff; legacy Taster recovery; institutional content; event replay; marketplace consent reuse; canonical site labels; and specialist-spectrum profile content. It also adds regression contracts for the new flows.
+- **Platform PR #283** — current-main draft, mergeable. Consolidates the narrowly scoped unconfirmed-account Taster-start handoff, preserves confirmed-email requirements for dashboard/full assessment, records the production-applied visibility migration in source control, and adds the specialist public-roster projection and canonical designation migration.
+- Earlier implementation branches were closed as superseded rather than merged wholesale because they were based on stale commits. Their current requirements were re-applied as targeted changes on #474 and #283.
+- Both PRs remain drafts. No production deployment or production database operation has been performed for this candidate.
+
+## Verified production and staging consent state
+Read-only Supabase migration-history and aggregate queries on 26 November show:
+- Production has migration `20261126000638_require_participant_entered_public_profile_consent` and the later migration `20261126111526_honor_admin_attested_public_profile_visibility`.
+- The effective production consent helper therefore accepts the current profile acknowledgement sources `profile_setup`, `profile_edit`, and the existing `admin_attestation` evidence. The earlier statement that admin attestations no longer authorize visibility is superseded by the later production migration.
+- Production aggregate counts: 13 public/listed, non-revoked, non-test profiles; 13 public-roster rows; 15 `admin_attestation` acknowledgement rows; 0 `profile_setup`/`profile_edit` acknowledgement rows; 15 total acknowledgement rows.
+- Staging aggregate counts: 0 public/listed profiles, 0 public-roster rows, 0 admin-attestation rows and 0 participant acknowledgement rows. Staging does not yet have migration `20261126111526`.
+- No participant names, answers, scores, identity links or consent rows were read or changed during this verification. Aggregate counts only were queried.
+
+## Pending platform migration and canonical designation alignment
+- PR #283 includes `20261126111526_honor_admin_attested_public_profile_visibility.sql` under the exact version recorded in production, for source-control parity. Do not reapply it to production. Staging parity is a controlled prerequisite for the later test phase.
+- PR #283 also includes `20261126191000_project_specialized_profile_evidence_and_canonical_designations.sql`. It is **not applied** in either environment.
+- The new migration extends the consent-gated public roster with experience years, facilitation topics, delivery formats, audience sizes, past events and past-client/programme evidence. It updates the roster writer to project these fields for both Basic and Full listings.
+- The same migration updates the database designation trigger and roster writer to the current point bands: 80–100 Force to Align With; 65–79 Emerging Force; 50–64 Developing Professional; 35–49 Building Foundations; below 35 no designation. It backfills derived designation labels only and does not change assessment answers or scores.
+- The migration refreshes only existing public/listed, non-revoked, non-test profiles through the existing consent gate. Apply it to staging only after the code phase is complete, then verify the projection and boundaries before any production promotion.
+
+## Specialist-spectrum correction
+- Site PR #474 adds a shared capability-evidence adapter. General views use the overall VALU report and PRIME strengths. Talent uses skills and professional context; Speaker uses topics, formats, audience experience and speaking engagements; Facilitator uses facilitation topics, programme types, delivery formats, audience experience and client/programme evidence.
+- Specialist views no longer reuse the general VALU summary, score/radar or PRIME-strength narrative. The profile route preserves the selected spectrum, and missing specialist evidence receives a neutral fallback.
+- The platform migration adds the required consent-gated roster fields; the site directory selects them. These two changes must be released and tested together.
+
+## Remaining verification gates
+- The consolidated test pass has **not** been started. Do not treat existing CI/E2E results for the earlier account-first flow as evidence for the new post-Taster confirmation sequence.
+- After code freeze, apply the two required migration versions to staging in order, then run site/platform unit and contract tests, lint/build, security checks, Cloudflare Worker validation, and desktop/mobile browser acceptance.
+- Use a synthetic staging identity and controlled mailbox to verify registration, Taster save/resume/completion, confirmation token exchange, authenticated dashboard landing, separate Full VALU Index authorization, score/report generation and marketplace listing. Do not use a real participant account or require anyone to retake an assessment.
+- Verify specialist Talent/Speaker/Facilitator content with synthetic profile evidence and confirm the General view alone shows the overall VALU narrative.
+- The Supabase confirmation-email template and real controlled-mailbox token exchange remain a release gate. No production promotion until the full journey passes.
+- Separate backlog items remain outside this code phase: private event certificate delivery, shared admin-auth refactoring, staging editorial redesign, broader ASVS/WCAG review, rapid-service external-caller identification and Supabase plan-limited leaked-password protection.
+
+---
+
 # Valoria Engineering Quality Register — Platform
 
 **Audit status:** TARGETED PRODUCTION SECURITY, CONSENT AND DATA-INTEGRITY FIXES VERIFIED; broader audit remains in progress. Evidence updated 26 November 2026. This is not a full ASVS, WCAG, runtime or end-to-end journey certification.
