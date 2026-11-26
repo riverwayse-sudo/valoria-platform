@@ -65,4 +65,34 @@ if (!release.includes("Production operations target Cloudflare only")) {
   console.error("Governance check failed: Cloudflare-only production boundary is missing.");
   process.exit(1);
 }
+
+const peerRef = process.env.VALORIA_GOVERNANCE_PEER_REF;
+const currentRepo = process.env.GITHUB_REPOSITORY || "";
+if (peerRef && currentRepo) {
+  const peerRepo = currentRepo.endsWith("/valoria-site")
+    ? "riverwayse-sudo/valoria-platform"
+    : "riverwayse-sudo/valoria-site";
+  const sharedFiles = [
+    "VALORIA_UNIFIED_GOVERNANCE.md",
+    "VALORIA_REQUIREMENTS_REGISTER.md",
+    "PLATFORM_INVARIANTS.md",
+    "PRODUCTION_RELEASE_POLICY.md",
+  ];
+  for (const file of sharedFiles) {
+    const url = `https://raw.githubusercontent.com/${peerRepo}/${encodeURI(peerRef)}/docs/engineering/${file}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`Governance parity check failed: cannot read peer ${peerRepo}/${file} at ${peerRef} (HTTP ${response.status}).`);
+      process.exit(1);
+    }
+    const peerContent = await response.text();
+    const localContent = readFileSync(resolve(docsDir, file), "utf8");
+    if (peerContent !== localContent) {
+      console.error(`Governance parity check failed: ${file} differs between ${currentRepo} and ${peerRepo}.`);
+      process.exit(1);
+    }
+  }
+  console.log(`Cross-repository governance parity: PASS (${sharedFiles.length} shared documents match ${peerRepo}@${peerRef}).`);
+}
+
 console.log("Valoria governance contract integrity: PASS (documentation guard only; application behavior is covered by the existing test suites).");
