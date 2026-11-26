@@ -46,7 +46,7 @@ The following are protected contracts. Routine fixes, refactoring and visual wor
 
 ### Profiles, consent and marketplace
 - One account has one canonical professional profile. The profile may carry multiple declared capabilities/modalities (candidate, speaker and facilitator) without creating duplicate accounts or profiles.
-- Account/profile creation, assessment completion, eligibility, participant consent and public discoverability are separate states.
+- Account/profile creation, assessment completion, eligibility, participant consent and public discoverability are separate states. Taster completion must automatically create or refresh the approved professional profile and eligibility projection without an administrator approval gate; public visibility remains gated by participant-entered consent and eligibility.
 - Public visibility requires the current, explicit participant-entered acknowledgement through the approved profile setup/edit journey. Administrative attestation, inferred consent or an unchecked marketing choice is not public-profile consent.
 - Eligibility and merit are determined by the authoritative platform rules. A Taster result, profile existence or account creation must not be misrepresented as full VALU completion or certification.
 - Never fabricate profiles, counts, opportunities, credentials, buyer activity or testimonials. Preserve source records and audit history. No participant data, scores, identity links or consent may be changed without explicit authorization.
