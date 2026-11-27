@@ -24,7 +24,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-STD-001 | Taster and full assessment remain separate records and journeys; no question reuse or subtraction | Both PDFs; later approved journey | Platform | AUDIT REQUIRED |
 | VAL-STD-002 | Full assessment contract remains 54 scored questions plus 4 validity anchors | Strategic Review | Platform | AUDIT REQUIRED |
 | VAL-STD-003 | New Taster uses approved nine-question version; historical versioned 15-question sessions remain resumable only as legacy | Current approved platform contract | Platform | AUDIT REQUIRED |
-| VAL-STD-004 | Account registration/authentication precedes new Taster entry; legacy recovery remains supported | Later explicit owner decision | Site + Platform | AUDIT REQUIRED |
+| VAL-STD-004 | Create the participant account at Taster entry; request email confirmation only after Taster completion. Before confirmation, allow only the server-issued, short-lived, single-use Taster capability; dashboard, profile, marketplace and Full VALU remain confirmation-gated. Preserve legacy recovery | Latest explicit owner decision and approved confirmation callback contract | Site + Platform | FIXED IN GOVERNANCE — IMPLEMENTATION NOT VERIFIED |
 | VAL-STD-005 | Assessment answers, progress and completion are independently persisted and server-confirmed | Both PDFs; REQS | Platform | AUDIT REQUIRED |
 | VAL-STD-006 | PRIME has five clusters and 17 canonical skills; canonical labels/mappings are not locally invented | Strategic Review | Platform + Site | DECISION REQUIRED for canonical label parity |
 | VAL-STD-007 | VALU is points-based; one server-side scoring/designation authority; no percentage or duplicate frontend scoring | Strategic Review; REQS | Platform | AUDIT REQUIRED |
@@ -87,7 +87,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 
 | Decision ID | Topic | Current rule | Source / rationale | Status |
 |---|---|---|---|---|
-| VAL-DEC-001 | Taster entry | New participants register/authenticate before starting the Taster; preserve legacy recovery | Later explicit owner decision supersedes earlier no-account copy | APPROVED — VERIFY IMPLEMENTATION |
+| VAL-DEC-001 | Taster entry and confirmation | Create account at Taster entry; complete the nine-question Taster; request email confirmation at completion; verify ownership, link the exact Taster and establish the authenticated dashboard session. No general unconfirmed session or Full VALU access | Latest explicit owner decision and scanner-safe confirmation callback contract | APPROVED — VERIFY IMPLEMENTATION |
 | VAL-DEC-002 | Taster versioning | New sessions use approved nine-question version; historical 15-question sessions remain versioned legacy | Current platform contract; do not reset historical answers | APPROVED — PROTECT |
 | VAL-DEC-003 | Public visibility | Explicit participant-entered consent is required; admin attestation is insufficient | Later consent decision and production privacy correction | APPROVED — PROTECT |
 | VAL-DEC-004 | Identity reconciliation | Automated suggestions require authenticated human review and traceable evidence before application | Reconciliation safety policy | APPROVED — PROTECT |

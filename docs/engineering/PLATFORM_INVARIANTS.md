@@ -32,7 +32,7 @@ For changes affecting rendered pages, route data, shared styles, assets or compo
 - The 9-question Taster and separate 58-question full assessment remain distinct records and journeys. The Taster is not part of or deducted from the full assessment.
 - The full assessment remains 54 scored questions plus 4 validity anchors.
 - New Taster sessions use the approved nine-question version. Historical, explicitly versioned 15-question sessions remain resumable only as legacy compatibility; never make them the default for new sessions.
-- New participants register/authenticate before Taster entry; preserve the explicitly supported legacy recovery path.
+- Create the participant account at Taster entry and request email confirmation only after Taster completion. Before confirmation, permit only a server-issued, short-lived, single-use Taster-start/continuation capability; do not create a general authenticated session or permit dashboard, profile, marketplace or Full VALU access. After confirmation, verify ownership and idempotently link the exact saved Taster before dashboard access. Preserve the explicitly supported legacy recovery path.
 - Taster and full-assessment answers, progress and completion remain independent, attributable and server-confirmed.
 - VALU is presented in points. One canonical server-side implementation owns scoring and designation; do not duplicate or locally reinterpret scoring.
 - PRIME remains five clusters and 17 canonical skills. Use approved canonical labels and mappings.
