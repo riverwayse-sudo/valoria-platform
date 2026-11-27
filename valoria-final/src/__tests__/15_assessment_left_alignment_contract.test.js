@@ -70,10 +70,14 @@ describe("VALU assessment left-alignment contract", () => {
     expect(css).toContain("animation-duration: 0.01ms !important");
   });
 
-  test("assessment journey status and progress labels are left aligned", () => {
+  test("assessment journey status and progress labels use the shared left-aligned component contract", () => {
     const journey = read("VALUAssessmentJourney.jsx");
-    expect(journey).toContain("textAlign:'left'");
-    expect(journey).toContain("alignItems:'flex-start'");
+    const tokens = read("design-tokens.css");
+    expect(journey).toContain('className="valu-journey"');
+    expect(journey).toContain('className="valu-journey__heading"');
+    expect(tokens).toMatch(/\.valu-journey\s*\{[^}]*text-align:\s*left/s);
+    expect(tokens).toMatch(/\.valu-journey__heading\s*\{[^}]*justify-items:\s*start/s);
+    expect(tokens).toContain("grid-template-columns: repeat(4,minmax(0,1fr))");
   });
 
   test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
