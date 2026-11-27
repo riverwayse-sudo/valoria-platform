@@ -90,6 +90,17 @@ describe("VALU assessment left-alignment contract", () => {
     expect(journey).toContain('aria-current={active ? \'step\' : undefined}');
   });
 
+  test("Full VALU submission morphs in place and exposes its pending state accessibly", () => {
+    const full = read("FullVALUAssessment.jsx");
+    const tokens = read("design-tokens.css");
+    expect(full).toContain('className="vi-submit-morph"');
+    expect(full).toContain("data-state={saving ? 'loading' : 'idle'}");
+    expect(full).toContain("aria-busy={saving}");
+    expect(tokens).toContain('.vi-submit-morph[data-state="loading"]::before');
+    expect(tokens).toContain("@keyframes vi-submit-spin");
+    expect(tokens).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+
   test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
     const full = read("FullVALUAssessment.jsx");
     expect(full).toContain("Your VALU Index is complete.");
