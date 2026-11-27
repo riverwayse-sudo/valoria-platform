@@ -29,6 +29,7 @@ A merged PR, successful build, or staging preview is not proof that the complete
 
 ### Governance and code
 - Site PR #481 merged: `72fae53c38222cfcc519e7a03617a5daeb5ca1ab`.
+- Site PR #479 merged after the staging audit passed: `7c5215a898a1888b435def7b8f5f94ede1d67730`. It adds the canonical legacy route redirects, fixes legal-page staging noindex/canonicals, changes Develop focus areas to the exact canonical 17 PRIME skills, and expands the browser acceptance suite.
 - Platform PR #290 merged: `6b7f65970a4f5fd0dd0023576324326ee80b40e3`.
 - Shared governance, requirements, and invariants documents have matching Git blob hashes in both repositories.
 - Site and platform CI, tests, production builds, security/secret checks, environment parity and Cloudflare build validation passed on the merged governance PRs.
@@ -39,7 +40,7 @@ A merged PR, successful build, or staging preview is not proof that the complete
 - Owner reports the dedicated GitHub staging secret has been added. Cloudflare metadata confirms `SUPABASE_SERVICE_ROLE_KEY` and `RESEND_API_KEY` secret bindings on both the `valoria-staging-site` and `valoria-staging-assessment` Workers. Secret values were not retrieved or exposed.
 - This verifies presence of a Worker secret binding, **not** successful signup, email delivery, token confirmation, or authenticated session creation.
 - Resend reports the `valoriainstitute.com` domain as verified with sending enabled. A historical 25 November confirmation event bounced and its callback targeted the production origin; that event predates the current account-at-entry route and is a warning, not proof that the current route is still wrong. A new Raleway, Taster-completion-specific template is documented at `docs/supabase-auth-email-template.md`; the active staging Supabase template is not independently inspectable through the available connector and must be verified with a fresh controlled test.
-- A current 82-route/viewport site staging audit previously reached all pages but failed eight checks because the Privacy Policy and Terms pages overrode inherited staging `noindex` metadata and used production absolute canonicals. A targeted fix is now on site PR #479; its refreshed staging workflow is running. Do not weaken the noindex test.
+- The refreshed Cloudflare staging workflow for site PR #479 passed: run `45983468554`, 82 route/viewport checks, zero failures. It verified staging deployment, staging-only Supabase secret configuration, redirects, noindex/privacy boundaries, responsive overflow, reveal states, console errors, account-first registration routes, confirmation form rendering and synthetic profile-card motion. The earlier eight legal-page noindex failures were corrected; the current run also validates canonical PRIME skill names on Develop. The merged main-branch commit still requires its own post-merge staging deployment verification; production was not promoted. Do not weaken the noindex test.
 
 ## 4. Remaining acceptance gates
 
