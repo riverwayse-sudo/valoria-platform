@@ -9,14 +9,14 @@ describe("canonical VALU designation consumers", () => {
 
   test.each([
     [34, null],
-    [35, "Building Foundations"],
-    [49, "Building Foundations"],
-    [50, "Developing Professional"],
-    [64, "Developing Professional"],
-    [65, "Emerging Force"],
-    [79, "Emerging Force"],
-    [80, "Force to Align With"],
-    [100, "Force to Align With"],
+    [35, "Standard"],
+    [54, "Standard"],
+    [55, "Proficient"],
+    [74, "Proficient"],
+    [75, "Distinguished"],
+    [89, "Distinguished"],
+    [90, "Elite"],
+    [100, "Elite"],
   ])("score %i resolves to %s", (score, expected) => {
     expect(canonicalDesignationName(score)).toBe(expected);
   });
@@ -46,12 +46,9 @@ describe("canonical VALU designation consumers", () => {
     expect(edgeFunction).toContain("score < 0 || score > 100");
     expect(edgeFunction).not.toContain("Platinum");
     expect(edgeFunction).not.toContain("Gold");
-    expect(edgeFunction).toContain("Force to Align With");
-    expect(edgeFunction).toContain("Emerging Force");
-    expect(edgeFunction).toContain("Developing Professional");
-    expect(edgeFunction).toContain("Building Foundations");
+    for (const retired of ["Force to Align With", "Emerging Force", "Developing Professional", "Building Foundations"]) expect(edgeFunction).not.toContain(retired);
     const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
-    for (const retired of ["Elite", "Distinguished", "Proficient", "Standard"]) expect(sharedContract).not.toContain(`name: "${retired}"`);
+    for (const approved of ["Elite", "Distinguished", "Proficient", "Standard"]) expect(sharedContract).toContain(`name: "${approved}"`);
     expect(edgeFunction).not.toContain("/100");
   });
 
