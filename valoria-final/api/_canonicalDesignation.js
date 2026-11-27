@@ -6,6 +6,7 @@ import { getDesignation } from '../src/valuV4Contract.js';
  * been written by legacy scoring versions.
  */
 export function canonicalDesignationName(score) {
+  if (score == null || typeof score === "boolean" || (typeof score === "string" && score.trim() === "")) return null;
   const points = Number(score);
   if (!Number.isFinite(points) || points < 0 || points > 100) return null;
   return getDesignation(points)?.name || null;
