@@ -8,7 +8,8 @@ describe("canonical VALU designation consumers", () => {
   const readRoot = relative => fs.readFileSync(path.join(process.cwd(), "..", relative), "utf8");
 
   test.each([
-    [34, null],
+    [0, "At the Starting Point"],
+    [34, "At the Starting Point"],
     [35, "Building Foundations"],
     [49, "Building Foundations"],
     [50, "Developing Professional"],
@@ -50,8 +51,10 @@ describe("canonical VALU designation consumers", () => {
     expect(edgeFunction).toContain("Emerging Force");
     expect(edgeFunction).toContain("Developing Professional");
     expect(edgeFunction).toContain("Building Foundations");
+    expect(edgeFunction).toContain("At the Starting Point");
     const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
     for (const retired of ["Elite", "Distinguished", "Proficient", "Standard"]) expect(sharedContract).not.toContain(`name: "${retired}"`);
+    expect(sharedContract).toContain('name: "At the Starting Point"');
     expect(edgeFunction).not.toContain("/100");
   });
 
