@@ -80,7 +80,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-ARC-003 | Cross-repository API/data contracts are documented, versioned and compatibility-tested | Site + Platform | AUDIT REQUIRED |
 | VAL-ARC-004 | Critical routes, auth/session behavior, error states and recovery paths have automated coverage | Site + Platform | AUDIT REQUIRED |
 | VAL-ARC-005 | Every defect has root cause, scope, correction, evidence, recurrence prevention and recovery record | Site + Platform | AUDIT REQUIRED |
-| VAL-ARC-006 | Each release has exact source commit, test evidence, environment, Cloudflare Worker version and rollback/forward-recovery plan | Production `valoria-assessment` version #301 (14:02 UTC) has no Git commit SHA in Cloudflare metadata; #301 is byte-identical to #300 by script etag. Production site Worker is unchanged. | Site + Platform | BLOCKED — provenance and release/rollback decision required |
+| VAL-ARC-006 | Each release has exact source commit, test evidence, environment, Cloudflare Worker version and rollback/forward-recovery plan | Cloudflare Build records map assessment Worker #300 to commit `3ed49c08c93816d48426160ce4168f11a31fb9ea` and #301 to `2cf97333246448727614b5ee8227c86aa45be7d3`; #301 has the same script etag as #300. Production site Worker is unchanged. | Site + Platform | PARTIAL — exact source commits verified; owner release/rollback decision and coordinated site promotion remain pending |
 | VAL-ARC-007 | Quality registers remain repository-specific and are linked to this shared requirements register | Site + Platform | AUDIT REQUIRED |
 
 ## E. Decision log and conflict handling
