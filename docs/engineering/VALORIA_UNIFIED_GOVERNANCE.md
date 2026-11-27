@@ -85,6 +85,7 @@ Every change follows the same sequence:
 8. **Verify staging:** use synthetic identities and isolated data; verify affected journeys, neighbouring components, desktop/mobile display, routes, console, errors and responsive states as applicable.
 9. **Review release risk:** assess data migration, rollback/forward recovery, privacy, consent, security, accessibility and operational monitoring.
 10. **Release:** Cloudflare is the approved production deployment target. Production deployment requires explicit approval, all applicable checks passing and a recorded recovery path.
+11. **Automatic deployment control:** Cloudflare Workers Builds must not auto-deploy production from the `main` branch. Disable/restrict automatic builds or use an explicitly approved release branch; each production deployment must map to an exact Git commit and release approval.
 11. **Verify and close:** verify the exact deployed commit/Worker version and real route where release-bound; update the requirement, component and quality registers with evidence.
 
 No stage may be skipped because a change is described as small. Risk is determined by blast radius, not file count.
