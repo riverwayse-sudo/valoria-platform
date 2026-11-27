@@ -391,3 +391,23 @@ button.valu-option:disabled { cursor: default; }
   line-height: 1.5;
   text-transform: uppercase;
 }
+
+
+/* Answer selection: immediate, reversible visual acknowledgement with semantic state. */
+.valu-assessment-page .valu-option {
+  transition:
+    transform var(--vi-motion-micro) var(--vi-motion-ease),
+    background-color var(--vi-motion-micro) var(--vi-motion-ease),
+    border-color var(--vi-motion-micro) var(--vi-motion-ease),
+    opacity var(--vi-motion-micro) var(--vi-motion-ease);
+}
+.valu-assessment-page .valu-option:active:not(:disabled) { transform: scale(.99); }
+.valu-assessment-page button.valu-option[aria-pressed="true"] {
+  border-color: var(--vi-color-gold) !important;
+  background: rgba(201,168,76,.14) !important;
+}
+.valu-assessment-page .valu-option:disabled { cursor: default; }
+@media (prefers-reduced-motion: reduce) {
+  .valu-assessment-page .valu-option { transition: none; }
+  .valu-assessment-page .valu-option:active:not(:disabled) { transform: none; }
+}
