@@ -16,7 +16,7 @@ describe("Canonical VALU designation read paths", () => {
 
   test("live designation writers use approved bands without rewriting participant rows", () => {
     const historicalMigration = read("supabase/migrations/20261126004120_align_valu_designation_bands.sql");
-    const migration = read("supabase/migrations/20261127140000_project_specialized_profile_evidence_and_approved_designations.sql");
+    const migration = read("supabase/migrations/20261127135134_project_specialized_profile_evidence_and_approved_designations.sql");
     expect(historicalMigration).toContain("NEW.total_score >= 80");
     expect(migration).toContain("NEW.total_score BETWEEN 90 AND 100");
     expect(migration).toContain("NEW.total_score BETWEEN 75 AND 89");
