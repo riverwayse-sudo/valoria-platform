@@ -1,4 +1,10 @@
-## 2026-11-26 consolidated closeout — post-merge evidence
+## 2026-11-27 current release status
+
+The 27 November consolidated status and remaining acceptance gates are recorded in [VALORIA_RELEASE_CLOSEOUT_2026-11-27.md](docs/engineering/VALORIA_RELEASE_CLOSEOUT_2026-11-27.md). The owner has confirmed that the dedicated GitHub staging secret has now been added. Cloudflare metadata confirms a `SUPABASE_SERVICE_ROLE_KEY` secret binding on the isolated `valoria-staging-site` Worker; the secret value was not retrieved. This confirms binding presence only. Live signup, confirmation-email delivery, token POST, session creation and dashboard handoff still require a controlled synthetic-account test. The site staging audit is being rerun after the legal-page noindex/canonical correction in site PR #479.
+
+**Historical note:** The 26 November record below is retained as a timestamped snapshot. Its statement that the staging secret was missing describes the state at that time and is superseded by this 27 November update. The old sequence in the original website documents is also superseded by the current account-registration-at-entry journey recorded in the shared governance register.
+
+## 2026-11-26 consolidated closeout — historical snapshot
 
 **Status:** CODE CONSOLIDATION MERGED TO BOTH MAIN BRANCHES. PLATFORM CI, UNIT TESTS, WORKER VALIDATION AND THE STAGING TASTER RETRY E2E PASS. SITE CI, QUALITY GATES, WORKER VALIDATION AND THE POST-MERGE 34-PAGE DESKTOP/MOBILE STAGING AUDIT PASS. LIVE STAGING AUTH IS FAIL-CLOSED BECAUSE THE DEDICATED STAGING SERVICE-ROLE SECRET IS MISSING. REAL EMAIL CONFIRMATION AND THE FULL 58-QUESTION ACCEPTANCE GATES REMAIN OPEN. THE SITE PRODUCTION WORKER HAS NOT BEEN PROMOTED TO THE CURRENT MAIN CLOSEOUT; A SEPARATE WRANGLER DEPLOYMENT OF THE ASSESSMENT PRODUCTION WORKER HAS UNVERIFIED SOURCE-COMMIT PROVENANCE.
 
