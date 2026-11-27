@@ -94,3 +94,28 @@
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
   .vi-button:active:not(:disabled) { transform: none; }
 }
+
+
+/* Assessment journey: four clear stages, with honest state and a progressive track. */
+.valu-journey { margin: 0 0 28px; min-width: 0; text-align: left; }
+.valu-journey__heading { display: grid; justify-items: start; gap: 6px; margin-bottom: 14px; }
+.valu-journey__eyebrow { color: var(--vi-color-gold); font-size: 10px; font-weight: 800; letter-spacing: .16em; line-height: 1.4; }
+.valu-journey__status { color: var(--vi-color-text-secondary); font-size: 11px; line-height: 1.5; }
+.valu-journey__steps { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.valu-journey__step { min-width: 0; }
+.valu-journey__track { height: 3px; overflow: hidden; border-radius: var(--vi-radius-pill); background: rgba(250,250,247,.12); }
+.valu-journey__track-fill { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--vi-color-gold); transition: width var(--vi-motion-standard) var(--vi-motion-ease); }
+.valu-journey__step.is-complete .valu-journey__track-fill,
+.valu-journey__step.is-current .valu-journey__track-fill { width: 100%; }
+.valu-journey__step-label { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; margin-top: 9px; color: rgba(250,250,247,.58); font-size: 10px; font-weight: 750; letter-spacing: .06em; line-height: 1.4; }
+.valu-journey__step.is-current .valu-journey__step-label { color: var(--vi-color-ivory); }
+.valu-journey__step.is-complete .valu-journey__step-label { color: var(--vi-color-brass); }
+.valu-journey__check { color: var(--vi-color-gold); font-size: 11px; font-weight: 800; }
+.valu-journey__detail { margin: 4px 0 0; color: rgba(250,250,247,.58); font-size: 10px; line-height: 1.45; }
+@media (max-width: 560px) {
+  .valu-journey { margin-bottom: 22px; }
+  .valu-journey__steps { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .valu-journey__track-fill { transition: none; }
+}
