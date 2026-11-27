@@ -34,7 +34,8 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-STD-011 | Historical identity links require exact evidence and authenticated human review; no automatic ownership transfer | Later approved reconciliation policy | Site + Platform | AUDIT REQUIRED |
 | VAL-STD-012 | No fabricated profiles, public counts, credentials, opportunities, buyer activity or outcomes | Both PDFs; REQS | Site + Platform | AUDIT REQUIRED |
 | VAL-STD-013 | Participant data, answers, scores, identity links and consent are not changed without explicit authorization | REQS | Platform | AUDIT REQUIRED |
-| VAL-STD-014 | Production deployment is Cloudflare-only and requires explicit release approval, passing gates and recovery plan | REQS / deployment policy | Site + Platform | AUDIT REQUIRED |\n| VAL-STD-015 | Taster completion automatically creates/refreshes the professional profile and eligibility projection without an admin approval gate; public visibility still requires participant-entered consent and eligibility | Later approved product decision plus consent policy | Platform | AUDIT REQUIRED |
+| VAL-STD-014 | Production deployment is Cloudflare-only and requires explicit release approval, passing gates and recovery plan | REQS / deployment policy | Site + Platform | AUDIT REQUIRED |
+| VAL-STD-015 | Taster completion automatically creates/refreshes the professional profile and eligibility projection without an admin approval gate; public visibility still requires participant-entered consent and eligibility | Later approved product decision plus consent policy | Platform | AUDIT REQUIRED |
 
 ## B. Strategic Review requirements
 
