@@ -72,3 +72,11 @@ A merged PR, successful build, or staging preview is not proof that the complete
 ## 7. Closure rule
 
 Close each gate only with a linked commit, CI run, staging evidence, controlled synthetic journey result, or explicit owner/legal approval. Record passed, failed, skipped and unverified separately. No production release is included in this document.
+
+## 8. UX and micro-interaction implementation scope
+
+The source catalogue supplied on 27 November contains **five groups of six patterns (30 patterns)**, not 18. The patterns cover gesture-following sheets and media, tooltips, typing indicators, stacked toasts, file-drop feedback, payment confirmation, copy and field states, checkout progress, map pins, deletion, speed-dial menus, sliders, collapsing titles, long-press actions, page dots, side menus, media controls, downloads, theme switching, search, send/unlock feedback, cart and submit states, progressive list entry, swipe dismissal, card flips and notification acknowledgement.
+
+Apply these patterns only where the corresponding interaction already exists in Valoria. Do not invent payment, cart, map, media, download or unlock features merely to reproduce a reference animation. Preserve the user's motion rules: morph rather than abruptly swap; follow rather than teleport; cascade rather than dump; settle rather than stop abruptly; respond without distracting. All motion must respect reduced-motion preferences, remain keyboard/touch accessible, preserve state and never imply server success before confirmation.
+
+Site PR #482 and platform PR #291 establish the first shared design-token/component foundation and semantic assessment-journey treatment. They do **not** constitute completion of all 30 interaction patterns or visual acceptance. The next implementation pass must map each applicable pattern to an existing Valoria component, implement only those with a real product use case, and verify desktop/mobile, keyboard, touch and reduced-motion behaviour before merge.
