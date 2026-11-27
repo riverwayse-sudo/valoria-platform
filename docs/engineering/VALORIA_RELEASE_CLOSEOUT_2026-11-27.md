@@ -28,6 +28,9 @@ A merged PR, successful build, or staging preview is not proof that the complete
 ## 3. Verified implementation and evidence
 
 ### Governance and code
+
+- Site PR #490 merged on 27 November as `3a1c530dafd044fbd06c86f02333044409d9681f`: shared fail-closed admin authorization now covers 15 protected API routes. Focused authorization tests, site unit/contract tests, static checks, secret scan, environment parity and Cloudflare Worker bundling passed. The post-merge staging workflow `46003079536` deployed the isolated staging Worker and configured its staging-only service-role secret; route/privacy smoke and desktop/mobile browser acceptance were still running at this closeout update. Production deployment was explicitly skipped.
+- Superseded, diverged site PR #405 was closed after PR #490 merged; it must not be reopened or merged. The two admin lifecycle endpoints (`create-admin` and `revoke-admin`) remain outside the shared-helper migration for separate privilege-model review; their existing server-side admin membership checks remain in place.
 - Site PR #481 merged: `72fae53c38222cfcc519e7a03617a5daeb5ca1ab`.
 - Site PR #479 merged after the staging audit passed: `7c5215a898a1888b435def7b8f5f94ede1d67730`. It adds the canonical legacy route redirects, fixes legal-page staging noindex/canonicals, changes Develop focus areas to the exact canonical 17 PRIME skills, and expands the browser acceptance suite.
 - Platform PR #290 merged: `6b7f65970a4f5fd0dd0023576324326ee80b40e3`.
