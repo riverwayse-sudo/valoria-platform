@@ -42,30 +42,30 @@ function getNextSteps(score: number | null): string {
       <li>Marketplace visibility depends on profile and capability eligibility checks, not assessment score alone.</li>
     `;
   }
-  if (score >= 80) {
+  if (score >= 90) {
     return `
-      <li>Your merit designation is <strong>Force to Align With</strong>. Keep your professional evidence and profile current.</li>
+      <li>Your merit designation is <strong>Elite</strong>. Keep your professional evidence and profile current.</li>
       <li>Marketplace visibility remains subject to profile, assessment and capability eligibility checks.</li>
       <li>Use your PRIME results to identify where to sustain and extend your professional contribution.</li>
     `;
   }
-  if (score >= 65) {
+  if (score >= 75) {
     return `
-      <li>Your merit designation is <strong>Emerging Force</strong>. Strengthen the evidence behind your professional capabilities.</li>
+      <li>Your merit designation is <strong>Distinguished</strong>. Strengthen the evidence behind your professional capabilities.</li>
       <li>Complete your professional profile and selected capability details for eligibility review.</li>
       <li>Use your PRIME results to identify your next development priority.</li>
     `;
   }
-  if (score >= 50) {
+  if (score >= 55) {
     return `
-      <li>Your merit designation is <strong>Developing Professional</strong>. Identify the dimensions where focused development will matter most.</li>
+      <li>Your merit designation is <strong>Proficient</strong>. Identify the dimensions where focused development will matter most.</li>
       <li>Complete your professional profile and capability details before marketplace eligibility can be assessed.</li>
       <li>Explore PRIME-aligned development opportunities that address your priority areas.</li>
     `;
   }
   if (score >= 35) {
     return `
-      <li>Your merit designation is <strong>Building Foundations</strong>. Review your PRIME dimension results and select a development priority.</li>
+      <li>Your merit designation is <strong>Standard</strong>. Review your PRIME dimension results and select a development priority.</li>
       <li>Complete your professional profile and capability details. A score of 35 points is only one marketplace eligibility condition.</li>
       <li>Marketplace listing is confirmed only after all required checks are satisfied.</li>
     `;
