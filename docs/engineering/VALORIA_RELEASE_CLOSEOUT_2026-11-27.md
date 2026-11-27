@@ -1,0 +1,88 @@
+# Valoria Institute — Consolidated Release Closeout
+
+**Updated:** 27 November 2026  
+**Applies to:** `riverwayse-sudo/valoria-site` and `riverwayse-sudo/valoria-platform`  
+**Authority:** Valoria Institute Website Review (20 pages), Valoria Website Content Overhaul (6 pages), 10 November 2026 Closeout Register/Addendum, current owner instructions, and the shared engineering governance documents.
+
+## 1. Release decision
+
+**Code consolidation is merged; production release is not approved.** The two repositories now share byte-identical `VALORIA_UNIFIED_GOVERNANCE.md`, `VALORIA_REQUIREMENTS_REGISTER.md`, and `PLATFORM_INVARIANTS.md`. Site PR #481 and platform PR #290 are merged. Their CI gates passed. These were documentation/governance changes and did not change runtime behaviour or participant data.
+
+A merged PR, successful build, or staging preview is not proof that the complete participant journey works. Production remains outside this closeout until all acceptance gates below are evidenced and separately authorised.
+
+## 2. Canonical requirements
+
+- Valoria Institute is the institution; the website and platform are its delivery mechanisms. Use institution-first, internationally oriented positioning. Retain jurisdiction/legal references only where operationally or legally necessary.
+- PRIME has exactly five dimensions and 17 canonical skills. Do not reintroduce an eighteenth skill or legacy labels.
+- VALU is points-based. Use the five approved merit designations. Do not display percentage-style VALU scores or internal scoring mechanics.
+- The current owner-approved participant journey supersedes the older pre-account Taster sequence in the original documents: **account registration → authenticated 9-question Taster → Taster completion → email confirmation → authenticated dashboard → separate 58-question full assessment → official VALU Index and applicable designation**.
+- The Taster and full assessment are separate instruments. Taster responses are not included in, deducted from, or substituted for the full assessment. Full-assessment progress must persist and resume independently.
+- Do not expose internal question counts, validity checks, or question-count progress labels to participants.
+- Taster completion, account verification, full assessment completion, VALU designation, listing eligibility, public visibility, and certification are separate states.
+- Public professional visibility requires current eligibility and recorded consent. Never manufacture, duplicate, or force profiles public to meet a target count.
+- Only publish real opportunities with a working application/enquiry route. Otherwise show a truthful empty state or buyer enquiry route.
+- Do not claim certification, accreditation, independent validation, partnerships, programme outcomes, or live inventory without verifiable evidence.
+- Homepage design follows the latest owner direction: no new imagery for now, a maximum of six to seven focused sections, a centered oval navigation that is not sticky, and a restrained editorial/fashion-magazine feel. Preserve the approved palette and Raleway typography.
+- The older nine-section homepage outline in the strategic review is superseded by this more recent owner-approved section limit; do not re-expand the page to nine sections.
+
+## 3. Verified implementation and evidence
+
+### Governance and code
+- Site PR #481 merged: `72fae53c38222cfcc519e7a03617a5daeb5ca1ab`.
+- Site PR #479 merged after the staging audit passed: `7c5215a898a1888b435def7b8f5f94ede1d67730`. It adds the canonical legacy route redirects, fixes legal-page staging noindex/canonicals, changes Develop focus areas to the exact canonical 17 PRIME skills, and expands the browser acceptance suite.
+- Platform PR #290 merged: `6b7f65970a4f5fd0dd0023576324326ee80b40e3`.
+- Shared governance, requirements, and invariants documents have matching Git blob hashes in both repositories.
+- Site and platform CI, tests, production builds, security/secret checks, environment parity and Cloudflare build validation passed on the merged governance PRs.
+- The 17-skill assessment aggregation, account-at-entry Taster architecture, post-Taster confirmation handoff and retry-safe Taster submission have prior passing automated and isolated staging evidence recorded in the platform quality register.
+
+### Staging infrastructure
+- Supabase staging project `yccxgjdqworgcbircnvn` is active and healthy; production project remains separate.
+- Owner reports the dedicated GitHub staging secret has been added. Cloudflare metadata confirms `SUPABASE_SERVICE_ROLE_KEY` and `RESEND_API_KEY` secret bindings on both the `valoria-staging-site` and `valoria-staging-assessment` Workers. Secret values were not retrieved or exposed.
+- This verifies presence of a Worker secret binding, **not** successful signup, email delivery, token confirmation, or authenticated session creation.
+- Resend reports the `valoriainstitute.com` domain as verified with sending enabled. A historical 25 November confirmation event bounced and its callback targeted the production origin; that event predates the current account-at-entry route and is a warning, not proof that the current route is still wrong. A new Raleway, Taster-completion-specific template is documented at `docs/supabase-auth-email-template.md`; the active staging Supabase template is not independently inspectable through the available connector and must be verified with a fresh controlled test.
+- The refreshed Cloudflare staging workflow for site PR #479 passed: run `45983468554`, 82 route/viewport checks, zero failures. It verified staging deployment, staging-only Supabase secret configuration, redirects, noindex/privacy boundaries, responsive overflow, reveal states, console errors, account-first registration routes, confirmation form rendering and synthetic profile-card motion. The earlier eight legal-page noindex failures were corrected; the current run also validates canonical PRIME skill names on Develop. The merged main-branch commit still requires its own post-merge staging deployment verification; production was not promoted. Do not weaken the noindex test.
+
+## 4. Remaining acceptance gates
+
+| Gate | Current status | Required closure evidence |
+|---|---|---|
+| Site route and responsive staging audit | Fix in PR #479; refreshed workflow pending | Cloudflare staging deploy and all 82 route/viewport checks pass, including canonical redirects, noindex, privacy boundaries, no overflow, and browser console |
+| Real account registration and confirmation | Not yet end-to-end verified | Apply/verify the Raleway token-hash template in Supabase staging; use a synthetic staging account and controlled mailbox; confirm email is sent only after Taster completion; verify the link and callback remain on staging and preserve the exact Taster UUID; recipient POSTs confirmation; authenticated session is created; completed Taster is linked to the same account; dashboard opens without another login |
+| Separate full assessment | Not yet end-to-end verified | Same synthetic account completes full assessment; autosave, refresh, resume, completion, points-based VALU report and designation verified |
+| Specialist profile projections | **BLOCKED for production promotion** | Production has 26 `professional_capabilities` rows and zero with `eligibility_status='listed'`; the 13 public roster rows carry declared selections (12 select one capability, 1 selects all three). Ten of the public rows have a completed full assessment and all ten score at or above 35 points; none is below the threshold. However, none currently passes `private.is_full_marketplace_listing_ready` because full listing is a separate gate requiring a completed profile and approved capability evidence. The public general roster is valid under the basic public-readiness rule. All three Talent/Speaker/Facilitator badges are rendered on each card with selected/unselected state; production has 12 profiles selecting one capability and 1 selecting all three. These are declared selections, not evidence verification. Do not describe them as verified specialist capability. Staging has the specialist projection columns, but production does not. Current site code selects those columns, so production promotion requires the approved specialist-projection migration, refreshed data and synthetic Talent/Speaker/Facilitator acceptance first |
+| Marketplace inventory and consent | **PASS for the current general public roster** | Read-only production checks: 13 public-roster rows; all 13 have the current visibility acknowledgement, pass `private.is_basic_public_profile_ready`, and are non-test. No test profile is in the public roster. The remaining 10 of 23 profiles are registered-only, including 5 test profiles. Do not force a target of 17 or copy production personal data into staging. **Specialist/full-listing eligibility is a separate open gate below** |
+| Opportunity discovery | **PASS for truthful empty state; no supply yet** | Read-only production snapshot: opportunities 0, employer profiles 0, applications 0, submissions 0. Staging also has 0 opportunities. The public page renders “No public opportunities yet” for a verified empty response and a separate retryable error state. Keep this empty state; do not invent listings. Real supply and end-to-end application acceptance remain a future operational gate |
+| Valoria Develop offer architecture | Owner decision pending | The Content Overhaul proposes four delivery formats, while the current page presents five PRIME-cluster focus cards. These are different dimensions and may coexist, but the published offer set and availability have not been confirmed. Do not publish prices, PRIME certification claims, fixed 90-day remeasurement or unconfirmed facilitator/programme availability. Keep the current five-cluster framework factual until the four delivery formats are explicitly approved |\n| Legal and institutional wording | Owner/legal sign-off pending | The April 2026 Brand Guidelines' Africa-first / “human capital institution” framing needs confirmation against the later direction for an internationally relevant identity. The user explicitly removed Nigerian positioning except legal/operational facts; no later instruction conclusively confirms whether Africa-first language remains. Confirm the intended geographic descriptor and replacement Mission/Vision/Purpose wording before publishing. Approve replacement Mission/Vision/Purpose copy; confirm the legal entity/operator (the review notes three names across source materials); review privacy/terms accuracy and certification claims. The Privacy Policy currently says analytics cookies/tracking are not used, while the production site layout loads Google Analytics; legal/privacy owner must reconcile the notice with actual tracking before release. Do not infer approval from existing copy |
+| Visual and accessibility acceptance | Automated route audit passed; design sign-off pending | The 82-route desktop/mobile staging audit passes. Screenshot review confirms the homepage is within the six-to-seven-section limit and contains no new photography, but the current navigation remains logo-left/links-right rather than the requested centered, non-sticky oval navigation. The paired design-foundation PRs do not implement that navigation or all applicable micro-interactions. Complete the visual treatment, inspect forms/focus/contrast/reduced motion, then review desktop/mobile screenshots. Automated checks are not WCAG 2.2 AA certification |
+| Production provenance and release | Not approved | Verify source commit/version of both production Workers, stage all accepted changes, complete all gates, then obtain explicit owner authorisation before production promotion |
+
+## 5. Data integrity and non-negotiable protections
+
+- Production general-roster verification: 13/13 public rows have current visibility consent and pass the database's basic public-readiness predicate; 0 test profiles are public. Full-listing readiness is separate: 0/13 currently pass the full-listing predicate, and no specialist capability record is currently marked listed. Keep the public cards honest about declared selections versus evidence-verified capability.
+
+- The production identity review ledger has 104 rows and zero recorded human reviewers. Automated suggestions are not approvals. Do not apply identity links or merge candidate records without a recorded human reviewer and deterministic evidence.
+- The 17 full-assessment records missing `taster_id` are not assumed to match the 17 contact candidates.
+- The current verified public roster is 13 rows; 10 profiles remain registered-only. Do not publish them without the required evidence and consent.
+- Do not mutate participant answers, assessment scores, profiles, consent acknowledgements, identity links, or production migrations as part of documentation or staging verification.
+- Do not apply the specialist projection migration to production until its staging acceptance and release gate pass. Staging migration history already contains the specialist-projection migration twice (versions `20261126200408` and `20261126202125`); do not reapply it or attempt destructive migration-history cleanup.
+- Do not use Vercel for deployment operations. Cloudflare is the deployment authority.
+- Do not promote staging code to production merely because CI or a preview succeeds.
+
+## 6. Active pull requests relevant to this closeout
+
+- Site PR #479: staging-only legacy route redirects and expanded browser audit. Targeted legal-page metadata correction is included; the new staging run must pass before merge.
+- Site PR #484 merged as `15ad4eaca2641c9c9d20953ba48d4de3bbddaaed`: a test-only regression guard now asserts the post-Taster email callback is built from the current request origin and preserves the completed Taster reference. CI and security checks passed.
+- Site PR #482 and platform PR #291: paired design-foundation changes. CI/build checks passed and the platform has a Cloudflare preview, but visual acceptance remains outstanding. Review together against the design constitution and reduced-motion/focus standards before merging either.
+- Other open pull requests are separate backlog or superseded work. Do not bulk-merge them as part of this closeout.
+
+## 7. Closure rule
+
+Close each gate only with a linked commit, CI run, staging evidence, controlled synthetic journey result, or explicit owner/legal approval. Record passed, failed, skipped and unverified separately. No production release is included in this document.
+
+## 8. UX and micro-interaction implementation scope
+
+The source catalogue supplied on 27 November contains **five groups of six patterns (30 patterns)**, not 18. The patterns cover gesture-following sheets and media, tooltips, typing indicators, stacked toasts, file-drop feedback, payment confirmation, copy and field states, checkout progress, map pins, deletion, speed-dial menus, sliders, collapsing titles, long-press actions, page dots, side menus, media controls, downloads, theme switching, search, send/unlock feedback, cart and submit states, progressive list entry, swipe dismissal, card flips and notification acknowledgement.
+
+Apply these patterns only where the corresponding interaction already exists in Valoria. Do not invent payment, cart, map, media, download or unlock features merely to reproduce a reference animation. Preserve the user's motion rules: morph rather than abruptly swap; follow rather than teleport; cascade rather than dump; settle rather than stop abruptly; respond without distracting. All motion must respect reduced-motion preferences, remain keyboard/touch accessible, preserve state and never imply server success before confirmation.
+
+Site PR #482 and platform PR #291 establish the first shared design-token/component foundation and semantic assessment-journey treatment. They do **not** constitute completion of all 30 interaction patterns or visual acceptance. The next implementation pass must map each applicable pattern to an existing Valoria component, implement only those with a real product use case, and verify desktop/mobile, keyboard, touch and reduced-motion behaviour before merge.
