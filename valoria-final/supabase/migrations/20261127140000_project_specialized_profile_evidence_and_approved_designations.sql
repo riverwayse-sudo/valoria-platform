@@ -169,10 +169,10 @@ begin
     canonical_cluster_scores := coalesce(canonical_cluster_scores, p.cluster_scores);
 
     canonical_designation := case
-      when canonical_valu_index between 80 and 100 then 'Elite'
-      when canonical_valu_index between 65 and 79 then 'Distinguished'
-      when canonical_valu_index between 50 and 64 then 'Proficient'
-      when canonical_valu_index between 35 and 49 then 'Standard'
+      when canonical_valu_index between 90 and 100 then 'Elite'
+      when canonical_valu_index between 75 and 89 then 'Distinguished'
+      when canonical_valu_index between 55 and 74 then 'Proficient'
+      when canonical_valu_index between 35 and 54 then 'Standard'
       else null
     end;
 
