@@ -86,13 +86,13 @@ describe("VALU assessment left-alignment contract", () => {
     expect(full).not.toContain("current + 1} / TOTAL_QUESTIONS");
   });
 
-  test("the legacy taster no longer queries public profiles with an anonymous key", () => {
-    const legacyGate = read("VALUIndexV4Gate.jsx");
+  test("the legacy taster import path delegates to the active account-first taster", () => {
+    const compatibilityEntry = read("prime-assessment-v4.jsx");
     const activeApp = read("VALUIndexV4App.jsx");
     expect(activeApp).toContain("VALUIndexV4GateNext");
-    expect(legacyGate).not.toContain("SUPABASE_ANON_KEY");
-    expect(legacyGate).not.toContain("professional_profiles?\u0024{params}");
-    expect(legacyGate).not.toContain("AssessmentProof");
+    expect(compatibilityEntry).toContain('from "./VALUIndexV4GateNext.jsx"');
+    expect(compatibilityEntry).toContain("<VALUIndexV4GateNext />");
+    expect(compatibilityEntry).not.toContain("VALUIndexV4Gate.jsx");
   });
 
   test("assessment navigation title begins at the left edge of its own grid cell", () => {
