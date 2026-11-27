@@ -108,16 +108,28 @@ $new$;
   end if;
 
   v_definition := pg_catalog.pg_get_functiondef('private.canonicalize_valu_designation_before_write()'::regprocedure);
-  if pg_catalog.strpos(v_definition, 'At the Starting Point') = 0
-     or pg_catalog.strpos(v_definition, 'Force to Align With') = 0
-     or pg_catalog.strpos(v_definition, 'Elite') > 0 then
+  if pg_catalog.strpos(v_definition, '''At the Starting Point''') = 0
+     or pg_catalog.strpos(v_definition, '''Force to Align With''') = 0
+     or pg_catalog.strpos(v_definition, '''Emerging Force''') = 0
+     or pg_catalog.strpos(v_definition, '''Developing Professional''') = 0
+     or pg_catalog.strpos(v_definition, '''Building Foundations''') = 0
+     or pg_catalog.strpos(v_definition, '''Elite''') > 0
+     or pg_catalog.strpos(v_definition, '''Distinguished''') > 0
+     or pg_catalog.strpos(v_definition, '''Proficient''') > 0
+     or pg_catalog.strpos(v_definition, '''Standard''') > 0 then
     raise exception 'Assessment designation trigger verification failed';
   end if;
 
   v_definition := pg_catalog.pg_get_functiondef('public.refresh_marketplace_public_roster(uuid)'::regprocedure);
-  if pg_catalog.strpos(v_definition, 'At the Starting Point') = 0
-     or pg_catalog.strpos(v_definition, 'Force to Align With') = 0
-     or pg_catalog.strpos(v_definition, 'Elite') > 0 then
+  if pg_catalog.strpos(v_definition, '''At the Starting Point''') = 0
+     or pg_catalog.strpos(v_definition, '''Force to Align With''') = 0
+     or pg_catalog.strpos(v_definition, '''Emerging Force''') = 0
+     or pg_catalog.strpos(v_definition, '''Developing Professional''') = 0
+     or pg_catalog.strpos(v_definition, '''Building Foundations''') = 0
+     or pg_catalog.strpos(v_definition, '''Elite''') > 0
+     or pg_catalog.strpos(v_definition, '''Distinguished''') > 0
+     or pg_catalog.strpos(v_definition, '''Proficient''') > 0
+     or pg_catalog.strpos(v_definition, '''Standard''') > 0 then
     raise exception 'Marketplace designation projection verification failed';
   end if;
 end;
