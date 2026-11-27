@@ -3,42 +3,53 @@ import React from 'react';
 const STEPS = [
   { key: 'account', title: 'Account', detail: 'Account registered' },
   { key: 'taster', title: 'Taster', detail: 'A guided starting point' },
+  { key: 'confirmation', title: 'Confirm email', detail: 'Activate your account' },
   { key: 'dashboard', title: 'Dashboard', detail: 'Your next step' },
   { key: 'full', title: 'Full VALU Index', detail: 'Your official result' },
 ];
 
 export default function VALUAssessmentJourney({ stage = 'taster' }) {
-  const normalizedStage = stage === 'registration' ? 'taster' : stage === 'account' ? 'dashboard' : stage;
+  const normalizedStage = stage === 'registration' ? 'taster' : stage === 'account' ? 'confirmation' : stage;
   const statusLabel = stage === 'registration'
     ? 'ACCOUNT REGISTERED · TASTER NEXT'
-    : stage === 'account'
-      ? 'TASTER SAVED · READY FOR YOUR DASHBOARD'
-      : stage === 'full'
-        ? 'CONTINUE YOUR FULL VALU INDEX'
-        : 'YOUR PROGRESS IS SAVED';
+    : stage === 'account' || stage === 'confirmation'
+      ? 'TASTER COMPLETE · CONFIRM EMAIL TO CONTINUE'
+      : stage === 'dashboard'
+        ? 'YOUR DASHBOARD IS READY · FULL VALU NEXT'
+        : stage === 'full'
+          ? 'CONTINUE YOUR FULL VALU INDEX'
+          : 'YOUR PROGRESS IS SAVED';
   const activeIndex = Math.max(0, STEPS.findIndex(step => step.key === normalizedStage));
+
   return (
-    <section aria-label="VALU Index progress" style={{ margin: '0 0 28px', textAlign:'left' }}>
-      <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:6, marginBottom:12, textAlign:'left' }}>
-        <span style={{ color:'#C9A84C', fontSize:9, fontWeight:800, letterSpacing:'.16em' }}>YOUR VALU INDEX JOURNEY</span>
-        <span style={{ color:'rgba(247,244,238,.68)', fontSize:10, textAlign:'left' }}>{statusLabel}</span>
+    <section className="valu-journey" aria-label="VALU Index progress">
+      <div className="valu-journey__heading">
+        <span className="valu-journey__eyebrow">YOUR VALU INDEX JOURNEY</span>
+        <span className="valu-journey__status" aria-live="polite">{statusLabel}</span>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(88px,1fr))', gap:8 }}>
-        {STEPS.map((step,index) => {
+      <ol className="valu-journey__steps" aria-label="Journey stages">
+        {STEPS.map((step, index) => {
           const done = index < activeIndex;
           const active = index === activeIndex;
+          const stateClass = done ? 'is-complete' : active ? 'is-current' : 'is-upcoming';
           return (
-            <div key={step.key} aria-current={active ? 'step' : undefined} style={{ minWidth:0 }}>
-              <div style={{ height:3, borderRadius:99, background:done || active ? '#C9A84C' : 'rgba(247,244,238,.12)' }} />
-              <div style={{ display:'flex', alignItems:'baseline', gap:6, flexWrap:'wrap', marginTop:8 }}>
-                {done && <span aria-hidden="true" style={{ color:'#C9A84C', fontSize:9, fontWeight:800 }}>✓</span>}
-                <span style={{ color:active ? '#FAFAF7' : 'rgba(247,244,238,.58)', fontSize:9, fontWeight:800, letterSpacing:'.08em' }}>{step.title.toUpperCase()}</span>
+            <li
+              key={step.key}
+              className={`valu-journey__step ${stateClass}`}
+              aria-current={active ? 'step' : undefined}
+            >
+              <div className="valu-journey__track" aria-hidden="true">
+                <span className="valu-journey__track-fill" />
               </div>
-              <div style={{ color:'rgba(247,244,238,.68)', fontSize:9, marginTop:3 }}>{step.detail}</div>
-            </div>
+              <div className="valu-journey__step-label">
+                {done && <span className="valu-journey__check" aria-hidden="true">✓</span>}
+                <span>{step.title}</span>
+              </div>
+              <p className="valu-journey__detail">{step.detail}</p>
+            </li>
           );
         })}
-      </div>
+      </ol>
     </section>
   );
 }

@@ -355,7 +355,7 @@ export default function VALUIndexV4GateNext(){
     <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
    </label>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="submit" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU INDEX TASTER →'}</button>
+   <button type="submit" className="vi-submit-morph" data-state={saving ? 'loading' : 'idle'} aria-busy={saving} aria-live="polite" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU INDEX TASTER →'}</button>
    <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved taster.</div>
   </form>
  </Shell>;
@@ -417,7 +417,7 @@ export default function VALUIndexV4GateNext(){
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED EMAIL</div><h2 style={{...S.scoreName,overflowWrap:'anywhere'}}>{email}</h2></div>
    </div>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'SAVE TASTER & CONTINUE TO DASHBOARD →'}</button>
+   <button type="button" className="vi-submit-morph" data-state={saving ? 'loading' : 'idle'} aria-busy={saving} aria-live="polite" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'SAVE TASTER & CONTINUE TO DASHBOARD →'}</button>
    <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
   </section>
  </Shell>;
@@ -427,7 +427,7 @@ export default function VALUIndexV4GateNext(){
   <div className="valu-taster-top" style={S.top}><div><div style={S.eyebrow}>VALU INDEX TASTER</div><div style={S.cluster}>{q.cluster} · {CLUSTERS[q.cluster]}</div></div><div className="valu-taster-save-state"><span aria-hidden="true">✓</span> YOUR PROGRESS IS SAVED</div></div>
   <div className="valu-taster-progress" role="progressbar" aria-label="Taster progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={sessionProgress} style={S.progress}><div style={{...S.fill,width:`${sessionProgress}%`,background:COLORS[q.cluster]}}/></div>
   <h1 className="valu-taster-question" style={S.question}>{q.q}</h1>
-  <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
+  <div className="valu-taster-options" style={S.options}>{q.options.map((o,i)=><button className="valu-option" key={i} aria-pressed={selected===i||answers[current]===i} disabled={selected!==null||saving} onClick={()=>choose(i)} style={{...S.option,borderColor:(selected===i||answers[current]===i)?GOLD:'rgba(247,244,238,.1)',background:(selected===i||answers[current]===i)?'rgba(201,168,76,.14)':'#2E2E4A',opacity:selected!==null&&selected!==i?.58:1}}><span style={S.optionLetter}>{String.fromCharCode(65+i)}</span><span>{o.text}</span></button>)}</div>
   {current>0&&<button type="button" className="valu-assessment-back" disabled={saving||selected!==null} onClick={()=>setCurrent(value=>Math.max(0,value-1))}>← REVIEW PREVIOUS RESPONSE</button>}
   {error&&<div style={S.error}>{error}</div>}
   <p style={S.note}>Your progress is saved as you go.</p>

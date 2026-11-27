@@ -70,10 +70,55 @@ describe("VALU assessment left-alignment contract", () => {
     expect(css).toContain("animation-duration: 0.01ms !important");
   });
 
-  test("assessment journey status and progress labels are left aligned", () => {
+  test("assessment journey status and progress labels use the shared left-aligned component contract", () => {
     const journey = read("VALUAssessmentJourney.jsx");
-    expect(journey).toContain("textAlign:'left'");
-    expect(journey).toContain("alignItems:'flex-start'");
+    const tokens = read("design-tokens.css");
+    expect(journey).toContain('className="valu-journey"');
+    expect(journey).toContain('className="valu-journey__heading"');
+    expect(tokens).toMatch(/\.valu-journey\s*\{[^}]*text-align:\s*left/s);
+    expect(tokens).toMatch(/\.valu-journey__heading\s*\{[^}]*justify-items:\s*start/s);
+    expect(tokens).toContain("grid-template-columns: repeat(5,minmax(0,1fr))");
+  });
+
+  test("journey stages reflect account, Taster, email confirmation, dashboard and Full VALU without exposing question counts", () => {
+    const journey = read("VALUAssessmentJourney.jsx");
+    expect(journey).toContain("stage === 'registration' ? 'taster'");
+    expect(journey).toContain("stage === 'account' ? 'confirmation'");
+    expect(journey).toContain("title: 'Confirm email'");
+    expect(journey).toContain('TASTER COMPLETE · CONFIRM EMAIL TO CONTINUE');
+    expect(journey).toContain("CONTINUE YOUR FULL VALU INDEX");
+    expect(journey).toContain("YOUR PROGRESS IS SAVED");
+    expect(journey).not.toMatch(/of 9|of 58|1 of 9|1 of 58|Question \\{[^}]+\\} of/);
+    expect(journey).toContain('aria-current={active ? \'step\' : undefined}');
+  });
+
+  test("Full VALU submission morphs in place and exposes its pending state accessibly", () => {
+    const full = read("FullVALUAssessment.jsx");
+    const tokens = read("design-tokens.css");
+    expect(full).toContain('className="vi-submit-morph"');
+    expect(full).toContain("data-state={saving ? 'loading' : 'idle'}");
+    expect(full).toContain("aria-busy={saving}");
+    expect(tokens).toContain('.vi-submit-morph[data-state="loading"]::before');
+    expect(tokens).toContain("@keyframes vi-submit-spin");
+    expect(tokens).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+
+  test("account registration and Taster continuation keep their submit control during saving", () => {
+    const gate = read("VALUIndexV4GateNext.jsx");
+    expect(gate).toContain('className="vi-submit-morph"');
+    expect(gate).toContain("data-state={saving ? 'loading' : 'idle'}");
+    expect(gate).toContain("aria-busy={saving}");
+    expect(gate).toContain("SAVING YOUR REGISTRATION…");
+    expect(gate).toContain("SAVING YOUR TASTER…");
+  });
+
+  test("Taster answer selection is exposed semantically and receives immediate motion feedback", () => {
+    const gate = read("VALUIndexV4GateNext.jsx");
+    const css = read("assessment.css");
+    expect(gate).toContain("aria-pressed={selected===i||answers[current]===i}");
+    expect(css).toContain('button.valu-option[aria-pressed="true"]');
+    expect(css).toContain("transform: scale(.99)");
+    expect(css).toContain("transition: none");
   });
 
   test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
@@ -110,4 +155,10 @@ describe("VALU assessment left-alignment contract", () => {
     expect(css).toContain(".valu-intro-benefits small");
     expect(css).toContain("display: none");
   });
+  test("shared interactive target token meets the 48px steering-law standard", () => {
+    const tokens = read("design-tokens.css");
+    expect(tokens).toContain("--vi-target-min: 48px;");
+    expect(tokens).toContain("--vi-control-height: 48px;");
+  });
+
 });
