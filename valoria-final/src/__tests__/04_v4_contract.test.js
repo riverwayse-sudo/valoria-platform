@@ -49,7 +49,8 @@ describe("VALU v4 canonical contract", () => {
   });
 
   test("designation and pathway boundaries remain canonical", () => {
-    expect(getDesignation(34)).toBeNull();
+    expect(getDesignation(0).name).toBe('At the Starting Point');
+    expect(getDesignation(34).name).toBe('At the Starting Point');
     expect(getDesignation(35).name).toBe("Building Foundations");
     expect(getDesignation(49).name).toBe("Building Foundations");
     expect(getDesignation(50).name).toBe("Developing Professional");
