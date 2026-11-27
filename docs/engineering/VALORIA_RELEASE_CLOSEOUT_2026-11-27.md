@@ -71,7 +71,7 @@ A merged PR, successful build, or staging preview is not proof that the complete
 ## 6. Active pull requests relevant to this closeout
 
 - Site PR #479: staging-only legacy route redirects and expanded browser audit. Targeted legal-page metadata correction is included; the new staging run must pass before merge.
-- Site PR #484: test-only regression guard that locks the post-Taster email callback to the current request origin and preserves the completed Taster reference; CI is pending.
+- Site PR #484 merged as `15ad4eaca2641c9c9d20953ba48d4de3bbddaaed`: a test-only regression guard now asserts the post-Taster email callback is built from the current request origin and preserves the completed Taster reference. CI and security checks passed.
 - Site PR #482 and platform PR #291: paired design-foundation changes. CI/build checks passed and the platform has a Cloudflare preview, but visual acceptance remains outstanding. Review together against the design constitution and reduced-motion/focus standards before merging either.
 - Other open pull requests are separate backlog or superseded work. Do not bulk-merge them as part of this closeout.
 
