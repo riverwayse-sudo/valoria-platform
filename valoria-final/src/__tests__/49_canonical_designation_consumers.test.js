@@ -47,10 +47,10 @@ describe("canonical VALU designation consumers", () => {
     expect(edgeFunction).toContain("score < 0 || score > 100");
     expect(edgeFunction).not.toContain("Platinum");
     expect(edgeFunction).not.toContain("Gold");
-    expect(edgeFunction).toContain("Force to Align With");
-    expect(edgeFunction).toContain("Emerging Force");
-    expect(edgeFunction).toContain("Developing Professional");
-    expect(edgeFunction).toContain("Building Foundations");
+    expect(sharedContract).toContain('name: "Force to Align With"');
+    expect(sharedContract).toContain('name: "Emerging Force"');
+    expect(sharedContract).toContain('name: "Developing Professional"');
+    expect(sharedContract).toContain('name: "Building Foundations"');
     const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
     for (const retired of ["Elite", "Distinguished", "Proficient", "Standard"]) expect(sharedContract).not.toContain(`name: "${retired}"`);
     expect(sharedContract).toContain('name: "At the Starting Point"');
