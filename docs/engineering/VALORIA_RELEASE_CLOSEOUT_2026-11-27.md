@@ -63,7 +63,7 @@ A merged PR, successful build, or staging preview is not proof that the complete
 - The 17 full-assessment records missing `taster_id` are not assumed to match the 17 contact candidates.
 - The current verified public roster is 13 rows; 10 profiles remain registered-only. Do not publish them without the required evidence and consent.
 - Do not mutate participant answers, assessment scores, profiles, consent acknowledgements, identity links, or production migrations as part of documentation or staging verification.
-- Do not apply the specialist projection migration to production until its staging acceptance and release gate pass.
+- Do not apply the specialist projection migration to production until its staging acceptance and release gate pass. Staging migration history already contains the specialist-projection migration twice (versions `20261126200408` and `20261126202125`); do not reapply it or attempt destructive migration-history cleanup.
 - Do not use Vercel for deployment operations. Cloudflare is the deployment authority.
 - Do not promote staging code to production merely because CI or a preview succeeds.
 
