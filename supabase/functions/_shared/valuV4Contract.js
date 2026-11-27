@@ -32,6 +32,7 @@ export const PATHWAYS = Object.freeze([
 ]);
 
 export function getDesignation(score) {
+  if (score == null || score === "") return null;
   const points = Number(score);
   if (!Number.isFinite(points) || points < 0 || points > MAX_SCORE) return null;
   return DESIGNATIONS.find(d => points >= d.min) || null;
