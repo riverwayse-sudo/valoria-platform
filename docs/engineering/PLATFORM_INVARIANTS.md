@@ -53,6 +53,7 @@ For changes affecting rendered pages, route data, shared styles, assets or compo
 - Destructive data operations require specific authorization. Tests must not mutate production participant data.
 - RLS and server-side authorization remain authoritative; client-editable metadata is never an authorization source.
 - Failed, skipped, cancelled or unverified required checks are not passes.
+- Cloudflare Workers Builds must not automatically deploy production from `main`; production deployment must require explicit owner approval and exact Git commit provenance.
 
 ## 5. Required change evidence
 
