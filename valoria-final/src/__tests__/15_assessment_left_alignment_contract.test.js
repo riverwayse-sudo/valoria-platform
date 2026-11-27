@@ -80,6 +80,16 @@ describe("VALU assessment left-alignment contract", () => {
     expect(tokens).toContain("grid-template-columns: repeat(4,minmax(0,1fr))");
   });
 
+  test("journey stages reflect account, Taster, dashboard and Full VALU without exposing question counts", () => {
+    const journey = read("VALUAssessmentJourney.jsx");
+    expect(journey).toContain("stage === 'registration' ? 'taster'");
+    expect(journey).toContain("stage === 'account' ? 'dashboard'");
+    expect(journey).toContain("CONTINUE YOUR FULL VALU INDEX");
+    expect(journey).toContain("YOUR PROGRESS IS SAVED");
+    expect(journey).not.toMatch(/of 9|of 58|1 of 9|1 of 58|Question \\{[^}]+\\} of/);
+    expect(journey).toContain('aria-current={active ? \'step\' : undefined}');
+  });
+
   test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
     const full = read("FullVALUAssessment.jsx");
     expect(full).toContain("Your VALU Index is complete.");
