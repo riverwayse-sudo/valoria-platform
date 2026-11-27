@@ -41,7 +41,7 @@ The following are protected contracts. Routine fixes, refactoring and visual wor
 - PRIME remains five clusters and 17 canonical skills. Skill names and cluster mappings must come from the approved canonical source; do not invent or locally rename skills.
 - VALU is presented in points, not percentages or percentage-formatted scores. Do not introduce a competing frontend scoring implementation.
 - The authoritative server-side scoring/designation implementation and its versioned boundary tests are the scoring source of truth.
-- The two source documents contain designation-boundary material that must be reconciled against the currently approved VALU implementation before changing any threshold. A mismatch is **DECISION REQUIRED**, not permission to alter scoring or rewrite historical results.
+- The 4–5 November source documents use older 80/65/50/35 labels and “At the Starting Point” below 35. The user's explicit 9 November 2026 decision supersedes that wording: 90–100 Elite, 75–89 Distinguished, 55–74 Proficient, 35–54 Standard, and no public merit designation below 35. The 35-point eligibility/listing gate remains separate. Do not rewrite historical assessment/profile labels.
 - A score, profile projection or cached display field is not proof of assessment completion. Completion and results must derive from the canonical completed assessment record.
 
 ### Profiles, consent and marketplace
