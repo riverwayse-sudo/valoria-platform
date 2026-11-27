@@ -35,12 +35,21 @@ $new$;
   end if;
 
   v_old := $old$
+    canonical_designation := case
+      when canonical_valu_index between 80 and 100 then 'Force to Align With'
+      when canonical_valu_index between 65 and 79 then 'Emerging Force'
+      when canonical_valu_index between 50 and 64 then 'Developing Professional'
       when canonical_valu_index between 35 and 49 then 'Building Foundations'
       else null
     end;
 $old$;
 
   v_new := $new$
+    canonical_designation := case
+      when canonical_valu_index is null then null
+      when canonical_valu_index between 80 and 100 then 'Force to Align With'
+      when canonical_valu_index between 65 and 79 then 'Emerging Force'
+      when canonical_valu_index between 50 and 64 then 'Developing Professional'
       when canonical_valu_index between 35 and 49 then 'Building Foundations'
       else 'At the Starting Point'
     end;
