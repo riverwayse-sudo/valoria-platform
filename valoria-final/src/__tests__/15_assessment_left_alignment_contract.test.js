@@ -153,4 +153,10 @@ describe("VALU assessment left-alignment contract", () => {
     expect(css).toContain(".valu-intro-benefits small");
     expect(css).toContain("display: none");
   });
+  test("shared interactive target token meets the 48px steering-law standard", () => {
+    const tokens = read("design-tokens.css");
+    expect(tokens).toContain("--vi-target-min: 48px;");
+    expect(tokens).toContain("--vi-control-height: 48px;");
+  });
+
 });
