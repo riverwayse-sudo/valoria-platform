@@ -15,16 +15,18 @@ describe("Canonical VALU designation read paths", () => {
   });
 
   test("live designation writers use approved bands without rewriting participant rows", () => {
-    const migration = read("supabase/migrations/20261126004120_align_valu_designation_bands.sql");
-    expect(migration).toContain("NEW.total_score >= 80");
-    expect(migration).toContain("NEW.total_score >= 65");
-    expect(migration).toContain("NEW.total_score >= 50");
-    expect(migration).toContain("NEW.total_score >= 35");
-    expect(migration).toContain("Force to Align With");
-    expect(migration).toContain("Emerging Force");
-    expect(migration).toContain("Developing Professional");
-    expect(migration).toContain("Building Foundations");
-    expect(migration).toContain("Below 35: no merit designation");
+    const historicalMigration = read("supabase/migrations/20261126004120_align_valu_designation_bands.sql");
+    const migration = read("supabase/migrations/20261127140000_project_specialized_profile_evidence_and_approved_designations.sql");
+    expect(historicalMigration).toContain("NEW.total_score >= 80");
+    expect(migration).toContain("NEW.total_score BETWEEN 90 AND 100");
+    expect(migration).toContain("NEW.total_score BETWEEN 75 AND 89");
+    expect(migration).toContain("NEW.total_score BETWEEN 55 AND 74");
+    expect(migration).toContain("NEW.total_score BETWEEN 35 AND 54");
+    expect(migration).toContain("Elite");
+    expect(migration).toContain("Distinguished");
+    expect(migration).toContain("Proficient");
+    expect(migration).toContain("Standard");
+    expect(migration).toContain("below 35 has no public merit designation");
     expect(migration).not.toMatch(/UPDATE\\s+public\\.(valu_assessments|professional_profiles)/i);
   });
 

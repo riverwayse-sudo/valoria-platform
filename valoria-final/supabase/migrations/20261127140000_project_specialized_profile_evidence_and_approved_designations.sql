@@ -1,3 +1,5 @@
+-- Owner-approved VALU merit bands: 90/75/55/35; below 35 has no public merit designation.
+-- Specialized fields are consent-gated; no assessment answers, scores, or historical designation rows are rewritten.
 -- Extend the consent-gated public roster with capability-specific evidence.
 -- General VALU insight remains separate from Talent, Speaker and Facilitator evidence.
 ALTER TABLE public.marketplace_public_roster
@@ -23,14 +25,14 @@ AS $function$
 BEGIN
   IF NEW.total_score IS NULL THEN
     NEW.designation := NULL;
-  ELSIF NEW.total_score BETWEEN 80 AND 100 THEN
-    NEW.designation := 'Force to Align With';
-  ELSIF NEW.total_score BETWEEN 65 AND 79 THEN
-    NEW.designation := 'Emerging Force';
-  ELSIF NEW.total_score BETWEEN 50 AND 64 THEN
-    NEW.designation := 'Developing Professional';
-  ELSIF NEW.total_score BETWEEN 35 AND 49 THEN
-    NEW.designation := 'Building Foundations';
+  ELSIF NEW.total_score BETWEEN 90 AND 100 THEN
+    NEW.designation := 'Elite';
+  ELSIF NEW.total_score BETWEEN 75 AND 89 THEN
+    NEW.designation := 'Distinguished';
+  ELSIF NEW.total_score BETWEEN 55 AND 74 THEN
+    NEW.designation := 'Proficient';
+  ELSIF NEW.total_score BETWEEN 35 AND 54 THEN
+    NEW.designation := 'Standard';
   ELSE
     NEW.designation := NULL;
   END IF;
@@ -167,10 +169,10 @@ begin
     canonical_cluster_scores := coalesce(canonical_cluster_scores, p.cluster_scores);
 
     canonical_designation := case
-      when canonical_valu_index between 80 and 100 then 'Force to Align With'
-      when canonical_valu_index between 65 and 79 then 'Emerging Force'
-      when canonical_valu_index between 50 and 64 then 'Developing Professional'
-      when canonical_valu_index between 35 and 49 then 'Building Foundations'
+      when canonical_valu_index between 90 and 100 then 'Elite'
+      when canonical_valu_index between 75 and 89 then 'Distinguished'
+      when canonical_valu_index between 55 and 74 then 'Proficient'
+      when canonical_valu_index between 35 and 54 then 'Standard'
       else null
     end;
 
@@ -294,41 +296,8 @@ end;
 $function$;
 
 
--- Canonical point bands replace the retired Elite/Distinguished/Proficient/Standard labels.
--- Scores and assessment answers are not changed; only derived designation labels are normalized.
-UPDATE public.valu_assessments
-SET designation = CASE
-  WHEN total_score BETWEEN 80 AND 100 THEN 'Force to Align With'
-  WHEN total_score BETWEEN 65 AND 79 THEN 'Emerging Force'
-  WHEN total_score BETWEEN 50 AND 64 THEN 'Developing Professional'
-  WHEN total_score BETWEEN 35 AND 49 THEN 'Building Foundations'
-  ELSE NULL
-END
-WHERE total_score IS NOT NULL
-  AND designation IS DISTINCT FROM CASE
-    WHEN total_score BETWEEN 80 AND 100 THEN 'Force to Align With'
-    WHEN total_score BETWEEN 65 AND 79 THEN 'Emerging Force'
-    WHEN total_score BETWEEN 50 AND 64 THEN 'Developing Professional'
-    WHEN total_score BETWEEN 35 AND 49 THEN 'Building Foundations'
-    ELSE NULL
-  END;
-
-UPDATE public.professional_profiles
-SET designation = CASE
-  WHEN valu_index BETWEEN 80 AND 100 THEN 'Force to Align With'
-  WHEN valu_index BETWEEN 65 AND 79 THEN 'Emerging Force'
-  WHEN valu_index BETWEEN 50 AND 64 THEN 'Developing Professional'
-  WHEN valu_index BETWEEN 35 AND 49 THEN 'Building Foundations'
-  ELSE NULL
-END
-WHERE valu_index IS NOT NULL
-  AND designation IS DISTINCT FROM CASE
-    WHEN valu_index BETWEEN 80 AND 100 THEN 'Force to Align With'
-    WHEN valu_index BETWEEN 65 AND 79 THEN 'Emerging Force'
-    WHEN valu_index BETWEEN 50 AND 64 THEN 'Developing Professional'
-    WHEN valu_index BETWEEN 35 AND 49 THEN 'Building Foundations'
-    ELSE NULL
-  END;
+-- Preserve historical assessment and profile designation columns. This migration updates
+-- future writes and the consent-gated public projection only; no historical rows are rewritten.
 
 -- Rebuild only the existing listed, public, non-revoked profiles through the consent gate.
 DO $$

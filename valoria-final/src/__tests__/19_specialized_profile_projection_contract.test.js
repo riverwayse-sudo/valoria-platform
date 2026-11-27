@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const readMigration = () => fs.readFileSync(
-  path.join(__dirname, "../../supabase/migrations/20261126191000_project_specialized_profile_evidence_and_canonical_designations.sql"),
+  path.join(__dirname, "../../supabase/migrations/20261127140000_project_specialized_profile_evidence_and_approved_designations.sql"),
   "utf8"
 );
 
@@ -32,22 +32,23 @@ describe("public profile capability projection contract", () => {
 
   test("database designation writes use the canonical VALU point bands", () => {
     const sql = readMigration();
-    expect(sql).toContain("when canonical_valu_index between 80 and 100 then 'Force to Align With'");
-    expect(sql).toContain("when canonical_valu_index between 65 and 79 then 'Emerging Force'");
-    expect(sql).toContain("when canonical_valu_index between 50 and 64 then 'Developing Professional'");
-    expect(sql).toContain("when canonical_valu_index between 35 and 49 then 'Building Foundations'");
-    expect(sql).not.toContain("'Elite'");
-    expect(sql).not.toContain("'Distinguished'");
-    expect(sql).not.toContain("'Proficient'");
-    expect(sql).not.toContain("'Standard'");
+    expect(sql).toContain("when canonical_valu_index between 90 and 100 then 'Elite'");
+    expect(sql).toContain("when canonical_valu_index between 75 and 89 then 'Distinguished'");
+    expect(sql).toContain("when canonical_valu_index between 55 and 74 then 'Proficient'");
+    expect(sql).toContain("when canonical_valu_index between 35 and 54 then 'Standard'");
+    expect(sql).not.toContain("'Force to Align With'");
+    expect(sql).not.toContain("'Emerging Force'");
+    expect(sql).not.toContain("'Developing Professional'");
+    expect(sql).not.toContain("'Building Foundations'");
   });
 
-  test("designation backfill does not mutate assessment scores or answers", () => {
+  test("designation migration preserves historical assessment and profile labels", () => {
     const sql = readMigration();
     expect(sql).not.toMatch(/SET\s+total_score\s*=/i);
     expect(sql).not.toMatch(/SET\s+answers\s*=/i);
     expect(sql).not.toMatch(/DELETE\s+FROM\s+public\.valu_assessments/i);
     expect(sql).not.toMatch(/DELETE\s+FROM\s+public\.professional_profiles/i);
+    expect(sql).not.toMatch(/UPDATE\s+public\.(valu_assessments|professional_profiles)/i);
   });
 
   test("the projection backfill is consent-gated and excludes test or revoked profiles", () => {
