@@ -24,6 +24,10 @@ describe("Five-level VALU designation contract", () => {
     expect(migration).toContain("else 'At the Starting Point'");
     expect(migration).toContain("when canonical_valu_index is null then null");
     expect(migration).toContain("canonicalize_valu_designation_before_write()");
+    expect(migration).toContain("NEW.total_score BETWEEN 90 AND 100");
+    expect(migration).toContain("NEW.total_score BETWEEN 80 AND 100");
+    expect(migration).toContain("canonical_valu_index between 90 and 100");
+    expect(migration).toContain("canonical_valu_index between 80 and 100");
     expect(migration).toContain("refresh_marketplace_public_roster(uuid)");
   });
 
