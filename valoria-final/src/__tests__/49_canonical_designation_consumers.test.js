@@ -8,20 +8,21 @@ describe("canonical VALU designation consumers", () => {
   const readRoot = relative => fs.readFileSync(path.join(process.cwd(), "..", relative), "utf8");
 
   test.each([
-    [34, null],
-    [35, "Standard"],
-    [54, "Standard"],
-    [55, "Proficient"],
-    [74, "Proficient"],
-    [75, "Distinguished"],
-    [89, "Distinguished"],
-    [90, "Elite"],
-    [100, "Elite"],
+    [0, "At the Starting Point"],
+    [34, "At the Starting Point"],
+    [35, "Building Foundations"],
+    [49, "Building Foundations"],
+    [50, "Developing Professional"],
+    [64, "Developing Professional"],
+    [65, "Emerging Force"],
+    [79, "Emerging Force"],
+    [80, "Force to Align With"],
+    [100, "Force to Align With"],
   ])("score %i resolves to %s", (score, expected) => {
     expect(canonicalDesignationName(score)).toBe(expected);
   });
 
-  test.each([null, undefined, "not-a-score", -1, 101, Infinity])(
+  test.each([null, undefined, "", " ", false, "not-a-score", -1, 101, Infinity])(
     "invalid score %s has no designation",
     (score) => {
       expect(canonicalDesignationName(score)).toBeNull();
@@ -40,15 +41,19 @@ describe("canonical VALU designation consumers", () => {
 
   test("rapid-service rejects caller-supplied designations and validates score boundaries", () => {
     const edgeFunction = fs.readFileSync(path.join(process.cwd(), "..", "supabase/functions/rapid-service/index.ts"), "utf8");
+    const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
     expect(edgeFunction).not.toContain("tier?: string");
     expect(edgeFunction).not.toContain("body.tier");
     expect(edgeFunction).toContain("Number.isInteger(score)");
     expect(edgeFunction).toContain("score < 0 || score > 100");
     expect(edgeFunction).not.toContain("Platinum");
     expect(edgeFunction).not.toContain("Gold");
-    for (const retired of ["Force to Align With", "Emerging Force", "Developing Professional", "Building Foundations"]) expect(edgeFunction).not.toContain(retired);
-    const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
-    for (const approved of ["Elite", "Distinguished", "Proficient", "Standard"]) expect(sharedContract).toContain(`name: "${approved}"`);
+    expect(sharedContract).toContain('name: "Force to Align With"');
+    expect(sharedContract).toContain('name: "Emerging Force"');
+    expect(sharedContract).toContain('name: "Developing Professional"');
+    expect(sharedContract).toContain('name: "Building Foundations"');
+    for (const retired of ["Elite", "Distinguished", "Proficient", "Standard"]) expect(sharedContract).not.toContain(`name: "${retired}"`);
+    expect(sharedContract).toContain('name: "At the Starting Point"');
     expect(edgeFunction).not.toContain("/100");
   });
 
@@ -81,7 +86,8 @@ describe("canonical VALU designation consumers", () => {
     expect(landing).toContain("9-question Taster");
     expect(landing).not.toContain("55 questions across five clusters");
     expect(landing).not.toContain("professional credential of its kind");
-    expect(landing).not.toContain("At the Starting Point");
+    expect(landing).toContain("At the Starting Point");
+    expect(landing).not.toContain("independently assessed");
     expect(about).toContain("not itself a certification or professional credential");
     expect(about).not.toContain("A certification body");
     expect(waitlist).toContain("confirm your email first");
