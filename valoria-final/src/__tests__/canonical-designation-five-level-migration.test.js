@@ -22,6 +22,12 @@ describe("Five-level VALU designation contract", () => {
   test("the database trigger and roster projection derive the fifth designation", () => {
     expect(migration).toContain("NEW.designation := 'At the Starting Point'");
     expect(migration).toContain("else 'At the Starting Point'");
+    expect(migration).toContain("'Emerging Force'");
+    expect(migration).toContain("'Developing Professional'");
+    expect(migration).toContain("'Building Foundations'");
+    expect(migration).toContain("'''Distinguished'''") ;
+    expect(migration).toContain("'''Proficient'''");
+    expect(migration).toContain("'''Standard'''");
     expect(migration).toContain("when canonical_valu_index is null then null");
     expect(migration).toContain("canonicalize_valu_designation_before_write()");
     expect(migration).toContain("NEW.total_score BETWEEN 90 AND 100");
