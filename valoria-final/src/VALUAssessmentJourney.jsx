@@ -3,19 +3,22 @@ import React from 'react';
 const STEPS = [
   { key: 'account', title: 'Account', detail: 'Account registered' },
   { key: 'taster', title: 'Taster', detail: 'A guided starting point' },
+  { key: 'confirmation', title: 'Confirm email', detail: 'Activate your account' },
   { key: 'dashboard', title: 'Dashboard', detail: 'Your next step' },
   { key: 'full', title: 'Full VALU Index', detail: 'Your official result' },
 ];
 
 export default function VALUAssessmentJourney({ stage = 'taster' }) {
-  const normalizedStage = stage === 'registration' ? 'taster' : stage === 'account' ? 'dashboard' : stage;
+  const normalizedStage = stage === 'registration' ? 'taster' : stage === 'account' ? 'confirmation' : stage;
   const statusLabel = stage === 'registration'
     ? 'ACCOUNT REGISTERED · TASTER NEXT'
-    : stage === 'account'
-      ? 'TASTER SAVED · READY FOR YOUR DASHBOARD'
-      : stage === 'full'
-        ? 'CONTINUE YOUR FULL VALU INDEX'
-        : 'YOUR PROGRESS IS SAVED';
+    : stage === 'account' || stage === 'confirmation'
+      ? 'TASTER COMPLETE · CONFIRM EMAIL TO CONTINUE'
+      : stage === 'dashboard'
+        ? 'YOUR DASHBOARD IS READY · FULL VALU NEXT'
+        : stage === 'full'
+          ? 'CONTINUE YOUR FULL VALU INDEX'
+          : 'YOUR PROGRESS IS SAVED';
   const activeIndex = Math.max(0, STEPS.findIndex(step => step.key === normalizedStage));
 
   return (
