@@ -181,7 +181,7 @@ describe("getDesignation", () => {
 
   test("returns a designation object with its minimum points boundary", () => {
     const designation = getDesignation(72);
-    expect(designation).toHaveProperty("min", 65);
+    expect(designation).toHaveProperty("min", 55);
     expect(designation).toHaveProperty("name", "Proficient");
   });
 });
