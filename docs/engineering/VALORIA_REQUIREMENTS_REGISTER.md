@@ -69,7 +69,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-CNT-009 | Remove unsupported facilitator certification, cohort reporting, 90-day remeasurement, pricing and independent-validation claims | Site | AUDIT REQUIRED |
 | VAL-CNT-010 | Verify every navigation item, CTA, footer link, Privacy and Terms route | Site | AUDIT REQUIRED |
 | VAL-CNT-011 | Legal entity, canonical public names, programme pricing, facilitator certification evidence and public speaker name are approved before publication | Product Owner | DECISION REQUIRED |
-| VAL-CNT-012 | Resolve international positioning against later approved brand direction; do not reintroduce retired localisation without approval | Product Owner + Site | DECISION REQUIRED |
+| VAL-CNT-012 | Retain Africa-first strategic context while removing Nigeria-specific public marketing/localisation; retain Nigerian jurisdiction only for legal/operational facts | Website Review (4 Nov, p. 12) and later explicit owner instruction | Product Owner + Site | APPROVED — SOURCE RECONCILED |
 
 ## D. Cross-repository architecture and reliability
 
