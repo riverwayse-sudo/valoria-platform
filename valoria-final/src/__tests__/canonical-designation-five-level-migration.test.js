@@ -4,11 +4,11 @@ const fs = require("fs");
 const path = require("path");
 
 const contract = fs.readFileSync(
-  path.join(__dirname, "../../supabase/functions/_shared/valuV4Contract.js"),
+  path.join(__dirname, "../../../supabase/functions/_shared/valuV4Contract.js"),
   "utf8"
 );
 const migration = fs.readFileSync(
-  path.join(__dirname, "../../supabase/migrations/20261127140000_restore_five_level_valu_designations.sql"),
+  path.join(__dirname, "../../../supabase/migrations/20261127140000_restore_five_level_valu_designations.sql"),
   "utf8"
 );
 
