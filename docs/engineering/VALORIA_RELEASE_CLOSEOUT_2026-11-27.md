@@ -52,10 +52,10 @@ A merged PR, successful build, or staging preview is not proof that the complete
 - Both repositories now share identical design constitution, governance, requirements, invariants and closeout documents.
 - The design foundation establishes a 48px minimum interaction target, 48px notification trigger and rows, reduced-motion support, and a five-stage assessment journey. The notification panel no longer marks all items read when opened; read-state changes only after an explicit action and successful API response.
 - The public `/valu` and `/valu/start` pages now use the same sequence as the assessment progress component: **Account → Taster → Email confirmation → Dashboard → Full VALU Index**. The Taster and full assessment remain separate, with no question-count progress labels.
-- This is a foundation pass, not complete visual sign-off. The centered non-sticky oval navigation, the broader applicable interaction-pattern catalogue, and WCAG 2.2 AA review remain open.
+- This was the foundation pass; the centered non-sticky oval navigation and two additional interaction refinements were completed in phase 2 below. The broader applicable interaction-pattern catalogue and WCAG 2.2 AA review remain open.
 
 
-## 3A. Design implementation phase 2 — merged 27 November
+### Design implementation phase 2 — merged 27 November
 
 - Site PR #497 merged as `c934584cab7262f6aa9b21e7104188f876aa43b5`. It combines three refinements: staging-only desktop centered/non-sticky oval navigation; pointer-specific hover behaviour that avoids stuck touch hover states while preserving keyboard focus; and accessible Share-button clipboard success/failure feedback with reduced-motion support.
 - The post-merge Cloudflare staging workflow `46004582150` passed all 82 desktop/mobile route-viewport checks with zero failures. The previous post-security-merge staging run `46003079536` also passed all 82 checks with zero failures. Production deployment was explicitly skipped in both runs.
