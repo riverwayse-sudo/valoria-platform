@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const readMigration = () => fs.readFileSync(
-  path.join(__dirname, "../../supabase/migrations/20261127140000_project_specialized_profile_evidence_and_approved_designations.sql"),
+  path.join(__dirname, "../../supabase/migrations/20261127135134_project_specialized_profile_evidence_and_approved_designations.sql"),
   "utf8"
 );
 
