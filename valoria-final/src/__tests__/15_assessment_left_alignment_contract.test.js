@@ -101,6 +101,15 @@ describe("VALU assessment left-alignment contract", () => {
     expect(tokens).toContain("@media (prefers-reduced-motion: reduce)");
   });
 
+  test("account registration and Taster continuation keep their submit control during saving", () => {
+    const gate = read("VALUIndexV4GateNext.jsx");
+    expect(gate).toContain('className="vi-submit-morph"');
+    expect(gate).toContain("data-state={saving ? 'loading' : 'idle'}");
+    expect(gate).toContain("aria-busy={saving}");
+    expect(gate).toContain("SAVING YOUR REGISTRATION…");
+    expect(gate).toContain("SAVING YOUR TASTER…");
+  });
+
   test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
     const full = read("FullVALUAssessment.jsx");
     expect(full).toContain("Your VALU Index is complete.");
