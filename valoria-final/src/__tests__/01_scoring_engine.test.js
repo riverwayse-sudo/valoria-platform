@@ -16,6 +16,7 @@ const {
   computeResults,
 } = require("../scoringEngine");
 const { ALL_QUESTIONS } = require("../questions");
+const { MARKETPLACE_SCORE_THRESHOLD, isMarketplaceScoreEligible } = require("../valuV4Contract");
 
 // ── MINIMAL QUESTION FIXTURE ──────────────────────────────────────────────
 // 3 questions per cluster (P,R,I,M,E) + 1 anchor = 16 total.
@@ -174,9 +175,12 @@ describe("getDesignation", () => {
     expect(getDesignation(score).name).toBe(expectedName);
   });
 
-  test("scores below the 35-point eligibility threshold have no merit designation", () => {
-    expect(getDesignation(34)).toBeNull();
-    expect(getDesignation(0)).toBeNull();
+  test("scores below 35 receive At the Starting Point but remain outside marketplace eligibility", () => {
+    expect(getDesignation(34).name).toBe("At the Starting Point");
+    expect(getDesignation(0).name).toBe("At the Starting Point");
+    expect(MARKETPLACE_SCORE_THRESHOLD).toBe(35);
+    expect(isMarketplaceScoreEligible(34)).toBe(false);
+    expect(isMarketplaceScoreEligible(35)).toBe(true);
   });
 
   test("returns a designation object with its minimum points boundary", () => {
