@@ -22,7 +22,7 @@ describe("canonical VALU designation consumers", () => {
     expect(canonicalDesignationName(score)).toBe(expected);
   });
 
-  test.each([null, undefined, "not-a-score", -1, 101, Infinity])(
+  test.each([null, undefined, "", " ", false, "not-a-score", -1, 101, Infinity])(
     "invalid score %s has no designation",
     (score) => {
       expect(canonicalDesignationName(score)).toBeNull();
