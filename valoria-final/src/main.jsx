@@ -25,7 +25,7 @@ loadProductionAnalytics()
 
 function AssessmentShell() {
   return (
-    <>
+    <div className={isPreview ? 'valu-staging-editorial' : undefined}>
       {isPreview && (
         <div className="staging-site-banner" role="status" aria-live="polite">
           STAGING PREVIEW · This environment is isolated from production.
@@ -33,7 +33,7 @@ function AssessmentShell() {
       )}
       <AssessmentNavigation />
       <VALUIndexV4App />
-    </>
+    </div>
   )
 }
 
