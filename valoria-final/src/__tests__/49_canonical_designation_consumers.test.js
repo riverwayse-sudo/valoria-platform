@@ -87,7 +87,8 @@ describe("canonical VALU designation consumers", () => {
     expect(landing).toContain("9-question Taster");
     expect(landing).not.toContain("55 questions across five clusters");
     expect(landing).not.toContain("professional credential of its kind");
-    expect(landing).not.toContain("At the Starting Point");
+    expect(landing).toContain("At the Starting Point");
+    expect(landing).not.toContain("independently assessed");
     expect(about).toContain("not itself a certification or professional credential");
     expect(about).not.toContain("A certification body");
     expect(waitlist).toContain("confirm your email first");
