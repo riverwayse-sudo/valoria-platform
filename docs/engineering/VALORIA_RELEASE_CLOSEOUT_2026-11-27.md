@@ -22,7 +22,8 @@ A merged PR, successful build, or staging preview is not proof that the complete
 - Public professional visibility requires current eligibility and recorded consent. Never manufacture, duplicate, or force profiles public to meet a target count.
 - Only publish real opportunities with a working application/enquiry route. Otherwise show a truthful empty state or buyer enquiry route.
 - Do not claim certification, accreditation, independent validation, partnerships, programme outcomes, or live inventory without verifiable evidence.
-- No new imagery is included in this closeout phase; preserve the approved palette and Raleway typography.
+- Homepage design follows the latest owner direction: no new imagery for now, a maximum of six to seven focused sections, a centered oval navigation that is not sticky, and a restrained editorial/fashion-magazine feel. Preserve the approved palette and Raleway typography.
+- The older nine-section homepage outline in the strategic review is superseded by this more recent owner-approved section limit; do not re-expand the page to nine sections.
 
 ## 3. Verified implementation and evidence
 
