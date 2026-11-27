@@ -93,10 +93,12 @@ A merged PR, successful build, or staging preview is not proof that the complete
 - Do not use Vercel for deployment operations. Cloudflare is the deployment authority.
 - Do not promote staging code to production merely because CI or a preview succeeds.
 
-## 6. Active pull requests relevant to this closeout
+## 6. Pull requests relevant to this closeout
 
 - Site PR #479 merged; its staging run passed all 82 route/viewport checks. Site PR #486 then merged the five-stage public flow and design foundation after a second 82-result staging pass.
 - Site PR #484 merged as `15ad4eaca2641c9c9d20953ba48d4de3bbddaaed`: a test-only regression guard now asserts the post-Taster email callback is built from the current request origin and preserves the completed Taster reference. CI and security checks passed.
+- Site PR #490 merged as `3a1c530dafd044fbd06c86f02333044409d9681f`: fail-closed shared admin authorization across 15 protected API routes. Superseded, diverged PR #405 was closed and must not be reopened or merged.
+- Site PR #497 merged as `c934584cab7262f6aa9b21e7104188f876aa43b5`: staging-only centered desktop navigation, touch-safe card hover and truthful clipboard feedback. Superseded design PRs #489–#496 were closed; #497 is the canonical implementation.
 - Superseded design PRs #482, #485 and #291 were closed. Their replacement staging-validation PRs #486 (site) and #293 (platform) are merged. They establish the first shared design-token/component foundation and semantic five-stage assessment journey; they do not constitute completion of all 30 interaction patterns or full visual/accessibility sign-off.
 - Other open pull requests are separate backlog or superseded work. Do not bulk-merge them as part of this closeout.
 
