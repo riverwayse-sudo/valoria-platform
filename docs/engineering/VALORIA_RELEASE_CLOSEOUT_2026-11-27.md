@@ -71,6 +71,15 @@ A merged PR, successful build, or staging preview is not proof that the complete
 - Staging database migration `20261127135134` was applied successfully to `valoria-staging` only. Read-only verification confirms both the assessment trigger and public roster writer use Elite/Distinguished/Proficient/Standard at the approved bands; no old designation names remain in either function. Staging had zero participant/profile/assessment/roster/capability rows at application time.
 - Production was not migrated or deployed. Its trigger already uses the approved bands; the production roster still lacks six optional specialist projection fields, but site PR #500 provides a narrow compatibility fallback for the general directory. Full specialist evidence projection remains gated on explicit production migration approval.
 
+
+### Production auto-deployment exception — 27 November
+
+- Cloudflare Workers Builds configuration for the production `valoria-assessment` Worker is `auto_build_enabled=true`, production branch `main`, `path_includes=["*"]`, deploy command `npx wrangler deploy --keep-vars`. This bypasses the repository's guarded GitHub production-deployment job for every main-branch merge, including documentation-only changes.
+- Following platform PR #300, Cloudflare deployed production Worker version **#300** at 13:53:46 UTC (100% traffic; script etag changed from `757831ae…` on #299 to `904b27b3…` on #300). The deployed script contains the approved 90/75/55/35 merit labels. Following platform PR #303, version **#301** was deployed at 14:02:50 UTC with the same script etag as #300, so it redeployed identical code.
+- The GitHub production-deployment job was skipped, but Cloudflare's independent auto-build deployed the assessment Worker. The production site Worker `valoria-institute-site` has not been updated since 26 November 00:33 UTC and still contains the older 80/65/50/35 public designation copy. The live site and assessment Worker are therefore inconsistent until the site release is explicitly approved.
+- No production database migration or historical-row update occurred. The production trigger already uses the approved bands; the 18 historical assessment labels remain unchanged. The specialist projection schema is still absent in production.
+- No rollback or Cloudflare build-setting change has been performed. Hold further platform main-branch merges until the owner approves whether to retain assessment Worker #301 or roll back to #299, and whether to disable/restrict automatic production builds so releases require explicit approval.
+
 ## 4. Remaining acceptance gates
 
 | Gate | Current status | Required closure evidence |
