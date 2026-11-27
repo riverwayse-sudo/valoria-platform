@@ -14,7 +14,7 @@ const stagingConfig = JSON.parse(
 const projectionMigration = fs.readFileSync(
   path.join(
     __dirname,
-    "../../../supabase/migrations/20261127140000_project_specialized_profile_evidence_and_approved_designations.sql"
+    "../../supabase/migrations/20261127140000_project_specialized_profile_evidence_and_approved_designations.sql"
   ),
   "utf8"
 );
