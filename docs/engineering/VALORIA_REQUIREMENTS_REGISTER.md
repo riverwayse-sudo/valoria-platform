@@ -65,7 +65,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-CNT-005 | Develop and facilitator/programme pages are structurally consolidated; programme availability and commercial details remain approval-gated | `/facilitators` redirects to `/programmes`; programme page contains five PRIME focus areas and facilitator-fit/commissioning information | Site | IMPLEMENTED — OFFER AVAILABILITY SIGN-OFF PENDING |
 | VAL-CNT-006 | Marketplace cards show verified name, headline, declared role, permitted designation/points and development area; incomplete/unconsented profiles are not public | Site + Platform | AUDIT REQUIRED |
 | VAL-CNT-007 | ATB Connect and ATB Spotlight describe working, truthful buyer journeys | Site + Platform | AUDIT REQUIRED |
-| VAL-CNT-008 | About page exists and uses approved mission, vision, purpose and verified leadership information | Site | AUDIT REQUIRED |
+| VAL-CNT-008 | About page exists; Mission/Vision/Purpose and named leadership details require owner/legal approval before publication | `/about-us` is live in source; page explains institutional role, PRIME, VALU and the distinction between assessment and certification | Site + Product Owner | PARTIAL — PAGE IMPLEMENTED; OWNER WORDING PENDING |
 | VAL-CNT-009 | Remove unsupported facilitator certification, cohort reporting, 90-day remeasurement, pricing and independent-validation claims | Site | AUDIT REQUIRED |
 | VAL-CNT-010 | Verify every navigation item, CTA, footer link, Privacy and Terms route | Site | AUDIT REQUIRED |
 | VAL-CNT-011 | Legal entity, canonical public names, programme pricing, facilitator certification evidence and public speaker name are approved before publication | Product Owner | DECISION REQUIRED |
