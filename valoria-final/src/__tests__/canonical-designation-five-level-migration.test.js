@@ -22,6 +22,7 @@ describe("Five-level VALU designation contract", () => {
   test("the database trigger and roster projection derive the fifth designation", () => {
     expect(migration).toContain("NEW.designation := 'At the Starting Point'");
     expect(migration).toContain("else 'At the Starting Point'");
+    expect(migration).toContain("when canonical_valu_index is null then null");
     expect(migration).toContain("canonicalize_valu_designation_before_write()");
     expect(migration).toContain("refresh_marketplace_public_roster(uuid)");
   });
