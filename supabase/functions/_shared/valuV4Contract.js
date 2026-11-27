@@ -14,12 +14,13 @@ export const CLUSTERS = Object.freeze([
 ]);
 
 // Merit designations are score-based, not certifications or paid subscription tiers.
-// Scores below 35 receive no merit designation.
+// The lowest band is a designation, but does not meet the separate 35-point listing threshold.
 export const DESIGNATIONS = Object.freeze([
   Object.freeze({ min: 80, name: "Force to Align With", stars: "✦✦✦", color: "#1A1A2E", bg: "#C9A84C" }),
   Object.freeze({ min: 65, name: "Emerging Force", stars: "✦✦", color: "#C9A84C", bg: "#1A1A2E" }),
   Object.freeze({ min: 50, name: "Developing Professional", stars: "✦", color: "#2E2E4A", bg: "#EDE8DC" }),
   Object.freeze({ min: 35, name: "Building Foundations", stars: "", color: "#2E2E4A", bg: "#F7F4EE" }),
+  Object.freeze({ min: 0, name: "At the Starting Point", stars: "", color: "#2E2E4A", bg: "#EDE8DC" }),
 ]);
 
 // Development pathways are separate from merit designations.
@@ -32,7 +33,7 @@ export const PATHWAYS = Object.freeze([
 
 export function getDesignation(score) {
   const points = Number(score);
-  if (!Number.isFinite(points) || points < MARKETPLACE_SCORE_THRESHOLD || points > MAX_SCORE) return null;
+  if (!Number.isFinite(points) || points < 0 || points > MAX_SCORE) return null;
   return DESIGNATIONS.find(d => points >= d.min) || null;
 }
 
