@@ -110,6 +110,15 @@ describe("VALU assessment left-alignment contract", () => {
     expect(gate).toContain("SAVING YOUR TASTER…");
   });
 
+  test("Taster answer selection is exposed semantically and receives immediate motion feedback", () => {
+    const gate = read("VALUIndexV4GateNext.jsx");
+    const css = read("assessment.css");
+    expect(gate).toContain("aria-pressed={selected===i||answers[current]===i}");
+    expect(css).toContain('button.valu-option[aria-pressed="true"]');
+    expect(css).toContain("transform: scale(.99)");
+    expect(css).toContain("transition: none");
+  });
+
   test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
     const full = read("FullVALUAssessment.jsx");
     expect(full).toContain("Your VALU Index is complete.");
