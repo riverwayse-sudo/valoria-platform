@@ -27,7 +27,7 @@ describe("Five-level VALU designation contract", () => {
   });
 
   test("the migration does not rewrite historical participant records", () => {
-    expect(migration).not.toMatch(/UPDATE\\s+public\\.(valu_assessments|professional_profiles)/i);
+    expect(migration).not.toMatch(/UPDATE\s+public\.(valu_assessments|professional_profiles)/i);
     expect(migration).toContain("No historical rows are rewritten");
   });
 
