@@ -28,7 +28,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-STD-005 | Assessment answers, progress and completion are independently persisted and server-confirmed | Both PDFs; REQS | Platform | AUDIT REQUIRED |
 | VAL-STD-006 | PRIME has five clusters and 17 canonical skills; canonical labels/mappings are not locally invented | Strategic Review | Platform + Site | DECISION REQUIRED for canonical label parity |
 | VAL-STD-007 | VALU is points-based; one server-side scoring/designation authority; no percentage or duplicate frontend scoring | Strategic Review; REQS | Platform | AUDIT REQUIRED |
-| VAL-STD-008 | Any disagreement between PDF designation thresholds and the current canonical scorer is resolved by explicit decision before changing rules or historical results | Source reconciliation rule | Product + Platform | DECISION REQUIRED |
+| VAL-STD-008 | Source-approved designation bands govern the canonical scorer; preserve historical rows during implementation | Website Review (4 Nov, pp. 9–10) and Content Overhaul (5 Nov, p. 2) | Product + Platform | APPROVED — SOURCE RECONCILED |
 | VAL-STD-009 | One canonical professional profile per account, with multiple declared capabilities supported | Approved product architecture | Platform | AUDIT REQUIRED |
 | VAL-STD-010 | Public profile visibility requires current participant-entered consent and applicable eligibility; admin attestation is not consent | Later explicit consent decision; production correction | Platform | AUDIT REQUIRED |
 | VAL-STD-011 | Historical identity links require exact evidence and authenticated human review; no automatic ownership transfer | Later approved reconciliation policy | Site + Platform | AUDIT REQUIRED |
