@@ -26,7 +26,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-STD-003 | New Taster uses approved nine-question version; historical versioned 15-question sessions remain resumable only as legacy | Current approved platform contract | Platform | AUDIT REQUIRED |
 | VAL-STD-004 | Create the participant account at Taster entry; request email confirmation only after Taster completion. Before confirmation, allow only the server-issued, short-lived, single-use Taster capability; dashboard, profile, marketplace and Full VALU remain confirmation-gated. Preserve legacy recovery | Latest explicit owner decision and approved confirmation callback contract | Site + Platform | FIXED IN GOVERNANCE — IMPLEMENTATION NOT VERIFIED |
 | VAL-STD-005 | Assessment answers, progress and completion are independently persisted and server-confirmed | Both PDFs; REQS | Platform | AUDIT REQUIRED |
-| VAL-STD-006 | PRIME has five clusters and 17 canonical skills; canonical labels/mappings are not locally invented | Strategic Review | Platform + Site | DECISION REQUIRED for canonical label parity |
+| VAL-STD-006 | PRIME has five clusters and 17 canonical skills; validity anchors are assessment integrity items, not an 18th skill | Website Review (4 Nov) + Content Overhaul (5 Nov) + canonical question-bank/brand tests | Platform + Site | APPROVED — 17-SKILL SOURCE RECONCILED |
 | VAL-STD-007 | VALU is points-based; one server-side scoring/designation authority; no percentage or duplicate frontend scoring | Strategic Review; REQS | Platform | AUDIT REQUIRED |
 | VAL-STD-008 | Source-approved designation bands govern the canonical scorer; preserve historical rows during implementation | Website Review (4 Nov, pp. 9–10) and Content Overhaul (5 Nov, p. 2) | Product + Platform | APPROVED — SOURCE RECONCILED |
 | VAL-STD-009 | One canonical professional profile per account, with multiple declared capabilities supported | Approved product architecture | Platform | AUDIT REQUIRED |
@@ -62,7 +62,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-CNT-002 | Remove duplicated registry cards and unverified live professional count; label illustrative examples | Site | AUDIT REQUIRED |
 | VAL-CNT-003 | PRIME page uses canonical five clusters, 17 skills and approved designations | Site | AUDIT REQUIRED |
 | VAL-CNT-004 | VALU page explains Taster and full assessment as separate stages; correct legacy “first 9 of 58” wording | Site | AUDIT REQUIRED |
-| VAL-CNT-005 | Develop and facilitator/programme pages are consolidated only to the extent supported by actual offers | Site | AUDIT REQUIRED |
+| VAL-CNT-005 | Develop and facilitator/programme pages are structurally consolidated; programme availability and commercial details remain approval-gated | `/facilitators` redirects to `/programmes`; programme page contains five PRIME focus areas and facilitator-fit/commissioning information | Site | IMPLEMENTED — OFFER AVAILABILITY SIGN-OFF PENDING |
 | VAL-CNT-006 | Marketplace cards show verified name, headline, declared role, permitted designation/points and development area; incomplete/unconsented profiles are not public | Site + Platform | AUDIT REQUIRED |
 | VAL-CNT-007 | ATB Connect and ATB Spotlight describe working, truthful buyer journeys | Site + Platform | AUDIT REQUIRED |
 | VAL-CNT-008 | About page exists and uses approved mission, vision, purpose and verified leadership information | Site | AUDIT REQUIRED |
