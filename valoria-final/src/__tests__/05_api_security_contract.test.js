@@ -161,6 +161,22 @@ describe("Identity ownership contracts", () => {
     expect(source).toContain("assessment.report_token");
   });
 
+  test("account confirmation and follow-up email use the validated request origin", () => {
+    const source = readApi("create-account.js");
+    const origin = readApi("_siteOrigin.js");
+    expect(source).toContain('import { getSiteOrigin } from "./_siteOrigin.js";');
+    expect(source).toContain("const siteOrigin = getSiteOrigin(req);");
+    expect(source).toContain("`${siteOrigin}/auth/callback");
+    expect(source).toContain('confirmationEmailHtml(name || "there", actionLink, siteOrigin)');
+    expect(source).toContain("journeyEmailHtml(assessment.name || name || \"there\", assessment.total_score, canonicalDesignationName(assessment.total_score) || '', siteOrigin)");
+    expect(source).toContain('href="${safeOrigin}/"');
+    expect(source).toContain("RETURN TO VALORIA");
+    expect(source).not.toContain("const VALORIA_SITE_URL");
+    expect(source).not.toContain("https://valoriainstitute.com/dashboard");
+    expect(source).not.toContain("https://valoriainstitute.com/logo.png");
+    expect(origin).toContain("https://staging.valoriainstitute.com");
+  });
+
   test("confirmation resend preserves the report token through the verified email redirect", () => {
     const source = readApi("resend-confirmation.js");
     expect(source).toContain("confirmation_email_sent_at");
