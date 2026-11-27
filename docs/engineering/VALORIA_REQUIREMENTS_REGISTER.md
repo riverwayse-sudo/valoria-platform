@@ -34,7 +34,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-STD-011 | Historical identity links require exact evidence and authenticated human review; no automatic ownership transfer | Later approved reconciliation policy | Site + Platform | AUDIT REQUIRED |
 | VAL-STD-012 | No fabricated profiles, public counts, credentials, opportunities, buyer activity or outcomes | Both PDFs; REQS | Site + Platform | AUDIT REQUIRED |
 | VAL-STD-013 | Participant data, answers, scores, identity links and consent are not changed without explicit authorization | REQS | Platform | AUDIT REQUIRED |
-| VAL-STD-014 | Production deployment is Cloudflare-only and requires explicit release approval, passing gates and recovery plan | REQS / deployment policy | Site + Platform | AUDIT REQUIRED |\n| VAL-STD-015 | Taster completion automatically creates/refreshes the professional profile and eligibility projection without an admin approval gate; public visibility still requires participant-entered consent and eligibility | Later approved product decision plus consent policy | Platform | AUDIT REQUIRED |
+| VAL-STD-014 | Production deployment is Cloudflare-only and requires explicit release approval, passing gates and recovery plan | Cloudflare Workers Builds audit: `valoria-assessment` has `auto_build_enabled=true`, production branch `main`, `path_includes=["*"]`; it deployed versions #300 and #301 after main merges despite the GitHub production gate being skipped | Site + Platform | BLOCKED — OWNER APPROVAL REQUIRED to disable/restrict auto-build and establish a manual release gate |\n| VAL-STD-015 | Taster completion automatically creates/refreshes the professional profile and eligibility projection without an admin approval gate; public visibility still requires participant-entered consent and eligibility | Later approved product decision plus consent policy | Platform | AUDIT REQUIRED |
 
 ## B. Strategic Review requirements
 
@@ -80,7 +80,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-ARC-003 | Cross-repository API/data contracts are documented, versioned and compatibility-tested | Site + Platform | AUDIT REQUIRED |
 | VAL-ARC-004 | Critical routes, auth/session behavior, error states and recovery paths have automated coverage | Site + Platform | AUDIT REQUIRED |
 | VAL-ARC-005 | Every defect has root cause, scope, correction, evidence, recurrence prevention and recovery record | Site + Platform | AUDIT REQUIRED |
-| VAL-ARC-006 | Each release has exact source commit, test evidence, environment, Cloudflare Worker version and rollback/forward-recovery plan | Site + Platform | AUDIT REQUIRED |
+| VAL-ARC-006 | Each release has exact source commit, test evidence, environment, Cloudflare Worker version and rollback/forward-recovery plan | Production `valoria-assessment` version #301 (14:02 UTC) has no Git commit SHA in Cloudflare metadata; #301 is byte-identical to #300 by script etag. Production site Worker is unchanged. | Site + Platform | BLOCKED — provenance and release/rollback decision required |
 | VAL-ARC-007 | Quality registers remain repository-specific and are linked to this shared requirements register | Site + Platform | AUDIT REQUIRED |
 
 ## E. Decision log and conflict handling
