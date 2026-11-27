@@ -36,7 +36,7 @@ For changes affecting rendered pages, route data, shared styles, assets or compo
 - Taster and full-assessment answers, progress and completion remain independent, attributable and server-confirmed.
 - VALU is presented in points. One canonical server-side implementation owns scoring and designation; do not duplicate or locally reinterpret scoring.
 - PRIME remains five clusters and 17 canonical skills. Use approved canonical labels and mappings.
-- A discrepancy between source-document thresholds and the current canonical scorer is a decision conflict. Do not change thresholds or rewrite historical results by inference.
+- The 4 Nov Website Review (pp. 9–10) and 5 Nov Content Overhaul (p. 2) define five merit designations: 80–100 Force to Align With; 65–79 Emerging Force; 50–64 Developing Professional; 35–49 Building Foundations; 0–34 At the Starting Point. The 35-point marketplace eligibility threshold is separate; At the Starting Point is valid but not yet listed. Do not substitute assistant summaries or PR descriptions for the source documents, and never rewrite historical results by inference.
 - One account has one canonical professional profile; multiple declared capabilities do not create duplicate profiles. Taster completion automatically creates/refreshes the approved profile and eligibility projection without an administrator approval gate; public visibility still requires participant-entered consent and eligibility.
 - Account/profile creation, assessment completion, eligibility, participant consent and public discoverability are separate states.
 - Public visibility requires current, explicit participant-entered consent through the approved profile setup/edit flow. Administrator attestation, inferred consent or marketing consent is not public-profile consent.
@@ -66,3 +66,10 @@ Every change record must identify:
 7. Recovery plan and exact deployment version when production release is authorized.
 
 If evidence is missing, mark the item **NOT VERIFIED**. Do not claim a component is protected or a release is complete by inference.
+
+## 6. Production release boundary
+
+- Cloudflare Workers Builds for `valoria-assessment` uses `main` as its configured production branch. A push to that branch triggers the build/deploy command; a pull-request preview is not a production release.
+- Keep production-bound PRs unmerged until the owner explicitly authorizes the production release and all acceptance gates are complete. Do not disable, reconfigure or bypass the production build integration during testing without separate approval.
+- A skipped GitHub production workflow does not prove that no production deployment occurred. Verify Cloudflare deployment history and audit logs before and after every authorized release.
+- Supabase migrations, historical score/designation updates, identity reconciliation and participant-data changes require separate explicit approval; staging verification never authorizes production data changes.
