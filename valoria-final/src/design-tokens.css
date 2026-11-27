@@ -119,3 +119,34 @@
 @media (prefers-reduced-motion: reduce) {
   .valu-journey__track-fill { transition: none; }
 }
+
+
+/* One submit control morphs into its pending state without changing its shape. */
+.vi-submit-morph {
+  display: flex !important;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: var(--vi-radius-pill);
+  transition: transform var(--vi-motion-micro) var(--vi-motion-ease), opacity var(--vi-motion-standard) var(--vi-motion-ease), background-color var(--vi-motion-standard) var(--vi-motion-ease);
+}
+.vi-submit-morph:active:not(:disabled) { transform: scale(.985); }
+.vi-submit-morph[data-state="loading"] { cursor: wait; }
+.vi-submit-morph[data-state="loading"]::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: vi-submit-spin 720ms linear infinite;
+}
+@keyframes vi-submit-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .vi-submit-morph { transition: none; }
+  .vi-submit-morph[data-state="loading"]::before { animation: none; border-right-color: currentColor; opacity: .7; }
+}
