@@ -355,7 +355,7 @@ export default function VALUIndexV4GateNext(){
     <span>I'd also like to receive relevant Valoria updates, programmes and opportunities by email. This is optional.</span>
    </label>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="submit" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU INDEX TASTER →'}</button>
+   <button type="submit" className="vi-submit-morph" data-state={saving ? 'loading' : 'idle'} aria-busy={saving} aria-live="polite" disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR REGISTRATION…':'CONTINUE TO MY VALU INDEX TASTER →'}</button>
    <div style={S.saveNote}><span>✓</span> Your details will be connected to your saved taster.</div>
   </form>
  </Shell>;
@@ -417,7 +417,7 @@ export default function VALUIndexV4GateNext(){
     <div style={S.resultRow}><div style={S.dimensionCode}>REGISTERED EMAIL</div><h2 style={{...S.scoreName,overflowWrap:'anywhere'}}>{email}</h2></div>
    </div>
    {error&&<div style={S.error} role="alert">{error}</div>}
-   <button type="button" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'SAVE TASTER & CONTINUE TO DASHBOARD →'}</button>
+   <button type="button" className="vi-submit-morph" data-state={saving ? 'loading' : 'idle'} aria-busy={saving} aria-live="polite" onClick={createAccount} disabled={saving} style={{...S.primary,opacity:saving?.5:1}}>{saving?'SAVING YOUR TASTER…':'SAVE TASTER & CONTINUE TO DASHBOARD →'}</button>
    <div style={S.saveNote}><span>✓</span> Your registration and taster remain connected.</div>
   </section>
  </Shell>;
