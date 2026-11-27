@@ -41,6 +41,7 @@ describe("canonical VALU designation consumers", () => {
 
   test("rapid-service rejects caller-supplied designations and validates score boundaries", () => {
     const edgeFunction = fs.readFileSync(path.join(process.cwd(), "..", "supabase/functions/rapid-service/index.ts"), "utf8");
+    const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
     expect(edgeFunction).not.toContain("tier?: string");
     expect(edgeFunction).not.toContain("body.tier");
     expect(edgeFunction).toContain("Number.isInteger(score)");
@@ -51,7 +52,6 @@ describe("canonical VALU designation consumers", () => {
     expect(sharedContract).toContain('name: "Emerging Force"');
     expect(sharedContract).toContain('name: "Developing Professional"');
     expect(sharedContract).toContain('name: "Building Foundations"');
-    const sharedContract = readRoot("supabase/functions/_shared/valuV4Contract.js");
     for (const retired of ["Elite", "Distinguished", "Proficient", "Standard"]) expect(sharedContract).not.toContain(`name: "${retired}"`);
     expect(sharedContract).toContain('name: "At the Starting Point"');
     expect(edgeFunction).not.toContain("/100");
