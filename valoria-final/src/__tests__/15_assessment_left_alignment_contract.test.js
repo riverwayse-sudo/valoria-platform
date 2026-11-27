@@ -77,13 +77,15 @@ describe("VALU assessment left-alignment contract", () => {
     expect(journey).toContain('className="valu-journey__heading"');
     expect(tokens).toMatch(/\.valu-journey\s*\{[^}]*text-align:\s*left/s);
     expect(tokens).toMatch(/\.valu-journey__heading\s*\{[^}]*justify-items:\s*start/s);
-    expect(tokens).toContain("grid-template-columns: repeat(4,minmax(0,1fr))");
+    expect(tokens).toContain("grid-template-columns: repeat(5,minmax(0,1fr))");
   });
 
-  test("journey stages reflect account, Taster, dashboard and Full VALU without exposing question counts", () => {
+  test("journey stages reflect account, Taster, email confirmation, dashboard and Full VALU without exposing question counts", () => {
     const journey = read("VALUAssessmentJourney.jsx");
     expect(journey).toContain("stage === 'registration' ? 'taster'");
-    expect(journey).toContain("stage === 'account' ? 'dashboard'");
+    expect(journey).toContain("stage === 'account' ? 'confirmation'");
+    expect(journey).toContain("title: 'Confirm email'");
+    expect(journey).toContain('TASTER COMPLETE · CONFIRM EMAIL TO CONTINUE');
     expect(journey).toContain("CONTINUE YOUR FULL VALU INDEX");
     expect(journey).toContain("YOUR PROGRESS IS SAVED");
     expect(journey).not.toMatch(/of 9|of 58|1 of 9|1 of 58|Question \\{[^}]+\\} of/);
