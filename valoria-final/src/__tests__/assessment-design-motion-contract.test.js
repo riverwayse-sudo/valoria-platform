@@ -41,6 +41,17 @@ describe('Valoria assessment design and motion enforcement', () => {
     expect(motion).toContain('transition: none !important');
   });
 
+  test('assessment implements the shared interaction-state lifecycle', () => {
+    const contract = read('ASSESSMENT_INTERACTION_CONTRACT.md');
+    const full = read('src/FullVALUAssessment.jsx');
+    const taster = read('src/VALUIndexV4GateNext.jsx');
+    expect(contract).toContain('**Idle**');
+    expect(contract).toContain('**Recovery**');
+    expect(full).toContain('aria-busy={saving}');
+    expect(taster).toContain('aria-pressed=');
+    expect(read('src/VALUAssessmentJourney.jsx')).toContain('YOUR PROGRESS IS SAVED');
+  });
+
   test('assessment retains the approved typeface and institutional palette', () => {
     const tokens = read('src/design-tokens.css');
     const css = read('src/assessment.css');
