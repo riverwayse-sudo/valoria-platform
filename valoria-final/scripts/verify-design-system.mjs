@@ -79,7 +79,7 @@ if (/transition\s*:|animation\s*:|@keyframes/.test(tokens) || /transition\s*:|an
 if (!/Raleway/.test(assessment) || /DM Mono/.test(assessment)) {
   failures.push('The assessment experience must use the approved Raleway typeface only.');
 }
-if (/scale\\(/.test(motion)) failures.push('Assessment motion must not use repeated scale feedback; use restrained spatial translation.');
+if (/scale\(/.test(motion)) failures.push('Assessment motion must not use repeated scale feedback; use restrained spatial translation.');
 if (!/prefers-reduced-motion:\s*reduce/.test(motion) || !/aria-live/.test(journey)) {
   failures.push('Assessment reduced-motion and honest journey-status contracts must remain present.');
 }
