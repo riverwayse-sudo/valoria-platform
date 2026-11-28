@@ -162,3 +162,40 @@ The assessment API verifies the token signature, audience, expiry, taster UUID, 
 - Test profiles in the marketplace roster: 0.
 - Revoked profiles in the marketplace roster: 0.
 - Listed-profile eligibility/visibility conflicts: 0.
+
+
+## Current production reconciliation snapshot — 28 November 2026
+
+This snapshot supersedes the 16 October and 7 November baselines above. It is aggregate-only; no participant names, emails, account IDs or evidence references are reproduced here.
+
+- Taster sessions: **47 total; 42 unlinked; 5 account-linked**.
+- Taster version provenance: **9 v4.0; 3 v4.1; 35 legacy_unknown**. Current canonical code is VALU Taster v4.2. No historical unknown version is inferred.
+- Completed full assessments: **18 total; 17 missing `taster_id`**. All 18 have an authenticated `user_id` and an identity hash, but an identity hash alone is not a verified Taster link.
+- Identity review queue: **42 open** — 17 contact candidates, 23 unresolved, 2 conflicting. Five Taster-to-account links and five assessment-to-account matches have already been applied; those assessment-account matches do not resolve the missing Taster IDs. Twelve records are explicitly resolved with no link.
+- Professional profiles: 23 total, including 5 test fixtures and 18 non-test profiles. Public roster: **13**. All 13 public profiles are eligible and consented; **0 eligible profiles are missing from the public roster**. Five non-test profiles remain unlisted or revoked; do not force publication to reach a target of 17.
+- Active capabilities: 21. Completed assessments without a profile: 0. Profiles without a full assessment: 5; these may be Basic/Taster-stage profiles and must not be misrepresented as Full listings.
+- Journey freshness: **9 records older than seven days** — 4 at `signed_up`, 5 at `profile_incomplete`. These are participant next-action states, not automatic repair candidates; do not advance them without participant action.
+- Assessment reports: **1 failed report**, failure code `REQUEST_TIMEOUT`, after 5 attempts. Do not automatically retry or send it; the report recipient and delivery authorization must be verified first.
+- Listing integrity: 13 eligible/consented profiles, 13 public roster rows, 0 eligible-but-unlisted profiles and 0 roster membership mismatches.
+
+### Current operational disposition
+
+1. Keep the 42 open identity cases in the manual review queue. Contact candidates are not authenticated account ownership; conflicting and unresolved records must not be linked automatically.
+2. Keep the 17 full assessments without `taster_id` unchanged until a verified, unambiguous Taster identity link is established. Do not alter scores, answers, owners, completion timestamps or historical versions.
+3. Keep the 35 unknown Taster versions as `legacy_unknown`.
+4. Leave the 9 stale journey records at their current states until the participant takes the next action or a human verifies a specific system error.
+5. Hold the single failed report for controlled review; report generation/delivery may contact the participant.
+6. Do not inflate the public roster from 13 to 17. Current evidence shows all 13 eligible and consented profiles are already listed.
+
+
+## Security advisory note — 28 November 2026
+
+The staging Supabase Security Advisor reports leaked-password protection disabled. Supabase documents this Auth control as Pro Plan and above: https://supabase.com/docs/guides/auth/password-security. Under the current no-paid-tools constraint, this is recorded as a plan-level residual, not a code defect or mandatory release blocker. Do not upgrade solely for this feature without explicit owner approval. Revisit if the project plan changes; retain the existing password validation and other available Auth protections.
+
+### Exact-match safety probe — 28 November 2026
+- Of 42 unlinked Taster sessions, 41 have no exact email match to an Auth account; the one exact-email candidate is already marked `conflict` against an authenticated account. No automatic Taster-to-account link is safe.
+- Of 17 completed full assessments missing `taster_id`, 16 have an email: 15 have no exact Taster contact-email match and one has a single candidate. The candidate remains unlinked pending manual review; email equality alone is not proof of identity.
+- None of the 35 legacy-unknown Taster sessions has a progress row carrying a recoverable version. Keep the provenance unknown.
+### Failed report retry boundary — 28 November 2026
+
+The single failed row has no email address, no `ai_report` content and no `report_email_sent_at`. The current generator explicitly leaves an email-less report in `EMAIL_PENDING` after successful generation and does not call the delivery endpoint. A retry therefore cannot email a participant, but it does call the Anthropic Claude Sonnet 4.6 API and may incur cost. Do not retry until the owner approves that one generation attempt.

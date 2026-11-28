@@ -33,3 +33,19 @@
 - Compare counts separately for profiles, unique public roster professionals, completed tasters, completed full assessments, assessments with `taster_id`, identity links and unresolved candidates.
 - Enable Supabase leaked-password protection and confirm RLS policies before release.
 - The live production route must be verified after deployment; a passing preview build alone is not production verification.
+
+
+## Production reconciliation status — 28 November 2026
+
+The current aggregate production snapshot contains 47 Taster sessions, 42 unlinked sessions and 18 completed full assessments, of which 17 have no `taster_id`. Five Taster-to-account links and five assessment-to-account matches have already been applied; the latter do not resolve the missing Taster links.
+
+The 42 open review items comprise 17 contact candidates, 23 unresolved records and 2 conflicting records. Contact-candidate evidence is not authenticated account ownership. Keep all 42 in manual review unless the participant completes the verified-email claim flow or an authorized reviewer records sufficient immutable evidence. Never infer a Taster link from name, role, email similarity, date, score or identity hash alone.
+
+The current production public roster contains 13 profiles; all 13 are eligible and consented, and no eligible profile is missing from the roster. Do not publish additional profiles to reach the previously discussed target of 17 without the required eligibility and public-consent evidence.
+
+The current journey snapshot has 9 records older than seven days (4 `signed_up`, 5 `profile_incomplete`). These represent participant next actions and must not be advanced automatically. One report is failed with `REQUEST_TIMEOUT` after five attempts; do not retry delivery without verifying the recipient and authorization.
+
+The current Taster source version is 4.2. Historical provenance remains 9 sessions at v4.0, 3 at v4.1 and 35 `legacy_unknown`; do not backfill the unknown rows from date or current code.
+
+### Exact-match safety probe — 28 November 2026
+An aggregate-only production probe found 42 unlinked Taster sessions: 41 had no exact email match to an Auth account, and the single exact-email candidate is already marked `conflict` against an authenticated account. No Taster session is safe to auto-link. For the 17 completed full assessments missing `taster_id`, 16 have an email: 15 have no exact Taster contact-email match and one has a single candidate. That candidate remains unlinked pending review; no assessment-to-Taster link is inferred from email alone.
