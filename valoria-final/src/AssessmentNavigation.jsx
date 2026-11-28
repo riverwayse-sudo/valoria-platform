@@ -31,7 +31,7 @@ function getSiteUrl() {
   return localDevelopment || ALLOWED_SITE_ORIGINS.has(environmentDefault) ? environmentDefault : 'https://valoriainstitute.com';
 }
 
-const LOGO_URL = typeof window === 'undefined' ? '/logo.png' : `${getSiteUrl()}/logo.png`;
+const LOGO_URL = `${getSiteUrl()}/logo.png`;
 
 export default function AssessmentNavigation({ progress = null, label = 'VALU INDEX' }) {
   const siteUrl = getSiteUrl();
