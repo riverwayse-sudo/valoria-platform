@@ -123,17 +123,6 @@ button.valu-option:disabled { cursor: default; }
   .valu-assessment-page.valu-assessment-taster .valu-assessment-shell > p { margin-top:12px !important; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
 /* Assessment content alignment contract: questions, instructions, labels and progress copy share a left edge. */
 .valu-assessment-page,
 .valu-assessment-page * {
@@ -190,7 +179,7 @@ button.valu-option:disabled { cursor: default; }
 .valu-full-save { display:inline-flex; align-items:center; gap:7px; color:rgba(250,250,247,.62); font-size:9px; font-weight:800; letter-spacing:.1em; }
 .valu-full-save span { color:#A8C5A8; font-size:13px; }
 .valu-full-progress { height:5px; overflow:hidden; background:rgba(250,250,247,.09); border-radius:99px; margin:0 0 28px; }
-.valu-full-progress > div { height:100%; border-radius:99px; background:#C9A84C; transition:width var(--vi-motion-standard) var(--vi-motion-ease); }
+.valu-full-progress > div { height:100%; border-radius:99px; background:#C9A84C; }
 .valu-full-context { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; margin:0 0 12px; }
 .valu-full-context span:first-child { color:#C9A84C; font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
 .valu-full-context span:last-child { color:rgba(247,244,238,.48); font-size:8px; font-weight:800; letter-spacing:.12em; }
@@ -393,24 +382,12 @@ button.valu-option:disabled { cursor: default; }
 }
 
 
-/* Answer selection: immediate, reversible visual acknowledgement with semantic state. */
-.valu-assessment-page .valu-option {
-  transition:
-    transform var(--vi-motion-micro) var(--vi-motion-ease),
-    background-color var(--vi-motion-micro) var(--vi-motion-ease),
-    border-color var(--vi-motion-micro) var(--vi-motion-ease),
-    opacity var(--vi-motion-micro) var(--vi-motion-ease);
-}
-.valu-assessment-page .valu-option:active:not(:disabled) { transform: scale(.99); }
+/* Answer selection state styling; transition and active feedback live in assessment-motion.css. */
 .valu-assessment-page button.valu-option[aria-pressed="true"] {
   border-color: var(--vi-color-gold) !important;
   background: rgba(201,168,76,.14) !important;
 }
 .valu-assessment-page .valu-option:disabled { cursor: default; }
-@media (prefers-reduced-motion: reduce) {
-  .valu-assessment-page .valu-option { transition: none; }
-  .valu-assessment-page .valu-option:active:not(:disabled) { transform: none; }
-}
 
 
 /* Assessment navigation layout — geometry belongs to the stylesheet, not JSX. */
