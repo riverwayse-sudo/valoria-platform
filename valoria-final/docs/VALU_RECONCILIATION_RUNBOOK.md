@@ -186,3 +186,8 @@ This snapshot supersedes the 16 October and 7 November baselines above. It is ag
 4. Leave the 9 stale journey records at their current states until the participant takes the next action or a human verifies a specific system error.
 5. Hold the single failed report for controlled review; report generation/delivery may contact the participant.
 6. Do not inflate the public roster from 13 to 17. Current evidence shows all 13 eligible and consented profiles are already listed.
+
+
+## Security advisory note — 28 November 2026
+
+The staging Supabase Security Advisor reports leaked-password protection disabled. Supabase documents this Auth control as Pro Plan and above: https://supabase.com/docs/guides/auth/password-security. Under the current no-paid-tools constraint, this is recorded as a plan-level residual, not a code defect or mandatory release blocker. Do not upgrade solely for this feature without explicit owner approval. Revisit if the project plan changes; retain the existing password validation and other available Auth protections.
