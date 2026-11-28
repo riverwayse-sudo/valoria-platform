@@ -3,9 +3,10 @@
 .assessment-nav,
 .assessment-nav-brand,
 .assessment-nav-exit,
+.vi-button,
+.vi-field__control,
 .valu-option,
-.vi-submit-morph,
-.valu-journey__track-fill {
+.vi-submit-morph {
   transition:
     transform var(--vi-motion-micro) var(--vi-motion-ease),
     opacity var(--vi-motion-standard) var(--vi-motion-ease),
@@ -15,12 +16,27 @@
     box-shadow var(--vi-motion-standard) var(--vi-motion-ease);
 }
 
-.valu-assessment-page .valu-option {
+.valu-option {
   transition:
     transform var(--vi-motion-micro) var(--vi-motion-ease),
     background-color var(--vi-motion-micro) var(--vi-motion-ease),
     border-color var(--vi-motion-micro) var(--vi-motion-ease),
-    box-shadow var(--vi-motion-micro) var(--vi-motion-ease);
+    opacity var(--vi-motion-micro) var(--vi-motion-ease);
+}
+.vi-button:active:not(:disabled) { transform: scale(.98); }
+.valu-option:active:not(:disabled) { transform: scale(.99); }
+.vi-submit-morph {
+  transition:
+    transform var(--vi-motion-micro) var(--vi-motion-ease),
+    opacity var(--vi-motion-standard) var(--vi-motion-ease),
+    background-color var(--vi-motion-standard) var(--vi-motion-ease);
+}
+.vi-submit-morph:active:not(:disabled) { transform: scale(.985); }
+.vi-submit-morph[data-state="loading"]::before { animation: vi-submit-spin 720ms linear infinite; }
+@keyframes vi-submit-spin { to { transform: rotate(360deg); } }
+.valu-full-progress > div,
+.valu-journey__track-fill {
+  transition: width var(--vi-motion-standard) var(--vi-motion-ease);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -43,14 +59,20 @@
   .assessment-nav,
   .assessment-nav-brand,
   .assessment-nav-exit,
+  .vi-button,
+  .vi-field__control,
   .valu-option,
   .vi-submit-morph,
+  .valu-full-progress > div,
   .valu-journey__track-fill {
     transition: none !important;
     animation: none !important;
   }
   .assessment-nav-exit:hover,
-  .valu-assessment-page .valu-option:active:not(:disabled) {
+  .vi-submit-morph[data-state="loading"]::before { animation: none; border-right-color: currentColor; opacity: .7; }
+  .vi-button:active:not(:disabled),
+  .valu-option:active:not(:disabled),
+  .vi-submit-morph:active:not(:disabled) {
     transform: none !important;
   }
 }
