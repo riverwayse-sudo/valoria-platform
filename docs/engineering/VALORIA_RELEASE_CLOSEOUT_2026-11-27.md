@@ -176,3 +176,13 @@ This addendum supersedes the earlier release and production snapshots in this do
 5. Review the one failed report before any retry or delivery.
 6. Enable Supabase leaked-password protection on staging; the staging Security Advisor currently reports it disabled. Production's migration history includes the relevant hardening migration, but the production Auth setting should be verified separately.
 7. Resolve the production release sequence. The site and platform release PRs remain unmerged; production Workers and production Supabase remain on the prior four-band implementation. No production release is authorized by the staging work.
+
+
+## 2026-11-28 code-consolidation closeout
+
+- The site release candidate remains in PR #512. It carries the integrated site-wide design and motion safeguards from PR #517, five source-approved VALU designations, specialist evidence-approved directory filtering, declared-capability labels, consent/privacy controls, event-state corrections, and the current route/design regression guards.
+- The platform release candidate remains in PR #310. Its branch has been integrated with the assessment design-and-motion implementation already present on `main` (commit `c445c570b043404276d47f847802ed44a7ffb991`) while retaining the five-level VALU contract, account-confirmation origin correction, de-identified report boundary, migration, and related code/documentation changes. The integration commit is `26ea6180a3792465e00a00548c86abb2516aa332`; the later documentation-alignment commit is recorded in repository history.
+- The shared `PLATFORM_INVARIANTS.md`, `VALORIA_REQUIREMENTS_REGISTER.md`, `VALORIA_UNIFIED_GOVERNANCE.md`, and this release-closeout document are byte-identical across the two release-candidate branches. Repository-specific `QUALITY_REGISTER.md` files remain separate by design.
+- This is a code-consolidation record, not an acceptance declaration. No new end-to-end, browser, accessibility, email, or production tests were run as part of this consolidation; those activities are deferred to the later testing phase. Previously recorded test evidence remains historical evidence for the exact commits/environments stated in its entries.
+- No production migration, participant-data modification, identity reconciliation, production merge, or production deployment was performed by this consolidation. Keep both release PRs unmerged pending the separately scheduled acceptance and explicit production-release approval.
+- The requirements register must retain `FIXED IN CODE — NOT VERIFIED`, `NOT VERIFIED`, or `DECISION REQUIRED` where appropriate. Do not convert implementation into a PASS until the corresponding later acceptance evidence exists.
