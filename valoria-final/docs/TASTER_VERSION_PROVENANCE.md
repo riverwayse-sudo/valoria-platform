@@ -13,3 +13,5 @@
 The canonical current taster version in `src/valuTaster.js` is **4.2**. New submissions must be stamped server-side with that version and `taster_version_source=server_stamped`.
 
 The production snapshot contains 47 Taster sessions: 9 recorded as v4.0, 3 as v4.1, and 35 with `legacy_unknown` provenance. No v4.2 session was present in this snapshot. Do not infer v4.2 for historical sessions from their creation date or from the current code. Preserve the 35 unknown rows as unknown unless immutable deployment evidence proves their actual version.
+
+The production probe found no known version in the corresponding Taster progress rows for any of the 35 legacy-unknown sessions. There is therefore no safe progress-based provenance recovery; keep these rows unknown.
