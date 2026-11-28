@@ -41,7 +41,7 @@ The following are protected contracts. Routine fixes, refactoring and visual wor
 - PRIME remains five clusters and 17 canonical skills. Skill names and cluster mappings must come from the approved canonical source; do not invent or locally rename skills.
 - VALU is presented in points, not percentages or percentage-formatted scores. Do not introduce a competing frontend scoring implementation.
 - The authoritative server-side scoring/designation implementation and its versioned boundary tests are the scoring source of truth.
-- The two source documents contain designation-boundary material that must be reconciled against the currently approved VALU implementation before changing any threshold. A mismatch is **DECISION REQUIRED**, not permission to alter scoring or rewrite historical results.
+- The 4 November Website Review (pages 9–10) and 5 November Content Overhaul (page 2) define five merit designations and their points bands: 80–100 Force to Align With; 65–79 Emerging Force; 50–64 Developing Professional; 35–49 Building Foundations; 0–34 At the Starting Point. The 35-point marketplace eligibility threshold is separate: At the Starting Point is a valid merit designation but is not yet listed. Do not change scores or rewrite historical results when aligning labels. A four-band implementation or assistant summary does not supersede the source documents without explicit user approval.
 - A score, profile projection or cached display field is not proof of assessment completion. Completion and results must derive from the canonical completed assessment record.
 
 ### Profiles, consent and marketplace
