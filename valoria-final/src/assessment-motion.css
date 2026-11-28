@@ -28,15 +28,15 @@
     border-color var(--vi-motion-micro) var(--vi-motion-ease),
     opacity var(--vi-motion-micro) var(--vi-motion-ease);
 }
-.vi-button:active:not(:disabled) { transform: scale(.98); }
-.valu-option:active:not(:disabled) { transform: scale(.99); }
+.vi-button:active:not(:disabled) { transform: translate3d(0,1px,0); }
+.valu-option:active:not(:disabled) { transform: translate3d(0,1px,0); }
 .vi-submit-morph {
   transition:
     transform var(--vi-motion-micro) var(--vi-motion-ease),
     opacity var(--vi-motion-standard) var(--vi-motion-ease),
     background-color var(--vi-motion-standard) var(--vi-motion-ease);
 }
-.vi-submit-morph:active:not(:disabled) { transform: scale(.985); }
+.vi-submit-morph:active:not(:disabled) { transform: translate3d(0,1px,0); }
 .vi-submit-morph[data-state="loading"]::before { animation: vi-submit-spin 720ms linear infinite; }
 @keyframes vi-submit-spin { to { transform: rotate(360deg); } }
 .valu-full-progress > div,
