@@ -112,7 +112,7 @@ function reportMatchesCanonicalAssessment(reportText, assessment) {
 async function generateAiReport({ valuIndex, designation, clusterScores, skillScores }) {
   const sortedSkills = Object.entries(skillScores || {}).filter(([s]) => s !== "Validity").sort(([,a],[,b]) => b - a);
   const topSkills = sortedSkills.slice(0, 3), bottomSkills = sortedSkills.slice(-3).reverse();
-  const prompt = `You are writing a personalised professional development report for a professional who completed the VALU Index. Use only the anonymised score profile supplied below. Do not infer or invent a person's name, employer, location or other identifying details.
+  const prompt = `You are writing a personalised professional development report for a professional who completed the VALU Index. Use only the de-identified score profile supplied below. Do not infer or invent a person's name, employer, location or other identifying details.
 YOUR WRITING RULES:
 1. Write like a trusted senior colleague who tells the truth.
 2. Use plain, direct language.
