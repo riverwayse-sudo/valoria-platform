@@ -196,3 +196,6 @@ The staging Supabase Security Advisor reports leaked-password protection disable
 - Of 42 unlinked Taster sessions, 41 have no exact email match to an Auth account; the one exact-email candidate is already marked `conflict` against an authenticated account. No automatic Taster-to-account link is safe.
 - Of 17 completed full assessments missing `taster_id`, 16 have an email: 15 have no exact Taster contact-email match and one has a single candidate. The candidate remains unlinked pending manual review; email equality alone is not proof of identity.
 - None of the 35 legacy-unknown Taster sessions has a progress row carrying a recoverable version. Keep the provenance unknown.
+### Failed report retry boundary — 28 November 2026
+
+The single failed row has no email address, no `ai_report` content and no `report_email_sent_at`. The current generator explicitly leaves an email-less report in `EMAIL_PENDING` after successful generation and does not call the delivery endpoint. A retry therefore cannot email a participant, but it does call the Anthropic Claude Sonnet 4.6 API and may incur cost. Do not retry until the owner approves that one generation attempt.
