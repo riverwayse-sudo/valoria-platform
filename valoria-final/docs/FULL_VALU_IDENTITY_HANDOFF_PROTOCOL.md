@@ -46,3 +46,6 @@ The current production public roster contains 13 profiles; all 13 are eligible a
 The current journey snapshot has 9 records older than seven days (4 `signed_up`, 5 `profile_incomplete`). These represent participant next actions and must not be advanced automatically. One report is failed with `REQUEST_TIMEOUT` after five attempts; do not retry delivery without verifying the recipient and authorization.
 
 The current Taster source version is 4.2. Historical provenance remains 9 sessions at v4.0, 3 at v4.1 and 35 `legacy_unknown`; do not backfill the unknown rows from date or current code.
+
+### Exact-match safety probe — 28 November 2026
+An aggregate-only production probe found 42 unlinked Taster sessions: 41 had no exact email match to an Auth account, and the single exact-email candidate is already marked `conflict` against an authenticated account. No Taster session is safe to auto-link. For the 17 completed full assessments missing `taster_id`, 16 have an email: 15 have no exact Taster contact-email match and one has a single candidate. That candidate remains unlinked pending review; no assessment-to-Taster link is inferred from email alone.
