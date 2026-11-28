@@ -37,6 +37,8 @@ for (const token of [
   '--vi-motion-micro: 160ms',
   '--vi-motion-standard: 240ms',
   '--vi-motion-emphasis: 420ms',
+  '--vi-motion-reveal: 560ms',
+  '--vi-motion-section: 720ms',
   '--vi-motion-ease: cubic-bezier(.22,1,.36,1)',
 ]) {
   if (!tokens.includes(token)) failures.push('src/design-tokens.css is missing canonical token: ' + token);
