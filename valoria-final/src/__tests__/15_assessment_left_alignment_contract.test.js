@@ -9,6 +9,7 @@ const readRoot = relative => fs.readFileSync(path.join(__dirname, "..", "..", re
 describe("VALU assessment left-alignment contract", () => {
   test("the shared assessment stylesheet is loaded by the application entry point", () => {
     expect(read("main.jsx")).toContain("import './assessment.css'");
+    expect(read("main.jsx")).toContain("import './assessment-motion.css'");
   });
 
   test("participant-facing report and waitlist copy use VALU Index as the product name", () => {
@@ -65,9 +66,9 @@ describe("VALU assessment left-alignment contract", () => {
   });
 
   test("assessment screens respect reduced-motion preferences", () => {
-    const css = read("assessment.css");
-    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
-    expect(css).toContain("animation-duration: 0.01ms !important");
+    const motion = read("assessment-motion.css");
+    expect(motion).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(motion).toContain("animation-duration: .01ms !important");
   });
 
   test("assessment journey status and progress labels use the shared left-aligned component contract", () => {
@@ -94,13 +95,13 @@ describe("VALU assessment left-alignment contract", () => {
 
   test("Full VALU submission morphs in place and exposes its pending state accessibly", () => {
     const full = read("FullVALUAssessment.jsx");
-    const tokens = read("design-tokens.css");
+    const motion = read("assessment-motion.css");
     expect(full).toContain('className="vi-submit-morph"');
     expect(full).toContain("data-state={saving ? 'loading' : 'idle'}");
     expect(full).toContain("aria-busy={saving}");
-    expect(tokens).toContain('.vi-submit-morph[data-state="loading"]::before');
-    expect(tokens).toContain("@keyframes vi-submit-spin");
-    expect(tokens).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(read("design-tokens.css")).toContain('.vi-submit-morph[data-state="loading"]::before');
+    expect(motion).toContain("@keyframes vi-submit-spin");
+    expect(motion).toContain("@media (prefers-reduced-motion: reduce)");
   });
 
   test("account registration and Taster continuation keep their submit control during saving", () => {
@@ -115,10 +116,11 @@ describe("VALU assessment left-alignment contract", () => {
   test("Taster answer selection is exposed semantically and receives immediate motion feedback", () => {
     const gate = read("VALUIndexV4GateNext.jsx");
     const css = read("assessment.css");
+    const motion = read("assessment-motion.css");
     expect(gate).toContain("aria-pressed={selected===i||answers[current]===i}");
     expect(css).toContain('button.valu-option[aria-pressed="true"]');
-    expect(css).toContain("transform: scale(.99)");
-    expect(css).toContain("transition: none");
+    expect(motion).toContain("transform: scale(.99)");
+    expect(motion).toContain("transition: none !important");
   });
 
   test("the completion state has one primary profile action and does not mislabel a Full assessment as Basic", () => {
@@ -141,9 +143,10 @@ describe("VALU assessment left-alignment contract", () => {
   });
 
   test("assessment navigation title begins at the left edge of its own grid cell", () => {
-    const navigation = read("AssessmentNavigation.jsx");
-    expect(navigation).toContain("justifyContent:'flex-start'");
-    expect(navigation).toContain("textAlign:'left'");
+    const css = read("assessment.css");
+    expect(css).toContain(".assessment-nav-center {");
+    expect(css).toContain("justify-content: flex-start;");
+    expect(css).toContain("text-align: left;");
   });
 
   test("assessment layouts use a restrained content width and consistent compact spacing", () => {
