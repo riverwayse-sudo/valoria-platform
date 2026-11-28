@@ -20,6 +20,7 @@ For changes affecting rendered pages, route data, shared styles, assets or compo
 
 - Preserve unrelated layouts, section order, typography, colour tokens, spacing, navigation, links, responsive behaviour and interaction states.
 - Preserve public routes, canonical URLs, metadata and loading/error behaviour unless explicitly in scope.
+- Public positioning preserves Valoria’s African origin and Africa-first operating context while remaining intelligible to international professional audiences. Do not frame Valoria as a Nigeria-only marketplace or imply operating reach beyond Africa until a verified pathway exists; Nigeria is the legal jurisdiction, not the whole market identity.
 - Protect homepage profile rails, profile cards, marketplace cards/listings, search/filter behaviour and public profile rendering unless explicitly in scope.
 - Do not change shared CSS, global tokens, root layouts, navigation, shared cards or common data projections for a local fix without mapping every consumer.
 - Source assertions and HTTP 200 responses do not prove visual or interaction parity.
