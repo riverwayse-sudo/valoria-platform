@@ -1,0 +1,56 @@
+/* VALORIA ASSESSMENT MOTION SYSTEM
+   One interaction = one dominant movement. State feedback remains usable without motion. */
+.assessment-nav,
+.assessment-nav-brand,
+.assessment-nav-exit,
+.valu-option,
+.vi-submit-morph,
+.valu-journey__track-fill {
+  transition:
+    transform var(--vi-motion-micro) var(--vi-motion-ease),
+    opacity var(--vi-motion-standard) var(--vi-motion-ease),
+    color var(--vi-motion-standard) var(--vi-motion-ease),
+    background-color var(--vi-motion-standard) var(--vi-motion-ease),
+    border-color var(--vi-motion-standard) var(--vi-motion-ease),
+    box-shadow var(--vi-motion-standard) var(--vi-motion-ease);
+}
+
+.valu-assessment-page .valu-option {
+  transition:
+    transform var(--vi-motion-micro) var(--vi-motion-ease),
+    background-color var(--vi-motion-micro) var(--vi-motion-ease),
+    border-color var(--vi-motion-micro) var(--vi-motion-ease),
+    box-shadow var(--vi-motion-micro) var(--vi-motion-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .assessment-nav-exit:hover {
+    color: var(--vi-color-ivory);
+    transform: translate3d(0,-1px,0);
+  }
+  .valu-assessment-page .valu-option:not(:disabled):hover {
+    border-color: rgba(201,168,76,.55) !important;
+  }
+}
+
+.assessment-nav-exit:focus-visible,
+.assessment-nav-brand:focus-visible {
+  outline: 2px solid var(--vi-color-focus);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assessment-nav,
+  .assessment-nav-brand,
+  .assessment-nav-exit,
+  .valu-option,
+  .vi-submit-morph,
+  .valu-journey__track-fill {
+    transition: none !important;
+    animation: none !important;
+  }
+  .assessment-nav-exit:hover,
+  .valu-assessment-page .valu-option:active:not(:disabled) {
+    transform: none !important;
+  }
+}
