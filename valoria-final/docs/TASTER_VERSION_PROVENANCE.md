@@ -1,9 +1,15 @@
 # Taster version provenance protocol
 
-- Every new 9-question taster submission (VALU v4.1) is stamped server-side with the canonical `VALU_VERSION` from `src/valuTaster.js`.
+- Every new 9-question taster submission (VALU v4.2) is stamped server-side with the canonical `VALU_VERSION` from `src/valuTaster.js`.
 - `taster_version_source=server_stamped` means the version came from the running server's canonical question/scoring module.
 - Historical rows created before version stamping retain `taster_version=NULL` and `taster_version_source=legacy_unknown` unless a human verifies version from release artifacts or deployment records.
 - Do not infer a historical version solely from `created_at`, name, role, score, or a later code version. Dates are useful for narrowing the release window, not proof of which code actually served the request.
 - If an administrator verifies a legacy row from immutable deployment/release evidence, set the actual version and `taster_version_source=admin_verified`, and record the evidence in the platform audit trail.
 - Reconciliation tools must show version and provenance separately. Unknown is a valid and preferable value to a fabricated version.
 - This metadata is for provenance and audit only; adding it must not recalculate or change historical scores.
+
+## Production observation — 28 November 2026
+
+The canonical current taster version in `src/valuTaster.js` is **4.2**. New submissions must be stamped server-side with that version and `taster_version_source=server_stamped`.
+
+The production snapshot contains 47 Taster sessions: 9 recorded as v4.0, 3 as v4.1, and 35 with `legacy_unknown` provenance. No v4.2 session was present in this snapshot. Do not infer v4.2 for historical sessions from their creation date or from the current code. Preserve the 35 unknown rows as unknown unless immutable deployment evidence proves their actual version.
