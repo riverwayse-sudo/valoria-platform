@@ -4,15 +4,15 @@ This contract implements the shared Valoria interaction lifecycle across the aut
 
 ## Applicable states
 
-- **Idle:** the control is available.
-- **Hover:** pointer-only affordance; never the only way to discover or operate a control.
-- **Focus:** visible keyboard focus and equivalent keyboard operation.
-- **Active:** immediate acknowledgement of activation or selection.
-- **Loading:** pending work is explicit and duplicate submissions are prevented where appropriate.
-- **Success:** completion is communicated clearly.
-- **Error:** failure is perceivable, specific and recoverable.
-- **Disabled:** unavailable controls have no misleading hover or active motion.
-- **Recovery:** retry or resume preserves valid context and saved progress.
+- **Idle** — the control is available.
+- **Hover** — pointer-only affordance; never the only way to discover or operate a control.
+- **Focus** — visible keyboard focus and equivalent keyboard operation.
+- **Active** — immediate acknowledgement of activation or selection.
+- **Loading** — pending work is explicit and duplicate submissions are prevented where appropriate.
+- **Success** — completion is communicated clearly.
+- **Error** — failure is perceivable, specific and recoverable.
+- **Disabled** — unavailable controls have no misleading hover or active motion.
+- **Recovery** — retry or resume preserves valid context and saved progress.
 
 Not every component requires every state. Applicable states must be semantic, accessible and consistent with the operation. Colour or animation alone is never the only state signal.
 
