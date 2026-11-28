@@ -70,7 +70,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-CNT-009 | Remove unsupported facilitator certification, cohort reporting, 90-day remeasurement, pricing and independent-validation claims | Site | AUDIT REQUIRED |
 | VAL-CNT-010 | Verify every navigation item, CTA, footer link, Privacy and Terms route | Site | AUDIT REQUIRED |
 | VAL-CNT-011 | Legal entity, canonical public names, programme pricing, facilitator certification evidence and public speaker name are approved before publication | Product Owner | DECISION REQUIRED |
-| VAL-CNT-012 | Retain Africa-first strategic context while removing Nigeria-specific public marketing/localisation; retain Nigerian jurisdiction only for legal/operational facts | Website Review (4 Nov, p. 12) and later explicit owner instruction | Product Owner + Site | APPROVED — SOURCE RECONCILED |
+| VAL-CNT-012 | Avoid geography-first public marketing and unsupported geographic-reach claims; retain Nigerian legal entity, jurisdiction and operational facts only where relevant | Institutional Positioning & Website Copy Standard; later explicit owner instruction | Product Owner + Site | APPROVED — SOURCE RECONCILED |
 
 ## D. Cross-repository architecture and reliability
 
@@ -93,7 +93,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-DEC-003 | Public visibility | Explicit participant-entered consent is required; admin attestation is insufficient | Later consent decision and production privacy correction | APPROVED — PROTECT |
 | VAL-DEC-004 | Identity reconciliation | Automated suggestions require authenticated human review and traceable evidence before application | Reconciliation safety policy | APPROVED — PROTECT |
 | VAL-DEC-005 | VALU five-level merit designations and separate listing threshold | Website Review (4 Nov, pp. 9–10) and Content Overhaul (5 Nov, p. 2): 80–100 Force to Align With; 65–79 Emerging Force; 50–64 Developing Professional; 35–49 Building Foundations; 0–34 At the Starting Point. The 35-point marketplace eligibility threshold is separate; At the Starting Point is a valid designation but is not yet listed. | The four-band implementation in site PR #504/platform PR #300 is not treated as owner approval; implement the source-approved five bands in PR #512/#310 and retain the separate 35-point listing gate. Do not rewrite historical records without an approved data-correction plan. Platform PR #310 remains unmerged because merging to `main` triggers the Cloudflare production deployment path; production release requires explicit owner approval | APPROVED — CODE READY; PRODUCTION RELEASE GATED |
-| VAL-DEC-006 | Public positioning | Latest approved international brand direction supersedes retired copy only where explicitly approved | Later brand direction; retain unresolved legal/jurisdiction facts for approval | DECISION REQUIRED where exact wording is unsettled |
+| VAL-DEC-006 | Public positioning | Lead with the institution and professional capability; do not use Nigerian-first, African-first or local-marketplace positioning, and do not claim geographic reach without evidence. Retain legal/jurisdiction facts only where relevant | Institutional Positioning & Website Copy Standard and later owner instruction | APPROVED — PROTECT |
 | VAL-DEC-007 | Legal identity and public names | Publish only after owner confirmation | Strategic Review and Content Overhaul open decisions | DECISION REQUIRED |
 
 ## F. Phase and release tracking
