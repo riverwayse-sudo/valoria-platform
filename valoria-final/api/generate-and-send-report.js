@@ -59,7 +59,7 @@ async function fetchAssessment(reportToken, workerIdentityHash = null) {
   const lookup = workerIdentityHash
     ? { identity_hash: `eq.${workerIdentityHash}` }
     : { report_token: `eq.${reportToken}` };
-  const params = new URLSearchParams({ ...lookup, select: "identity_hash,report_token,name,role,email,total_score,designation,cluster_scores,skill_scores,ai_report,report_email_sent_at,report_status,report_attempts", limit: "1" });
+  const params = new URLSearchParams({ ...lookup, select: "identity_hash,report_token,email,total_score,designation,cluster_scores,skill_scores,ai_report,report_email_sent_at,report_status,report_attempts", limit: "1" });
   const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/valu_assessments?${params}`, { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` }, cache: "no-store" });
   if (!res.ok) throw new Error("Assessment lookup failed");
   const rows = await res.json();
@@ -109,10 +109,10 @@ function reportMatchesCanonicalAssessment(reportText, assessment) {
   const indexClaims = Array.from(opening.matchAll(/\bVALU Index(?:\s+(?:score\s+)?(?:sits at|is|of))\s*(\d{1,3})\b/gi));
   return [...claims, ...indexClaims].every(match => Number(match[1]) === expectedScore);
 }
-async function generateAiReport({ name, role, valuIndex, designation, clusterScores, skillScores }) {
+async function generateAiReport({ valuIndex, designation, clusterScores, skillScores }) {
   const sortedSkills = Object.entries(skillScores || {}).filter(([s]) => s !== "Validity").sort(([,a],[,b]) => b - a);
   const topSkills = sortedSkills.slice(0, 3), bottomSkills = sortedSkills.slice(-3).reverse();
-  const prompt = `You are writing a personalised professional development report for ${name}, a ${role} who just completed the VALU Index.
+  const prompt = `You are writing a personalised professional development report for a professional who completed the VALU Index. Use only the anonymised score profile supplied below. Do not infer or invent a person's name, employer, location or other identifying details.
 YOUR WRITING RULES:
 1. Write like a trusted senior colleague who tells the truth.
 2. Use plain, direct language.
@@ -210,7 +210,7 @@ export default async function handler(req, res) {
 
     let reportText = assessment.ai_report;
     if (!reportMatchesCanonicalAssessment(reportText, assessment)) {
-      reportText = await generateAiReport({ name: assessment.name, role: assessment.role, valuIndex: assessment.total_score, designation: canonicalDesignation(assessment.total_score), clusterScores: assessment.cluster_scores, skillScores: assessment.skill_scores });
+      reportText = await generateAiReport({ valuIndex: assessment.total_score, designation: canonicalDesignation(assessment.total_score), clusterScores: assessment.cluster_scores, skillScores: assessment.skill_scores });
       if (!reportMatchesCanonicalAssessment(reportText, assessment)) {
         throw new Error("Generated report conflicts with canonical VALU score or designation");
       }
