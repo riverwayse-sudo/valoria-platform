@@ -5,7 +5,7 @@ import { join } from 'node:path';
 const failures = [];
 const read = (file) => {
   if (!existsSync(file)) {
-    failures.push(\`Missing required file: \${file}\`);
+    failures.push('Missing required file: ' + file);
     return '';
   }
   return readFileSync(file, 'utf8');
@@ -22,11 +22,9 @@ const motion = read('src/assessment-motion.css');
 const navigation = read('src/AssessmentNavigation.jsx');
 const journey = read('src/VALUAssessmentJourney.jsx');
 
-for (const contract of [
-  /design-tokens\.css/,
-  /assessment\.css/,
-  /assessment-motion\.css/,
-]) if (!contract.test(main)) failures.push(\`src/main.jsx must load shared assessment design layer: \${contract}\`);
+for (const contract of [/design-tokens\.css/, /assessment\.css/, /assessment-motion\.css/]) {
+  if (!contract.test(main)) failures.push('src/main.jsx must load shared assessment design layer: ' + contract);
+}
 
 for (const token of [
   '--vi-color-midnight: #1A1A2E',
@@ -40,7 +38,9 @@ for (const token of [
   '--vi-motion-standard: 240ms',
   '--vi-motion-emphasis: 420ms',
   '--vi-motion-ease: cubic-bezier(.22,1,.36,1)',
-]) if (!tokens.includes(token)) failures.push(\`src/design-tokens.css is missing canonical token: \${token}\`);
+]) {
+  if (!tokens.includes(token)) failures.push('src/design-tokens.css is missing canonical token: ' + token);
+}
 
 for (const contract of [
   /prefers-reduced-motion:\s*reduce/,
@@ -49,7 +49,9 @@ for (const contract of [
   /\.valu-option/,
   /\.valu-journey__track-fill/,
   /\.assessment-nav/,
-]) if (!contract.test(motion)) failures.push(\`src/assessment-motion.css is missing motion contract \${contract}\`);
+]) {
+  if (!contract.test(motion)) failures.push('src/assessment-motion.css is missing motion contract ' + contract);
+}
 
 for (const contract of [
   /className="assessment-nav"/,
@@ -57,12 +59,14 @@ for (const contract of [
   /className="assessment-nav-brand"/,
   /className="assessment-nav-center"/,
   /className="assessment-nav-exit"/,
-]) if (!contract.test(navigation)) failures.push(\`Assessment navigation is missing shared class contract \${contract}\`);
+]) {
+  if (!contract.test(navigation)) failures.push('Assessment navigation is missing shared class contract ' + contract);
+}
 if (/style=\{/.test(navigation) || /const styles\s*=/.test(navigation)) {
   failures.push('AssessmentNavigation.jsx must not own inline visual styles; use the shared stylesheet.');
 }
 for (const selector of ['.assessment-nav {', '.assessment-nav-inner {', '.assessment-nav-exit {']) {
-  if (!assessment.includes(selector)) failures.push(\`src/assessment.css is missing layout rule \${selector}\`);
+  if (!assessment.includes(selector)) failures.push('src/assessment.css is missing layout rule ' + selector);
 }
 if (!/Raleway/.test(assessment) || /DM Mono/.test(assessment)) {
   failures.push('The assessment experience must use the approved Raleway typeface only.');
@@ -72,12 +76,12 @@ if (!/prefers-reduced-motion:\s*reduce/.test(assessment) || !/aria-live/.test(jo
 }
 
 const componentFiles = walk('src').filter((file) => /\.jsx?$/.test(file));
-if (componentFiles.length < 12) failures.push(\`Assessment component inventory unexpectedly low: \${componentFiles.length} files.\`);
+if (componentFiles.length < 12) failures.push('Assessment component inventory unexpectedly low: ' + componentFiles.length + ' files.');
 
 if (failures.length) {
   console.error('Valoria assessment design enforcement FAILED.');
   failures.forEach((failure) => console.error(' - ' + failure));
   process.exit(1);
 }
-console.log(\`Valoria assessment design enforcement PASSED: \${componentFiles.length} assessment source files inherit shared tokens, responsive layout and canonical motion.\`);
+console.log('Valoria assessment design enforcement PASSED: ' + componentFiles.length + ' assessment source files inherit shared tokens, responsive layout and canonical motion.');
 console.log('Assessment coverage: authenticated taster entry, answer selection, progress, full assessment, resume, submission and dashboard handoff surfaces.');
