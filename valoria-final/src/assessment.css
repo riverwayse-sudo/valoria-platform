@@ -190,7 +190,7 @@ button.valu-option:disabled { cursor: default; }
 .valu-full-save { display:inline-flex; align-items:center; gap:7px; color:rgba(250,250,247,.62); font-size:9px; font-weight:800; letter-spacing:.1em; }
 .valu-full-save span { color:#A8C5A8; font-size:13px; }
 .valu-full-progress { height:5px; overflow:hidden; background:rgba(250,250,247,.09); border-radius:99px; margin:0 0 28px; }
-.valu-full-progress > div { height:100%; border-radius:99px; background:#C9A84C; transition:width .25s ease; }
+.valu-full-progress > div { height:100%; border-radius:99px; background:#C9A84C; transition:width var(--vi-motion-standard) var(--vi-motion-ease); }
 .valu-full-context { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; margin:0 0 12px; }
 .valu-full-context span:first-child { color:#C9A84C; font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
 .valu-full-context span:last-child { color:rgba(247,244,238,.48); font-size:8px; font-weight:800; letter-spacing:.12em; }
