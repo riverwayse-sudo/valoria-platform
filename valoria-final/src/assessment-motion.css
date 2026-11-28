@@ -69,6 +69,7 @@
     transition-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
+  .valu-assessment-page { animation: none !important; transform: none !important; opacity: 1 !important; }
   .assessment-nav,
   .assessment-nav-brand,
   .assessment-nav-exit,
