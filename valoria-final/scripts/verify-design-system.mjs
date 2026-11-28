@@ -83,6 +83,23 @@ if (!/prefers-reduced-motion:\s*reduce/.test(motion) || !/aria-live/.test(journe
   failures.push('Assessment reduced-motion and honest journey-status contracts must remain present.');
 }
 
+const interactionStates = ['Idle', 'Hover', 'Focus', 'Active', 'Loading', 'Success', 'Error', 'Disabled', 'Recovery'];
+for (const state of interactionStates) {
+  if (!interactionContract.includes('**' + state + '**')) failures.push('Assessment interaction contract is missing state: ' + state);
+}
+if (!full.includes('aria-busy={saving}') || !full.includes("data-state={saving ? 'loading' : 'idle'}")) {
+  failures.push('Full assessment submission must expose accessible pending state.');
+}
+if (!taster.includes('aria-pressed=') || !taster.includes('aria-busy={saving}')) {
+  failures.push('Taster answer selection and submission must expose semantic interaction states.');
+}
+if (!motion.includes('@media (hover: hover) and (pointer: fine)') || !motion.includes('@media (prefers-reduced-motion: reduce)')) {
+  failures.push('Assessment hover and reduced-motion behaviour must follow the interaction contract.');
+}
+if (!journey.includes('YOUR PROGRESS IS SAVED')) {
+  failures.push('Assessment recovery must communicate saved progress truthfully.');
+}
+
 const componentFiles = walk('src').filter((file) => /\.jsx?$/.test(file));
 if (componentFiles.length < 12) failures.push('Assessment component inventory unexpectedly low: ' + componentFiles.length + ' files.');
 
