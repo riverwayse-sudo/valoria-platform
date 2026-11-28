@@ -22,7 +22,7 @@ try {
     let metrics = null;
     let navigationError = null;
     try {
-      const response = await page.goto(\`\${base}/valu/assessment/?journey=account-first\`, {
+      const response = await page.goto(base + '/valu/assessment/?journey=account-first', {
         waitUntil: 'domcontentloaded',
         timeout: 45000,
       });
@@ -37,17 +37,17 @@ try {
         rootTextLength: (document.querySelector('#root')?.innerText || '').trim().length,
         mainLandmarks: document.querySelectorAll('main,[role="main"]').length,
       }));
-      await page.screenshot({ path: \`artifacts/assessment-design-audit/\${viewport.name}.png\`, fullPage: true });
+      await page.screenshot({ path: 'artifacts/assessment-design-audit/' + viewport.name + '.png', fullPage: true });
     } catch (error) {
       navigationError = error.message;
     }
     const errors = [
-      ...(status == null || status >= 400 ? [\`HTTP \${status}\`] : []),
+      ...(status == null || status >= 400 ? ['HTTP ' + status] : []),
       ...(navigationError ? [navigationError] : []),
       ...(metrics && metrics.documentWidth > metrics.viewportWidth + 2 ? ['horizontal overflow'] : []),
       ...(metrics && metrics.bodyTextLength === 0 ? ['blank assessment document'] : []),
       ...(metrics && metrics.rootTextLength === 0 ? ['blank assessment application root'] : []),
-      ...(metrics && !/Raleway/i.test(metrics.fontFamily) ? [\`unexpected assessment typeface: \${metrics.fontFamily}\`] : []),
+      ...(metrics && !/Raleway/i.test(metrics.fontFamily) ? ['unexpected assessment typeface: ' + metrics.fontFamily] : []),
       ...pageErrors,
     ];
     const result = { viewport, status, metrics, errors };
@@ -67,9 +67,9 @@ await fs.writeFile('artifacts/assessment-design-audit/report.json', JSON.stringi
   failures,
 }, null, 2));
 
-console.log(\`Assessment design audit completed across \${viewports.length} viewports.\`);
+console.log('Assessment design audit completed across ' + viewports.length + ' viewports.');
 if (failures.length) {
-  console.error(\`Assessment design audit FAILED: \${failures.length} viewport checks.\`);
+  console.error('Assessment design audit FAILED: ' + failures.length + ' viewport checks.');
   failures.forEach((failure) => console.error(JSON.stringify(failure)));
   process.exit(1);
 }
