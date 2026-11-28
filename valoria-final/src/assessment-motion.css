@@ -1,5 +1,12 @@
 /* VALORIA ASSESSMENT MOTION SYSTEM
    One interaction = one dominant movement. State feedback remains usable without motion. */
+.valu-assessment-page {
+  animation: vi-assessment-page-enter var(--vi-motion-reveal) var(--vi-motion-ease) both;
+}
+@keyframes vi-assessment-page-enter {
+  from { opacity: 0; transform: translate3d(0,12px,0); }
+  to { opacity: 1; transform: translate3d(0,0,0); }
+}
 .assessment-nav,
 .assessment-nav-brand,
 .assessment-nav-exit,
