@@ -21,6 +21,9 @@ const assessment = read('src/assessment.css');
 const motion = read('src/assessment-motion.css');
 const navigation = read('src/AssessmentNavigation.jsx');
 const journey = read('src/VALUAssessmentJourney.jsx');
+const full = read('src/FullVALUAssessment.jsx');
+const taster = read('src/VALUIndexV4GateNext.jsx');
+const interactionContract = read('ASSESSMENT_INTERACTION_CONTRACT.md');
 
 for (const contract of [/design-tokens\.css/, /assessment\.css/, /assessment-motion\.css/]) {
   if (!contract.test(main)) failures.push('src/main.jsx must load shared assessment design layer: ' + contract);
