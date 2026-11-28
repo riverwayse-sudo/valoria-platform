@@ -119,7 +119,7 @@ describe("VALU assessment left-alignment contract", () => {
     const motion = read("assessment-motion.css");
     expect(gate).toContain("aria-pressed={selected===i||answers[current]===i}");
     expect(css).toContain('button.valu-option[aria-pressed="true"]');
-    expect(motion).toContain("transform: scale(.99)");
+    expect(motion).toContain("transform: translate3d(0,1px,0)");
     expect(motion).toContain("transition: none !important");
   });
 
