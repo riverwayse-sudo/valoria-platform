@@ -186,3 +186,7 @@ This addendum supersedes the earlier release and production snapshots in this do
 - This is a code-consolidation record, not an acceptance declaration. No new end-to-end, browser, accessibility, email, or production tests were run as part of this consolidation; those activities are deferred to the later testing phase. Previously recorded test evidence remains historical evidence for the exact commits/environments stated in its entries.
 - No production migration, participant-data modification, identity reconciliation, production merge, or production deployment was performed by this consolidation. Keep both release PRs unmerged pending the separately scheduled acceptance and explicit production-release approval.
 - The requirements register must retain `FIXED IN CODE — NOT VERIFIED`, `NOT VERIFIED`, or `DECISION REQUIRED` where appropriate. Do not convert implementation into a PASS until the corresponding later acceptance evidence exists.
+
+### Production build-control invariant
+
+Cloudflare Workers Builds for `valoria-assessment` is connected to `main` as its production branch. A push to `main` can trigger a production Worker deployment independently of the guarded GitHub production workflow. Therefore, do not merge either release PR to `main` as a documentation or code housekeeping action. Verify Cloudflare build/deployment controls and deployment history, and obtain explicit owner release approval before any production-bound merge. A skipped GitHub workflow is not evidence that no production deployment occurred.
