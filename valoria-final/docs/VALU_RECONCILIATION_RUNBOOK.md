@@ -191,3 +191,8 @@ This snapshot supersedes the 16 October and 7 November baselines above. It is ag
 ## Security advisory note — 28 November 2026
 
 The staging Supabase Security Advisor reports leaked-password protection disabled. Supabase documents this Auth control as Pro Plan and above: https://supabase.com/docs/guides/auth/password-security. Under the current no-paid-tools constraint, this is recorded as a plan-level residual, not a code defect or mandatory release blocker. Do not upgrade solely for this feature without explicit owner approval. Revisit if the project plan changes; retain the existing password validation and other available Auth protections.
+
+### Exact-match safety probe — 28 November 2026
+- Of 42 unlinked Taster sessions, 41 have no exact email match to an Auth account; the one exact-email candidate is already marked `conflict` against an authenticated account. No automatic Taster-to-account link is safe.
+- Of 17 completed full assessments missing `taster_id`, 16 have an email: 15 have no exact Taster contact-email match and one has a single candidate. The candidate remains unlinked pending manual review; email equality alone is not proof of identity.
+- None of the 35 legacy-unknown Taster sessions has a progress row carrying a recoverable version. Keep the provenance unknown.
