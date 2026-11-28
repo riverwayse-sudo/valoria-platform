@@ -34,6 +34,8 @@
   --vi-motion-micro: 160ms;
   --vi-motion-standard: 240ms;
   --vi-motion-emphasis: 420ms;
+  --vi-motion-reveal: 560ms;
+  --vi-motion-section: 720ms;
   --vi-motion-ease: cubic-bezier(.22,1,.36,1);
   --vi-elevation-contact: 0 2px 5px rgba(15,15,26,.18);
   --vi-elevation-ambient: 0 18px 42px rgba(15,15,26,.22);
