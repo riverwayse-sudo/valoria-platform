@@ -68,6 +68,9 @@ if (/style=\{/.test(navigation) || /const styles\s*=/.test(navigation)) {
 for (const selector of ['.assessment-nav {', '.assessment-nav-inner {', '.assessment-nav-exit {']) {
   if (!assessment.includes(selector)) failures.push('src/assessment.css is missing layout rule ' + selector);
 }
+if (/transition\s*:|animation\s*:|@keyframes/.test(tokens) || /transition\s*:|animation\s*:|@keyframes/.test(assessment)) {
+  failures.push('Motion declarations must live only in src/assessment-motion.css, not token or layout stylesheets.');
+}
 if (!/Raleway/.test(assessment) || /DM Mono/.test(assessment)) {
   failures.push('The assessment experience must use the approved Raleway typeface only.');
 }
