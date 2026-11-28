@@ -45,7 +45,7 @@ For changes affecting rendered pages, route data, shared styles, assets or compo
 - Never fabricate profiles, counts, credentials, opportunities, buyer activity or outcomes.
 - Never alter participant data, answers, scores, identity links or consent without explicit authorization.
 - Email delivery states remain distinct and retries idempotent.
-- AI report generation sends only the anonymised score profile (aggregate score, canonical designation, cluster scores and skill scores) to Anthropic. Never send participant name, email, identity hash, account/user ID, raw answers or profile text. Report-delivery identity is handled separately and is never included in the AI request.
+- AI report generation sends only the de-identified score profile (aggregate score, canonical designation, cluster scores and skill scores) to Anthropic. Never send participant name, email, identity hash, account/user ID, raw answers or profile text. Report-delivery identity is handled separately and is never included in the AI request.
 
 ## 4. Security and availability invariants
 
