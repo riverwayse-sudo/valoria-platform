@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Raleway:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -410,4 +410,87 @@ button.valu-option:disabled { cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   .valu-assessment-page .valu-option { transition: none; }
   .valu-assessment-page .valu-option:active:not(:disabled) { transform: none; }
+}
+
+
+/* Assessment navigation layout — geometry belongs to the stylesheet, not JSX. */
+.assessment-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  border-bottom: 1px solid rgba(201,168,76,.14);
+  background: rgba(26,26,46,.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.assessment-nav-inner {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 1180px;
+  min-height: 64px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.assessment-nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  color: #F7F4EE;
+  text-decoration: none;
+}
+.assessment-nav-logo {
+  display: block;
+  width: auto;
+  height: 40px;
+  object-fit: contain;
+}
+.assessment-nav-center {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  white-space: nowrap;
+  text-align: left;
+}
+.assessment-nav-label {
+  color: #C9A84C;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+.assessment-nav-progress {
+  color: rgba(247,244,238,.28);
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+.assessment-nav-exit {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 0 12px;
+  color: #D4C9A8;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .12em;
+  text-decoration: none;
+}
+@media (max-width: 640px) {
+  .assessment-nav-inner {
+    grid-template-columns: minmax(0,1fr) auto;
+    min-height: 58px;
+    gap: 12px;
+    padding-inline: 16px;
+  }
+  .assessment-nav-center,
+  .assessment-nav-wordmark { display: none; }
+  .assessment-nav-exit { min-height: 48px; font-size: 8px; }
+  .assessment-nav-logo { height: 36px; }
 }
