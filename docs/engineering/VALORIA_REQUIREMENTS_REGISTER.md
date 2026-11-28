@@ -36,6 +36,7 @@ Do not change a status without evidence. A merged PR or successful build is not 
 | VAL-STD-013 | Participant data, answers, scores, identity links and consent are not changed without explicit authorization | REQS | Platform | AUDIT REQUIRED |
 | VAL-STD-014 | Production deployment is Cloudflare-only and requires explicit release approval, passing gates and recovery plan | REQS / deployment policy | Site + Platform | AUDIT REQUIRED |
 | VAL-STD-015 | Taster completion automatically creates/refreshes the professional profile and eligibility projection without an admin approval gate; public visibility still requires participant-entered consent and eligibility | Later approved product decision plus consent policy | Platform | AUDIT REQUIRED |
+| VAL-STD-016 | Anthropic report generation receives only the de-identified score profile (aggregate score, canonical designation, cluster scores and skill scores); never send participant name, email, identity hash, account/user ID, raw answers or profile text. Delivery identity remains separate | Privacy Policy (AI processor disclosure) and platform data-minimisation invariant | Platform | APPROVED — PROTECT |
 
 ## B. Strategic Review requirements
 
