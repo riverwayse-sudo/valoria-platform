@@ -16,7 +16,7 @@ describe('Valoria assessment design and motion enforcement', () => {
     expect(navigation).toContain('className="assessment-nav"');
     expect(navigation).toContain('className="assessment-nav-inner"');
     expect(navigation).toContain('className="assessment-nav-exit"');
-    expect(navigation).not.toMatch(/style=\\{/);
+    expect(navigation).not.toContain('style=');
     expect(navigation).not.toContain('const styles =');
     const css = read('src/assessment.css');
     expect(css).toContain('.assessment-nav {');
