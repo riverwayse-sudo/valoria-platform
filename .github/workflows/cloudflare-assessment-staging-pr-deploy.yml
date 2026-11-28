@@ -12,6 +12,21 @@ on:
       - "valoria-final/lib/**"
       - "valoria-final/src/**"
       - "valoria-final/worker-tests/**"
+      - "valoria-final/scripts/**"
+      - "valoria-final/worker.js"
+      - "valoria-final/wrangler.jsonc"
+      - "valoria-final/package.json"
+      - "valoria-final/package-lock.json"
+      - ".github/workflows/cloudflare-assessment-staging-pr-deploy.yml"
+  push:
+    branches:
+      - "deploy/staging-*"
+    paths:
+      - "valoria-final/api/**"
+      - "valoria-final/lib/**"
+      - "valoria-final/src/**"
+      - "valoria-final/worker-tests/**"
+      - "valoria-final/scripts/**"
       - "valoria-final/worker.js"
       - "valoria-final/wrangler.jsonc"
       - "valoria-final/package.json"
@@ -22,12 +37,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: valoria-assessment-staging-pr-${{ github.event.pull_request.number }}
+  group: valoria-assessment-staging-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   deploy-staging:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'deploy/staging-') }}
+    if: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'deploy/staging-')) || (github.event_name == 'push' && startsWith(github.ref_name, 'deploy/staging-')) }}
     name: Test, build, deploy and smoke-test isolated assessment Worker
     runs-on: ubuntu-latest
     environment: staging
@@ -159,3 +174,17 @@ jobs:
         env:
           STAGING_ASSESSMENT_URL: https://assessment-staging.valoriainstitute.com
           STAGING_SITE_URL: https://staging.valoriainstitute.com
+
+      - name: Audit assessment design at desktop, tablet and mobile
+        run: node ./scripts/assessment-design-browser-audit.mjs
+        env:
+          STAGING_ASSESSMENT_URL: https://assessment-staging.valoriainstitute.com
+
+      - name: Upload assessment design audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: valoria-assessment-design-audit
+          path: valoria-final/artifacts/assessment-design-audit/
+          if-no-files-found: warn
+          retention-days: 7

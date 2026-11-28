@@ -4,6 +4,7 @@ import VALUIndexV4App from './VALUIndexV4App.jsx'
 import AssessmentNavigation from './AssessmentNavigation.jsx'
 import './design-tokens.css'
 import './assessment.css'
+import './assessment-motion.css'
 
 const isPreview = import.meta.env.VITE_VALU_PREVIEW === '1'
 

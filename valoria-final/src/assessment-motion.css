@@ -1,0 +1,92 @@
+/* VALORIA ASSESSMENT MOTION SYSTEM
+   One interaction = one dominant movement. State feedback remains usable without motion. */
+.valu-assessment-page {
+  animation: vi-assessment-page-enter var(--vi-motion-reveal) var(--vi-motion-ease) both;
+}
+@keyframes vi-assessment-page-enter {
+  from { opacity: 0; transform: translate3d(0,12px,0); }
+  to { opacity: 1; transform: translate3d(0,0,0); }
+}
+.assessment-nav,
+.assessment-nav-brand,
+.assessment-nav-exit,
+.vi-button,
+.vi-field__control {
+  transition:
+    transform var(--vi-motion-micro) var(--vi-motion-ease),
+    opacity var(--vi-motion-standard) var(--vi-motion-ease),
+    color var(--vi-motion-standard) var(--vi-motion-ease),
+    background-color var(--vi-motion-standard) var(--vi-motion-ease),
+    border-color var(--vi-motion-standard) var(--vi-motion-ease),
+    box-shadow var(--vi-motion-standard) var(--vi-motion-ease);
+}
+
+.valu-option {
+  transition:
+    transform var(--vi-motion-micro) var(--vi-motion-ease),
+    background-color var(--vi-motion-micro) var(--vi-motion-ease),
+    border-color var(--vi-motion-micro) var(--vi-motion-ease),
+    opacity var(--vi-motion-micro) var(--vi-motion-ease);
+}
+.vi-button:active:not(:disabled) { transform: translate3d(0,1px,0); }
+.valu-option:active:not(:disabled) { transform: translate3d(0,1px,0); }
+.vi-submit-morph {
+  transition:
+    transform var(--vi-motion-micro) var(--vi-motion-ease),
+    opacity var(--vi-motion-standard) var(--vi-motion-ease),
+    background-color var(--vi-motion-standard) var(--vi-motion-ease);
+}
+.vi-submit-morph:active:not(:disabled) { transform: translate3d(0,1px,0); }
+.vi-submit-morph[data-state="loading"]::before { animation: vi-submit-spin 720ms linear infinite; }
+@keyframes vi-submit-spin { to { transform: rotate(360deg); } }
+.valu-full-progress > div,
+.valu-journey__track-fill {
+  transition: width var(--vi-motion-standard) var(--vi-motion-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .assessment-nav-exit:hover {
+    color: var(--vi-color-ivory);
+    transform: translate3d(0,-1px,0);
+  }
+  .valu-assessment-page .valu-option:not(:disabled):hover {
+    border-color: rgba(201,168,76,.55) !important;
+  }
+}
+
+.assessment-nav-exit:focus-visible,
+.assessment-nav-brand:focus-visible {
+  outline: 2px solid var(--vi-color-focus);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .valu-assessment-page { animation: none !important; transform: none !important; opacity: 1 !important; }
+  .assessment-nav,
+  .assessment-nav-brand,
+  .assessment-nav-exit,
+  .vi-button,
+  .vi-field__control,
+  .valu-option,
+  .vi-submit-morph,
+  .valu-full-progress > div,
+  .valu-journey__track-fill {
+    transition: none !important;
+    animation: none !important;
+  }
+  .assessment-nav-exit:hover,
+  .vi-submit-morph[data-state="loading"]::before { animation: none; border-right-color: currentColor; opacity: .7; }
+  .vi-button:active:not(:disabled),
+  .valu-option:active:not(:disabled),
+  .vi-submit-morph:active:not(:disabled) {
+    transform: none !important;
+  }
+}
