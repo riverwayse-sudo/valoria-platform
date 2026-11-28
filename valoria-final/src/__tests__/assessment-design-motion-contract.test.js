@@ -29,6 +29,8 @@ describe('Valoria assessment design and motion enforcement', () => {
     expect(motion).toContain('var(--vi-motion-micro)');
     expect(motion).toContain('var(--vi-motion-standard)');
     expect(motion).toContain('.valu-option');
+    expect(motion).toContain('vi-assessment-page-enter');
+    expect(motion).toContain('var(--vi-motion-reveal)');
     expect(motion).toContain('.valu-journey__track-fill');
   });
 
