@@ -14,7 +14,7 @@ describe('AI report data minimisation', () => {
 
   test('the Anthropic prompt accepts only anonymised score fields', () => {
     expect(source).toContain('async function generateAiReport({ valuIndex, designation, clusterScores, skillScores })')
-    expect(source).toContain('Use only the anonymised score profile supplied below.')
+    expect(source).toContain('Use only the de-identified score profile supplied below.')
     expect(source).not.toContain('${name}')
     expect(source).not.toContain('${role}')
     expect(source).not.toContain('name: assessment.name')
